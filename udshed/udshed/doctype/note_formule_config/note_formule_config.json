@@ -1,0 +1,65 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-07-10 09:11:39.420297",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "type_ue_section",
+  "type_ue",
+  "composante",
+  "pourcentage"
+ ],
+ "fields": [
+  {
+   "fieldname": "type_ue_section",
+   "fieldtype": "Section Break",
+   "label": "Type_UE"
+  },
+  {
+   "fetch_if_empty": 1,
+   "fieldname": "type_ue",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "type UE",
+   "options": "Sans TP\nAvec TP\nStage SMSB (Science Medico Sanitaires et Biom\u00e9dicale)",
+   "reqd": 1
+  },
+  {
+   "fetch_if_empty": 1,
+   "fieldname": "composante",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Composante",
+   "options": "Controle Continu(CC)\nExamen\nTravaux Pratique (TP)\nRapport\nCompetence",
+   "reqd": 1
+  },
+  {
+   "fieldname": "pourcentage",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Pourcentage",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-10 09:46:18.717672",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Note Formule Config",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
