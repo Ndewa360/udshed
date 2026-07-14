@@ -33,7 +33,7 @@
   {
    "fieldname": "tab_2_tab",
    "fieldtype": "Tab Break",
-   "label": "Tab 2"
+   "label": "Configuration Resultat"
   },
   {
    "fieldname": "school_name",
@@ -87,7 +87,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-07-10 10:44:24.161902",
+ "modified": "2026-07-14 08:42:34.024826",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Udshed Setting",

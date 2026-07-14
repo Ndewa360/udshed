@@ -1,0 +1,172 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-07-14 09:48:24.486605",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identification_section",
+  "session_examen",
+  "student",
+  "teaching_unit",
+  "type_ue",
+  "section_break_qequ",
+  "note_cc",
+  "note_examen",
+  "note_tp",
+  "note_rapport",
+  "note_competence",
+  "section_break_hvfb",
+  "note_finale",
+  "note_pct",
+  "grade",
+  "point"
+ ],
+ "fields": [
+  {
+   "fieldname": "session_examen",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Session Examen",
+   "options": "Session Examen",
+   "reqd": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1
+  },
+  {
+   "fieldname": "teaching_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Teaching Unit",
+   "options": "Teaching Unit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "type_ue",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Type UE",
+   "options": "Sans TP\nAvec TP\nStage SMSB",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_qequ",
+   "fieldtype": "Section Break",
+   "label": "Saisie des Notes"
+  },
+  {
+   "fieldname": "note_cc",
+   "fieldtype": "Currency",
+   "label": "Note CC",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "note_examen",
+   "fieldtype": "Currency",
+   "label": "Note Examen",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "note_tp",
+   "fieldtype": "Currency",
+   "label": "Note TP",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "note_rapport",
+   "fieldtype": "Currency",
+   "label": "Note Rapport",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "note_competence",
+   "fieldtype": "Currency",
+   "label": "Note competence",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_hvfb",
+   "fieldtype": "Section Break",
+   "label": "Resultat Calcul\u00e9s"
+  },
+  {
+   "fieldname": "note_finale",
+   "fieldtype": "Currency",
+   "label": "Note Finale",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "note_pct",
+   "fieldtype": "Percent",
+   "label": "Note pct",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "grade",
+   "fieldtype": "Data",
+   "label": "Grade",
+   "reqd": 1
+  },
+  {
+   "fieldname": "point",
+   "fieldtype": "Percent",
+   "label": "Point",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "identification_section",
+   "fieldtype": "Section Break",
+   "label": "Identification"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-14 10:32:13.205058",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Session Examen Note",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
