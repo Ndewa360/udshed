@@ -12,7 +12,11 @@
   "school_logo",
   "section_break_bsrn",
   "configuration_des_paiements_par_grade",
-  "tab_2_tab"
+  "tab_2_tab",
+  "seuil_validation_licence",
+  "seuil_validation_master",
+  "formule_notes",
+  "grille_grades"
  ],
  "fields": [
   {
@@ -29,7 +33,7 @@
   {
    "fieldname": "tab_2_tab",
    "fieldtype": "Tab Break",
-   "label": "Tab 2"
+   "label": "Configuration Resultat"
   },
   {
    "fieldname": "school_name",
@@ -55,13 +59,35 @@
    "fieldtype": "Table",
    "label": "Configuration des paiements par grade",
    "options": "Financial Payment Grade Config"
+  },
+  {
+   "fieldname": "seuil_validation_licence",
+   "fieldtype": "Percent",
+   "label": "Seuil validation Licence (%)"
+  },
+  {
+   "fieldname": "seuil_validation_master",
+   "fieldtype": "Percent",
+   "label": "Seuil validation Master (%)"
+  },
+  {
+   "fieldname": "formule_notes",
+   "fieldtype": "Table",
+   "label": "Formules de notes",
+   "options": "Note Formule Config"
+  },
+  {
+   "fieldname": "grille_grades",
+   "fieldtype": "Table",
+   "label": "Grille des grades",
+   "options": "Grade Config"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-10 05:57:59.445090",
+ "modified": "2026-07-14 08:42:34.024826",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Udshed Setting",
