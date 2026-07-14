@@ -82,24 +82,21 @@
    "fieldtype": "Currency",
    "label": "Note TP",
    "non_negative": 1,
-   "precision": "2",
-   "reqd": 1
+   "precision": "2"
   },
   {
    "fieldname": "note_rapport",
    "fieldtype": "Currency",
    "label": "Note Rapport",
    "non_negative": 1,
-   "precision": "2",
-   "reqd": 1
+   "precision": "2"
   },
   {
    "fieldname": "note_competence",
    "fieldtype": "Currency",
    "label": "Note competence",
    "non_negative": 1,
-   "precision": "2",
-   "reqd": 1
+   "precision": "2"
   },
   {
    "fieldname": "section_break_hvfb",
@@ -111,30 +108,26 @@
    "fieldtype": "Currency",
    "label": "Note Finale",
    "non_negative": 1,
-   "precision": "2",
-   "reqd": 1
+   "precision": "2"
   },
   {
    "fieldname": "note_pct",
    "fieldtype": "Percent",
    "label": "Note pct",
    "non_negative": 1,
-   "precision": "2",
-   "reqd": 1
+   "precision": "2"
   },
   {
    "fieldname": "grade",
    "fieldtype": "Data",
-   "label": "Grade",
-   "reqd": 1
+   "label": "Grade"
   },
   {
    "fieldname": "point",
    "fieldtype": "Percent",
    "label": "Point",
    "non_negative": 1,
-   "precision": "2",
-   "reqd": 1
+   "precision": "2"
   },
   {
    "fieldname": "identification_section",
@@ -145,7 +138,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-14 10:32:13.205058",
+ "modified": "2026-07-14 13:53:34.446123",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Examen Note",
