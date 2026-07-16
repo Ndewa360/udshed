@@ -29,7 +29,7 @@ fixtures = [
     {
         "dt" : "Role",
         "filters": [
-            ["name","in",["Teacher","Coordonateur","Udshed Financial Admin", "Planning Manager"]]
+            ["name","in",["Teacher","Coordonateur","Udshed Financial Admin", "Planning Manager", "Registration Manager"]]
         ]
     },
     
