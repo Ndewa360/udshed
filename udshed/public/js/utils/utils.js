@@ -14,45 +14,44 @@ window.Udshed.Utils = {
                 filters.semestre=null
                 page.fields_dict.semestre.set_value(null)
             }
-            levelMap = {};
-            return;
-        }
+			if (levelMap && typeof levelMap === 'object') {
+				Object.keys(levelMap).forEach((key) => delete levelMap[key]);
+			}
+			return;
+		}
 
-        if(field === "faculty") {
-            filters.filiere = null;
-            filters.niveau = null;
+		if(field === "faculty") {
+			filters.filiere = null;
+			filters.niveau = null;
 
-            page.fields_dict.filiere.set_value(null);
-            page.fields_dict.niveau.set_value(null);
+			page.fields_dict.filiere.set_value(null);
+			page.fields_dict.niveau.set_value(null);
 
-            if(page.fields_dict.semestre) {
-                filters.semestre=null
-                page.fields_dict.semestre.set_value(null)
-            }
-            levelMap = {};
+			if(page.fields_dict.semestre) {
+				filters.semestre=null
+				page.fields_dict.semestre.set_value(null)
+			}
+			if (levelMap && typeof levelMap === 'object') {
+				Object.keys(levelMap).forEach((key) => delete levelMap[key]);
+			}
             return;
         }
 
         if(field === "filiere") {
-            filters.niveau = null;
-            page.fields_dict.niveau.set_value(null);
-            if(page.fields_dict.semestre) {
-                filters.semestre=null
-                page.fields_dict.semestre.set_value(null)
-            }
-            levelMap = {};
+			filters.niveau = null;
+			page.fields_dict.niveau.set_value(null);
+			if(page.fields_dict.semestre) {
+				filters.semestre=null
+				page.fields_dict.semestre.set_value(null)
+			}
+			if (levelMap && typeof levelMap === 'object') {
+				Object.keys(levelMap).forEach((key) => delete levelMap[key]);
+			}
             return;
         }
 
-        if(field === "niveau") {
-             if(page.fields_dict.semestre) {
-                filters.semestre=null
-                page.fields_dict.semestre.set_value(null)
-            }
-            return;
-        }
+        },
 
-    },
     mergeDataByKey(arr1,arr2,key)
     {
         const map = new Map();

@@ -1,0 +1,24 @@
+{
+ "app": "udshed",
+ "bg_color": "orange",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "graduation-cap",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "Gestion Des Notes",
+ "link_to": "Gestion des Notes",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-07-24 17:00:00.000000",
+ "modified_by": "Administrator",
+ "name": "Gestion Des Notes",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "Coordonateur"},
+  {"role": "Teacher"}
+ ],
+ "standard": 1
+}

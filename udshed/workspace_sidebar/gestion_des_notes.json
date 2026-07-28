@@ -1,31 +1,31 @@
 {
  "app": "udshed",
- "creation": "2026-02-05 05:11:58.859067",
+ "creation": "2026-07-24 17:00:00.000000",
  "docstatus": 0,
  "doctype": "Workspace Sidebar",
- "header_icon": "calendar-range",
+ "header_icon": "graduation-cap",
  "idx": 0,
  "items": [
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "calendar",
+   "icon": "house",
    "indent": 0,
    "keep_closed": 0,
-   "label": "Planning",
-   "link_to": "planning-academique",
-   "link_type": "Page",
+   "label": "Home",
+    "link_to": "Udshed",
+    "link_type": "Workspace",
    "show_arrow": 0,
    "type": "Link"
   },
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "folder",
+   "icon": "file-pen-line",
    "indent": 0,
    "keep_closed": 0,
-   "label": "Facult\u00e9s",
-   "link_to": "Faculty",
+   "label": "Session d'examen",
+   "link_to": "Session Examen",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -33,11 +33,11 @@
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "layout-grid",
+   "icon": "pencil",
    "indent": 0,
    "keep_closed": 0,
-   "label": "Filieres",
-   "link_to": "Field of study",
+   "label": "Saisie des Notes",
+   "link_to": "Session Examen Note",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -45,35 +45,11 @@
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "file",
+   "icon": "book-open",
    "indent": 0,
    "keep_closed": 0,
-   "label": "Cours",
-   "link_to": "course-management",
-   "link_type": "Page",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
-   "icon": "users-round",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Enseignant",
-   "link_to": "Teacher",
-   "link_type": "DocType",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
-   "icon": "building-2",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Batiment",
-   "link_to": "Building",
+   "label": "Etudiants",
+   "link_to": "Student",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -91,11 +67,11 @@
    "type": "Link"
   }
  ],
- "modified": "2026-02-10 19:06:55.659137",
+ "modified": "2026-07-24 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
- "name": "Planning Acad\u00e9mique",
+ "name": "Gestion des Notes",
  "owner": "Administrator",
  "standard": 1,
- "title": "Planning Acad\u00e9mique"
+ "title": "Gestion des Notes"
 }

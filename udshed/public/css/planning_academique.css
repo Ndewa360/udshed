@@ -3,6 +3,18 @@
   padding: 12px;
 }
 
+#note-udshed-planning,
+.planning-calendar-wrapper {
+  position: sticky;
+  top: 120px;
+  z-index: 10;
+  background: var(--page-bg);
+  padding: 0 20px 20px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  border-bottom: 1px solid var(--border-color);
+}
+
 
 
 /* Barre de navigation*/

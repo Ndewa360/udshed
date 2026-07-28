@@ -24,7 +24,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "type UE",
-   "options": "Sans TP\nAvec TP\nStage SMSB (Science Medico Sanitaires et Biom\u00e9dicale)",
+   "options": "Sans TP\nAvec TP\nStage SMSB",
    "reqd": 1
   },
   {
