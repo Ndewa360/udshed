@@ -51,112 +51,113 @@
     "reqd": 1
    },
    {
+    "fetch_if_empty": 1,
     "fieldname": "prenom",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Pr\u00e9nom",
-   "reqd": 1
-  },
-  {
-   "default": "Licence",
-   "fieldname": "cycle",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Cycle",
-   "options": "Licence\nBTS\nMaster",
-   "reqd": 1
-  },
-  {
-   "default": "udshed@example.com",
-   "fetch_if_empty": 1,
-   "fieldname": "email",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Email",
-   "options": "Email",
-   "reqd": 1
-  },
-  {
-   "fieldname": "utilisateur",
-   "fieldtype": "Link",
-   "label": "Utilisateur",
-   "options": "User"
-  },
-  {
-   "fieldname": "sexe",
-   "fieldtype": "Select",
-   "label": "sexe",
-   "options": "Homme\nFemme",
-   "reqd": 1
-  },
-  {
-   "fieldname": "section_break_zydq",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "phone",
-   "fieldtype": "Phone",
-   "label": "phone",
-   "reqd": 1
-  },
-  {
-   "fieldname": "column_break_rbb6",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "parent_phone",
-   "fieldtype": "Phone",
-   "label": "T\u00e9l\u00e9phone parent"
-  },
-  {
-   "fieldname": "email_parent",
-   "fieldtype": "Data",
-   "label": "Email parent",
-   "options": "Email"
-  },
-  {
-   "fieldname": "section_break_wffz",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "birth_date",
-   "fieldtype": "Date",
-   "label": "birthdate",
-   "reqd": 1
-  },
-  {
-   "fieldname": "birth_place",
-   "fieldtype": "Data",
-   "label": "lieu de naissance",
-   "reqd": 1
-  },
-  {
-   "fieldname": "column_break_sp3i",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "photo",
-   "fieldtype": "Attach Image",
-   "label": "photo"
-  },
-  {
-   "fieldname": "section_break_qezh",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "filiere",
-   "fieldtype": "Link",
-   "label": "fili\u00e8re",
-   "options": "Field of study",
-   "reqd": 1
-  },
-  {
-   "description": "Mis \u00e0 jour automatiquement apr\u00e8s chaque r\u00e9inscription",
-   "fieldname": "niveau_actuel",
-   "fieldtype": "Data",
-   "label": "Niveau actuel",
-   "read_only": 1
-  }
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Pr\u00e9nom",
+    "reqd": 1
+   },
+   {
+    "default": "Licence",
+    "fieldname": "cycle",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "label": "Cycle",
+    "options": "Licence\nBTS\nMaster",
+    "reqd": 1
+   },
+   {
+    "default": "udshed@example.com",
+    "fetch_if_empty": 1,
+    "fieldname": "email",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Email",
+    "options": "Email",
+    "reqd": 1
+   },
+   {
+    "fieldname": "utilisateur",
+    "fieldtype": "Link",
+    "label": "Utilisateur",
+    "options": "User"
+   },
+   {
+    "fieldname": "sexe",
+    "fieldtype": "Select",
+    "label": "sexe",
+    "options": "Homme\nFemme",
+    "reqd": 1
+   },
+   {
+    "fieldname": "section_break_zydq",
+    "fieldtype": "Section Break"
+   },
+   {
+    "fieldname": "phone",
+    "fieldtype": "Phone",
+    "label": "phone",
+    "reqd": 1
+   },
+   {
+    "fieldname": "column_break_rbb6",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "parent_phone",
+    "fieldtype": "Phone",
+    "label": "T\u00e9l\u00e9phone parent"
+   },
+   {
+    "fieldname": "email_parent",
+    "fieldtype": "Data",
+    "label": "Email parent",
+    "options": "Email"
+   },
+   {
+    "fieldname": "section_break_wffz",
+    "fieldtype": "Section Break"
+   },
+   {
+    "fieldname": "birth_date",
+    "fieldtype": "Date",
+    "label": "birthdate",
+    "reqd": 1
+   },
+   {
+    "fieldname": "birth_place",
+    "fieldtype": "Data",
+    "label": "lieu de naissance",
+    "reqd": 1
+   },
+   {
+    "fieldname": "column_break_sp3i",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "photo",
+    "fieldtype": "Attach Image",
+    "label": "photo"
+   },
+   {
+    "fieldname": "section_break_qezh",
+    "fieldtype": "Section Break"
+   },
+   {
+    "fieldname": "filiere",
+    "fieldtype": "Link",
+    "label": "fili\u00e8re",
+    "options": "Field of study",
+    "reqd": 1
+   },
+   {
+    "description": "Mis \u00e0 jour automatiquement apr\u00e8s chaque r\u00e9inscription",
+    "fieldname": "niveau_actuel",
+    "fieldtype": "Data",
+    "label": "Niveau actuel",
+    "read_only": 1
+   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,

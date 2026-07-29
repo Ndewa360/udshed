@@ -23,7 +23,9 @@
   "cours_inscrits",
   "r\u00e9sultats_ann\u00e9e_pr\u00e9c\u00e9dente_section",
   "resultats_precedents",
-  "fiche_telechargee"
+  "fiche_telechargee",
+  "observations_section",
+  "observations"
  ],
  "fields": [
   {
@@ -106,6 +108,24 @@
    "options": "Reregistration Previous Result"
   },
   {
+   "default": "0",
+   "description": "Passe \u00e0 1 apr\u00e8s le t\u00e9l\u00e9chargement unique de la fiche par l'\u00e9tudiant",
+   "fieldname": "fiche_telechargee",
+   "fieldtype": "Check",
+   "label": "Fiche t\u00e9l\u00e9charg\u00e9e",
+   "read_only": 1
+  },
+  {
+   "fieldname": "observations_section",
+   "fieldtype": "Section Break",
+   "label": "Observations"
+  },
+  {
+   "fieldname": "observations",
+   "fieldtype": "Small Text",
+   "label": "Observations"
+  },
+  {
    "fieldname": "reinscription_session",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -120,22 +140,14 @@
    "options": "Reregistration Course Item"
   },
   {
-   "default": "0",
-   "description": "Passe \u00e0 1 apr\u00e8s le t\u00e9l\u00e9chargement unique de la fiche par l'\u00e9tudiant",
-   "fieldname": "fiche_telechargee",
-   "fieldtype": "Check",
-   "label": "Fiche t\u00e9l\u00e9charg\u00e9e",
+   "default": "Brouillon",
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Statut",
+   "options": "Brouillon\nEn attente\nValid\u00e9e\nRefus\u00e9e",
    "read_only": 1
-  },
-   {
-    "default": "Brouillon",
-    "fieldname": "statut",
-    "fieldtype": "Select",
-    "in_list_view": 1,
-    "label": "Statut",
-    "options": "Brouillon\nEn attente\nValid\u00e9e\nRefus\u00e9e",
-    "read_only": 1
-   }
+  }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
@@ -177,7 +189,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Agent de scolarité",
+   "role": "Agent de scolarit\u00e9",
    "share": 1,
    "write": 1
   },
