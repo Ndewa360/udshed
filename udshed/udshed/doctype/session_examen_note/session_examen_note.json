@@ -5,24 +5,33 @@
  "creation": "2026-07-14 09:48:24.486605",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": [
-  "identification_section",
-  "session_examen",
-  "student",
-  "teaching_unit",
-  "type_ue",
-  "section_break_qequ",
-  "note_cc",
-  "note_examen",
-  "note_tp",
-  "note_rapport",
-  "note_competence",
-  "section_break_hvfb",
-  "note_finale",
-  "note_pct",
-  "grade",
-  "point"
- ],
+  "field_order": [
+   "identification_section",
+   "session_examen",
+   "student",
+   "teaching_unit",
+   "type_ue",
+   "column_break_sen",
+   "statut",
+   "section_break_qequ",
+   "notes_cc",
+   "note_cc_moyenne",
+   "column_break_cc",
+   "note_examen",
+   "note_examen_rattrapage",
+   "date_rattrapage",
+   "note_tp",
+   "note_rapport",
+   "note_competence",
+   "section_break_hvfb",
+   "note_examen_active",
+   "note_finale",
+   "note_pct",
+   "column_break_res",
+   "grade",
+   "point",
+   "mention"
+  ],
  "fields": [
   {
    "fieldname": "session_examen",
@@ -61,54 +70,84 @@
    "fieldtype": "Section Break",
    "label": "Saisie des Notes"
   },
-  {
-   "fieldname": "note_cc",
-   "fieldtype": "Currency",
-   "label": "Note CC",
-   "non_negative": 1,
-   "precision": "2",
-   "reqd": 1
-  },
-  {
-   "fieldname": "note_examen",
-   "fieldtype": "Currency",
-   "label": "Note Examen",
-   "non_negative": 1,
-   "precision": "2",
-   "reqd": 1
-  },
+   {
+    "fieldname": "notes_cc",
+    "fieldtype": "Table",
+    "label": "Notes CC",
+    "options": "Note CC Item"
+   },
+   {
+    "fieldname": "note_cc_moyenne",
+    "fieldtype": "Float",
+    "label": "Moyenne CC (/20)",
+    "non_negative": 1,
+    "precision": "2",
+    "read_only": 1
+   },
+   {
+    "fieldname": "column_break_cc",
+    "fieldtype": "Column Break"
+   },
+     {
+      "fieldname": "note_examen",
+      "fieldtype": "Float",
+      "label": "Note Examen",
+      "non_negative": 1,
+      "precision": "2",
+      "reqd": 1
+     },
+     {
+      "fieldname": "note_examen_rattrapage",
+      "fieldtype": "Float",
+      "label": "Note Examen Rattrapage",
+      "non_negative": 1,
+      "precision": "2"
+     },
+    {
+     "fieldname": "date_rattrapage",
+     "fieldtype": "Date",
+     "label": "Date Rattrapage"
+    },
   {
    "fieldname": "note_tp",
-   "fieldtype": "Currency",
+   "fieldtype": "Float",
    "label": "Note TP",
    "non_negative": 1,
    "precision": "2"
   },
   {
    "fieldname": "note_rapport",
-   "fieldtype": "Currency",
+   "fieldtype": "Float",
    "label": "Note Rapport",
    "non_negative": 1,
    "precision": "2"
   },
   {
    "fieldname": "note_competence",
-   "fieldtype": "Currency",
+   "fieldtype": "Float",
    "label": "Note competence",
    "non_negative": 1,
    "precision": "2"
   },
-  {
-   "fieldname": "section_break_hvfb",
-   "fieldtype": "Section Break",
-   "label": "Resultat Calcul\u00e9s"
-  },
-  {
-   "fieldname": "note_finale",
-   "fieldtype": "Currency",
-   "label": "Note Finale",
-   "non_negative": 1,
-   "precision": "2"
+    {
+     "fieldname": "section_break_hvfb",
+     "fieldtype": "Section Break",
+     "label": "Resultat Calcul\u00e9s"
+    },
+     {
+      "fieldname": "note_examen_active",
+      "fieldtype": "Float",
+      "label": "Note Examen Utilis\u00e9e",
+      "non_negative": 1,
+      "precision": "2",
+      "read_only": 1
+     },
+     {
+      "fieldname": "note_finale",
+    "fieldtype": "Float",
+    "label": "Note Finale",
+    "non_negative": 1,
+    "precision": "2"
   },
   {
    "fieldname": "note_pct",
@@ -130,15 +169,38 @@
    "precision": "2"
   },
   {
+   "fieldname": "mention",
+   "fieldtype": "Select",
+   "label": "Mention",
+   "options": "Honorable\nExcellent\nTr\u00e8s bien\nBien\nAssez-bien\nPassable\nAvertissement"
+  },
+  {
    "fieldname": "identification_section",
    "fieldtype": "Section Break",
    "label": "Identification"
+  },
+  {
+   "fieldname": "statut",
+   "default": "Brouillon",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Statut",
+   "options": "Brouillon\nSaisi\nValid\u00e9\nPubli\u00e9",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_sen",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_res",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-14 13:53:34.446123",
+ "modified": "2026-07-24 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Examen Note",
@@ -155,8 +217,27 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
-  }
- ],
+  },
+   {
+    "create": 1,
+    "email": 1,
+    "export": 1,
+    "print": 1,
+    "read": 1,
+    "report": 1,
+    "role": "Coordonateur",
+    "share": 1,
+    "write": 1
+   },
+   {
+    "create": 1,
+    "email": 1,
+    "print": 1,
+    "read": 1,
+    "role": "Teacher",
+    "write": 1
+   }
+  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",

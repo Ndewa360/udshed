@@ -1,0 +1,242 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "format: RES-{student}-{academic_year}-{teaching_unit}",
+ "creation": "2026-07-24 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identification_section",
+  "student",
+  "student_name",
+  "teaching_unit",
+  "ue_name",
+  "column_break_res",
+  "academic_year",
+  "semestre",
+  "est_rattrapage",
+  "section_break_notes",
+  "note_finale",
+  "note_pct",
+  "column_break_notes",
+  "grade",
+  "point",
+  "mention",
+  "section_break_statut",
+  "statut",
+  "statut_color",
+  "column_break_statut",
+  "session_normale",
+  "session_rattrapage",
+  "section_break_decision",
+  "decision_annee",
+  "commentaire"
+ ],
+ "fields": [
+  {
+   "fieldname": "identification_section",
+   "fieldtype": "Section Break",
+   "label": "Identification"
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Étudiant",
+   "options": "Student",
+   "reqd": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Nom Complet",
+   "read_only": 1
+  },
+  {
+   "fieldname": "teaching_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "UE",
+   "options": "Teaching Unit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "ue_name",
+   "fieldtype": "Data",
+   "label": "Nom UE",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_res",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Année Académique",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "semestre",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Semestre",
+   "options": "S1\nS2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "est_rattrapage",
+   "fieldtype": "Check",
+   "label": "Rattrapage",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_notes",
+   "fieldtype": "Section Break",
+   "label": "Résultats"
+  },
+  {
+   "fieldname": "note_finale",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Note Finale (/20)",
+   "non_negative": 1,
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "note_pct",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Note (%)",
+   "non_negative": 1,
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_notes",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "grade",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Grade",
+   "read_only": 1
+  },
+  {
+   "fieldname": "point",
+   "fieldtype": "Percent",
+   "label": "Point",
+   "non_negative": 1,
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mention",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Mention",
+   "options": "\nHonorable\nExcellent\nTrès bien\nBien\nAssez-bien\nPassable\nAvertissement",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_statut",
+   "fieldtype": "Section Break",
+   "label": "Statut & Sessions"
+  },
+  {
+   "fieldname": "statut",
+   "default": "Non Validé",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Statut",
+   "options": "Non Validé\nValidé",
+   "read_only": 1
+  },
+  {
+   "fieldname": "statut_color",
+   "fieldtype": "Data",
+   "label": "Couleur Statut",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_statut",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "session_normale",
+   "fieldtype": "Link",
+   "label": "Session Normale",
+   "options": "Session Examen Note",
+   "read_only": 1
+  },
+  {
+   "fieldname": "session_rattrapage",
+   "fieldtype": "Link",
+   "label": "Session Rattrapage",
+   "options": "Session Examen Note",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_decision",
+   "fieldtype": "Section Break",
+   "label": "Décision"
+  },
+  {
+   "fieldname": "decision_annee",
+   "fieldtype": "Select",
+   "label": "Décision Année",
+   "options": "\nAdmis\nAjourné\nEn attente",
+   "read_only": 1
+  },
+  {
+   "fieldname": "commentaire",
+   "fieldtype": "Small Text",
+   "label": "Commentaire"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-24 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Resultat Academique",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "student_name,ue_name,grade,mention",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "student_name",
+ "track_changes": 1
+}

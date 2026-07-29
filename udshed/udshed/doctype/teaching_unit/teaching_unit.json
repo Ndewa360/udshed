@@ -6,16 +6,17 @@
  "creation": "2026-02-06 05:49:13.671088",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": [
-  "nouveau_cours_section",
-  "course",
-  "intitule_cours",
-  "unite_de_valeur",
-  "column_break_askz",
-  "academic_year",
-  "mode",
-  "semestre",
-  "section_break_mvno",
+  "field_order": [
+   "nouveau_cours_section",
+   "course",
+   "intitule_cours",
+   "unite_de_valeur",
+   "column_break_askz",
+   "academic_year",
+   "mode",
+   "semestre",
+   "credits",
+   "section_break_mvno",
   "nombre_dheure_cm",
   "nombre_dheure_td",
   "column_break_wada",
@@ -92,17 +93,25 @@
    "label": "Unit\u00e9 de valeur",
    "options": "Teaching Unit Value"
   },
-  {
-   "default": "Semestre 1",
-   "fetch_from": "course.semestre",
-   "fieldname": "semestre",
-   "fieldtype": "Select",
-   "label": "Semestre",
-   "options": "Semestre 1\nSemestre 2",
-   "reqd": 1
-  },
-  {
-   "fieldname": "section_break_mvno",
+   {
+    "default": "Semestre 1",
+    "fetch_from": "course.semestre",
+    "fieldname": "semestre",
+    "fieldtype": "Select",
+    "label": "Semestre",
+    "options": "Semestre 1\nSemestre 2",
+    "reqd": 1
+   },
+   {
+    "fieldname": "credits",
+    "fieldtype": "Int",
+    "in_list_view": 1,
+    "label": "Crédits",
+    "non_negative": 1,
+    "reqd": 1
+   },
+   {
+    "fieldname": "section_break_mvno",
    "fieldtype": "Section Break"
   },
   {

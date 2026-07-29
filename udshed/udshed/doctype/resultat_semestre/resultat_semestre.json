@@ -1,0 +1,179 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "format: RES-SEM-{student}-{academic_year}-{semestre}",
+ "creation": "2026-07-28 10:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identification_section",
+  "student",
+  "student_name",
+  "column_break_rsem",
+  "academic_year",
+  "semestre",
+  "semester_index",
+  "section_break_moyennes",
+  "mps",
+  "mpc",
+  "column_break_moyennes",
+  "total_credits",
+  "credits_obtenus",
+  "mention",
+  "section_break_decision",
+  "decision"
+ ],
+ "fields": [
+  {
+   "fieldname": "identification_section",
+   "fieldtype": "Section Break",
+   "label": "Identification"
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u00c9tudiant",
+   "options": "Student",
+   "reqd": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Nom Complet",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_rsem",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Ann\u00e9e Acad\u00e9mique",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "semestre",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Semestre",
+   "options": "Semestre 1\nSemestre 2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "semester_index",
+   "fieldtype": "Int",
+   "label": "Index Semestre (i)",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_moyennes",
+   "fieldtype": "Section Break",
+   "label": "Moyennes"
+  },
+  {
+   "fieldname": "mps",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "MPS (Moy. Pond\u00e9r\u00e9e Semestrielle)",
+   "non_negative": 1,
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mpc",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "MPC (Moy. Pond\u00e9r\u00e9e Cumul\u00e9e)",
+   "non_negative": 1,
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_moyennes",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_credits",
+   "fieldtype": "Int",
+   "label": "Total Cr\u00e9dits",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "credits_obtenus",
+   "fieldtype": "Int",
+   "label": "Cr\u00e9dits Obtenus",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "mention",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Mention",
+   "options": "\nHonorable\nExcellent\nTr\u00e8s bien\nBien\nAssez-bien\nPassable\nAvertissement",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_decision",
+   "fieldtype": "Section Break",
+   "label": "D\u00e9cision"
+  },
+  {
+   "default": "En attente",
+   "fieldname": "decision",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "D\u00e9cision",
+   "options": "\nAdmis\nAjourn\u00e9\nEn attente",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-28 11:46:50.271909",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Resultat Semestre",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "student_name,mention,decision",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "student_name",
+ "track_changes": 1
+}
