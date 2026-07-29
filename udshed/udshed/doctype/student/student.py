@@ -1,40 +1,9 @@
-<<<<<<< HEAD
-# Copyright (c) 2026, Cédric Nguendap Bedjama and contributors
-# For license information, please see license.txt
-
-=======
->>>>>>> 7a5ecfa (Ajout du module de réinscription)
 import frappe
 from frappe.model.document import Document
 
 
 class Student(Document):
 
-<<<<<<< HEAD
-    def validate(self):
-        self.definir_nom_complet()
-        self.determiner_cycle()
-
-    def definir_nom_complet(self):
-        self.nom_complet = f"{self.matricule or ''} - {self.nom or ''} {self.prenom or ''}".strip()
-
-    def determiner_cycle(self):
-        if not self.niveau:
-            return
-
-        level = frappe.db.get_value("Field of study Level", self.niveau, "level")
-        if not level:
-            return
-
-        if level.startswith("Licence"):
-            self.cycle = "Licence"
-        elif level.startswith("Master"):
-            self.cycle = "Master"
-        elif level.startswith("BTS"):
-            self.cycle = "BTS"
-        else:
-            self.cycle = "Licence"
-=======
 	def before_save(self):
 		# Le matricule = le nom auto-généré STU-0001
 		# Disponible seulement après la première sauvegarde
@@ -68,4 +37,3 @@ class Student(Document):
 		# Supprime le compte utilisateur quand l'étudiant est supprimé
 		if self.utilisateur and frappe.db.exists("User", self.utilisateur):
 			frappe.delete_doc("User", self.utilisateur, ignore_permissions=True)
->>>>>>> 7a5ecfa (Ajout du module de réinscription)

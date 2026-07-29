@@ -6,20 +6,6 @@
  "creation": "2026-07-10 14:13:47.941675",
  "doctype": "DocType",
  "engine": "InnoDB",
-<<<<<<< HEAD
-  "field_order": [
-   "student_section",
-   "matricule",
-   "nom",
-   "prenom",
-   "nom_complet",
-   "email",
-   "column_break_std",
-   "niveau",
-   "cycle",
-   "utilisateur"
-  ],
-=======
  "field_order": [
   "student_section",
   "matricule",
@@ -42,7 +28,6 @@
   "section_break_qezh",
   "filiere"
  ],
->>>>>>> 7a5ecfa (Ajout du module de réinscription)
  "fields": [
   {
    "fieldname": "student_section",
@@ -64,21 +49,14 @@
    "label": "Nom",
    "reqd": 1
   },
-   {
-    "fetch_if_empty": 1,
-    "fieldname": "prenom",
-    "fieldtype": "Data",
-    "in_list_view": 1,
-    "label": "Pr\u00e9nom",
-    "reqd": 1
-   },
-   {
-    "fieldname": "nom_complet",
-    "fieldtype": "Data",
-    "label": "Nom Complet",
-    "read_only": 1,
-    "unique": 0
-   },
+  {
+   "fetch_if_empty": 1,
+   "fieldname": "prenom",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Pr\u00e9nom",
+   "reqd": 1
+  },
   {
    "default": "udshed@example.com",
    "fetch_if_empty": 1,
@@ -90,36 +68,12 @@
    "reqd": 1
   },
   {
-<<<<<<< HEAD
-   "fetch_if_empty": 1,
-   "fieldname": "niveau",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Niveau",
-   "options": "Field of study Level",
-   "reqd": 1
-  },
-  {
-   "fieldname": "cycle",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Cycle",
-   "options": "Licence\nMaster\nBTS",
-   "read_only": 1
-  },
-  {
-=======
->>>>>>> 7a5ecfa (Ajout du module de réinscription)
    "fieldname": "utilisateur",
    "fieldtype": "Link",
    "label": "Utilisateur",
    "options": "User"
   },
   {
-<<<<<<< HEAD
-   "fieldname": "column_break_std",
-   "fieldtype": "Column Break"
-=======
    "fieldname": "sexe",
    "fieldtype": "Select",
    "label": "sexe",
@@ -193,26 +147,16 @@
    "fieldtype": "Data",
    "label": "Niveau actuel",
    "read_only": 1
->>>>>>> 7a5ecfa (Ajout du module de réinscription)
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
-<<<<<<< HEAD
- "autoname": "format: {nom} {prenom}",
- "modified": "2026-07-24 10:00:00.000000",
- "modified_by": "Administrator",
- "module": "Udshed",
- "name": "Student",
- "naming_rule": "Expression (old style)",
-=======
  "modified": "2026-07-22 13:49:31.347521",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Student",
  "naming_rule": "Expression",
->>>>>>> 7a5ecfa (Ajout du module de réinscription)
  "owner": "Administrator",
  "permissions": [
   {
@@ -232,7 +176,5 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
-  "title_field": "nom_complet",
- "show_title_field_in_link": 1
+ "states": []
 }
