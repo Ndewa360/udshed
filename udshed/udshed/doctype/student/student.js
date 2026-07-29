@@ -1,6 +1,6 @@
-// Copyright (c) 2026, Cédric Nguendap Bedjama and contributors
-// For license information, please see license.txt
+frappe.ui.form.on("Student", {
 
+<<<<<<< HEAD
 frappe.ui.form.on("Student", {
 
     refresh(frm) {
@@ -51,4 +51,12 @@ frappe.ui.form.on("Student", {
             }
         });
     }
+=======
+	refresh(frm) {
+		// Afficher le matricule en bleu en haut du formulaire
+		if (!frm.is_new()) {
+			frm.set_intro(`Matricule : ${frm.doc.name}`, "blue");
+		}
+	}
+>>>>>>> 7a5ecfa (Ajout du module de réinscription)
 });

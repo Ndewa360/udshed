@@ -2,9 +2,11 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
+ "autoname": "STU-.####",
  "creation": "2026-07-10 14:13:47.941675",
  "doctype": "DocType",
  "engine": "InnoDB",
+<<<<<<< HEAD
   "field_order": [
    "student_section",
    "matricule",
@@ -17,6 +19,30 @@
    "cycle",
    "utilisateur"
   ],
+=======
+ "field_order": [
+  "student_section",
+  "matricule",
+  "nom",
+  "prenom",
+  "niveau_actuel",
+  "email",
+  "utilisateur",
+  "sexe",
+  "section_break_zydq",
+  "phone",
+  "column_break_rbb6",
+  "parent_phone",
+  "email_parent",
+  "section_break_wffz",
+  "birth_date",
+  "birth_place",
+  "column_break_sp3i",
+  "photo",
+  "section_break_qezh",
+  "filiere"
+ ],
+>>>>>>> 7a5ecfa (Ajout du module de réinscription)
  "fields": [
   {
    "fieldname": "student_section",
@@ -29,7 +55,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Matricule",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "nom",
@@ -64,6 +90,7 @@
    "reqd": 1
   },
   {
+<<<<<<< HEAD
    "fetch_if_empty": 1,
    "fieldname": "niveau",
    "fieldtype": "Link",
@@ -81,25 +108,111 @@
    "read_only": 1
   },
   {
+=======
+>>>>>>> 7a5ecfa (Ajout du module de réinscription)
    "fieldname": "utilisateur",
    "fieldtype": "Link",
    "label": "Utilisateur",
    "options": "User"
   },
   {
+<<<<<<< HEAD
    "fieldname": "column_break_std",
    "fieldtype": "Column Break"
+=======
+   "fieldname": "sexe",
+   "fieldtype": "Select",
+   "label": "sexe",
+   "options": "Homme\nFemme",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_zydq",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Phone",
+   "label": "phone",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_rbb6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "parent_phone",
+   "fieldtype": "Phone",
+   "label": "T\u00e9l\u00e9phone parent"
+  },
+  {
+   "fieldname": "email_parent",
+   "fieldtype": "Data",
+   "label": "Email parent",
+   "options": "Email"
+  },
+  {
+   "fieldname": "section_break_wffz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "birth_date",
+   "fieldtype": "Date",
+   "label": "birthdate",
+   "reqd": 1
+  },
+  {
+   "fieldname": "birth_place",
+   "fieldtype": "Data",
+   "label": "lieu de naissance",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_sp3i",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "photo",
+   "fieldtype": "Attach Image",
+   "label": "photo"
+  },
+  {
+   "fieldname": "section_break_qezh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "label": "fili\u00e8re",
+   "options": "Field of study",
+   "reqd": 1
+  },
+  {
+   "description": "Mis \u00e0 jour automatiquement apr\u00e8s chaque r\u00e9inscription",
+   "fieldname": "niveau_actuel",
+   "fieldtype": "Data",
+   "label": "Niveau actuel",
+   "read_only": 1
+>>>>>>> 7a5ecfa (Ajout du module de réinscription)
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
+<<<<<<< HEAD
  "autoname": "format: {nom} {prenom}",
  "modified": "2026-07-24 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Student",
  "naming_rule": "Expression (old style)",
+=======
+ "modified": "2026-07-22 13:49:31.347521",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Student",
+ "naming_rule": "Expression",
+>>>>>>> 7a5ecfa (Ajout du module de réinscription)
  "owner": "Administrator",
  "permissions": [
   {

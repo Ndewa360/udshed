@@ -5,6 +5,7 @@
  "creation": "2026-07-14 09:48:24.486605",
  "doctype": "DocType",
  "engine": "InnoDB",
+<<<<<<< HEAD
   "field_order": [
    "identification_section",
    "session_examen",
@@ -32,6 +33,29 @@
    "point",
    "mention"
   ],
+=======
+ "field_order": [
+  "identification_section",
+  "session_examen",
+  "student",
+  "teaching_unit",
+  "type_ue",
+  "column_break_filiere",
+  "filiere",
+  "niveau",
+  "section_break_qequ",
+  "note_cc",
+  "note_examen",
+  "note_tp",
+  "note_rapport",
+  "note_competence",
+  "section_break_hvfb",
+  "note_finale",
+  "note_pct",
+  "grade",
+  "point"
+ ],
+>>>>>>> 7a5ecfa (Ajout du module de réinscription)
  "fields": [
   {
    "fieldname": "session_examen",
@@ -57,14 +81,34 @@
    "options": "Teaching Unit",
    "reqd": 1
   },
-  {
-   "fieldname": "type_ue",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Type UE",
-   "options": "Sans TP\nAvec TP\nStage SMSB",
-   "reqd": 1
-  },
+   {
+    "fieldname": "type_ue",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "label": "Type UE",
+    "options": "Sans TP\nAvec TP\nStage SMSB",
+    "reqd": 1
+   },
+   {
+    "fieldname": "column_break_filiere",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "filiere",
+    "fieldtype": "Link",
+    "in_list_view": 1,
+    "label": "Fili\u00e8re",
+    "options": "Field of study",
+    "read_only": 1
+   },
+   {
+    "fieldname": "niveau",
+    "fieldtype": "Link",
+    "in_list_view": 1,
+    "label": "Niveau",
+    "options": "Field of study Level",
+    "read_only": 1
+   },
   {
    "fieldname": "section_break_qequ",
    "fieldtype": "Section Break",

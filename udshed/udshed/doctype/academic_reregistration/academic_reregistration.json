@@ -1,0 +1,194 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "RER-.####",
+ "creation": "2026-07-16 12:55:57.808962",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_iqxs",
+  "student",
+  "reinscription_session",
+  "column_break_oxjc",
+  "statut",
+  "academic_year",
+  "informations_acad\u00e9miques_section",
+  "filiere",
+  "niveau",
+  "column_break_t8ni",
+  "semestre",
+  "niveau_precedent",
+  "mati\u00e8res_inscrites_section",
+  "r\u00e9sultats_ann\u00e9e_pr\u00e9c\u00e9dente_section",
+  "cours_inscrits",
+  "resultats_precedents",
+  "observations_section",
+  "observations"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_iqxs",
+   "fieldtype": "Section Break",
+   "label": "Informations g\u00e9n\u00e9rales"
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u00c9tudiant",
+   "options": "Student",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_oxjc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Ann\u00e9e acad\u00e9mique",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "informations_acad\u00e9miques_section",
+   "fieldtype": "Section Break",
+   "label": "Informations acad\u00e9miques"
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Fili\u00e8re",
+   "options": "Field of study",
+   "reqd": 1
+  },
+  {
+   "fieldname": "niveau",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Niveau actuel",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_t8ni",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "semestre",
+   "fieldtype": "Select",
+   "label": "Semestre",
+   "options": "Semestre 1\nSemestre 2\nLes deux",
+   "reqd": 1
+  },
+  {
+   "description": "Rempli automatiquement selon l'ordre des niveaux",
+   "fieldname": "niveau_precedent",
+   "fieldtype": "Data",
+   "label": "Niveau pr\u00e9c\u00e9dent",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mati\u00e8res_inscrites_section",
+   "fieldtype": "Section Break",
+   "label": "Mati\u00e8res inscrites"
+  },
+  {
+   "fieldname": "r\u00e9sultats_ann\u00e9e_pr\u00e9c\u00e9dente_section",
+   "fieldtype": "Section Break",
+   "label": "R\u00e9sultats ann\u00e9e pr\u00e9c\u00e9dente"
+  },
+  {
+   "fieldname": "resultats_precedents",
+   "fieldtype": "Table",
+   "label": "R\u00e9sultats pr\u00e9c\u00e9dents",
+   "options": "Reregistration Previous Result"
+  },
+  {
+   "fieldname": "observations_section",
+   "fieldtype": "Section Break",
+   "label": "Observations"
+  },
+  {
+   "fieldname": "observations",
+   "fieldtype": "Small Text",
+   "label": "Observations"
+  },
+  {
+   "fieldname": "reinscription_session",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Session de r\u00e9inscription",
+   "options": "Reinscription",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cours_inscrits",
+   "fieldtype": "Table",
+   "label": "Mati\u00e8res inscrites",
+   "options": "Reregistration Course Item"
+  },
+  {
+   "default": "En attente",
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "statut",
+   "options": "En attente\nValid\u00e9e\nRejet\u00e9e",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-23 13:33:29.131247",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Academic Reregistration",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "student",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

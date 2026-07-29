@@ -23,8 +23,7 @@
    "fieldname": "name_of_field",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Intitul\u00e9",
-   "reqd": 1
+   "label": "Intitul\u00e9"
   },
   {
    "fieldname": "column_break_fzsk",
@@ -83,7 +82,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-06 03:36:09.843184",
+ "modified": "2026-07-22 11:11:02.135452",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Field of study",
@@ -136,6 +135,7 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "name_of_field",
  "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",

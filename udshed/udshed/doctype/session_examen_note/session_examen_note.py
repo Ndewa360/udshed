@@ -1,6 +1,9 @@
+<<<<<<< HEAD
 # Copyright (c) 2026, Cédric Nguendap Bedjama and contributors
 # For license information, please see license.txt
 
+=======
+>>>>>>> 7a5ecfa (Ajout du module de réinscription)
 import frappe
 from frappe.model.document import Document
 
@@ -8,7 +11,11 @@ from frappe.model.document import Document
 class SessionExamenNote(Document):
 
     def validate(self):
+<<<<<<< HEAD
         self.verrouiller_cc()
+=======
+        self.remplir_filiere_niveau()
+>>>>>>> 7a5ecfa (Ajout du module de réinscription)
         self.valider_saisie()
         self.valider_rattrapage()
         self.calculer_note_finale()
@@ -50,6 +57,23 @@ class SessionExamenNote(Document):
                 "Impossible de modifier les notes de Contrôle Continu. "
                 "Une note d'examen ou de rattrapage a déjà été enregistrée pour cette UE."
             )
+
+    def remplir_filiere_niveau(self):
+        """Remplit automatiquement filiere et niveau depuis Teaching Unit → course_levels"""
+        if not self.teaching_unit:
+            return
+
+        # Récupérer les course_levels de la Teaching Unit
+        levels = frappe.get_all(
+            "Course Field of study level item",
+            filters={"parent": self.teaching_unit},
+            fields=["filiere", "niveau"],
+            limit_page_length=1
+        )
+
+        if levels:
+            self.filiere = levels[0].filiere
+            self.niveau = levels[0].niveau
 
     def valider_saisie(self):
         note_max = 20
@@ -177,6 +201,7 @@ class SessionExamenNote(Document):
 
         if self.note_pct >= seuil:
             frappe.msgprint(
+<<<<<<< HEAD
                 f"UE <b>Validée</b> — Note: {self.note_pct}% | "
                 f"Grade: {self.grade} | Point: {self.point} | {mention_trouvee}",
                 indicator="green",
@@ -229,3 +254,13 @@ class SessionExamenNote(Document):
         if self.is_new():
             return None
         return frappe.db.get_value("Session Examen Note", self.name, "statut")
+=======
+                f"UE <b>Validée</b> — Note: {self.note_pct}% | Grade: {self.grade} | Point: {self.point} | {mention_trouvee}",
+                indicator="green"
+            )
+        else:
+            frappe.msgprint(
+                f"UE <b>Non Validée</b> — Note: {self.note_pct}% | Grade: {self.grade} | Point: {self.point} | {mention_trouvee}",
+                indicator="red"
+            )
+>>>>>>> 7a5ecfa (Ajout du module de réinscription)

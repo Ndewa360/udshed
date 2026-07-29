@@ -1,0 +1,31 @@
+{
+ "app": "udshed",
+ "creation": "2026-07-29 10:15:26.579432",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "user-plus",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "Inscription - Reinscription",
+ "link_to": "Inscription - Reinscription",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-07-29 10:20:41.378488",
+ "modified_by": "Administrator",
+ "name": "Inscription - Reinscription",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Coordonateur"
+  },
+  {
+   "role": "student"
+  }
+ ],
+ "sidebar": "Inscription - Reinscription",
+ "standard": 1
+}

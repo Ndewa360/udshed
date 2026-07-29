@@ -1,0 +1,147 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "RS-.####",
+ "creation": "2026-07-16 10:01:53.521306",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_kvja",
+  "academic_year",
+  "column_break_2l35",
+  "statut",
+  "p\u00e9riode_section",
+  "date_ouverture",
+  "column_break_bmef",
+  "date_cloture",
+  "r\u00e8gles_section",
+  "note_minimale",
+  "column_break_yhpf",
+  "note_maximale",
+  "description_section",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_kvja",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Academic year",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_2l35",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Statut",
+   "options": "Ouverte\nFerm\u00e9e\nArchiv\u00e9e",
+   "reqd": 1
+  },
+  {
+   "fieldname": "p\u00e9riode_section",
+   "fieldtype": "Section Break",
+   "label": "P\u00e9riode"
+  },
+  {
+   "fieldname": "date_ouverture",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date d'ouverture",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_bmef",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "date_cloture",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date de cl\u00f4ture",
+   "reqd": 1
+  },
+  {
+   "fieldname": "r\u00e8gles_section",
+   "fieldtype": "Section Break",
+   "label": "R\u00e8gles"
+  },
+  {
+   "default": "10",
+   "description": "Note \u00e0 partir de laquelle une mati\u00e8re est consid\u00e9r\u00e9e comme valid\u00e9e",
+   "fieldname": "note_minimale",
+   "fieldtype": "Float",
+   "label": "Note minimale de validation",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_yhpf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "20",
+   "fieldname": "note_maximale",
+   "fieldtype": "Float",
+   "label": "Note maximale",
+   "reqd": 1
+  },
+  {
+   "fieldname": "description_section",
+   "fieldtype": "Section Break",
+   "label": "Description"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-16 11:07:57.608052",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Reinscription",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
