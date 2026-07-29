@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
  "app": "udshed",
  "creation": "2026-02-22 16:49:36.351231",
@@ -13,3 +14,20 @@
  "standard": 1,
  "title": "Insight Academique"
 }
+=======
+{
+ "app": "udshed",
+ "creation": "2026-02-22 16:49:36.351231",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "liabilities",
+ "idx": 0,
+ "items": [],
+ "modified": "2026-02-22 16:49:36.351231",
+ "modified_by": "Administrator",
+ "name": "Insight Academique",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Insight Academique"
+}
+>>>>>>> 7a5ecfa (Ajout du module de réinscription)

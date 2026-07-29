@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-07-16 14:49:21.061928",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_ehet",
+  "teaching_unit",
+  "semestre",
+  "statut",
+  "est_obligatoire"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_ehet",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "teaching_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Mati\u00e8re",
+   "options": "Teaching Unit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "semestre",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Semestre",
+   "options": "Semestre 1\nSemestre 2"
+  },
+  {
+   "default": "Inscrit",
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Statut",
+   "options": "Inscrit\nDispens\u00e9\nReport\u00e9"
+  },
+  {
+   "default": "1",
+   "fieldname": "est_obligatoire",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Obligatoire"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-16 15:05:36.878487",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Reregistration Course Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
