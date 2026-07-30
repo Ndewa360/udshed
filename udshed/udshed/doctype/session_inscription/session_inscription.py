@@ -6,6 +6,12 @@ from frappe.model.document import Document
 from frappe import _
 
 
+@frappe.whitelist(allow_guest=True)
+def get_open_session():
+	"""Retourne la session ouverte s'il en existe une"""
+	return frappe.db.exists("Session Inscription", {"status": "Open"})
+
+
 class SessionInscription(Document):
 
 	def validate(self):

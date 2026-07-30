@@ -17,7 +17,11 @@ add_to_apps_screen = [
 		"logo": "/assets/udshed/images/logo.png",
 		"title": "Udshed",
 		"route": "/desk/planning-academique",
-		"has_permission": "udshed.api.permission.has_app_permission"
+		"has_permission": "udshed.api.permission.has_app_permission",
+		"role_home_page": {
+			"All": "desk"
+		}
+
 	}
 ]
 
@@ -72,7 +76,7 @@ fixtures = [
 # ----------
 
 # application home page (will override Website Settings)
-# home_page = "login"
+home_page = "index"
 
 # website user home page (by Role)
 # role_home_page = {
