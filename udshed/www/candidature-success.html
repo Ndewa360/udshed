@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidature soumise - UDSHED</title>
+    <link rel="stylesheet" href="/assets/udshed/css/welcome.css">
+    <style>
+        .success-wrapper {
+            min-height: 100vh;
+            background: var(--page-bg);
+            display: flex;
+            flex-direction: column;
+        }
+        .success-hero {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 32px;
+            text-align: center;
+        }
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+        }
+        .success-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: #2e7d32;
+            margin-bottom: 16px;
+        }
+        .success-message {
+            font-size: 18px;
+            color: var(--text-muted);
+            max-width: 500px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+        .success-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: opacity 0.2s ease;
+        }
+        .success-btn:hover {
+            opacity: 0.85;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-wrapper">
+        <div class="welcome-topbar">
+            <div class="welcome-logo">UDSHED</div>
+        </div>
+        <div class="success-hero">
+            <div class="success-icon">✓</div>
+            <h1 class="success-title">Candidature envoyée avec succès !</h1>
+            <p class="success-message">
+                Votre candidature a bien été enregistrée.<br>
+                Vous serez contacté(e) pour la suite du processus d'inscription.<br>
+                Un accusé de réception vous a été envoyé par email.
+            </p>
+            <a href="/welcome" class="success-btn">Retour à l'accueil</a>
+        </div>
+    </div>
+</body>
+</html>

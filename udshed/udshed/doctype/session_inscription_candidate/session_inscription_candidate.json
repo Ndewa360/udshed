@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "CAND-.YYYY.-.#####",
  "creation": "2026-04-11 06:46:47.537518",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -9,6 +10,7 @@
   "column_break_etdp",
   "filiere",
   "niveau",
+  "examination_centre",
   "column_break_nmqp",
   "choix_de_formation",
   "informations_personnellespersonal_informations_section",
@@ -23,8 +25,14 @@
   "email",
   "parent_phone",
   "email_parent",
+  "home_city",
   "diplome_acces_formation",
-  "diplome_formation"
+  "diplome_formation",
+  "associated_document_section",
+  "birth_certificate",
+  "access_diploma_copy",
+  "id_photo",
+  "remittance_receipt"
  ],
  "fields": [
   {
@@ -137,15 +145,56 @@
    "fieldname": "diplome_formation",
    "fieldtype": "Table",
    "options": "Choise Formation Diplome Inscription Candidat"
+  },
+  {
+   "fieldname": "examination_centre",
+   "fieldtype": "Select",
+   "label": "Examination Centre",
+   "options": "Bangangt\u00e9\nBafoussam\nYaound\u00e9\nDouala"
+  },
+  {
+   "fieldname": "home_city",
+   "fieldtype": "Data",
+   "label": "Home city"
+  },
+  {
+   "fieldname": "associated_document_section",
+   "fieldtype": "Section Break",
+   "label": "Associated Document"
+  },
+  {
+   "fieldname": "birth_certificate",
+   "fieldtype": "Attach",
+   "label": "Birth Certificate",
+   "reqd": 1
+  },
+  {
+   "fieldname": "access_diploma_copy",
+   "fieldtype": "Attach",
+   "label": "Access Diploma Copy ",
+   "reqd": 1
+  },
+  {
+   "fieldname": "id_photo",
+   "fieldtype": "Attach",
+   "label": "ID photo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "remittance_receipt",
+   "fieldtype": "Attach",
+   "label": "Remittance Receipt ",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-15 10:18:34.745151",
+ "modified": "2026-07-28 11:00:43.569479",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Inscription Candidate",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
