@@ -92,19 +92,19 @@
    "show_arrow": 0,
    "type": "Link"
   },
-  {
-   "child": 1,
-   "collapsible": 1,
-   "icon": "sort-asc",
-   "indent": 1,
-   "keep_closed": 0,
-   "label": "Gestion des Niveaux",
-   "link_to": "Field of study Level",
-   "link_type": "DocType",
-   "open_in_new_tab": 1,
-   "show_arrow": 0,
-   "type": "Link"
-  },
+   {
+    "child": 1,
+    "collapsible": 1,
+    "icon": "sort-asc",
+    "indent": 1,
+    "keep_closed": 0,
+    "label": "Gestion des Niveaux",
+    "link_to": "gestion-des-niveaux",
+    "link_type": "Page",
+    "open_in_new_tab": 1,
+    "show_arrow": 0,
+    "type": "Link"
+   },
   {
    "child": 0,
    "collapsible": 1,

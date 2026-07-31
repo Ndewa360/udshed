@@ -55,9 +55,11 @@ class AcademicReregistration(Document):
 
 	def charger_resultats_precedents(self):
 		"""
-		Lit les notes de l'étudiant depuis Session Examen Note
-		pour les matières du niveau précédent.
-		Utilise directement les champs filiere/niveau de Session Examen Note.
+		Charge TOUS les cours du niveau précédent avec leurs notes.
+		- Cours avec note >= note_minimale : Validé
+		- Cours avec note < note_minimale  : Dette
+		- Cours sans note                   : Non évalué (dette par défaut)
+		Filtre par semestre si spécifié.
 		"""
 		if not self.niveau_precedent or not self.student:
 			return
@@ -66,19 +68,47 @@ class AcademicReregistration(Document):
 		if not niveau_precedent_name:
 			return
 
-		# Requête simplifiée grâce aux champs filiere/niveau sur Session Examen Note
+		from frappe.query_builder import DocType
+		TeachingUnit = DocType("Teaching Unit")
+		CourseLevel = DocType("Course Field of study level item")
+
+		query = (
+			frappe.qb.from_(TeachingUnit)
+			.join(CourseLevel).on(CourseLevel.parent == TeachingUnit.name)
+			.select(
+				TeachingUnit.name,
+				TeachingUnit.intitule_cours,
+				TeachingUnit.semestre
+			)
+			.where(
+				(TeachingUnit.academic_year == self.academic_year) &
+				(CourseLevel.filiere == self.filiere) &
+				(CourseLevel.niveau == niveau_precedent_name)
+			)
+		)
+
+		if self.semestre and self.semestre != "Les deux":
+			query = query.where(TeachingUnit.semestre == self.semestre)
+
+		tous_les_cours = query.run(as_dict=True)
+
+		if not tous_les_cours:
+			return
+
+		tu_names = [c.name for c in tous_les_cours]
+
 		notes = frappe.get_all(
 			"Session Examen Note",
 			filters={
 				"student": self.student,
 				"filiere": self.filiere,
-				"niveau": niveau_precedent_name
+				"niveau": niveau_precedent_name,
+				"teaching_unit": ["in", tu_names]
 			},
 			fields=["teaching_unit", "note_finale"]
 		)
 
-		if not notes:
-			return
+		notes_dict = {n.teaching_unit: n.note_finale or 0 for n in notes}
 
 		note_minimale = frappe.db.get_value(
 			"Reinscription", self.reinscription_session, "note_minimale"
@@ -86,23 +116,21 @@ class AcademicReregistration(Document):
 
 		self.set("resultats_precedents", [])
 
-		for note in notes:
-			intitule = frappe.db.get_value(
-				"Teaching Unit", note.teaching_unit, "intitule_cours"
-			) or ""
+		for cours in tous_les_cours:
+			note_finale = notes_dict.get(cours.name, 0)
+			a_note = cours.name in notes_dict
 
-			semestre = frappe.db.get_value(
-				"Teaching Unit", note.teaching_unit, "semestre"
-			) or ""
-
-			note_finale = note.note_finale or 0
-			valide = 1 if note_finale >= note_minimale else 0
-			est_dette = 1 if note_finale < note_minimale else 0
+			if a_note:
+				valide = 1 if note_finale >= note_minimale else 0
+				est_dette = 1 if note_finale < note_minimale else 0
+			else:
+				valide = 0
+				est_dette = 1
 
 			self.append("resultats_precedents", {
-				"teaching_unit": note.teaching_unit,
-				"intitule": intitule,
-				"semestre": semestre,
+				"teaching_unit": cours.name,
+				"intitule": cours.intitule_cours or "",
+				"semestre": cours.semestre or "",
 				"note": note_finale,
 				"valide": valide,
 				"est_dette": est_dette
@@ -161,17 +189,36 @@ class AcademicReregistration(Document):
 
 		self.set("cours_inscrits", [])
 
+		resultats_details = {}
+		for r in self.resultats_precedents:
+			resultats_details[r.teaching_unit] = r
+
 		for matiere in matieres:
 			if matiere.name in resultats_dict:
-				statut = "Dispensé" if resultats_dict[matiere.name] else "Reporté"
+				valide = resultats_dict[matiere.name]
+				detail = resultats_details.get(matiere.name)
+				note_obtenue = detail.note if detail else 0
+				if valide:
+					statut = "Dispensé"
+					inscrire = 0
+					motif = f"Déjà validé au niveau précédent (note: {note_obtenue}/20)"
+				else:
+					statut = "Reporté"
+					inscrire = 1
+					motif = f"Échec au niveau précédent (note: {note_obtenue}/20)"
 			else:
 				statut = "Inscrit"
+				inscrire = 1
+				motif = "Nouvelle matière du niveau actuel"
 
 			self.append("cours_inscrits", {
 				"teaching_unit": matiere.name,
+				"intitule": matiere.intitule_cours,
 				"semestre": matiere.semestre,
 				"statut": statut,
-				"est_obligatoire": 1
+				"inscrire": inscrire,
+				"est_obligatoire": 1,
+				"motif": motif
 			})
 
 	def valider(self):
