@@ -23,20 +23,8 @@ window.Udshed.PlanningQueries  = {
             },
             callback: (res) => {
                 if(!res.message) return callback_function([])
-                const items = res.message; // supposons que l'API retourne une liste d'items
-                let item_map = new Map()
-                for(let item of items) {
-                    if(item_map.has(`${item.cours}-${item.date}-${item.period}`)) {
-                        item_map.get(`${item.cours}-${item.date}-${item.period}`).teachers.push(item.enseignant);
-                    } else {
-                        item_map.set(`${item.cours}-${item.date}-${item.period}`, {
-                            ...item,
-                            teachers: [item.enseignant]
-                        }
-                        );
-                    }
-                }
-                return callback_function(Array.from(item_map.values()));
+                const items = res.message;
+                return callback_function(items);
             }
         });
     },

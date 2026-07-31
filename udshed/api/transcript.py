@@ -1,0 +1,165 @@
+import frappe
+from frappe import _
+
+
+@frappe.whitelist()
+def get_transcript_data(doc):
+    if isinstance(doc, str):
+        doc = frappe.parse_json(doc)
+
+    student = doc.get("name")
+    if not student:
+        return {}
+
+    student_doc = frappe.get_doc("Student", student)
+
+    semesters = frappe.get_all(
+        "Resultat Semestre",
+        filters={"student": student},
+        fields=[
+            "name", "semestre", "academic_year", "semester_index",
+            "mps", "mpc", "total_credits", "credits_obtenus", "mention", "decision",
+        ],
+        order_by="semester_index asc",
+    )
+
+    semester_data = []
+    total_credits_all = 0
+    total_credits_obtenus = 0
+
+    for sem in semesters:
+        year_label = frappe.get_cached_value(
+            "Academic Year", sem.academic_year, "year_name"
+        ) or sem.academic_year
+
+        ue_results = frappe.get_all(
+            "Resultat Academique",
+            filters={
+                "student": student,
+                "semestre": sem.semestre,
+                "academic_year": sem.academic_year,
+            },
+            fields=[
+                "name", "teaching_unit", "ue_name", "note_finale", "note_pct",
+                "grade", "point", "mention", "statut", "est_rattrapage",
+                "decision_annee",
+            ],
+        )
+
+        ue_list = []
+        for ue in ue_results:
+            tu = frappe.get_cached_value(
+                "Teaching Unit", ue.teaching_unit,
+                ["course", "intitule_cours", "credits", "semestre"],
+                as_dict=True,
+            ) or {}
+
+            credits_val = frappe.db.get_value(
+                "Course Field of study level item",
+                {"parent": ue.teaching_unit, "niveau": doc.get("niveau_actuel")},
+                "course_poid",
+            )
+            if not credits_val:
+                credits_val = tu.get("credits", 0)
+
+            ue_list.append({
+                "code": tu.get("course", "") or "",
+                "intitule": ue.ue_name or tu.get("intitule_cours", "") or ue.teaching_unit,
+                "credits": int(credits_val or 0),
+                "note_finale": ue.note_finale,
+                "note_pct": ue.note_pct,
+                "grade": ue.grade or "",
+                "point": ue.point or 0,
+                "mention": ue.mention or "",
+                "statut": ue.statut or "",
+                "est_rattrapage": ue.est_rattrapage or 0,
+                "session": _("Rattrapage") if ue.est_rattrapage else _("Normale"),
+            })
+
+        backlogs = [ue for ue in ue_list if ue["statut"] == "Non Validé"]
+
+        total_credits_all += sem.total_credits or 0
+        total_credits_obtenus += sem.credits_obtenus or 0
+
+        semester_data.append({
+            "label": sem.semestre,
+            "academic_year": year_label,
+            "academic_year_name": sem.academic_year,
+            "index": sem.semester_index,
+            "mps": sem.mps,
+            "mpc": sem.mpc,
+            "total_credits": sem.total_credits,
+            "credits_obtenus": sem.credits_obtenus,
+            "mention": sem.mention or "",
+            "decision": sem.decision or "",
+            "ues": ue_list,
+            "backlogs": backlogs,
+        })
+
+    prev_mpc = semesters[-1].mpc if semesters else 0
+    prev_credits = semesters[-1].credits_obtenus if semesters else 0
+
+    settings = frappe.get_single("Udshed Setting")
+    grade_scale = []
+    if settings.get("grille_grades"):
+        for g in settings.grille_grades:
+            grade_scale.append({
+                "note_min": g.note_min,
+                "note_max": g.note_max,
+                "grade": g.grade,
+                "point": g.point,
+                "mention": g.mention or "",
+            })
+        grade_scale.sort(key=lambda x: x.get("note_min", 0), reverse=True)
+
+    filiere_name = ""
+    if student_doc.filiere:
+        filiere_name = frappe.get_cached_value(
+            "Field of study", student_doc.filiere, "name_of_field"
+        ) or student_doc.filiere
+
+    overall_decision = semesters[-1].decision if semesters else ""
+    pct_validation = (
+        round(total_credits_obtenus / total_credits_all * 100, 2)
+        if total_credits_all > 0
+        else 0
+    )
+
+    cycle = "Licence"
+    if hasattr(student_doc, "cycle") and student_doc.cycle:
+        cycle = student_doc.cycle
+    elif hasattr(student_doc, "niveau_actuel") and student_doc.niveau_actuel:
+        niv = student_doc.niveau_actuel.lower()
+        if "master" in niv or "m" in niv[:1]:
+            cycle = "Master"
+
+    return {
+        "semesters": semester_data,
+        "total_credits": total_credits_all,
+        "total_credits_obtenus": total_credits_obtenus,
+        "pct_validation": pct_validation,
+        "grade_scale": grade_scale,
+        "school_name": settings.school_name or "",
+        "school_logo": settings.school_logo or "",
+        "prev_mpc": prev_mpc,
+        "prev_credits": prev_credits,
+        "overall_decision": overall_decision,
+        "filiere_name": filiere_name,
+        "niveau_label": student_doc.niveau_actuel or "",
+        "cycle": cycle,
+        "date_emission": frappe.utils.today(),
+        "reference_no": "TSCR-{}-{}".format(
+            student, frappe.utils.today().replace("-", "")
+        ),
+        "student": {
+            "name": student,
+            "matricule": student_doc.matricule or "",
+            "nom": student_doc.nom or "",
+            "prenom": student_doc.prenom or "",
+            "birth_date": student_doc.birth_date,
+            "birth_place": student_doc.birth_place or "",
+            "filiere": filiere_name,
+            "niveau": student_doc.niveau_actuel or "",
+            "cycle": cycle,
+        },
+    }

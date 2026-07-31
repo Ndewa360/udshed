@@ -1,8 +1,6 @@
-# Copyright (c) 2026, Cédric Nguendap Bedjama and contributors
-# For license information, please see license.txt
-
 import frappe
 from frappe.model.document import Document
+from udshed.grade_calculation import get_active_formula
 
 
 class ResultatAcademique(Document):
@@ -10,6 +8,7 @@ class ResultatAcademique(Document):
     def validate(self):
         self.remplir_noms()
         self.determiner_statut()
+        self.determiner_grade_et_mention()
 
     def after_insert(self):
         self.declencher_mps_mpc()
@@ -37,15 +36,14 @@ class ResultatAcademique(Document):
             else:
                 self.ue_name = self.teaching_unit
 
-    def determiner_statut(self):
-        setting = frappe.get_single("Udshed Setting")
+    def _get_seuil(self):
         student_doc = frappe.get_doc("Student", self.student)
         cycle = student_doc.cycle or "Licence"
+        formula = get_active_formula(cycle)
+        return formula.seuil_validation
 
-        if cycle == "Licence":
-            seuil = setting.seuil_validation_licence or 50
-        else:
-            seuil = setting.seuil_validation_master or 60
+    def determiner_statut(self):
+        seuil = self._get_seuil()
 
         if self.note_pct >= seuil:
             self.statut = "Validé"

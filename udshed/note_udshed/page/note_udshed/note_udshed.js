@@ -8,7 +8,8 @@ frappe.pages['note-udshed'].on_page_load = function(wrapper) {
 		'/assets/udshed/js/planning_calendar/planning_queries.js',
 		'/assets/udshed/js/utils/utils.js',
 		'/assets/udshed/js/utils/utils_queries.js',
-		'/assets/udshed/js/utils/permission.js'
+		'/assets/udshed/js/utils/permission.js',
+		'/assets/udshed/js/planning_calendar/grade_entry_dialog.js'
 	]).then(async () => {
 
 		// 1. Creation de la page Frappe
@@ -221,7 +222,28 @@ frappe.pages['note-udshed'].on_page_load = function(wrapper) {
 		// 5. Affichage initial
 		show_empty_state();
 
-		// 6. Application des permissions utilisateur
+		// 6. Click handler for CC/Exam grade entry
+		$(document).on("click", ".planning-cell", function () {
+			const courseData = $(this).data("course");
+			if (!courseData || !courseData.item) return;
+
+			const itemType = courseData.item.type;
+			const isGradeType = itemType && (
+				itemType.includes("CC") ||
+				itemType === "Controlle Continue (CC)" ||
+				itemType.includes("Examen") ||
+				itemType.includes("examen") ||
+				itemType.includes("rattrapage")
+			);
+
+			if (isGradeType) {
+				Udshed.GradeEntry.openGradeEntryDialog(courseData, () => {
+					load_note_content(filters);
+				});
+			}
+		});
+
+		// 7. Application des permissions utilisateur
 		let userContext = null;
 		Udshed.UtilsQueries.get_data_of_user((data) => {
 			userContext = Udshed.Perms.normalizeUserContext(data);

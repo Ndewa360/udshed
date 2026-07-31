@@ -88,6 +88,12 @@ fixtures = [
 # automatically load and sync documents of this doctype from downstream apps
 # importable_doctypes = [doctype_1]
 
+# Print Format Data
+# ----------
+print_format_data = {
+	"Releve Notes": "udshed.api.transcript.get_transcript_data"
+}
+
 # Jinja
 # ----------
 

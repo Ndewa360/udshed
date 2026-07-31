@@ -1,0 +1,192 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format: GRADE-FORMULA-{cycle}-{#####}",
+ "creation": "2026-07-29 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "cycle",
+  "active",
+  "column_break_status",
+  "seuil_validation",
+  "section_break_weights",
+  "poids_cc",
+  "poids_examen",
+  "column_break_weights",
+  "total_poids",
+  "section_break_complementaires",
+  "composantes_supplementaires",
+  "section_break_cc_config",
+  "methode_calcul_cc",
+  "nombre_min_cc_requis",
+  "column_break_cc_config",
+  "note_de_passage",
+  "methode_arrondi"
+ ],
+ "fields": [
+  {
+   "fieldname": "cycle",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Cycle",
+   "options": "Licence\nMaster",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "seuil_validation",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Seuil de validation (%)",
+   "non_negative": 1,
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_weights",
+   "fieldtype": "Section Break",
+   "label": "Poids"
+  },
+  {
+   "fieldname": "poids_cc",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Poids du Contrôle Continu (CC) %",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "poids_examen",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Poids de l'Examen %",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_weights",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_poids",
+   "fieldtype": "Percent",
+   "label": "Total des poids (%)",
+   "non_negative": 1,
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_complementaires",
+   "fieldtype": "Section Break",
+   "label": "Composantes Supplémentaires"
+  },
+  {
+   "fieldname": "composantes_supplementaires",
+   "fieldtype": "Table",
+   "label": "Composantes supplémentaires",
+   "options": "Grade Formula Complementaire"
+  },
+  {
+   "fieldname": "section_break_cc_config",
+   "fieldtype": "Section Break",
+   "label": "Configuration du Contrôle Continu"
+  },
+  {
+   "fieldname": "methode_calcul_cc",
+   "fieldtype": "Select",
+   "label": "Méthode de calcul des CC",
+   "options": "Moyenne arithmétique\nMoyenne des N meilleures notes\nMoyenne pondérée",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "nombre_min_cc_requis",
+   "fieldtype": "Int",
+   "label": "Nombre minimum de CC requis",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_cc_config",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "note_de_passage",
+   "fieldtype": "Float",
+   "label": "Note de passage (/20)",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "default": "Au plus proche",
+   "fieldname": "methode_arrondi",
+   "fieldtype": "Select",
+   "label": "Méthode d'arrondi",
+   "options": "Au plus proche\nAu supérieur\nÀ l'inférieur\nSans arrondi",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-29 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Grade Formula",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Teacher",
+   "select": 1,
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "cycle"
+}

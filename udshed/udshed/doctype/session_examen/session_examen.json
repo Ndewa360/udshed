@@ -5,74 +5,82 @@
  "creation": "2026-04-02 05:27:23.684812",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": [
-  "academic_year",
-  "calendar",
-  "type_dexamen",
-  "column_break_ctlg",
-  "date_debut",
-  "date_de_fin",
-  "semestre",
-  "section_break_kmhq",
-  "classes_concernees"
- ],
- "fields": [
-  {
-   "fieldname": "date_debut",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Date de d\u00e9but",
-   "reqd": 1
-  },
-  {
-   "fieldname": "column_break_ctlg",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "date_de_fin",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Date de fin",
-   "reqd": 1
-  },
-  {
-   "fieldname": "section_break_kmhq",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "academic_year",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Ann\u00e9e Acad\u00e9mique",
-   "options": "Academic Year",
-   "reqd": 1
-  },
-  {
-   "fieldname": "type_dexamen",
-   "fieldtype": "Select",
-   "label": "Type d'examen",
-   "options": "Controlle Continue (CC)\nExamen de session normal\nExamen de rattrapage"
-  },
-  {
-   "fieldname": "semestre",
-   "fieldtype": "Select",
-   "label": "Semestre",
-   "options": "Semestre 1\nSemestre 2"
-  },
-  {
-   "fieldname": "classes_concernees",
-   "fieldtype": "Table",
-   "label": "Classes concern\u00e9es",
-   "options": "Session Examen Field of study Level"
-  },
-  {
-   "fieldname": "calendar",
-   "fieldtype": "Link",
-   "label": "Planning",
-   "options": "Calendar Planing",
-   "reqd": 1
-  }
- ],
+  "field_order": [
+   "academic_year",
+   "calendar",
+   "type_dexamen",
+   "planning_item",
+   "column_break_ctlg",
+   "date_debut",
+   "date_de_fin",
+   "semestre",
+   "section_break_kmhq",
+   "classes_concernees"
+  ],
+  "fields": [
+   {
+    "fieldname": "date_debut",
+    "fieldtype": "Date",
+    "in_list_view": 1,
+    "label": "Date de d\u00e9but",
+    "reqd": 1
+   },
+   {
+    "fieldname": "column_break_ctlg",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "date_de_fin",
+    "fieldtype": "Date",
+    "in_list_view": 1,
+    "label": "Date de fin",
+    "reqd": 1
+   },
+   {
+    "fieldname": "section_break_kmhq",
+    "fieldtype": "Section Break"
+   },
+   {
+    "fieldname": "academic_year",
+    "fieldtype": "Link",
+    "in_list_view": 1,
+    "label": "Ann\u00e9e Acad\u00e9mique",
+    "options": "Academic Year",
+    "reqd": 1
+   },
+   {
+    "fieldname": "type_dexamen",
+    "fieldtype": "Select",
+    "label": "Type d'examen",
+    "options": "Controlle Continue (CC)\nExamen de session normal\nExamen de rattrapage"
+   },
+   {
+    "fieldname": "planning_item",
+    "fieldtype": "Link",
+    "label": "Planning Item",
+    "options": "Planning Item",
+    "read_only": 1
+   },
+   {
+    "fieldname": "semestre",
+    "fieldtype": "Select",
+    "label": "Semestre",
+    "options": "Semestre 1\nSemestre 2"
+   },
+   {
+    "fieldname": "classes_concernees",
+    "fieldtype": "Table",
+    "label": "Classes concern\u00e9es",
+    "options": "Session Examen Field of study Level"
+   },
+   {
+    "fieldname": "calendar",
+    "fieldtype": "Link",
+    "label": "Planning",
+    "options": "Calendar Planing",
+    "reqd": 1
+   }
+  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],

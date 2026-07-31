@@ -1,5 +1,17 @@
 import frappe
 from frappe.model.document import Document
+from udshed.grade_calculation import (
+    get_active_formula,
+    calculer_note_finale_ue,
+    est_valide,
+)
+
+WORKFLOW_ORDRE = {"Brouillon": 0, "Saisi": 1, "Validé": 2, "Publié": 3}
+ROLES_TRANSITIONS = {
+    "Saisi": ["Teacher", "Coordonateur", "System Manager"],
+    "Validé": ["Coordonateur", "System Manager"],
+    "Publié": ["System Manager"],
+}
 
 
 class SessionExamenNote(Document):
@@ -7,65 +19,101 @@ class SessionExamenNote(Document):
     def validate(self):
         self.remplir_filiere_niveau()
         self.valider_saisie()
+        self.valider_workflow()
         self.calculer_note_finale()
         self.determiner_grade()
 
     def remplir_filiere_niveau(self):
-        """Remplit automatiquement filiere et niveau depuis Teaching Unit → course_levels"""
         if not self.teaching_unit:
             return
-
-        # Récupérer les course_levels de la Teaching Unit
         levels = frappe.get_all(
             "Course Field of study level item",
             filters={"parent": self.teaching_unit},
             fields=["filiere", "niveau"],
-            limit_page_length=1
+            limit_page_length=1,
         )
-
         if levels:
             self.filiere = levels[0].filiere
             self.niveau = levels[0].niveau
 
     def valider_saisie(self):
         note_max = 20
-        if self.note_cc and self.note_cc > note_max:
-            frappe.throw(f"La note CC <b>{self.note_cc}</b> dépasse le maximum autorisé ({note_max})")
-        if self.note_examen and self.note_examen > note_max:
-            frappe.throw(f"La note Examen <b>{self.note_examen}</b> dépasse le maximum autorisé ({note_max})")
-        if self.note_tp and self.note_tp > note_max:
-            frappe.throw(f"La note TP <b>{self.note_tp}</b> dépasse le maximum autorisé ({note_max})")
-        if self.note_rapport and self.note_rapport > note_max:
-            frappe.throw(f"La note Rapport <b>{self.note_rapport}</b> dépasse le maximum autorisé ({note_max})")
-        if self.note_competence and self.note_competence > note_max:
-            frappe.throw(f"La note Compétence <b>{self.note_competence}</b> dépasse le maximum autorisé ({note_max})")
+        champs = [
+            ("note_cc", "Note CC"),
+            ("note_examen", "Note Examen"),
+            ("note_examen_rattrapage", "Note Examen Rattrapage"),
+            ("note_tp", "Note TP"),
+            ("note_rapport", "Note Rapport"),
+            ("note_competence", "Note Compétence"),
+        ]
+        for champ, label in champs:
+            val = getattr(self, champ, None)
+            if val is not None and val > note_max:
+                frappe.throw(
+                    f"La {label} <b>{val}</b> dépasse le maximum autorisé ({note_max})"
+                )
 
-    def calculer_note_finale(self):
-        setting = frappe.get_single("Udshed Setting")
-        formules = [f for f in setting.formule_notes if f.type_ue == self.type_ue]
+    def valider_workflow(self):
+        if not self.get("__islocal") and not self._doc_before_save:
+            return
+        ancien = self._doc_before_save.get("statut") if self._doc_before_save else None
+        nouveau = self.statut or "Brouillon"
 
-        if not formules:
+        if not ancien:
+            self.statut = "Brouillon"
+            return
+
+        ordre_ancien = WORKFLOW_ORDRE.get(ancien, -1)
+        ordre_nouveau = WORKFLOW_ORDRE.get(nouveau, -1)
+
+        if ordre_nouveau < ordre_ancien:
             frappe.throw(
-                f"Aucune formule trouvée pour le type UE <b>{self.type_ue}</b>. "
-                f"Vérifiez la configuration dans Udshed Setting"
+                f"Impossible de revenir en arrière dans le workflow : "
+                f"{ancien} → {nouveau}"
+            )
+        if ordre_nouveau == ordre_ancien:
+            return
+
+        roles_autorises = ROLES_TRANSITIONS.get(nouveau, [])
+        user_roles = frappe.get_roles(frappe.session.user)
+        if not any(r in roles_autorises for r in user_roles):
+            frappe.throw(
+                f"Seuls les rôles {', '.join(roles_autorises)} peuvent "
+                f"passer le statut à « {nouveau} »."
             )
 
-        note_map = {
-            "Controle Continu(CC)": self.note_cc or 0,
-            "Examen": self.note_examen or 0,
-            "Travaux Pratique (TP)": self.note_tp or 0,
+    def _get_formula(self):
+        student = frappe.get_doc("Student", self.student)
+        cycle = student.cycle or "Licence"
+        return get_active_formula(cycle)
+
+    def calculer_note_finale(self):
+        rattrapage = self.note_examen_rattrapage or 0
+        normal = self.note_examen or 0
+        self.note_examen_active = (rattrapage if rattrapage > 0 else normal)
+
+        formula = self._get_formula()
+
+        notes_map = {
+            "TP": self.note_tp or 0,
             "Rapport": self.note_rapport or 0,
             "Competence": self.note_competence or 0,
+            "Competences": self.note_competence or 0,
         }
 
-        note_finale = 0
-        for formule in formules:
-            note_composante = note_map.get(formule.composante, 0)
-            contribution = (note_composante / 20) * formule.pourcentage
-            note_finale += contribution
+        notes_complementaires = {}
+        for comp in formula.composantes_supplementaires:
+            notes_complementaires[comp.nom] = notes_map.get(comp.nom, 0)
 
-        self.note_finale = round(note_finale * 20 / 100, 2)
-        self.note_pct = round(note_finale, 2)
+        note_finale = calculer_note_finale_ue(
+            note_cc=self.note_cc or 0,
+            note_examen=self.note_examen_active or 0,
+            notes_complementaires=notes_complementaires,
+            formula=formula,
+        )
+
+        self.note_finale = note_finale
+        self.note_pct = round((note_finale / 20) * 100, 2)
 
     def determiner_grade(self):
         setting = frappe.get_single("Udshed Setting")
@@ -88,20 +136,23 @@ class SessionExamenNote(Document):
 
         self.grade = grade_trouve
         self.point = point_trouve
+        self.mention = mention_trouvee
 
         student = frappe.get_doc("Student", self.student)
-        if student.cycle == "Licence":
-            seuil = setting.seuil_validation_licence or 50
-        else:
-            seuil = setting.seuil_validation_master or 60
+        cycle = student.cycle or "Licence"
+        valide = est_valide(self.note_finale, cycle)
 
-        if self.note_pct >= seuil:
+        if valide:
+            self.statut_color = "green"
             frappe.msgprint(
-                f"UE <b>Validée</b> — Note: {self.note_pct}% | Grade: {self.grade} | Point: {self.point} | {mention_trouvee}",
-                indicator="green"
+                f"UE <b>Validée</b> — Note: {self.note_pct}% | "
+                f"Grade: {self.grade} | Point: {self.point} | {mention_trouvee}",
+                indicator="green",
             )
         else:
+            self.statut_color = "red"
             frappe.msgprint(
-                f"UE <b>Non Validée</b> — Note: {self.note_pct}% | Grade: {self.grade} | Point: {self.point} | {mention_trouvee}",
-                indicator="red"
+                f"UE <b>Non Validée</b> — Note: {self.note_pct}% | "
+                f"Grade: {self.grade} | Point: {self.point} | {mention_trouvee}",
+                indicator="red",
             )

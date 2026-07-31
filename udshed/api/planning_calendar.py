@@ -51,30 +51,61 @@ def get_week_planning(academic_year,week_start,filiere=None, niveau=None,teacher
     if teacher:
         query = query.where(CourseEnseignant.enseignant == teacher)
 
-    data =  query.run(as_dict=True)
-    # data = [item for item in data if item.date >= date_week_start and item.date <= frappe.utils.add_days(date_week_start, 7)]
+    data = query.run(as_dict=True)
+
+    # Déduplication : le JOIN avec les deux tables enfants (CourseNiveauFiliere
+    # et CourseEnseignant) crée un produit cartésien. On regroupe par Planning
+    # Item et on collecte les enseignants uniques.
+    seen = {}
+    for row in data:
+        pid = row.name
+        if pid not in seen:
+            row._teachers = [row.enseignant] if row.enseignant else []
+            seen[pid] = row
+        else:
+            if row.enseignant and row.enseignant not in seen[pid]._teachers:
+                seen[pid]._teachers.append(row.enseignant)
+
+    data = list(seen.values())
+
+    teacher_cache = {}
+    def _format_teacher(t_name):
+        if not t_name:
+            return ""
+        if t_name not in teacher_cache:
+            try:
+                t_doc = frappe.get_doc("Teacher", {"name": t_name})
+                teacher_cache[t_name] = (
+                    f"{t_doc.grade} {t_doc.first_name} {t_doc.last_name}"
+                )
+            except Exception:
+                teacher_cache[t_name] = t_name
+        return teacher_cache[t_name]
+
     teacher_doc = None
     if teacher:
-        teacher_doc = frappe.get_doc("Teacher",{"name":teacher})
+        teacher_doc = frappe.get_doc("Teacher", {"name": teacher})
+        teacher_cache[teacher] = (
+            f"{teacher_doc.grade} {teacher_doc.first_name} {teacher_doc.last_name}"
+        )
 
     for doc in data:
-        if not teacher:
-            teacher_doc = frappe.get_doc("Teacher", {"name":doc.enseignant})
-        doc["enseignant"] = f"{teacher_doc.grade} {teacher_doc.first_name} {teacher_doc.last_name}"
+        doc["teachers"] = [_format_teacher(t) for t in (doc._teachers or [])]
+        doc["enseignant"] = doc["teachers"][0] if doc["teachers"] else ""
+        del doc["_teachers"]
 
-        cours  = frappe.get_doc("Course",doc.course)
+        cours = frappe.get_doc("Course", doc.course)
         doc["cours_label"] = cours.intitule
 
-        niveau_doc = frappe.get_doc("Field of study Level",doc.niveau)
+        niveau_doc = frappe.get_doc("Field of study Level", doc.niveau)
         doc["niveau_label"] = niveau_doc.level
 
-        # doc["period"] = frappe.get_doc("Planning Period",doc.period)
         if doc.salle:
-            doc["salle"] = (frappe.get_doc("Room",doc.salle)).code
+            doc["salle"] = (frappe.get_doc("Room", doc.salle)).code
         if doc.batiment:
             doc["batiment"] = (frappe.get_doc("Building", doc.batiment)).code
 
-    return  data
+    return data
 
 
 @frappe.whitelist()

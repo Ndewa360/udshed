@@ -67,11 +67,11 @@
    "type": "Link"
   }
  ],
- "modified": "2026-07-30 22:35:43.000000",
+ "modified": "2026-07-30 22:01:10.651605",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Gestion des Notes",
  "owner": "Administrator",
  "standard": 1,
- "title": "Gestion des Notes"
+ "title": "Note"
 }

@@ -5,27 +5,34 @@
  "creation": "2026-07-14 09:48:24.486605",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": [
-  "identification_section",
-  "session_examen",
-  "student",
-  "teaching_unit",
-  "type_ue",
-  "column_break_filiere",
-  "filiere",
-  "niveau",
-  "section_break_qequ",
-  "note_cc",
-  "note_examen",
-  "note_tp",
-  "note_rapport",
-  "note_competence",
-  "section_break_hvfb",
-  "note_finale",
-  "note_pct",
-  "grade",
-  "point"
- ],
+  "field_order": [
+   "identification_section",
+   "session_examen",
+   "student",
+   "teaching_unit",
+   "type_ue",
+   "column_break_filiere",
+   "filiere",
+   "niveau",
+    "section_break_qequ",
+    "note_cc",
+    "note_examen",
+    "note_examen_rattrapage",
+    "date_rattrapage",
+    "note_examen_active",
+    "note_tp",
+    "note_rapport",
+    "note_competence",
+   "section_break_hvfb",
+   "note_finale",
+   "note_pct",
+   "grade",
+   "point",
+   "mention",
+   "column_break_statut",
+   "statut",
+   "statut_color"
+  ],
  "fields": [
   {
    "fieldname": "session_examen",
@@ -92,14 +99,34 @@
    "precision": "2",
    "reqd": 1
   },
-  {
-   "fieldname": "note_examen",
-   "fieldtype": "Currency",
-   "label": "Note Examen",
-   "non_negative": 1,
-   "precision": "2",
-   "reqd": 1
-  },
+   {
+    "fieldname": "note_examen",
+    "fieldtype": "Currency",
+    "label": "Note Examen",
+    "non_negative": 1,
+    "precision": "2",
+    "reqd": 1
+   },
+   {
+    "fieldname": "note_examen_rattrapage",
+    "fieldtype": "Currency",
+    "label": "Note Examen Rattrapage",
+    "non_negative": 1,
+    "precision": "2"
+   },
+   {
+    "fieldname": "date_rattrapage",
+    "fieldtype": "Date",
+    "label": "Date Rattrapage"
+   },
+   {
+    "fieldname": "note_examen_active",
+    "fieldtype": "Currency",
+    "label": "Note Examen Active",
+    "non_negative": 1,
+    "precision": "2",
+    "read_only": 1
+   },
   {
    "fieldname": "note_tp",
    "fieldtype": "Currency",
@@ -151,6 +178,31 @@
    "label": "Point",
    "non_negative": 1,
    "precision": "2"
+  },
+  {
+   "fieldname": "mention",
+   "fieldtype": "Data",
+   "label": "Mention",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_statut",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Brouillon",
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Statut",
+   "options": "Brouillon\nSaisi\nValidé\nPublié",
+   "read_only": 1
+  },
+  {
+   "fieldname": "statut_color",
+   "fieldtype": "Data",
+   "label": "Couleur Statut",
+   "read_only": 1
   },
   {
    "fieldname": "identification_section",

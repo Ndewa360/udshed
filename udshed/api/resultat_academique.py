@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from udshed.grade_calculation import get_active_formula
 
 
 @frappe.whitelist()
@@ -79,13 +80,10 @@ def calculer_resultat_session(student, session_examen):
         resultat_source = note_normale
         est_rattrapage = False
 
-    setting = frappe.get_single("Udshed Setting")
     student_doc = frappe.get_doc("Student", student)
     cycle = student_doc.cycle or "Licence"
-    if cycle == "Licence":
-        seuil = setting.seuil_validation_licence or 50
-    else:
-        seuil = setting.seuil_validation_master or 60
+    formula = get_active_formula(cycle)
+    seuil = formula.seuil_validation
 
     note_pct = resultat_source.note_pct
     statut = "Validé" if note_pct >= seuil else "Non Validé"
@@ -192,13 +190,10 @@ def calculer_resultat_semestre(student, semestre, academic_year):
             "ue_non_validees": 0,
         }
 
-    setting = frappe.get_single("Udshed Setting")
     student_doc = frappe.get_doc("Student", student)
     cycle = student_doc.cycle or "Licence"
-    if cycle == "Licence":
-        seuil = setting.seuil_validation_licence or 50
-    else:
-        seuil = setting.seuil_validation_master or 60
+    formula = get_active_formula(cycle)
+    seuil = formula.seuil_validation
 
     somme_cj_pj = 0
     somme_cj = 0
@@ -258,13 +253,10 @@ def calculer_resultat_annee(student, academic_year):
     total_note_pct = sum(r["note_pct"] for r in tous_resultats)
     moyenne_annuelle = round(total_note_pct / len(tous_resultats), 2)
 
-    setting = frappe.get_single("Udshed Setting")
     student_doc = frappe.get_doc("Student", student)
     cycle = student_doc.cycle or "Licence"
-    if cycle == "Licence":
-        seuil = setting.seuil_validation_licence or 50
-    else:
-        seuil = setting.seuil_validation_master or 60
+    formula = get_active_formula(cycle)
+    seuil = formula.seuil_validation
 
     ue_validees = sum(1 for r in tous_resultats if r["note_pct"] >= seuil)
     ue_non_validees = len(tous_resultats) - ue_validees
@@ -411,13 +403,10 @@ def calculer_mps(student, semestre, academic_year):
         fields=["name", "teaching_unit", "note_pct", "point", "statut", "grade", "mention"],
     )
 
-    setting = frappe.get_single("Udshed Setting")
     student_doc = frappe.get_doc("Student", student)
     cycle = student_doc.cycle or "Licence"
-    if cycle == "Licence":
-        seuil = setting.seuil_validation_licence or 50
-    else:
-        seuil = setting.seuil_validation_master or 60
+    formula = get_active_formula(cycle)
+    seuil = formula.seuil_validation
 
     somme_cj_pj = 0
     somme_cj = 0
@@ -557,13 +546,10 @@ def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year):
     rs.total_credits = total_credits
     rs.credits_obtenus = credits_obtenus
 
-    setting = frappe.get_single("Udshed Setting")
     student_doc = frappe.get_doc("Student", student)
     cycle = student_doc.cycle or "Licence"
-    if cycle == "Licence":
-        seuil = setting.seuil_validation_licence or 50
-    else:
-        seuil = setting.seuil_validation_master or 60
+    formula = get_active_formula(cycle)
+    seuil = formula.seuil_validation
 
     if mps >= seuil:
         rs.decision = "Admis"

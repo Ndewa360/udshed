@@ -9,7 +9,8 @@ frappe.pages['planning-academique'].on_page_load = function(wrapper) {
 		'/assets/udshed/js/planning_calendar/planning_queries.js',
 		'/assets/udshed/js/utils/utils_queries.js',
 		'/assets/udshed/js/planning_calendar/ui.js',
-		'/assets/udshed/js/utils/permission.js'
+		'/assets/udshed/js/utils/permission.js',
+		'/assets/udshed/js/planning_calendar/grade_entry_dialog.js'
 	]).then(async () => {
 
 
@@ -305,11 +306,25 @@ frappe.pages['planning-academique'].on_page_load = function(wrapper) {
 			const halfLibelle = $(this).data("half-libelle");
 			const courseData = $(this).data("course");
 
-			// console.log("User Context ",userContext)
 			if (courseData) {
-				Udshed.Dialogs.openEditPlanningDialog(filters,currentDay,half,halfLibelle,courseData,userContext,() => {
-					loadPlanning(weekSelect,monthPicker,filters,calendar_zone,periods)
-				});
+				const itemType = courseData.item && courseData.item.type;
+				const isGradeType = itemType && (
+					itemType.includes("CC") || 
+					itemType === "Controlle Continue (CC)" ||
+					itemType.includes("Examen") || 
+					itemType.includes("examen") ||
+					itemType.includes("rattrapage")
+				);
+
+				if (isGradeType) {
+					Udshed.GradeEntry.openGradeEntryDialog(courseData, () => {
+						loadPlanning(weekSelect,monthPicker,filters,calendar_zone,periods)
+					});
+				} else {
+					Udshed.Dialogs.openEditPlanningDialog(filters,currentDay,half,halfLibelle,courseData,userContext,() => {
+						loadPlanning(weekSelect,monthPicker,filters,calendar_zone,periods)
+					});
+				}
 			} else {
 				Udshed.Dialogs.openCreatePlanningDialog(filters,currentDay,half,halfLibelle,userContext, () => {
 					loadPlanning(weekSelect,monthPicker,filters,calendar_zone,periods)
