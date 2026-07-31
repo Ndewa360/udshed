@@ -307,6 +307,84 @@ def reorder_levels(filiere, level_names):
 
 
 @frappe.whitelist()
+def get_all_levels(faculty=None, filiere=None):
+	"""Retourne tous les niveaux groupés par filière, triés par ordre"""
+	filters = {}
+	if filiere:
+		filters["name"] = filiere
+	elif faculty:
+		filters["faculte"] = faculty
+
+	fields_of_study = frappe.get_all("Field of study", filters=filters, fields=["name", "name_of_field", "faculte"])
+	result = []
+	for fos in fields_of_study:
+		doc = frappe.get_doc("Field of study", fos.name)
+		levels = sorted(doc.field_of_study_level, key=lambda x: x.order or 0)
+		result.append({
+			"filiere_name": fos.name,
+			"filiere_label": fos.name_of_field,
+			"faculte": fos.faculte,
+			"levels": [
+				{
+					"name": l.name,
+					"level": l.level,
+					"order": l.order,
+					"coordonateur": l.coordonateur,
+					"calendrier": l.calendrier,
+				}
+				for l in levels
+			]
+		})
+	return result
+
+
+@frappe.whitelist()
+def move_level(filiere, level_name, direction):
+	"""
+	Déplace un niveau vers le haut (up) ou vers le bas (down)
+	en permutant l'ordre avec le niveau adjacent
+	"""
+	doc = frappe.get_doc("Field of study", filiere)
+	levels = sorted(doc.field_of_study_level, key=lambda x: x.order or 0)
+
+	current_idx = None
+	for i, l in enumerate(levels):
+		if l.name == level_name:
+			current_idx = i
+			break
+
+	if current_idx is None:
+		frappe.throw("Niveau introuvable")
+
+	if direction == "up":
+		if current_idx == 0:
+			frappe.throw("Le niveau est déjà en première position")
+		swap_idx = current_idx - 1
+	elif direction == "down":
+		if current_idx == len(levels) - 1:
+			frappe.throw("Le niveau est déjà en dernière position")
+		swap_idx = current_idx + 1
+	else:
+		frappe.throw("Direction invalide. Utilisez 'up' ou 'down'")
+
+	levels[current_idx].order, levels[swap_idx].order = levels[swap_idx].order, levels[current_idx].order
+	doc.save()
+	return {"status": True, "message": f"Niveau déplacé vers le {'haut' if direction == 'up' else 'bas'}"}
+
+
+@frappe.whitelist()
+def reorder_levels(filiere, level_names):
+	"""Réassigne l'ordre des niveaux selon l'ordre du tableau level_names"""
+	doc = frappe.get_doc("Field of study", filiere)
+	name_to_row = {row.name: row for row in doc.field_of_study_level}
+	for i, name in enumerate(level_names):
+		if name in name_to_row:
+			name_to_row[name].order = i + 1
+	doc.save()
+	return {"status": True, "message": "Ordre des niveaux mis à jour"}
+
+
+@frappe.whitelist()
 def get_reregistrations_by_session(reinscription_session):
 	"""
 	Retourne toutes les réinscriptions d'une session

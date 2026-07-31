@@ -1,7 +1,7 @@
 {
  "app": "udshed",
  "charts": [],
- "content": "[{\"id\":\"Bk7p2XvR9m\",\"type\":\"header\",\"data\":{\"text\":\"Gestion Inscription \\u0026 Reinscription\",\"col\":12}},{\"id\":\"Lw4q8YzT1n\",\"type\":\"paragraph\",\"data\":{\"text\":\"Module central de gestion des inscriptions et reinscriptions acad\\u00e9miques.\",\"col\":12}},{\"id\":\"Hx3k9MvP7j\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Session Inscription\",\"col\":3}},{\"id\":\"Fg6r2WsN5b\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Candidats\",\"col\":3}},{\"id\":\"Vd9c1XtK3m\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sessions Reinscription\",\"col\":3}},{\"id\":\"Jp4n8LkR2h\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Reinscriptions\",\"col\":3}},{\"id\":\"Qw7e5YtU9i\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Etudiants\",\"col\":3}},{\"id\":\"Zo3v6CxP8s\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
+ "content": "[{\"id\":\"Bk7p2XvR9m\",\"type\":\"header\",\"data\":{\"text\":\"Gestion Inscription \\u0026 Reinscription\",\"col\":12}},{\"id\":\"Lw4q8YzT1n\",\"type\":\"paragraph\",\"data\":{\"text\":\"Module central de gestion des inscriptions et reinscriptions acad\\u00e9miques.\",\"col\":12}},{\"id\":\"Hx3k9MvP7j\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Session Inscription\",\"col\":3}},{\"id\":\"Fg6r2WsN5b\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Candidats\",\"col\":3}},{\"id\":\"Vd9c1XtK3m\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sessions Reinscription\",\"col\":3}},{\"id\":\"Jp4n8LkR2h\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Reinscriptions\",\"col\":3}},{\"id\":\"Qw7e5YtU9i\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Etudiants\",\"col\":3}},{\"id\":\"Xt2k9MvN4p\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Gestion des Niveaux\",\"col\":3}},{\"id\":\"Zo3v6CxP8s\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
  "custom_blocks": [],
  "doctype": "Workspace",
  "for_user": "",
@@ -29,38 +29,44 @@
   }
  ],
  "sequence_id": 5.0,
- "shortcuts": [
-  {
-   "doc_view": "",
-   "label": "Session Inscription",
-   "link_to": "Session Inscription",
-   "type": "DocType"
-  },
-  {
-   "doc_view": "",
-   "label": "Candidats",
-   "link_to": "Session Inscription Candidate",
-   "type": "DocType"
-  },
-  {
-   "doc_view": "",
-   "label": "Sessions Reinscription",
-   "link_to": "Reinscription",
-   "type": "DocType"
-  },
-  {
-   "doc_view": "",
-   "label": "Reinscriptions",
-   "link_to": "Academic Reregistration",
-   "type": "DocType"
-  },
-  {
-   "doc_view": "",
-   "label": "Etudiants",
-   "link_to": "Student",
-   "type": "DocType"
-  }
- ],
+  "shortcuts": [
+   {
+    "doc_view": "",
+    "label": "Session Inscription",
+    "link_to": "Session Inscription",
+    "type": "DocType"
+   },
+   {
+    "doc_view": "",
+    "label": "Candidats",
+    "link_to": "Session Inscription Candidate",
+    "type": "DocType"
+   },
+   {
+    "doc_view": "",
+    "label": "Sessions Reinscription",
+    "link_to": "Reinscription",
+    "type": "DocType"
+   },
+   {
+    "doc_view": "",
+    "label": "Reinscriptions",
+    "link_to": "Academic Reregistration",
+    "type": "DocType"
+   },
+   {
+    "doc_view": "",
+    "label": "Etudiants",
+    "link_to": "Student",
+    "type": "DocType"
+   },
+   {
+    "doc_view": "",
+    "label": "Gestion des Niveaux",
+    "link_to": "gestion-des-niveaux",
+    "type": "Page"
+   }
+  ],
  "title": "Inscription - Reinscription",
  "type": "Workspace"
 }

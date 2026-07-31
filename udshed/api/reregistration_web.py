@@ -7,13 +7,13 @@ def verify_student(matricule):
     """
     Vérifie le matricule et retourne les infos de l'étudiant
     pour pré-remplir le formulaire de réinscription.
+    Calcule automatiquement le niveau suivant selon l'ordre des niveaux.
     """
     if not frappe.db.exists("Student", matricule):
         frappe.throw(f"Aucun étudiant trouvé avec le matricule {matricule}")
 
     student = frappe.get_doc("Student", matricule)
 
-    # Récupérer la dernière réinscription de l'étudiant
     last_reregistration = frappe.get_all(
         "Academic Reregistration",
         filters={"student": matricule},
@@ -22,9 +22,9 @@ def verify_student(matricule):
         limit_page_length=1
     )
 
-    # Si pas de réinscription précédente, essayer l'inscription initiale
     filiere = None
     niveau = None
+    niveau_suivant = None
     semestre = None
 
     if last_reregistration:
@@ -32,9 +32,21 @@ def verify_student(matricule):
         niveau = last_reregistration[0].niveau
         semestre = last_reregistration[0].semestre
     else:
-        # Fallback: utiliser la filière du student
         filiere = student.filiere
         niveau = student.niveau_actuel
+
+    if filiere and niveau:
+        filiere_doc = frappe.get_doc("Field of study", filiere)
+        niveau_actuel_order = None
+        for row in filiere_doc.field_of_study_level:
+            if row.level == niveau:
+                niveau_actuel_order = row.order
+                break
+        if niveau_actuel_order:
+            for row in filiere_doc.field_of_study_level:
+                if row.order == niveau_actuel_order + 1:
+                    niveau_suivant = row.level
+                    break
 
     return {
         "exists": True,
@@ -43,21 +55,22 @@ def verify_student(matricule):
         "email": student.email,
         "filiere": filiere,
         "niveau": niveau,
+        "niveau_suivant": niveau_suivant,
         "semestre": semestre
     }
 
 
 @frappe.whitelist()
-def get_student_grades_and_debts(matricule, academic_year, filiere, niveau):
+def get_student_grades_and_debts(matricule, academic_year, filiere, niveau, semestre=None):
     """
     Récupère les notes de l'étudiant et détermine les dettes académiques.
+    Peut être filtré par semestre si spécifié.
     Lecture seule - les notes viennent du coéquipier (saisie des notes).
     """
     if not frappe.db.exists("Student", matricule):
         frappe.throw(f"Aucun étudiant trouvé avec le matricule {matricule}")
 
-    # Récupérer la note minimale de validation
-    note_minimale = 10  # Valeur par défaut
+    note_minimale = 10
 
     # Chercher les notes de l'étudiant pour le niveau précédent
     # On cherche dans Session Examen Note
@@ -66,7 +79,6 @@ def get_student_grades_and_debts(matricule, academic_year, filiere, niveau):
     CourseFieldOfStudyLevelItem = DocType("Course Field of study level item")
     CourseFieldOfStudy = DocType("Field of study")
 
-    # Récupérer les notes existantes
     notes_query = (
         frappe.qb.from_(SessionExamenNote)
         .join(TeachingUnit)
@@ -88,6 +100,9 @@ def get_student_grades_and_debts(matricule, academic_year, filiere, niveau):
             (CourseFieldOfStudyLevelItem.filiere == filiere)
         )
     )
+
+    if semestre and semestre != "Les deux":
+        notes_query = notes_query.where(TeachingUnit.semestre == semestre)
 
     notes = notes_query.run(as_dict=True)
 
@@ -122,16 +137,20 @@ def get_student_grades_and_debts(matricule, academic_year, filiere, niveau):
 
 
 @frappe.whitelist()
-def create_reregistration(doc_data):
+def create_reregistration(doc_data, courses=None):
     """
     Crée une réinscription pour un étudiant.
     Le statut initial est 'En attente' (validation par le coordinateur).
+    L'étudiant peut choisir les matières auxquelles il s'inscrit via le paramètre courses.
     """
     if isinstance(doc_data, str):
         import json
         doc_data = json.loads(doc_data)
 
-    # Vérifier que la session est ouverte
+    if isinstance(courses, str):
+        import json
+        courses = json.loads(courses)
+
     session_name = doc_data.get("reinscription_session")
     if session_name:
         session = frappe.db.exists("Reinscription", {
@@ -141,7 +160,6 @@ def create_reregistration(doc_data):
         if not session:
             frappe.throw("La session de réinscription sélectionnée n'est pas ouverte.")
 
-    # Vérifier les doublons
     existing = frappe.db.exists("Academic Reregistration", {
         "student": doc_data.get("student"),
         "academic_year": doc_data.get("academic_year"),
@@ -150,7 +168,6 @@ def create_reregistration(doc_data):
     if existing:
         frappe.throw("Une réinscription existe déjà pour cet étudiant, cette année et ce niveau.")
 
-    # Créer le document
     doc = frappe.get_doc({
         "doctype": "Academic Reregistration",
         "student": doc_data.get("student"),
@@ -163,6 +180,15 @@ def create_reregistration(doc_data):
     })
 
     doc.insert(ignore_permissions=True)
+
+    if courses:
+        noms_cours = set(courses)
+        doc.cours_inscrits = [
+            c for c in doc.cours_inscrits
+            if c.teaching_unit in noms_cours
+        ]
+        doc.save(ignore_permissions=True)
+
     frappe.db.commit()
 
     return {
@@ -170,6 +196,46 @@ def create_reregistration(doc_data):
         "name": doc.name,
         "message": "Réinscription enregistrée avec succès. En attente de validation par le coordinateur."
     }
+
+
+@frappe.whitelist()
+def get_courses_for_semester(filiere, niveau_label, academic_year, semestre):
+    """
+    Retourne les matières disponibles pour un niveau, une filière,
+    une année et un semestre donnés.
+    """
+    filiere_doc = frappe.get_doc("Field of study", filiere)
+    niveau_name = None
+    for row in filiere_doc.field_of_study_level:
+        if row.level == niveau_label:
+            niveau_name = row.name
+            break
+
+    if not niveau_name:
+        return []
+
+    TeachingUnit = DocType("Teaching Unit")
+    CourseLevel = DocType("Course Field of study level item")
+
+    query = (
+        frappe.qb.from_(TeachingUnit)
+        .join(CourseLevel).on(CourseLevel.parent == TeachingUnit.name)
+        .select(
+            TeachingUnit.name,
+            TeachingUnit.intitule_cours,
+            TeachingUnit.semestre
+        )
+        .where(
+            (TeachingUnit.academic_year == academic_year) &
+            (CourseLevel.filiere == filiere) &
+            (CourseLevel.niveau == niveau_name)
+        )
+    )
+
+    if semestre and semestre != "Les deux":
+        query = query.where(TeachingUnit.semestre == semestre)
+
+    return query.run(as_dict=True)
 
 
 @frappe.whitelist()
