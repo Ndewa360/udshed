@@ -8,7 +8,7 @@
  "anonymous": 0,
  "apply_document_permissions": 0,
  "banner_image": "/private/files/logo_digikuntz.webp",
- "button_label": "S'inscrire",
+  "button_label": "Soumettre la candidature",
  "condition_json": "[]",
  "creation": "2026-04-11 07:12:06.946641",
  "doc_type": "Session Inscription Candidate",
@@ -34,5 +34,148 @@
  "show_sidebar": 0,
  "success_message": "Votre candidature \u00e0 bien \u00e9t\u00e9 enregistrer. \n\nVous serez contacter pour plus d'inscription",
  "title": "Session de 2025",
- "web_form_fields": []
+  "web_form_fields": [
+   {
+    "fieldname": "choix_du_de_la_candidate_candidate_selection_section",
+    "fieldtype": "Section Break",
+    "label": "Choix du (de la) Candidate (candidate selection)"
+   },
+   {
+    "fieldname": "filiere",
+    "fieldtype": "Link",
+    "label": "Fili\u00e9re",
+    "options": "Field of study",
+    "reqd": 1
+   },
+   {
+    "fieldname": "niveau",
+    "fieldtype": "Select",
+    "label": "Niveau",
+    "options": "BTS\nLICENCE 1\nLICENCE 2\nLICENCE 3\nMASTER 1\nMASTER 2",
+    "reqd": 1
+   },
+   {
+    "fieldname": "examination_centre",
+    "fieldtype": "Select",
+    "label": "Examination Centre",
+    "options": "Bangangt\u00e9\nBafoussam\nYaound\u00e9\nDouala",
+    "reqd": 1
+   },
+   {
+    "fieldname": "choix_de_formation",
+    "fieldtype": "Table",
+    "label": "Choix de formation",
+    "options": "ChildTable Choise Formation Inscription Candidat",
+    "reqd": 1
+   },
+   {
+    "fieldname": "informations_personnellespersonal_informations_section",
+    "fieldtype": "Section Break",
+    "label": "Informations personnelles/Personal informations"
+   },
+   {
+    "fieldname": "first_name",
+    "fieldtype": "Data",
+    "label": "Nom(s) / First name",
+    "reqd": 1
+   },
+   {
+    "fieldname": "last_name",
+    "fieldtype": "Data",
+    "label": "Pr\u00e9nom / Last name",
+    "reqd": 1
+   },
+   {
+    "fieldname": "full_name",
+    "fieldtype": "Data",
+    "label": "Nom Complet",
+    "read_only": 1
+   },
+   {
+    "fieldname": "birthdate",
+    "fieldtype": "Date",
+    "label": "Date de naissace / Birthdate",
+    "reqd": 1
+   },
+   {
+    "fieldname": "birth_place",
+    "fieldtype": "Data",
+    "label": "N\u00e9e \u00e0",
+    "reqd": 1
+   },
+   {
+    "fieldname": "sexe",
+    "fieldtype": "Select",
+    "label": "Sexe",
+    "options": "Homme\nFemme",
+    "reqd": 1
+   },
+   {
+    "fieldname": "phone",
+    "fieldtype": "Phone",
+    "label": "T\u00e9l\u00e9phone (WhatsApp) / Phone",
+    "reqd": 1
+   },
+   {
+    "fieldname": "email",
+    "fieldtype": "Data",
+    "label": "Email",
+    "reqd": 1
+   },
+   {
+    "fieldname": "parent_phone",
+    "fieldtype": "Phone",
+    "label": "Contact Parent"
+   },
+   {
+    "fieldname": "email_parent",
+    "fieldtype": "Data",
+    "label": "Email Parent"
+   },
+   {
+    "fieldname": "home_city",
+    "fieldtype": "Data",
+    "label": "Home city"
+   },
+   {
+    "fieldname": "diplome_acces_formation",
+    "fieldtype": "Section Break",
+    "label": "Dipl\u00f4me donnant acc\u00e8s \u00e0 la formation/Diploma giving access to training"
+   },
+   {
+    "fieldname": "diplome_formation",
+    "fieldtype": "Table",
+    "label": "Diplomes",
+    "options": "Choise Formation Diplome Inscription Candidat"
+   },
+   {
+    "fieldname": "associated_document_section",
+    "fieldtype": "Section Break",
+    "label": "Associated Document"
+   },
+   {
+    "fieldname": "birth_certificate",
+    "fieldtype": "Attach",
+    "label": "Birth Certificate",
+    "reqd": 1
+   },
+   {
+    "fieldname": "access_diploma_copy",
+    "fieldtype": "Attach",
+    "label": "Access Diploma Copy",
+    "reqd": 1
+   },
+   {
+    "fieldname": "id_photo",
+    "fieldtype": "Attach",
+    "label": "ID photo",
+    "reqd": 1
+   },
+   {
+    "fieldname": "remittance_receipt",
+    "fieldtype": "Attach",
+    "label": "Remittance Receipt",
+    "reqd": 1
+   }
+  ]
 }
