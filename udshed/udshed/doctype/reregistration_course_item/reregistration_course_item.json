@@ -7,49 +7,79 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "section_break_ehet",
-  "teaching_unit",
-  "semestre",
-  "statut",
-  "est_obligatoire"
- ],
- "fields": [
-  {
-   "fieldname": "section_break_ehet",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "teaching_unit",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Mati\u00e8re",
-   "options": "Teaching Unit",
-   "reqd": 1
-  },
-  {
-   "fieldname": "semestre",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Semestre",
-   "options": "Semestre 1\nSemestre 2"
-  },
-  {
-   "default": "Inscrit",
-   "fieldname": "statut",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Statut",
-   "options": "Inscrit\nDispens\u00e9\nReport\u00e9"
-  },
-  {
-   "default": "1",
-   "fieldname": "est_obligatoire",
-   "fieldtype": "Check",
-   "in_standard_filter": 1,
-   "label": "Obligatoire"
-  }
- ],
+   "section_break_ehet",
+   "teaching_unit",
+   "intitule",
+   "semestre",
+   "column_break_vjzp",
+   "statut",
+   "inscrire",
+   "est_obligatoire",
+   "motif"
+  ],
+  "fields": [
+   {
+    "fieldname": "section_break_ehet",
+    "fieldtype": "Section Break"
+   },
+   {
+    "fieldname": "teaching_unit",
+    "fieldtype": "Link",
+    "in_list_view": 1,
+    "label": "Mati\u00e8re",
+    "options": "Teaching Unit",
+    "reqd": 1
+   },
+   {
+    "fetch_from": "teaching_unit.intitule_cours",
+    "fieldname": "intitule",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Intitul\u00e9",
+    "read_only": 1
+   },
+   {
+    "fieldname": "semestre",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "label": "Semestre",
+    "options": "Semestre 1\nSemestre 2"
+   },
+   {
+    "fieldname": "column_break_vjzp",
+    "fieldtype": "Column Break"
+   },
+   {
+    "default": "Inscrit",
+    "fieldname": "statut",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "in_standard_filter": 1,
+    "label": "Statut",
+    "options": "Inscrit\nDispens\u00e9\nReport\u00e9"
+   },
+   {
+    "default": "1",
+    "fieldname": "inscrire",
+    "fieldtype": "Check",
+    "in_list_view": 1,
+    "label": "Inscrire"
+   },
+   {
+    "default": "1",
+    "fieldname": "est_obligatoire",
+    "fieldtype": "Check",
+    "in_standard_filter": 1,
+    "label": "Obligatoire"
+   },
+   {
+    "fieldname": "motif",
+    "fieldtype": "Small Text",
+    "in_list_view": 1,
+    "label": "Motif",
+    "read_only": 1
+   }
+  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,

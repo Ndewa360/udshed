@@ -8,40 +8,52 @@ from frappe.model.document import Document
 class Fieldofstudy(Document):
 
 	def before_save(self):
-		old_doc = self.get_doc_before_save()
-		# Si c'est une création, pas besoin de comparer
-		if not old_doc:
+		self.normaliser_ordres_niveaux()
+		self.gerer_coordonateurs()
+
+	def normaliser_ordres_niveaux(self):
+		rows = self.get("field_of_study_level")
+		if not rows:
 			return
 
-		old_rows = {row.name: row for row in old_doc.field_of_study_level}
+		orders = {}
+		has_duplicate_or_zero = False
+		for row in rows:
+			o = row.get("order") or 0
+			if o == 0:
+				has_duplicate_or_zero = True
+				break
+			if o in orders:
+				has_duplicate_or_zero = True
+				break
+			orders[o] = row
+
+		if has_duplicate_or_zero:
+			for i, row in enumerate(rows):
+				row.order = i + 1
+
+	def gerer_coordonateurs(self):
+		old_doc = self.get_doc_before_save()
 		new_rows = {row.name: row for row in self.field_of_study_level}
 		teacher_to_cordo_list = []
 
-		# 🔹 Détection des suppressions
-		# for row_name in old_rows:
-		# 	if row_name not in new_rows and row_name not in teacher_to_cordo_list:
-		# 		teacher_to_cordo_list.append(row_name)
+		if old_doc:
+			old_rows = {row.name: row for row in old_doc.field_of_study_level}
+			for row_name in new_rows:
+				if row_name not in old_rows:
+					if new_rows[row_name].get("coordonateur") not in teacher_to_cordo_list:
+						teacher_to_cordo_list.append(new_rows[row_name].get("coordonateur"))
+			for row_name in new_rows:
+				if row_name in old_rows:
+					if old_rows[row_name].get("coordonateur") != new_rows[row_name].get("coordonateur") and new_rows[row_name].get("coordonateur") not in teacher_to_cordo_list:
+						teacher_to_cordo_list.append(new_rows[row_name].get("coordonateur"))
+		else:
+			for row in self.field_of_study_level:
+				if row.get("coordonateur") and row.get("coordonateur") not in teacher_to_cordo_list:
+					teacher_to_cordo_list.append(row.get("coordonateur"))
 
-		# 🔹 Détection des ajouts
-		for row_name in new_rows:
-			if row_name not in old_rows:
-				new_row = new_rows[row_name]
-				fieldname = "coordonateur"
-				if new_row.get(fieldname) not in teacher_to_cordo_list:
-					teacher_to_cordo_list.append(new_row.get(fieldname))
-		
-		# 🔹 Détection des modifications
-		for row_name in new_rows:
-			if row_name in old_rows:
-				old_row = old_rows[row_name]
-				new_row = new_rows[row_name]
-				fieldname = "coordonateur"
-				if old_row.get(fieldname) != new_row.get(fieldname) and new_row.get(fieldname) not in teacher_to_cordo_list:
-					teacher_to_cordo_list.append(new_row.get(fieldname))
-
-		# Ajout du role coordonateur aux enseignants concernés
 		for teacher in teacher_to_cordo_list:
-			t = frappe.get_doc("Teacher",teacher)
+			t = frappe.get_doc("Teacher", teacher)
 			t_user = frappe.get_doc("User", t.user)
 			if not frappe.db.exists("Has Role", { "parent": t_user.email, "role": "Coordonateur" }):
 				t_user.append("roles", {"role": "Coordonateur"})
