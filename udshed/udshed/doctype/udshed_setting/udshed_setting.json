@@ -14,6 +14,7 @@
   "configuration_des_paiements_par_grade",
   "tab_2_tab",
   "seuil_validation_licence",
+  "seuil_validation_bts_",
   "seuil_validation_master",
   "methode_calcul_cc",
   "nb_meilleures_notes_cc",
@@ -105,13 +106,20 @@
    "fieldtype": "Table",
    "label": "Grille des grades",
    "options": "Grade Config"
+  },
+  {
+   "fieldname": "seuil_validation_bts_",
+   "fieldtype": "Percent",
+   "label": "Seuil validation BTS (%)",
+   "non_negative": 1,
+   "precision": "2"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-07-14 08:42:34.024826",
+ "modified": "2026-07-30 22:50:52.654044",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Udshed Setting",

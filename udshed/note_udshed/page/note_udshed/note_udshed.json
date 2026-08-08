@@ -1,0 +1,31 @@
+{
+ "content": null,
+ "creation": "2026-07-30 21:40:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "clipboard-list",
+ "icon_image": "/assets/udshed/icons/gestion_des_notes.svg",
+ "idx": 0,
+ "modified": "2026-07-30 21:40:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "note-udshed",
+ "owner": "Administrator",
+ "page_name": "note-udshed",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Coordonateur"
+  },
+  {
+   "role": "Teacher"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Note Udshed — Gestion des Notes"
+}

@@ -157,3 +157,14 @@ def get_field_of_study_and_levels_for_coordinator(user):
         "levels": ["Licence 1", "Licence 2"]
     }
 
+
+@frappe.whitelist()
+def get_teacher_ues(teacher):
+    """Retourne la liste des UE assignées à un enseignant."""
+    return frappe.db.get_all(
+        "Course Teacher Item",
+        filters={"enseignant": teacher},
+        pluck="parent",
+        distinct=True,
+    )
+

@@ -1,0 +1,77 @@
+{
+ "app": "udshed",
+ "creation": "2026-07-24 17:00:00",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "clipboard-list",
+ "idx": 0,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "home",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Home",
+   "link_to": "Gestion des Notes",
+   "link_type": "Workspace",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "file-pen-line",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Session d'examen",
+   "link_to": "Session Examen",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "edit",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Saisie des Notes",
+   "link_to": "Session Examen Note",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "book-open",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Etudiants",
+   "link_to": "Student",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "setting-gear",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Configuration",
+   "link_to": "Udshed Setting",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-07-30 22:01:10.651605",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Gestion des Notes",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Note"
+}
