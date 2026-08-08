@@ -1,0 +1,166 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-08-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "cycle_section",
+  "cycle",
+  "active",
+  "column_break_cycle",
+  "seuil_validation",
+  "methode_arrondi",
+  "methode_cc_section",
+  "methode_calcul_cc",
+  "nb_meilleures_notes_cc",
+  "formule_section",
+  "components",
+  "composition_section",
+  "composition",
+  "apercu_section",
+  "apercu"
+ ],
+ "fields": [
+  {
+   "fieldname": "cycle_section",
+   "fieldtype": "Section Break",
+   "label": "Cycle"
+  },
+  {
+   "fieldname": "cycle",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Cycle",
+   "options": "Licence\nBTS\nMaster",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Formule active",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_cycle",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "seuil_validation",
+   "fieldtype": "Percent",
+   "label": "Seuil de validation UE (%)",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "default": "Au plus proche",
+   "fieldname": "methode_arrondi",
+   "fieldtype": "Select",
+   "label": "Méthode d'arrondi",
+   "options": "Au plus proche\nAu supérieur\nÀ l'inférieur\nSans arrondi"
+  },
+  {
+   "fieldname": "methode_cc_section",
+   "fieldtype": "Section Break",
+   "label": "Calcul du Contrôle Continu"
+  },
+  {
+   "default": "Moyenne arithmétique",
+   "fieldname": "methode_calcul_cc",
+   "fieldtype": "Select",
+   "label": "Méthode de calcul de la moyenne CC",
+   "options": "Moyenne arithmétique\nMoyenne des N meilleures notes\nMoyenne pondérée"
+  },
+  {
+   "default": "2",
+   "description": "Utilisé pour la méthode « Moyenne des N meilleures notes ».",
+   "fieldname": "nb_meilleures_notes_cc",
+   "fieldtype": "Int",
+   "label": "Nombre de meilleures notes CC (N)",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "formule_section",
+   "fieldtype": "Section Break",
+   "label": "Formule du cours / matière"
+  },
+  {
+   "description": "Composantes de la note du cours. La somme des pourcentages doit être exactement 100 %.",
+   "fieldname": "components",
+   "fieldtype": "Table",
+   "label": "Composantes de la formule",
+   "options": "Grade Formula Component"
+  },
+  {
+   "fieldname": "composition_section",
+   "fieldtype": "Section Break",
+   "label": "Composition interne (TP → CC, TP → Examen, …)"
+  },
+  {
+   "description": "Définit comment une composante principale est elle-même calculée. Chaque composition interne doit totaliser 100 %.",
+   "fieldname": "composition",
+   "fieldtype": "Table",
+   "label": "Compositions internes",
+   "options": "Grade Formula Composition"
+  },
+  {
+   "fieldname": "apercu_section",
+   "fieldtype": "Section Break",
+   "label": "Aperçu de la formule"
+  },
+  {
+   "fieldname": "apercu",
+   "fieldtype": "Text",
+   "label": "Aperçu",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Grade Formula",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Teacher",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

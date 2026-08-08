@@ -37,12 +37,13 @@ frappe.ui.form.on("Resultat Academique", {
                     freeze: true,
                     freeze_message: __("Recalcul en cours..."),
                     callback(r) {
-                        if (r.message) {
+                        if (r.message && r.message.resultats && r.message.resultats.length) {
+                            const premier = r.message.resultats[0];
                             frappe.msgprint({
                                 title: __("Résultat recalculé"),
                                 indicator: "green",
                                 message: __("Note: {0}% | Grade: {1} | {2}",
-                                    [r.message.note_pct, r.message.grade, r.message.mention || ""])
+                                    [premier.note_pct, premier.grade, premier.mention || ""])
                             });
                             frm.reload_doc();
                         }

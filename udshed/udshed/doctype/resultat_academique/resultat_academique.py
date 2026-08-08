@@ -38,16 +38,15 @@ class ResultatAcademique(Document):
                 self.ue_name = self.teaching_unit
 
     def determiner_statut(self):
-        setting = frappe.get_single("Udshed Setting")
-        student_doc = frappe.get_doc("Student", self.student)
-        cycle = student_doc.cycle or "Licence"
+        from udshed.grade_calculation import get_seuil_validation, get_student_cycle
 
-        if cycle == "Licence":
-            seuil = setting.seuil_validation_licence or 50
-        else:
-            seuil = setting.seuil_validation_master or 60
+        if not self.student:
+            return
 
-        if self.note_pct >= seuil:
+        cycle = get_student_cycle(self.student)
+        seuil = get_seuil_validation(cycle)
+
+        if self.note_pct is not None and self.note_pct >= seuil:
             self.statut = "Validé"
             self.statut_color = "green"
         else:

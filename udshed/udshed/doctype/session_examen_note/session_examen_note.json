@@ -10,21 +10,35 @@
   "session_examen",
   "student",
   "teaching_unit",
-  "type_ue",
   "column_break_filiere",
+  "type_ue",
   "filiere",
   "niveau",
-  "section_break_qequ",
-  "note_cc",
+  "section_break_saisie",
+  "notes_cc",
+  "note_cc_moyenne",
   "note_examen",
+  "note_examen_rattrapage",
+  "date_rattrapage",
+  "note_examen_active",
   "note_tp",
   "note_rapport",
   "note_competence",
+  "drapeaux_section",
+  "cc_saisi",
+  "examen_saisi",
+  "rattrapage_saisi",
+  "tp_saisi",
   "section_break_hvfb",
   "note_finale",
   "note_pct",
+  "column_break_resultat",
   "grade",
-  "point"
+  "point",
+  "mention",
+  "column_break_statut",
+  "statut",
+  "statut_color"
  ],
  "fields": [
   {
@@ -51,106 +65,196 @@
    "options": "Teaching Unit",
    "reqd": 1
   },
-   {
-    "fieldname": "type_ue",
-    "fieldtype": "Select",
-    "in_list_view": 1,
-    "label": "Type UE",
-    "options": "Sans TP\nAvec TP\nStage SMSB",
-    "reqd": 1
-   },
-   {
-    "fieldname": "column_break_filiere",
-    "fieldtype": "Column Break"
-   },
-   {
-    "fieldname": "filiere",
-    "fieldtype": "Link",
-    "in_list_view": 1,
-    "label": "Fili\u00e8re",
-    "options": "Field of study",
-    "read_only": 1
-   },
-   {
-    "fieldname": "niveau",
-    "fieldtype": "Link",
-    "in_list_view": 1,
-    "label": "Niveau",
-    "options": "Field of study Level",
-    "read_only": 1
-   },
   {
-   "fieldname": "section_break_qequ",
+   "fieldname": "column_break_filiere",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "teaching_unit.type_ue",
+   "fieldname": "type_ue",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Type UE",
+   "options": "Sans TP\nAvec TP\nStage SMSB",
+   "reqd": 1
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Filière",
+   "options": "Field of study",
+   "read_only": 1
+  },
+  {
+   "fieldname": "niveau",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Niveau",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_saisie",
    "fieldtype": "Section Break",
    "label": "Saisie des Notes"
   },
   {
-   "fieldname": "note_cc",
-   "fieldtype": "Currency",
-   "label": "Note CC",
-   "non_negative": 1,
+   "fieldname": "notes_cc",
+   "fieldtype": "Table",
+   "label": "Notes de contrôle continu (CC)",
+   "options": "Note CC Item"
+  },
+  {
+   "fieldname": "note_cc_moyenne",
+   "fieldtype": "Float",
+   "label": "Moyenne CC (/20)",
    "precision": "2",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "note_examen",
    "fieldtype": "Currency",
-   "label": "Note Examen",
+   "label": "Note Examen (/20)",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "note_examen_rattrapage",
+   "fieldtype": "Currency",
+   "label": "Note de Rattrapage (/20)",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "date_rattrapage",
+   "fieldtype": "Date",
+   "label": "Date du rattrapage"
+  },
+  {
+   "fieldname": "note_examen_active",
+   "fieldtype": "Currency",
+   "label": "Note Examen Retenue (/20)",
    "non_negative": 1,
    "precision": "2",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "note_tp",
    "fieldtype": "Currency",
-   "label": "Note TP",
+   "label": "Note TP (/20)",
    "non_negative": 1,
    "precision": "2"
   },
   {
    "fieldname": "note_rapport",
    "fieldtype": "Currency",
-   "label": "Note Rapport",
+   "label": "Note Rapport (/20)",
    "non_negative": 1,
    "precision": "2"
   },
   {
    "fieldname": "note_competence",
    "fieldtype": "Currency",
-   "label": "Note competence",
+   "label": "Note competence (/20)",
    "non_negative": 1,
    "precision": "2"
+  },
+  {
+   "fieldname": "drapeaux_section",
+   "fieldtype": "Section Break",
+   "label": "Indicateurs de saisie"
+  },
+  {
+   "default": "0",
+   "fieldname": "cc_saisi",
+   "fieldtype": "Check",
+   "label": "CC saisi",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "examen_saisi",
+   "fieldtype": "Check",
+   "label": "Examen saisi",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "rattrapage_saisi",
+   "fieldtype": "Check",
+   "label": "Rattrapage saisi",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "tp_saisi",
+   "fieldtype": "Check",
+   "label": "TP saisi",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_hvfb",
    "fieldtype": "Section Break",
-   "label": "Resultat Calcul\u00e9s"
+   "label": "Résultats Calculés"
   },
   {
    "fieldname": "note_finale",
    "fieldtype": "Currency",
-   "label": "Note Finale",
+   "label": "Note Finale (/20)",
    "non_negative": 1,
-   "precision": "2"
+   "precision": "2",
+   "read_only": 1
   },
   {
    "fieldname": "note_pct",
    "fieldtype": "Percent",
-   "label": "Note pct",
+   "label": "Note (%)",
    "non_negative": 1,
-   "precision": "2"
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_resultat",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "grade",
    "fieldtype": "Data",
-   "label": "Grade"
+   "label": "Grade",
+   "read_only": 1
   },
   {
    "fieldname": "point",
-   "fieldtype": "Percent",
+   "fieldtype": "Currency",
    "label": "Point",
    "non_negative": 1,
-   "precision": "2"
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mention",
+   "fieldtype": "Data",
+   "label": "Mention",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_statut",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Brouillon",
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Statut",
+   "options": "Brouillon\nSaisi\nValidé\nPublié",
+   "read_only": 1
+  },
+  {
+   "fieldname": "statut_color",
+   "fieldtype": "Data",
+   "label": "Couleur statut",
+   "read_only": 1
   },
   {
    "fieldname": "identification_section",
@@ -161,7 +265,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-14 13:53:34.446123",
+ "modified": "2026-08-06 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Examen Note",
@@ -176,6 +280,30 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Teacher",
    "share": 1,
    "write": 1
   }

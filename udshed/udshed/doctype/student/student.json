@@ -11,6 +11,7 @@
   "matricule",
   "nom",
   "prenom",
+  "cycle",
   "niveau_actuel",
   "email",
   "utilisateur",
@@ -34,27 +35,35 @@
    "fieldtype": "Section Break",
    "label": "Student"
   },
-  {
-   "fetch_if_empty": 1,
-   "fieldname": "matricule",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Matricule",
-   "read_only": 1
-  },
-  {
-   "fieldname": "nom",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Nom",
-   "reqd": 1
-  },
-  {
-   "fetch_if_empty": 1,
-   "fieldname": "prenom",
+   {
+    "fetch_if_empty": 1,
+    "fieldname": "matricule",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Matricule",
+    "read_only": 1
+   },
+   {
+    "fieldname": "nom",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Nom",
+    "reqd": 1
+   },
+   {
+    "fieldname": "prenom",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Pr\u00e9nom",
+   "reqd": 1
+  },
+  {
+   "default": "Licence",
+   "fieldname": "cycle",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Cycle",
+   "options": "Licence\nBTS\nMaster",
    "reqd": 1
   },
   {

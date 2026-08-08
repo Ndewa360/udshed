@@ -15,9 +15,10 @@
    "academic_year",
    "mode",
    "semestre",
-   "credits",
-   "section_break_mvno",
-  "nombre_dheure_cm",
+    "credits",
+    "type_ue",
+    "section_break_mvno",
+   "nombre_dheure_cm",
   "nombre_dheure_td",
   "column_break_wada",
   "nombre_dheure_tp",
@@ -108,6 +109,15 @@
     "in_list_view": 1,
     "label": "Crédits",
     "non_negative": 1,
+    "reqd": 1
+   },
+   {
+    "default": "Sans TP",
+    "fieldname": "type_ue",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "label": "Type UE",
+    "options": "Sans TP\nAvec TP\nStage SMSB",
     "reqd": 1
    },
    {

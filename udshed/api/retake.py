@@ -4,48 +4,64 @@
 import frappe
 from frappe import _
 
+from udshed.grade_calculation import get_seuil_validation, get_student_cycle
+
+TYPE_NORMALE = "Examen de session normal"
+
+
+def _detail_ue_non_validee(note, student_doc, seuil):
+    """Construit le détail d'une UE non validée pour un étudiant."""
+    teaching_unit_doc = frappe.get_doc("Teaching Unit", note.teaching_unit)
+    course_name = ""
+    if teaching_unit_doc.course:
+        course_name = frappe.db.get_value(
+            "Course", teaching_unit_doc.course, "intitule"
+        )
+
+    credits = frappe.db.get_value("Teaching Unit", note.teaching_unit, "credits") or 0
+
+    return {
+        "name": note.name,
+        "student": note.student,
+        "matricule": student_doc.matricule,
+        "student_name": f"{student_doc.nom or ''} {student_doc.prenom or ''}".strip(),
+        "cycle": get_student_cycle(student_doc),
+        "niveau": student_doc.niveau_actuel or "",
+        "teaching_unit": note.teaching_unit,
+        "ue_name": course_name or note.teaching_unit,
+        "credits": int(credits),
+        "note_cc_moyenne": note.note_cc_moyenne,
+        "note_examen": note.note_examen,
+        "note_examen_rattrapage": note.note_examen_rattrapage,
+        "note_examen_active": note.note_examen_active,
+        "note_finale": note.note_finale,
+        "note_pct": note.note_pct,
+        "note_session_normale": note.note_pct,
+        "grade": note.grade,
+        "type_ue": note.type_ue,
+        "seuil": seuil,
+        "statut": "Non validé",
+    }
+
 
 @frappe.whitelist()
 def identifier_rattrapages(session_examen):
     """Identifie tous les étudiants et UE non validés pour une session d'examen.
 
+    Le passage au rattrapage est déterminé à partir des résultats de la session
+    normale : une UE est concernée si sa note est inférieure au seuil du cycle.
+
     Args:
         session_examen: Nom du document Session Examen
 
     Returns:
-        dict: {
-            "session": session_examen,
-            "etudiants": [
-                {
-                    "student": "STU-001",
-                    "student_name": "Jean Dupont",
-                    "teaching_unit": "UE-001",
-                    "ue_name": "Mathématiques",
-                    "note_pct": 45.0,
-                    "seuil": 50.0,
-                    "cycle": "Licence",
-                    "note_cc_moyenne": 12.0,
-                    "note_examen": 7.0,
-                    "note_finale": 8.5,
-                    "grade": "F",
-                },
-                ...
-            ],
-            "total_etudiants": 100,
-            "total_non_valides": 15,
-        }
+        dict: détails des UE non validées + récapitulatif par étudiant
     """
     session = frappe.get_doc("Session Examen", session_examen)
-    setting = frappe.get_single("Udshed Setting")
-
-    filters = {
-        "session_examen": session_examen,
-        "statut": "Publié",
-    }
 
     notes = frappe.get_all(
         "Session Examen Note",
-        filters=filters,
+        filters={"session_examen": session_examen, "statut": "Publié"},
         fields=[
             "name",
             "student",
@@ -62,42 +78,35 @@ def identifier_rattrapages(session_examen):
     )
 
     etudiants_non_valides = []
-    total = len(notes)
-
     for note in notes:
         student_doc = frappe.get_doc("Student", note.student)
-        cycle = student_doc.cycle or "Licence"
+        cycle = get_student_cycle(student_doc)
+        seuil = get_seuil_validation(cycle)
 
-        if cycle == "Licence":
-            seuil = setting.seuil_validation_licence or 50
-        else:
-            seuil = setting.seuil_validation_master or 60
+        if note.note_pct is not None and note.note_pct < seuil:
+            etudiants_non_valides.append(
+                _detail_ue_non_validee(note, student_doc, seuil)
+            )
 
-        if note.note_pct < seuil:
-            teaching_unit_doc = frappe.get_doc("Teaching Unit", note.teaching_unit)
-            course_name = ""
-            if teaching_unit_doc.course:
-                course_name = frappe.db.get_value(
-                    "Course", teaching_unit_doc.course, "intitule"
-                )
+    # Récapitulatif par étudiant (éligibilité après calcul complet de la session normale)
+    par_etudiant = {}
+    for detail in etudiants_non_valides:
+        par_etudiant.setdefault(detail["student"], []).append(detail)
 
-            etudiants_non_valides.append({
-                "name": note.name,
-                "student": note.student,
-                "student_name": f"{student_doc.nom} {student_doc.prenom}",
-                "teaching_unit": note.teaching_unit,
-                "ue_name": course_name or note.teaching_unit,
-                "note_cc_moyenne": note.note_cc_moyenne,
-                "note_examen": note.note_examen,
-                "note_examen_rattrapage": note.note_examen_rattrapage,
-                "note_examen_active": note.note_examen_active,
-                "note_finale": note.note_finale,
-                "note_pct": note.note_pct,
-                "grade": note.grade,
-                "cycle": cycle,
-                "seuil": seuil,
-                "type_ue": note.type_ue,
-            })
+    etudiants_eligibles = [
+        {
+            "student": student,
+            "matricule": details[0]["matricule"],
+            "student_name": details[0]["student_name"],
+            "cycle": details[0]["cycle"],
+            "niveau": details[0]["niveau"],
+            "ue_concernees": [d["ue_name"] for d in details],
+            "nb_ue_concernees": len(details),
+            "credits_concernee": sum(d["credits"] for d in details),
+            "statut": "À rattraper",
+        }
+        for student, details in par_etudiant.items()
+    ]
 
     return {
         "session": session_examen,
@@ -105,14 +114,132 @@ def identifier_rattrapages(session_examen):
         "semestre": session.semestre,
         "type_session": session.type_dexamen,
         "etudiants": etudiants_non_valides,
-        "total_etudiants": total,
+        "total_etudiants": len(notes),
         "total_non_valides": len(etudiants_non_valides),
+        "etudiants_eligibles": etudiants_eligibles,
+        "total_eligibles": len(etudiants_eligibles),
+    }
+
+
+@frappe.whitelist()
+def etudiants_eligibles_rattrapage(academic_year, semestre, filiere, niveau):
+    """Liste des étudiants éligibles au rattrapage pour une classe et un semestre.
+
+    Un étudiant devient éligible au rattrapage lorsqu'il reste des UE non
+    validées après le calcul complet de la session normale.
+
+    Args:
+        academic_year: Nom de l'Academic Year
+        semestre: "Semestre 1" ou "Semestre 2"
+        filiere: Nom de la Field of study
+        niveau: Nom du Field of study Level
+
+    Returns:
+        dict: liste des étudiants éligibles avec leurs UE concernées
+    """
+    sessions = frappe.get_all(
+        "Session Examen",
+        filters={
+            "academic_year": academic_year,
+            "semestre": semestre,
+            "type_dexamen": TYPE_NORMALE,
+        },
+        pluck="name",
+    )
+
+    sessions_classe = []
+    for name in sessions:
+        existe_classe = frappe.db.exists(
+            "Session Examen Field of study Level",
+            {"parent": name, "filiere": filiere, "niveau": niveau},
+        )
+        if existe_classe:
+            sessions_classe.append(name)
+
+    if not sessions_classe:
+        return {
+            "academic_year": academic_year,
+            "semestre": semestre,
+            "filiere": filiere,
+            "niveau": niveau,
+            "etudiants": [],
+            "total_eligibles": 0,
+        }
+
+    notes = frappe.get_all(
+        "Session Examen Note",
+        filters={"session_examen": ["in", sessions_classe], "statut": "Publié"},
+        fields=[
+            "name",
+            "student",
+            "teaching_unit",
+            "note_cc_moyenne",
+            "note_examen",
+            "note_examen_rattrapage",
+            "note_examen_active",
+            "note_finale",
+            "note_pct",
+            "grade",
+            "type_ue",
+        ],
+    )
+
+    # Un étudiant est éligible s'il possède au moins une UE non validée.
+    par_etudiant = {}
+    for note in notes:
+        student_doc = frappe.get_doc("Student", note.student)
+        cycle = get_student_cycle(student_doc)
+        seuil = get_seuil_validation(cycle)
+        if note.note_pct is None or note.note_pct >= seuil:
+            continue
+        par_etudiant.setdefault(note.student, {
+            "matricule": student_doc.matricule,
+            "student_name": f"{student_doc.nom or ''} {student_doc.prenom or ''}".strip(),
+            "cycle": cycle,
+            "niveau": student_doc.niveau_actuel or "",
+            "ue_concernees": [],
+            "credits_concernee": 0,
+        })
+        par_etudiant[note.student]["ue_concernees"].append(
+            _detail_ue_non_validee(note, student_doc, seuil)
+        )
+        par_etudiant[note.student]["credits_concernee"] += par_etudiant[note.student]["ue_concernees"][-1]["credits"]
+
+    etudiants = []
+    for student, info in par_etudiant.items():
+        details = info["ue_concernees"]
+        etudiants.append({
+            "student": student,
+            "matricule": info["matricule"],
+            "student_name": info["student_name"],
+            "cycle": info["cycle"],
+            "niveau": info["niveau"],
+            "semestre": semestre,
+            "ue_concernees": [d["ue_name"] for d in details],
+            "nb_ue_concernees": len(details),
+            "credits_concernee": info["credits_concernee"],
+            "statut": "À rattraper",
+            "details": details,
+        })
+
+    etudiants.sort(key=lambda e: e["student_name"])
+
+    return {
+        "academic_year": academic_year,
+        "semestre": semestre,
+        "filiere": filiere,
+        "niveau": niveau,
+        "etudiants": etudiants,
+        "total_eligibles": len(etudiants),
     }
 
 
 @frappe.whitelist()
 def creer_session_rattrapage(session_normale, date_debut, date_fin):
     """Crée une session de rattrapage basée sur les résultats d'une session normale.
+
+    Les résultats de la session normale sont conservés : le rattrapage possède
+    sa propre session et ses propres notes.
 
     Args:
         session_normale: Nom de la session normale
@@ -147,6 +274,6 @@ def creer_session_rattrapage(session_normale, date_debut, date_fin):
 
     return {
         "session_rattrapage": rattrapage.name,
-        "nb_etudiants_concernes": resultats["total_non_valides"],
-        "etudiants": resultats["etudiants"],
+        "nb_etudiants_concernes": resultats["total_eligibles"],
+        "etudiants": resultats["etudiants_eligibles"],
     }

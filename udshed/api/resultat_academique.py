@@ -4,57 +4,65 @@
 import frappe
 from frappe import _
 
+from udshed.grade_calculation import get_seuil_validation, get_student_cycle
 
-@frappe.whitelist()
-def calculer_resultat_session(student, session_examen):
-    """Calcule le résultat académique pour un étudiant donné dans une session d'examen.
+TYPE_NORMALE = "Examen de session normal"
+TYPE_RATTRAPAGE = "Examen de rattrapage"
 
-    Prend la meilleure note entre session normale et session de rattrapage.
-    Crée ou met à jour le Resultat Academique correspondant.
+SEMESTRES = ["Semestre 1", "Semestre 2"]
+
+_MOIS_INDEX = {
+    "Janvier": 1, "Févriér": 2, "Mars": 3, "Avril": 4, "Mai": 5,
+    "Juin": 6, "Juillet": 7, "Aout": 8, "Septembre": 9, "Octobre": 10,
+    "Novembre": 11, "Decembre": 12,
+}
+
+
+def _debut_annee(academic_year):
+    """Date de début (int comparable) d'une Academic Year pour le tri."""
+    annee = frappe.db.get_value(
+        "Academic Year", academic_year, ["start_year", "start_month"], as_dict=True
+    )
+    if not annee:
+        return 0
+    mois = _MOIS_INDEX.get(annee.start_month, 9)
+    try:
+        return int(annee.start_year) * 100 + mois
+    except (TypeError, ValueError):
+        return int(annee.start_year or 0) * 100 + 9
+
+
+# ---------------------------------------------------------------------- #
+#  Résultat d'une UE
+# ---------------------------------------------------------------------- #
+def _resultat_ue(student, session_doc, note_normale):
+    """Calcule et sauvegarde le résultat d'une UE pour un étudiant.
+
+    Retient le meilleur résultat entre la session normale et la session de
+    rattrapage : note finale = MAX(note normale, note rattrapage).
 
     Args:
         student: Nom du Student
-        session_examen: Nom de la Session Examen (session normale)
+        session_doc: Document Session Examen (session normale)
+        note_normale: dict de la Session Examen Note (session normale)
 
     Returns:
-        dict: Résultat calculé
+        dict: résultat de l'UE
     """
-    session_doc = frappe.get_doc("Session Examen", session_examen)
-
-    note_normale = frappe.db.get_value(
-        "Session Examen Note",
-        {
-            "student": student,
-            "session_examen": session_examen,
-            "statut": "Publié",
-        },
-        ["name", "teaching_unit", "note_finale", "note_pct", "grade", "point", "mention",
-         "note_examen_active", "note_examen_rattrapage", "session_examen"],
-        as_dict=True,
-    )
-
-    if not note_normale:
-        frappe.throw(
-            _("Aucune note publiée trouvée pour l'étudiant {0} dans la session {1}").format(
-                student, session_examen
-            )
-        )
-
     teaching_unit = note_normale.teaching_unit
 
     note_rattrapage = None
-    session_rattrapage_name = None
     rattrapages = frappe.get_all(
         "Session Examen",
         filters={
             "academic_year": session_doc.academic_year,
             "semestre": session_doc.semestre,
-            "type_dexamen": "Examen de rattrapage",
+            "type_dexamen": TYPE_RATTRAPAGE,
         },
         pluck="name",
     )
 
-    for sess_r in session_rattrapages:
+    for sess_r in rattrapages:
         note_r = frappe.db.get_value(
             "Session Examen Note",
             {
@@ -70,7 +78,6 @@ def calculer_resultat_session(student, session_examen):
         if note_r and note_r.note_finale:
             if note_rattrapage is None or note_r.note_finale > note_rattrapage.note_finale:
                 note_rattrapage = note_r
-                session_rattrapage_name = sess_r
 
     if note_rattrapage and note_rattrapage.note_finale > note_normale.note_finale:
         resultat_source = note_rattrapage
@@ -79,20 +86,12 @@ def calculer_resultat_session(student, session_examen):
         resultat_source = note_normale
         est_rattrapage = False
 
-    setting = frappe.get_single("Udshed Setting")
     student_doc = frappe.get_doc("Student", student)
-    cycle = student_doc.cycle or "Licence"
-    if cycle == "Licence":
-        seuil = setting.seuil_validation_licence or 50
-    else:
-        seuil = setting.seuil_validation_master or 60
+    cycle = get_student_cycle(student_doc)
+    seuil = get_seuil_validation(cycle)
 
     note_pct = resultat_source.note_pct
-    statut = "Validé" if note_pct >= seuil else "Non Validé"
-
-    grade = resultat_source.grade
-    point = resultat_source.point
-    mention = resultat_source.mention
+    statut = "Validé" if note_pct is not None and note_pct >= seuil else "Non Validé"
 
     existing = frappe.db.get_value(
         "Resultat Academique",
@@ -116,13 +115,13 @@ def calculer_resultat_session(student, session_examen):
     res.semestre = session_doc.semestre
     res.note_finale = resultat_source.note_finale
     res.note_pct = note_pct
-    res.grade = grade
-    res.point = point
-    res.mention = mention
+    res.grade = resultat_source.grade
+    res.point = resultat_source.point
+    res.mention = resultat_source.mention
     res.statut = statut
     res.est_rattrapage = est_rattrapage
-    res.session_normale = session_examen
-    res.session_rattrapage = session_rattrapage_name
+    res.session_normale = note_normale.name
+    res.session_rattrapage = note_rattrapage.name if est_rattrapage else None
 
     if existing:
         res.save()
@@ -144,9 +143,54 @@ def calculer_resultat_session(student, session_examen):
         "mention": res.mention,
         "statut": res.statut,
         "est_rattrapage": est_rattrapage,
-        "session_normale": session_examen,
-        "session_rattrapage": session_rattrapage_name,
+        "session_normale": note_normale.name,
+        "session_rattrapage": res.session_rattrapage,
     }
+
+
+@frappe.whitelist()
+def calculer_resultat_session(student, session_examen, teaching_unit=None):
+    """Calcule les résultats académiques d'un étudiant pour une session.
+
+    Prend la meilleure note entre session normale et session de rattrapage
+    pour chaque UE, puis crée / met à jour les Resultat Academique.
+
+    Args:
+        student: Nom du Student
+        session_examen: Nom de la Session Examen (session normale)
+        teaching_unit: UE à recalculer (optionnel ; sinon toutes les UE)
+
+    Returns:
+        dict: {"resultats": [...], "total": n}
+    """
+    session_doc = frappe.get_doc("Session Examen", session_examen)
+
+    filters = {
+        "student": student,
+        "session_examen": session_examen,
+        "statut": "Publié",
+    }
+    if teaching_unit:
+        filters["teaching_unit"] = teaching_unit
+
+    notes_normales = frappe.get_all(
+        "Session Examen Note",
+        filters=filters,
+        fields=["name", "teaching_unit", "note_finale", "note_pct", "grade",
+                "point", "mention", "note_examen_active", "note_examen_rattrapage"],
+        order_by="teaching_unit",
+    )
+
+    if not notes_normales:
+        frappe.throw(
+            _("Aucune note publiée trouvée pour l'étudiant {0} dans la session {1}").format(
+                student, session_examen
+            )
+        )
+
+    resultats = [_resultat_ue(student, session_doc, n) for n in notes_normales]
+
+    return {"resultats": resultats, "total": len(resultats)}
 
 
 @frappe.whitelist()
@@ -155,7 +199,7 @@ def calculer_resultat_semestre(student, semestre, academic_year):
 
     Args:
         student: Nom du Student
-        semestre: "S1" ou "S2"
+        semestre: "Semestre 1" ou "Semestre 2"
         academic_year: Nom de l'Academic Year
 
     Returns:
@@ -166,7 +210,7 @@ def calculer_resultat_semestre(student, semestre, academic_year):
         filters={
             "academic_year": academic_year,
             "semestre": semestre,
-            "type_dexamen": "Examen normal",
+            "type_dexamen": TYPE_NORMALE,
         },
         pluck="name",
     )
@@ -174,8 +218,8 @@ def calculer_resultat_semestre(student, semestre, academic_year):
     resultats = []
     for session in sessions:
         try:
-            resultat = calculer_resultat_session(student, session)
-            resultats.append(resultat)
+            data = calculer_resultat_session(student, session)
+            resultats.extend(data["resultats"])
         except frappe.DoesNotExistError:
             continue
 
@@ -192,13 +236,9 @@ def calculer_resultat_semestre(student, semestre, academic_year):
             "ue_non_validees": 0,
         }
 
-    setting = frappe.get_single("Udshed Setting")
     student_doc = frappe.get_doc("Student", student)
-    cycle = student_doc.cycle or "Licence"
-    if cycle == "Licence":
-        seuil = setting.seuil_validation_licence or 50
-    else:
-        seuil = setting.seuil_validation_master or 60
+    cycle = get_student_cycle(student_doc)
+    seuil = get_seuil_validation(cycle)
 
     somme_cj_pj = 0
     somme_cj = 0
@@ -206,12 +246,12 @@ def calculer_resultat_semestre(student, semestre, academic_year):
         credits = frappe.db.get_value(
             "Teaching Unit", r["teaching_unit"], "credits"
         ) or 0
-        somme_cj_pj += credits * r["point"]
+        somme_cj_pj += credits * (r.get("point") or 0)
         somme_cj += credits
 
     mps = round(somme_cj_pj / somme_cj, 2) if somme_cj > 0 else 0
 
-    ue_validees = sum(1 for r in resultats if r["note_pct"] >= seuil)
+    ue_validees = sum(1 for r in resultats if (r["note_pct"] or 0) >= seuil)
     ue_non_validees = len(resultats) - ue_validees
 
     return {
@@ -238,10 +278,24 @@ def calculer_resultat_annee(student, academic_year):
     Returns:
         dict: Résultats annuels avec décision
     """
-    resultats_s1 = calculer_resultat_semestre(student, "S1", academic_year)
-    resultats_s2 = calculer_resultat_semestre(student, "S2", academic_year)
+    semestres = frappe.get_all(
+        "Session Examen",
+        filters={
+            "academic_year": academic_year,
+            "type_dexamen": TYPE_NORMALE,
+        },
+        pluck="semestre",
+        distinct=True,
+    )
+    if not semestres:
+        semestres = list(SEMESTRES)
 
-    tous_resultats = resultats_s1["resultats"] + resultats_s2["resultats"]
+    resultats_par_semestre = {}
+    tous_resultats = []
+    for semestre in semestres:
+        data = calculer_resultat_semestre(student, semestre, academic_year)
+        resultats_par_semestre[semestre] = data
+        tous_resultats.extend(data["resultats"])
 
     if not tous_resultats:
         return {
@@ -251,45 +305,36 @@ def calculer_resultat_annee(student, academic_year):
             "total_ue": 0,
             "ue_validees": 0,
             "decision": "En attente",
-            "resultats_s1": resultats_s1,
-            "resultats_s2": resultats_s2,
+            "resultats_par_semestre": resultats_par_semestre,
         }
 
-    total_note_pct = sum(r["note_pct"] for r in tous_resultats)
+    total_note_pct = sum((r["note_pct"] or 0) for r in tous_resultats)
     moyenne_annuelle = round(total_note_pct / len(tous_resultats), 2)
 
-    setting = frappe.get_single("Udshed Setting")
     student_doc = frappe.get_doc("Student", student)
-    cycle = student_doc.cycle or "Licence"
-    if cycle == "Licence":
-        seuil = setting.seuil_validation_licence or 50
-    else:
-        seuil = setting.seuil_validation_master or 60
+    cycle = get_student_cycle(student_doc)
+    seuil = get_seuil_validation(cycle)
 
-    ue_validees = sum(1 for r in tous_resultats if r["note_pct"] >= seuil)
+    ue_validees = sum(1 for r in tous_resultats if (r["note_pct"] or 0) >= seuil)
     ue_non_validees = len(tous_resultats) - ue_validees
 
-    if ue_non_validees == 0:
-        decision = "Admis"
-    else:
-        decision = "Ajourné"
+    decision = "Admis" if ue_non_validees == 0 else "Ajourné"
 
-    for r in resultats_s1["resultats"] + resultats_s2["resultats"]:
+    for r in tous_resultats:
         if r.get("name"):
             frappe.db.set_value("Resultat Academique", r["name"], "decision_annee", decision)
     frappe.db.commit()
 
     return {
         "student": student,
-        "student_name": resultats_s1["resultats"][0]["student_name"] if resultats_s1["resultats"] else "",
+        "student_name": tous_resultats[0].get("student_name", ""),
         "academic_year": academic_year,
         "moyenne_annuelle": moyenne_annuelle,
         "total_ue": len(tous_resultats),
         "ue_validees": ue_validees,
         "ue_non_validees": ue_non_validees,
         "decision": decision,
-        "resultats_s1": resultats_s1,
-        "resultats_s2": resultats_s2,
+        "resultats_par_semestre": resultats_par_semestre,
     }
 
 
@@ -307,7 +352,7 @@ def generer_classe_resultat(filiere, niveau, academic_year):
     """
     students = frappe.get_all(
         "Student",
-        filters={"niveau": niveau},
+        filters={"filiere": filiere, "niveau_actuel": niveau},
         pluck="name",
     )
 
@@ -374,6 +419,8 @@ def _get_credits(student, teaching_unit):
         int: Nombre de crédits (0 si non trouvé)
     """
     student_niveau = frappe.db.get_value("Student", student, "niveau")
+    if not student_niveau:
+        student_niveau = frappe.db.get_value("Student", student, "niveau_actuel")
     if student_niveau:
         credits = frappe.db.get_value(
             "Course Field of study level item",
@@ -395,7 +442,7 @@ def calculer_mps(student, semestre, academic_year):
 
     Args:
         student: Nom du Student
-        semestre: "S1" ou "S2"
+        semestre: "Semestre 1" ou "Semestre 2"
         academic_year: Nom de l'Academic Year
 
     Returns:
@@ -411,13 +458,9 @@ def calculer_mps(student, semestre, academic_year):
         fields=["name", "teaching_unit", "note_pct", "point", "statut", "grade", "mention"],
     )
 
-    setting = frappe.get_single("Udshed Setting")
     student_doc = frappe.get_doc("Student", student)
-    cycle = student_doc.cycle or "Licence"
-    if cycle == "Licence":
-        seuil = setting.seuil_validation_licence or 50
-    else:
-        seuil = setting.seuil_validation_master or 60
+    cycle = get_student_cycle(student_doc)
+    seuil = get_seuil_validation(cycle)
 
     somme_cj_pj = 0
     somme_cj = 0
@@ -445,35 +488,36 @@ def calculer_index_semestre(student, academic_year, semestre):
     """Calcule l'index (i) d'un semestre dans le parcours de l'étudiant.
 
     Compte le nombre total de semestres antérieurs + le semestre courant.
-    Ex: S1 de la 1ère année = 1, S2 de la 1ère année = 2,
-        S1 de la 2ème année = 3, etc.
+    Ex: Semestre 1 de la 1ère année = 1, Semestre 2 de la 1ère année = 2,
+        Semestre 1 de la 2ème année = 3, etc.
 
     Args:
         student: Nom du Student
         academic_year: Nom de l'Academic Year actuelle
-        semestre: "S1" ou "S2"
+        semestre: "Semestre 1" ou "Semestre 2"
 
     Returns:
         int: Index du semestre (i ≥ 1)
     """
     all_years = frappe.get_all(
         "Academic Year",
-        order_by="year_start_date asc",
-        fields=["name", "year_start_date"],
+        fields=["name"],
+    )
+    all_years = sorted(
+        all_years, key=lambda y: _debut_annee(y.name)
     )
 
-    current_year_doc = frappe.get_doc("Academic Year", academic_year)
-    current_start = current_year_doc.year_start_date
+    current_start = _debut_annee(academic_year)
 
     index = 0
     for year in all_years:
-        if year.year_start_date and year.year_start_date < current_start:
+        if _debut_annee(year.name) < current_start:
             index += 2
         elif year.name == academic_year:
             index += 1
             break
 
-    if semestre == "S2":
+    if semestre in ("Semestre 2", "S2"):
         index += 1
 
     return max(index, 1)
@@ -521,7 +565,7 @@ def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year):
 
     Args:
         student: Nom du Student
-        semestre: "S1" ou "S2"
+        semestre: "Semestre 1" ou "Semestre 2"
         academic_year: Nom de l'Academic Year
 
     Returns:
@@ -557,18 +601,11 @@ def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year):
     rs.total_credits = total_credits
     rs.credits_obtenus = credits_obtenus
 
-    setting = frappe.get_single("Udshed Setting")
     student_doc = frappe.get_doc("Student", student)
-    cycle = student_doc.cycle or "Licence"
-    if cycle == "Licence":
-        seuil = setting.seuil_validation_licence or 50
-    else:
-        seuil = setting.seuil_validation_master or 60
+    cycle = get_student_cycle(student_doc)
+    seuil = get_seuil_validation(cycle)
 
-    if mps >= seuil:
-        rs.decision = "Admis"
-    else:
-        rs.decision = "Ajourné"
+    rs.decision = "Admis" if mps >= seuil else "Ajourné"
 
     if existing:
         rs.save()

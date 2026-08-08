@@ -1,0 +1,27 @@
+{
+ "creation": "2026-08-07 00:00:00.000000",
+ "doctype": "Page",
+ "icon": "fa-solid fa-file-lines",
+ "idx": 0,
+ "modified": "2026-08-07 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "releve_notes",
+ "owner": "Administrator",
+ "page_name": "releve_notes",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Coordonateur"
+  },
+  {
+   "role": "Teacher"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "Relevé de notes"
+}

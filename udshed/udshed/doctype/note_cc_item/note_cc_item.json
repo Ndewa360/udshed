@@ -7,19 +7,36 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "cc_label",
+  "cc_weight",
   "note_cc",
   "date_saisie",
   "commentaire"
  ],
  "fields": [
    {
+    "fieldname": "cc_label",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Libellé",
+    "description": "Ex : CC1, CC2, CC3"
+   },
+   {
+    "default": "1",
+    "fieldname": "cc_weight",
+    "fieldtype": "Float",
+    "in_list_view": 1,
+    "label": "Coefficient",
+    "non_negative": 1,
+    "precision": "2"
+   },
+   {
     "fieldname": "note_cc",
     "fieldtype": "Float",
     "in_list_view": 1,
     "label": "Note CC (/20)",
     "non_negative": 1,
-    "precision": "2",
-    "reqd": 1
+    "precision": "2"
    },
   {
    "fieldname": "date_saisie",

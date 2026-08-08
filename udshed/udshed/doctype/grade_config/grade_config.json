@@ -53,7 +53,7 @@
   {
    "fetch_if_empty": 1,
    "fieldname": "point",
-   "fieldtype": "Currency",
+   "fieldtype": "Percent",
    "in_list_view": 1,
    "label": "Point",
    "non_negative": 1,
@@ -62,17 +62,17 @@
    "search_index": 1
   },
   {
+   "fetch_if_empty": 1,
    "fieldname": "mention",
-   "fieldtype": "Select",
-   "label": "Mention",
-   "options": "Honorable\nExcellent\nTr\u00e8s bien\nBien\nAssez-bien\nPassable\nAvertissement"
+   "fieldtype": "Data",
+   "label": "Mention"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-14 09:09:22.251018",
+ "modified": "2026-07-10 08:46:01.142261",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Grade Config",

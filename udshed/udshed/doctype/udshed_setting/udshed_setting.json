@@ -15,6 +15,9 @@
   "tab_2_tab",
   "seuil_validation_licence",
   "seuil_validation_master",
+  "methode_calcul_cc",
+  "nb_meilleures_notes_cc",
+  "exiger_programmation",
   "formule_notes",
   "grille_grades"
  ],
@@ -69,6 +72,27 @@
    "fieldname": "seuil_validation_master",
    "fieldtype": "Percent",
    "label": "Seuil validation Master (%)"
+  },
+  {
+   "default": "Moyenne arithmétique",
+   "fieldname": "methode_calcul_cc",
+   "fieldtype": "Select",
+   "label": "Méthode de calcul de la moyenne CC",
+   "options": "Moyenne arithmétique\nMoyenne pondérée\nMoyenne des N meilleures notes"
+  },
+  {
+   "default": "2",
+   "fieldname": "nb_meilleures_notes_cc",
+   "fieldtype": "Int",
+   "label": "Nombre de meilleures notes CC (N)",
+   "non_negative": 1
+  },
+  {
+   "default": "0",
+   "description": "Si activé, la saisie des notes est bloquée tant que l'évaluation (CC, Examen, TP, Rattrapage) n'est pas programmée dans le planning académique.",
+   "fieldname": "exiger_programmation",
+   "fieldtype": "Check",
+   "label": "Exiger la programmation avant la saisie"
   },
   {
    "fieldname": "formule_notes",

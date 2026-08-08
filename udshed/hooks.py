@@ -14,9 +14,9 @@ app_license = "mit"
 add_to_apps_screen = [
 	{
 		"name": "udshed",
-		"logo": "/assets/udshed/images/logo.png",
+		"logo": "/assets/udshed/images/logo1.png",
 		"title": "Udshed",
-		"route": "/desk/planning-academique",
+		"route": "/app/gestion-des-notes",
 		"has_permission": "udshed.api.permission.has_app_permission",
 		"role_home_page": {
 			"All": "desk"
@@ -91,6 +91,12 @@ home_page = "index"
 
 # automatically load and sync documents of this doctype from downstream apps
 # importable_doctypes = [doctype_1]
+
+# Print Format Data
+# ----------
+print_format_data = {
+	"Releve Notes": "udshed.api.transcript.get_transcript_data"
+}
 
 # Jinja
 # ----------

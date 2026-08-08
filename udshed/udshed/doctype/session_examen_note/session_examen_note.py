@@ -1,107 +1,252 @@
 import frappe
+from frappe import _
 from frappe.model.document import Document
+
+from udshed.grade_calculation import (
+    calculer_note_ue,
+    get_cycle_formula,
+    get_student_cycle,
+)
+
+NOTE_MAX = 20
 
 
 class SessionExamenNote(Document):
 
     def validate(self):
+        self.verrouiller_si_publie()
         self.remplir_filiere_niveau()
+        self.deriver_drapeaux_saisie()
         self.valider_saisie()
+        self.calculer_note_cc_moyenne()
+        self.calculer_note_examen_active()
         self.calculer_note_finale()
         self.determiner_grade()
 
+    # ------------------------------------------------------------------ #
+    #  Verrouillage
+    # ------------------------------------------------------------------ #
+    def verrouiller_si_publie(self):
+        """Empêche toute modification quand la session d'examen est publiée."""
+        if not self.session_examen:
+            return
+        statut_session = frappe.db.get_value("Session Examen", self.session_examen, "statut")
+        if statut_session == "Publiée" and not frappe.session.user == "Administrator":
+            frappe.throw(
+                _("Notes publiées — la session <b>{0}</b> est clôturée, toute modification est impossible.").format(
+                    self.session_examen
+                )
+            )
+
+    # ------------------------------------------------------------------ #
+    #  Identification
+    # ------------------------------------------------------------------ #
     def remplir_filiere_niveau(self):
-        """Remplit automatiquement filiere et niveau depuis Teaching Unit → course_levels"""
+        """Complète filière et niveau depuis la Teaching Unit si absents."""
         if not self.teaching_unit:
             return
+        if not self.filiere or not self.niveau:
+            levels = frappe.get_all(
+                "Course Field of study level item",
+                filters={"parent": self.teaching_unit},
+                fields=["filiere", "niveau"],
+                limit_page_length=1,
+            )
+            if levels:
+                if not self.filiere:
+                    self.filiere = levels[0].filiere
+                if not self.niveau:
+                    self.niveau = levels[0].niveau
 
-        # Récupérer les course_levels de la Teaching Unit
-        levels = frappe.get_all(
-            "Course Field of study level item",
-            filters={"parent": self.teaching_unit},
-            fields=["filiere", "niveau"],
-            limit_page_length=1
+    def deriver_drapeaux_saisie(self):
+        """Déduit les drapeaux *saisi des valeurs réellement présentes (cohérence multi-canal)."""
+        self.cc_saisi = 1 if any(row.note_cc is not None for row in self.notes_cc) else 0
+        if self.note_examen is not None:
+            self.examen_saisi = 1
+        if self.note_examen_rattrapage is not None:
+            self.rattrapage_saisi = 1
+        if self.note_tp is not None:
+            self.tp_saisi = 1
+
+    # ------------------------------------------------------------------ #
+    #  Validation de la saisie
+    # ------------------------------------------------------------------ #
+    def valider_saisie(self):
+        champs = [
+            ("note_cc_moyenne", "CC"),
+            ("note_examen", "Examen"),
+            ("note_examen_rattrapage", "Rattrapage"),
+            ("note_examen_active", "Examen retenue"),
+            ("note_tp", "TP"),
+            ("note_rapport", "Rapport"),
+            ("note_competence", "Compétence"),
+        ]
+        for champ, libelle in champs:
+            valeur = self.get(champ)
+            if valeur is not None:
+                if valeur < 0:
+                    frappe.throw(_("La note <b>{0}</b> ({1}) ne peut pas être négative.").format(valeur, libelle))
+                if valeur > NOTE_MAX:
+                    frappe.throw(
+                        _("La note <b>{0}</b> ({1}) dépasse le maximum autorisé ({2}/20).").format(
+                            valeur, libelle, NOTE_MAX
+                        )
+                    )
+
+        for row in self.notes_cc:
+            if row.note_cc is not None:
+                if row.note_cc < 0:
+                    frappe.throw(_("La note CC <b>{0}</b> ne peut pas être négative.").format(row.note_cc))
+                if row.note_cc > NOTE_MAX:
+                    frappe.throw(
+                        _("La note CC <b>{0}</b> ({1}) dépasse le maximum autorisé ({2}/20).").format(
+                            row.note_cc, row.cc_label or "CC", NOTE_MAX
+                        )
+                    )
+
+    # ------------------------------------------------------------------ #
+    #  Calcul de la moyenne CC
+    # ------------------------------------------------------------------ #
+    def calculer_note_cc_moyenne(self):
+        """Calcule la moyenne de CC selon la méthode configurée (Grade Formula d'abord)."""
+        valeurs = [(row.cc_weight or 1, row.note_cc) for row in self.notes_cc if row.note_cc is not None]
+
+        if not valeurs:
+            self.note_cc_moyenne = None
+            self.cc_saisi = 0
+            return
+
+        formula = None
+        if self.student:
+            cycle = get_student_cycle(self.student)
+            formula = get_cycle_formula(cycle)
+
+        setting = frappe.get_single("Udshed Setting")
+        methode = (
+            formula.methode_calcul_cc
+            if formula and formula.methode_calcul_cc
+            else (setting.methode_calcul_cc or "Moyenne arithmétique")
         )
 
-        if levels:
-            self.filiere = levels[0].filiere
-            self.niveau = levels[0].niveau
+        if methode == "Moyenne pondérée":
+            somme_produits = sum(w * n for w, n in valeurs)
+            somme_coeffs = sum(w for w, _ in valeurs) or 1
+            moyenne = somme_produits / somme_coeffs
+        elif methode == "Moyenne des N meilleures notes":
+            nb = int(
+                formula.nb_meilleures_notes_cc
+                if formula and formula.nb_meilleures_notes_cc
+                else (setting.nb_meilleures_notes_cc or 2)
+            )
+            if nb <= 0:
+                frappe.throw(_("Le nombre de meilleures notes CC (N) doit être supérieur à 0."))
+            meilleures = sorted((n for _, n in valeurs), reverse=True)[:nb]
+            moyenne = sum(meilleures) / len(meilleures)
+        else:
+            moyenne = sum(n for _, n in valeurs) / len(valeurs)
 
-    def valider_saisie(self):
-        note_max = 20
-        if self.note_cc and self.note_cc > note_max:
-            frappe.throw(f"La note CC <b>{self.note_cc}</b> dépasse le maximum autorisé ({note_max})")
-        if self.note_examen and self.note_examen > note_max:
-            frappe.throw(f"La note Examen <b>{self.note_examen}</b> dépasse le maximum autorisé ({note_max})")
-        if self.note_tp and self.note_tp > note_max:
-            frappe.throw(f"La note TP <b>{self.note_tp}</b> dépasse le maximum autorisé ({note_max})")
-        if self.note_rapport and self.note_rapport > note_max:
-            frappe.throw(f"La note Rapport <b>{self.note_rapport}</b> dépasse le maximum autorisé ({note_max})")
-        if self.note_competence and self.note_competence > note_max:
-            frappe.throw(f"La note Compétence <b>{self.note_competence}</b> dépasse le maximum autorisé ({note_max})")
+        self.note_cc_moyenne = round(moyenne, 2)
+        self.cc_saisi = 1
+
+    # ------------------------------------------------------------------ #
+    #  Note d'examen retenue
+    # ------------------------------------------------------------------ #
+    def calculer_note_examen_active(self):
+        """Note retenue = max(note examen, note rattrapage). Les deux notes sont conservées."""
+        examen = self.note_examen if self.examen_saisi else None
+        rattrapage = self.note_examen_rattrapage if self.rattrapage_saisi else None
+
+        if rattrapage is not None:
+            self.note_examen_active = round(max(examen or 0, rattrapage), 2)
+        elif examen is not None:
+            self.note_examen_active = round(examen, 2)
+        else:
+            self.note_examen_active = None
+
+    # ------------------------------------------------------------------ #
+    #  Note finale selon la formule configurée
+    # ------------------------------------------------------------------ #
+    def _note_composante(self, composante):
+        mapping = {
+            "Controle Continu(CC)": self.note_cc_moyenne if self.cc_saisi else None,
+            "Examen": self.note_examen_active if (self.examen_saisi or self.rattrapage_saisi) else None,
+            "Travaux Pratique (TP)": self.note_tp if self.tp_saisi else None,
+            "Rapport": self.note_rapport,
+            "Competence": self.note_competence,
+        }
+        return mapping.get(composante)
+
+    def _ctx_composantes(self):
+        return {
+            "Controle Continu(CC)": self._note_composante("Controle Continu(CC)"),
+            "Examen": self._note_composante("Examen"),
+            "Travaux Pratique (TP)": self._note_composante("Travaux Pratique (TP)"),
+            "Rapport": self._note_composante("Rapport"),
+            "Competence": self._note_composante("Competence"),
+        }
 
     def calculer_note_finale(self):
+        """Calcule la note finale selon la formule active du cycle (Grade Formula)."""
+        formula = None
+        if self.student:
+            formula = get_cycle_formula(get_student_cycle(self.student))
+
+        if formula:
+            note_finale, note_pct = calculer_note_ue(self._ctx_composantes(), formula)
+            if note_finale is None:
+                self.note_finale = None
+                self.note_pct = 0
+                return
+            self.note_finale = note_finale
+            self.note_pct = note_pct
+            return
+
         setting = frappe.get_single("Udshed Setting")
         formules = [f for f in setting.formule_notes if f.type_ue == self.type_ue]
 
         if not formules:
             frappe.throw(
-                f"Aucune formule trouvée pour le type UE <b>{self.type_ue}</b>. "
-                f"Vérifiez la configuration dans Udshed Setting"
+                _("Aucune formule trouvée pour le type UE <b>{0}</b>. Vérifiez la configuration dans Udshed Setting.").format(
+                    self.type_ue
+                )
             )
 
-        note_map = {
-            "Controle Continu(CC)": self.note_cc or 0,
-            "Examen": self.note_examen or 0,
-            "Travaux Pratique (TP)": self.note_tp or 0,
-            "Rapport": self.note_rapport or 0,
-            "Competence": self.note_competence or 0,
-        }
+        notes = []
+        for formule in formules:
+            note = self._note_composante(formule.composante)
+            if note is None:
+                self.note_finale = None
+                self.note_pct = 0
+                return
+            notes.append((note, formule.pourcentage))
 
         note_finale = 0
-        for formule in formules:
-            note_composante = note_map.get(formule.composante, 0)
-            contribution = (note_composante / 20) * formule.pourcentage
-            note_finale += contribution
+        for note, pourcentage in notes:
+            note_finale += (note / NOTE_MAX) * pourcentage
 
-        self.note_finale = round(note_finale * 20 / 100, 2)
+        self.note_finale = round(note_finale * NOTE_MAX / 100, 2)
         self.note_pct = round(note_finale, 2)
 
+    # ------------------------------------------------------------------ #
+    #  Grade / point / mention
+    # ------------------------------------------------------------------ #
     def determiner_grade(self):
-        setting = frappe.get_single("Udshed Setting")
-        grade_trouve = None
-        point_trouve = 0
-        mention_trouvee = ""
+        if not self.note_finale:
+            self.grade = None
+            self.point = None
+            self.mention = None
+            return
 
+        setting = frappe.get_single("Udshed Setting")
         for g in setting.grille_grades:
             if g.note_min <= self.note_pct <= g.note_max:
-                grade_trouve = g.grade
-                point_trouve = g.point
-                mention_trouvee = g.mention
-                break
+                self.grade = g.grade
+                self.point = g.point
+                self.mention = g.mention
+                return
 
-        if not grade_trouve:
-            frappe.throw(
-                f"Aucun grade trouvé pour la note <b>{self.note_pct}%</b>. "
-                f"Vérifiez la grille des grades dans Udshed Setting"
+        frappe.throw(
+            _("Aucun grade trouvé pour la note <b>{0}%</b>. Vérifiez la grille des grades dans Udshed Setting.").format(
+                self.note_pct
             )
-
-        self.grade = grade_trouve
-        self.point = point_trouve
-
-        student = frappe.get_doc("Student", self.student)
-        if student.cycle == "Licence":
-            seuil = setting.seuil_validation_licence or 50
-        else:
-            seuil = setting.seuil_validation_master or 60
-
-        if self.note_pct >= seuil:
-            frappe.msgprint(
-                f"UE <b>Validée</b> — Note: {self.note_pct}% | Grade: {self.grade} | Point: {self.point} | {mention_trouvee}",
-                indicator="green"
-            )
-        else:
-            frappe.msgprint(
-                f"UE <b>Non Validée</b> — Note: {self.note_pct}% | Grade: {self.grade} | Point: {self.point} | {mention_trouvee}",
-                indicator="red"
-            )
+        )
