@@ -16,6 +16,7 @@
   "nb_meilleures_notes_cc",
   "formule_section",
   "components",
+  "combinaison",
   "composition_section",
   "composition",
   "apercu_section",
@@ -87,13 +88,21 @@
    "fieldtype": "Section Break",
    "label": "Formule du cours / matière"
   },
-  {
-   "description": "Composantes de la note du cours. La somme des pourcentages doit être exactement 100 %.",
-   "fieldname": "components",
-   "fieldtype": "Table",
-   "label": "Composantes de la formule",
-   "options": "Grade Formula Component"
-  },
+   {
+    "description": "Composantes de la note du cours. La somme des pourcentages doit être exactement 100 %.",
+    "fieldname": "components",
+    "fieldtype": "Table",
+    "label": "Composantes de la formule",
+    "options": "Grade Formula Component"
+   },
+   {
+    "description": "Déduite automatiquement des composantes (pourcentage > 0). Une formule active par cycle et par combinaison. Détermine la sélection automatique de la formule lors de la saisie des notes.",
+    "fieldname": "combinaison",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Combinaison d'évaluations",
+    "read_only": 1
+   },
   {
    "fieldname": "composition_section",
    "fieldtype": "Section Break",

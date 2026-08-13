@@ -83,6 +83,14 @@ def _get_or_create_session(args, type_dexamen):
             return session.name
 
     if sessions:
+        # Cherche une session existante qui concerne déjà cette filière/niveau
+        for session in sessions:
+            if frappe.db.exists(
+                "Session Examen Field of study Level",
+                {"parent": session.name, "filiere": filiere, "niveau": niveau},
+            ):
+                return session.name
+        # Aucune session ne couvre encore cette filière/niveau : on l'ajoute à la première
         doc = frappe.get_doc("Session Examen", sessions[0].name)
         doc.append("classes_concernees", {"filiere": filiere, "niveau": niveau})
         doc.save(ignore_permissions=True)
@@ -176,9 +184,9 @@ def _get_ue_info(teaching_unit):
 
     enseignants = []
     for row in tu.table_enseignant or []:
-        nom = row.full_name or ""
-        if not nom and row.enseignant:
-            nom = frappe.db.get_value("Teacher", row.enseignant, "full_name") or ""
+        if not row.enseignant:
+            continue
+        nom = frappe.db.get_value("Teacher", row.enseignant, "full_name") or ""
         enseignants.append({"name": row.enseignant, "full_name": nom})
 
     return {
@@ -284,6 +292,10 @@ def _charger_notes(students, teaching_unit, sessions):
             "rattrapage_saisi",
             "date_rattrapage",
             "note_examen_active",
+            "note_finale",
+            "grade",
+            "point",
+            "mention",
         ],
     )
     if not notes:
@@ -318,6 +330,10 @@ def _charger_notes(students, teaching_unit, sessions):
                 "notes_cc": items_by_note.get(cc_note.name, []),
                 "note_cc_moyenne": cc_note.note_cc_moyenne,
                 "cc_saisi": cc_note.cc_saisi,
+                "note_finale": cc_note.note_finale,
+                "grade": cc_note.grade,
+                "point": cc_note.point,
+                "mention": cc_note.mention,
             }
 
         normale = (par_session.get(sessions["normale"]) or {}).get(nom)
@@ -326,6 +342,10 @@ def _charger_notes(students, teaching_unit, sessions):
                 "note_examen": normale.note_examen,
                 "examen_saisi": normale.examen_saisi,
                 "note_examen_active": normale.note_examen_active,
+                "note_finale": normale.note_finale,
+                "grade": normale.grade,
+                "point": normale.point,
+                "mention": normale.mention,
             }
             resultats["TP"][nom] = {
                 "note_tp": normale.note_tp,
@@ -343,6 +363,10 @@ def _charger_notes(students, teaching_unit, sessions):
                 "rattrapage_saisi": rattrapage.rattrapage_saisi,
                 "date_rattrapage": rattrapage.date_rattrapage,
                 "note_examen_active": rattrapage.note_examen_active,
+                "note_finale": rattrapage.note_finale,
+                "grade": rattrapage.grade,
+                "point": rattrapage.point,
+                "mention": rattrapage.mention,
             }
         elif initiale is not None:
             resultats["Rattrapage"][nom] = {
@@ -351,6 +375,10 @@ def _charger_notes(students, teaching_unit, sessions):
                 "rattrapage_saisi": 0,
                 "date_rattrapage": None,
                 "note_examen_active": initiale,
+                "note_finale": None,
+                "grade": None,
+                "point": None,
+                "mention": None,
             }
 
     return resultats
@@ -362,6 +390,71 @@ def _verifier_non_publiee(session):
         frappe.throw(_("La session {0} est publiée : les notes sont verrouillées.").format(session))
 
 
+def _passer_saisi(note):
+    """Fait passer une note au statut « Saisi » dès qu'une saisie est enregistrée.
+
+    Le statut ne recule jamais : une note « Validé » ou « Publié » le reste.
+    """
+    if note.statut in (None, "", "Brouillon"):
+        note.statut = "Saisi"
+
+
+def _verifier_cc_modifiable(note):
+    """Le CC validé ou publié ne peut plus être modifié (immutabilité du CC)."""
+    if note.statut in ("Validé", "Publié"):
+        frappe.throw(
+            _("Les notes de CC de l'étudiant <b>{0}</b> sont {1} : elles ne peuvent plus être modifiées. "
+              "Ne validez les notes de CC que lorsque la saisie est terminée.").format(
+                note.student, note.statut.lower()
+            )
+        )
+
+
+def _copier_cc_dans_note(args, student, note):
+    """Reproduit le CC (lecture seule) de la session CC sur la note cible.
+
+    Le CC est saisi dans sa propre session (Contrôle Continu) ; pour que la
+    note de matière de la session normale soit complète (CC + Examen + TP),
+    ses notes de CC sont synchronisées depuis la session CC. La session CC
+    reste la seule source : on ne modifie jamais la note source.
+    """
+    if note.notes_cc:
+        return
+    session_cc = frappe.db.get_value(
+        "Session Examen",
+        {
+            "academic_year": args["academic_year"],
+            "semestre": args.get("semestre"),
+            "type_dexamen": TYPE_CC,
+        },
+        "name",
+    )
+    if not session_cc:
+        return
+    source = frappe.db.get_value(
+        "Session Examen Note",
+        {
+            "session_examen": session_cc,
+            "student": student,
+            "teaching_unit": args["teaching_unit"],
+        },
+        "name",
+    )
+    if not source:
+        return
+    source_doc = frappe.get_doc("Session Examen Note", source)
+    for cc in source_doc.notes_cc:
+        if cc.note_cc is not None:
+            note.append(
+                "notes_cc",
+                {
+                    "cc_label": cc.cc_label,
+                    "cc_weight": cc.cc_weight,
+                    "note_cc": cc.note_cc,
+                },
+            )
+
+
 def _sauvegarder_cc(args, rows):
     _valider_lignes(rows)
     _verifier_programmation_requise(args["academic_year"], args["teaching_unit"])
@@ -369,6 +462,7 @@ def _sauvegarder_cc(args, rows):
     _verifier_non_publiee(session)
     for row in rows:
         note = _get_or_create_note(session, row["student"], args)
+        _verifier_cc_modifiable(note)
         note.set("notes_cc", [])
         for item in row.get("notes_cc") or []:
             note.append(
@@ -381,6 +475,7 @@ def _sauvegarder_cc(args, rows):
             )
         notes_saisies = [i for i in (row.get("notes_cc") or []) if i.get("note_cc") not in (None, "")]
         note.cc_saisi = 1 if notes_saisies else 0
+        _passer_saisi(note)
         note.save(ignore_permissions=True)
     return len(rows)
 
@@ -392,8 +487,10 @@ def _sauvegarder_examen(args, rows):
     _verifier_non_publiee(session)
     for row in rows:
         note = _get_or_create_note(session, row["student"], args)
+        _copier_cc_dans_note(args, row["student"], note)
         note.note_examen = row.get("note_examen")
         note.examen_saisi = 1 if row.get("note_examen") not in (None, "") else 0
+        _passer_saisi(note)
         note.save(ignore_permissions=True)
     return len(rows)
 
@@ -405,8 +502,10 @@ def _sauvegarder_tp(args, rows):
     _verifier_non_publiee(session)
     for row in rows:
         note = _get_or_create_note(session, row["student"], args)
+        _copier_cc_dans_note(args, row["student"], note)
         note.note_tp = row.get("note_tp")
         note.tp_saisi = 1 if row.get("note_tp") not in (None, "") else 0
+        _passer_saisi(note)
         note.save(ignore_permissions=True)
     return len(rows)
 
@@ -460,6 +559,7 @@ def _sauvegarder_rattrapage(args, rows):
 
         if row.get("date_rattrapage"):
             note.date_rattrapage = row.get("date_rattrapage")
+        _passer_saisi(note)
         note.save(ignore_permissions=True)
     return len(rows)
 
@@ -641,13 +741,83 @@ def enregistrer_rattrapage(academic_year, filiere, niveau, semestre, teaching_un
 
 
 @frappe.whitelist()
+def valider_notes(session):
+    """Valide toutes les notes d'une session d'examen (statut -> « Validé »).
+
+    Étape obligatoire avant la publication : une session ne peut être
+    publiée que si toutes ses notes sont validées.
+
+    Args:
+        session: Nom du document Session Examen
+
+    Returns:
+        dict: {"session": ..., "validated": n}
+    """
+    statut_session = frappe.db.get_value("Session Examen", session, "statut")
+    if statut_session == "Publiée":
+        frappe.throw(_("La session {0} est publiée : impossible de valider les notes.").format(session))
+
+    names = frappe.get_all(
+        "Session Examen Note",
+        filters={"session_examen": session, "statut": ["in", ["Brouillon", "Saisi"]]},
+        pluck="name",
+    )
+    for name in names:
+        frappe.db.set_value("Session Examen Note", name, "statut", "Validé")
+
+    return {"session": session, "validated": len(names)}
+
+
+@frappe.whitelist()
 def publier_session(session):
-    """Publie une session d'examen (verrouille les notes)."""
+    """Publie une session d'examen.
+
+    Toutes les notes de la session doivent d'abord être validées
+    (statut « Validé »). Elles passent alors au statut « Publié » et
+    deviennent consultables au babillard public. La session est clôturée.
+
+    Args:
+        session: Nom du document Session Examen
+
+    Returns:
+        dict: {"name", "statut", "date_publication"}
+    """
     doc = frappe.get_doc("Session Examen", session)
-    if doc.statut != "Publiée":
-        doc.db_set("statut", "Publiée")
-        doc.db_set("date_publication", today())
+    if doc.statut == "Publiée":
+        return {"name": doc.name, "statut": doc.statut, "date_publication": doc.date_publication}
+
+    non_validees = frappe.db.count(
+        "Session Examen Note",
+        {"session_examen": session, "statut": ["not in", ["Validé", "Publié"]]},
+    )
+    if non_validees:
+        frappe.throw(
+            _("Impossible de publier : {0} note(s) de la session {1} ne sont pas validées. "
+              "Validez d'abord les notes avant de publier.").format(non_validees, session)
+        )
+
+    frappe.db.set_value(
+        "Session Examen Note",
+        {"session_examen": session, "statut": "Validé"},
+        "statut",
+        "Publié",
+    )
+    doc.db_set("statut", "Publiée")
+    doc.db_set("date_publication", today())
     return {"name": doc.name, "statut": doc.statut, "date_publication": doc.date_publication}
+
+
+def _colonnes_cc(cc_columns):
+    """Normalise la liste des colonnes CC envoyee par le client (labels [+ poids])."""
+    if isinstance(cc_columns, str):
+        try:
+            cc_columns = frappe.parse_json(cc_columns)
+        except Exception:
+            cc_columns = None
+    return [
+        c if isinstance(c, dict) else {"label": c, "weight": 1}
+        for c in (cc_columns or [])
+    ]
 
 
 def _en_tetes(type_dexamen, cc_columns):
@@ -695,7 +865,7 @@ def _valeur_note(valeur):
 @frappe.whitelist()
 def export_modele(type_dexamen, cc_columns=None):
     """Télécharge un modèle Excel vierge pour la saisie des notes."""
-    cc_columns = [c if isinstance(c, dict) else {"label": c, "weight": 1} for c in (cc_columns or [])]
+    cc_columns = _colonnes_cc(cc_columns)
     _repondre_xlsx([_en_tetes(type_dexamen, cc_columns)], "modele_{0}.xlsx".format(type_dexamen.lower()))
 
 
@@ -754,7 +924,7 @@ def export_modele_pdf(
     """Télécharge un modèle PDF imprimable, étudiants pré-remplis si un contexte est fourni."""
     from frappe.utils.pdf import get_pdf
 
-    cc_columns = [c if isinstance(c, dict) else {"label": c, "weight": 1} for c in (cc_columns or [])]
+    cc_columns = _colonnes_cc(cc_columns)
     entetes = _en_tetes(type_dexamen, cc_columns)
 
     students = []
@@ -791,7 +961,7 @@ def export_modele_pdf(
 @frappe.whitelist()
 def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_dexamen, cc_columns=None):
     """Exporte les notes déjà saisies au format Excel."""
-    cc_columns = [c if isinstance(c, dict) else {"label": c, "weight": 1} for c in (cc_columns or [])]
+    cc_columns = _colonnes_cc(cc_columns)
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": semestre, "teaching_unit": teaching_unit}
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
 
@@ -834,7 +1004,7 @@ def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_d
 @frappe.whitelist()
 def importer_notes(file_url, type_dexamen, academic_year, filiere, niveau, semestre, teaching_unit, cc_columns=None):
     """Importe des notes depuis un fichier Excel (modèle exporté)."""
-    cc_columns = [c if isinstance(c, dict) else {"label": c, "weight": 1} for c in (cc_columns or [])]
+    cc_columns = _colonnes_cc(cc_columns)
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": semestre, "teaching_unit": teaching_unit}
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
     par_matricule = {s["matricule"]: s["student"] for s in students}

@@ -77,6 +77,27 @@ def identifier_rattrapages(session_examen):
         ],
     )
 
+    if not notes:
+        total_notes = frappe.db.count("Session Examen Note", {"session_examen": session_examen})
+        if total_notes:
+            frappe.throw(
+                _("La session {0} contient {1} note(s) mais aucune n'est publiée. "
+                  "Validez et publiez les notes avant d'identifier les rattrapages.").format(
+                    session_examen, total_notes
+                )
+            )
+        return {
+            "session": session_examen,
+            "annee_academique": session.academic_year,
+            "semestre": session.semestre,
+            "type_session": session.type_dexamen,
+            "etudiants": [],
+            "total_etudiants": 0,
+            "total_non_valides": 0,
+            "etudiants_eligibles": [],
+            "total_eligibles": 0,
+        }
+
     etudiants_non_valides = []
     for note in notes:
         student_doc = frappe.get_doc("Student", note.student)

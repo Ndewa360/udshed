@@ -128,8 +128,6 @@ def _resultat_ue(student, session_doc, note_normale):
     else:
         res.insert()
 
-    frappe.db.commit()
-
     return {
         "name": res.name,
         "student": student,
@@ -308,12 +306,17 @@ def calculer_resultat_annee(student, academic_year):
             "resultats_par_semestre": resultats_par_semestre,
         }
 
-    total_note_pct = sum((r["note_pct"] or 0) for r in tous_resultats)
-    moyenne_annuelle = round(total_note_pct / len(tous_resultats), 2)
-
     student_doc = frappe.get_doc("Student", student)
     cycle = get_student_cycle(student_doc)
     seuil = get_seuil_validation(cycle)
+
+    somme_cp = 0.0
+    somme_c = 0
+    for r in tous_resultats:
+        credits = frappe.db.get_value("Teaching Unit", r["teaching_unit"], "credits") or 0
+        somme_cp += credits * (r["note_pct"] or 0)
+        somme_c += credits
+    moyenne_annuelle = round(somme_cp / somme_c, 2) if somme_c > 0 else 0
 
     ue_validees = sum(1 for r in tous_resultats if (r["note_pct"] or 0) >= seuil)
     ue_non_validees = len(tous_resultats) - ue_validees
@@ -323,7 +326,6 @@ def calculer_resultat_annee(student, academic_year):
     for r in tous_resultats:
         if r.get("name"):
             frappe.db.set_value("Resultat Academique", r["name"], "decision_annee", decision)
-    frappe.db.commit()
 
     return {
         "student": student,
@@ -627,7 +629,6 @@ def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year):
             mpc = round((mpc * (i - 1) + res.mps) / i, 2)
 
     frappe.db.set_value("Resultat Semestre", rs.name, "mpc", mpc)
-    frappe.db.commit()
 
     return {
         "name": rs.name,

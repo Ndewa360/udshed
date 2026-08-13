@@ -2,6 +2,56 @@ import frappe
 from frappe import _
 
 
+def pdf_body_html(template, args, **kwargs):
+    """Hook `pdf_body_html`: injects `data` (transcript context) into the
+    "Releve Notes" print format, then delegates to Frappe's default renderer."""
+    from frappe.utils.pdf import pdf_body_html as _default_pdf_body_html
+
+    print_format = kwargs.get("print_format")
+    doc = args.get("doc")
+    if print_format and print_format.name == "Releve Notes" and doc:
+        args = dict(args)
+        args["data"] = get_transcript_data(doc)
+    return _default_pdf_body_html(template, args, **kwargs)
+
+
+@frappe.whitelist()
+def download_releve_pdf(student):
+    """Génère et télécharge le relevé de notes (PDF) d'un étudiant.
+
+    Construit le corps HTML via le même pipeline que /printview (le hook
+    `pdf_body_html` injecte `data`), puis le convertit en PDF avec WeasyPrint.
+    """
+    doc = frappe.get_doc("Student", student)
+    doc.check_permission("print")
+
+    from frappe.www.printview import get_rendered_template
+
+    print_format = frappe.get_doc("Print Format", "Releve Notes")
+    body = get_rendered_template(
+        doc,
+        print_format=print_format,
+        meta=frappe.get_meta("Student"),
+        no_letterhead=1,
+        trigger_print=False,
+    )
+
+    html = (
+        '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'
+        + body
+        + "</body></html>"
+    )
+
+    from weasyprint import HTML
+
+    pdf = HTML(string=html, base_url=frappe.utils.get_url()).write_pdf()
+
+    frappe.response["filename"] = "Releve_{0}.pdf".format(student.replace("/", "-"))
+    frappe.response["filecontent"] = pdf
+    frappe.response["type"] = "download"
+    frappe.response["content_type"] = "application/pdf"
+
+
 @frappe.whitelist()
 def get_transcript_data(doc):
     if isinstance(doc, str):

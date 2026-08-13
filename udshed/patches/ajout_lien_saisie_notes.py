@@ -7,7 +7,7 @@ def execute():
 
     exists = frappe.db.exists(
         "Workspace Link",
-        {"parent": "Gestion des Notes", "link_type": "Page", "link_to": "saisie_notes"},
+        {"parent": "Gestion des Notes", "link_type": "Page", "link_to": "note-udshed"},
     )
     if exists:
         return
@@ -22,9 +22,9 @@ def execute():
         "links",
         {
             "type": "Link",
-            "label": "Saisie des notes",
+            "label": "Saisie des Notes",
             "link_type": "Page",
-            "link_to": "saisie_notes",
+            "link_to": "note-udshed",
         },
     )
     ws.save()

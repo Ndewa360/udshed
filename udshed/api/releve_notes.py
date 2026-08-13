@@ -36,9 +36,5 @@ def search_students(doctype, txt, searchfield, start, page_len, filters=None):
 	out = []
 	for s in students:
 		label = " ".join(x for x in [s.matricule, s.nom, s.prenom] if x) or s.name
-		out.append({
-			"value": s.name,
-			"label": label,
-			"description": s.matricule or s.name,
-		})
+		out.append([s.name, label])
 	return out

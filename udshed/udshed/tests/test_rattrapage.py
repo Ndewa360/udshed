@@ -34,6 +34,7 @@ from udshed.udshed._fixture_factory import (
     make_student,
     make_teacher,
     make_teaching_unit,
+    seed_formule,
     seed_grade_formula,
     seed_grille_grades,
     suppress_commits,
@@ -57,11 +58,13 @@ class TestSessionNormaleEtRattrapage(IntegrationTestCase):
 
         self.course = make_course()
         self.tu = make_teaching_unit(
-            self.course, self.academic_year, self.fos, self.niveau, credits=3
+            self.course, self.academic_year, self.fos, self.niveau, credits=3,
+            type_ue="Avec TP",
         )
         self.course2 = make_course()
         self.tu2 = make_teaching_unit(
-            self.course2, self.academic_year, self.fos, self.niveau, credits=6
+            self.course2, self.academic_year, self.fos, self.niveau, credits=6,
+            type_ue="Avec TP",
         )
 
         self.student = make_student(self.fos, self.niveau, "BTS")
@@ -113,6 +116,20 @@ class TestSessionNormaleEtRattrapage(IntegrationTestCase):
         )
         # Mêmes notes => même note finale, peu importe les crédits (3 vs 6)
         self.assertEqual(note1.note_finale, note2.note_finale)
+
+    def test_14b_selection_formule_selon_type_ue(self):
+        """Une UE Sans TP utilise la formule CC+Examen, pas la formule Avec TP."""
+        seed_formule("BTS", ["Controle Continu(CC)", "Examen"], [40, 60])
+        tu_sans_tp = make_teaching_unit(
+            make_course(), self.academic_year, self.fos, self.niveau,
+            credits=3, type_ue="Sans TP",
+        )
+        note = make_session_examen_note(
+            self.session, self.student, tu_sans_tp, note_cc=16, note_examen=18
+        )
+        # 16*0.4 + 18*0.6 = 17.2 -> 86 %
+        self.assertEqual(note.note_finale, 17.2)
+        self.assertEqual(note.note_pct, 86.0)
 
     # ------------------------------------------------------------------ #
     #  15-16 : éligibilité au rattrapage

@@ -37,8 +37,8 @@
    "indent": 0,
    "keep_closed": 0,
    "label": "Saisie des Notes",
-   "link_to": "Session Examen Note",
-   "link_type": "DocType",
+   "link_to": "note-udshed",
+   "link_type": "Page",
    "show_arrow": 0,
    "type": "Link"
   },

@@ -94,9 +94,10 @@ home_page = "index"
 
 # Print Format Data
 # ----------
-print_format_data = {
-	"Releve Notes": "udshed.api.transcript.get_transcript_data"
-}
+# Injects the `data` context (from get_transcript_data) into the
+# "Releve Notes" print format before HTML rendering. Frappe calls the
+# last registered `pdf_body_html` hook (see frappe/www/printview.py).
+pdf_body_html = "udshed.api.transcript.pdf_body_html"
 
 # Jinja
 # ----------

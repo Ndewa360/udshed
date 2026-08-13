@@ -15,18 +15,12 @@ statut **Publié** sont prises en compte. Les notes en Brouillon / Saisi
 import frappe
 from frappe import _
 
-from udshed.grade_calculation import get_student_cycle
+from udshed.grade_calculation import get_seuil_validation, get_student_cycle
 from udshed.api.resultat_academique import _get_credits
 
 SEMESTRES = ["Semestre 1", "Semestre 2"]
 TYPE_NORMALE = "Examen de session normal"
 TYPE_RATTRAPAGE = "Examen de rattrapage"
-
-CYCLES_SEUILS = {
-    "Licence": "seuil_validation_licence",
-    "Master": "seuil_validation_master",
-    "BTS": "seuil_validation_bts_",
-}
 
 
 # ---------------------------------------------------------------------------
@@ -60,21 +54,8 @@ def _get_current_academic_year():
 
 
 def _get_seuil_validation(cycle):
-	"""Seuil de validation (%) pour un cycle.
-
-	Priorité : Grade Formula active -> Udshed Setting -> défaut 50.
-	"""
-	formula_name = frappe.db.get_value(
-		"Grade Formula", {"cycle": cycle, "active": 1}, "name"
-	)
-	if formula_name:
-		seuil = frappe.db.get_value("Grade Formula", formula_name, "seuil_validation")
-		if seuil:
-			return float(seuil)
-
-	setting = frappe.get_single("Udshed Setting")
-	seuil = setting.get(CYCLES_SEUILS.get(cycle, "seuil_validation_licence")) or 0
-	return float(seuil) if seuil else 50
+	"""Seuil de validation (%) pour un cycle (délègue au moteur central)."""
+	return get_seuil_validation(cycle)
 
 
 def _get_mention(mps):

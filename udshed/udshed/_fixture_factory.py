@@ -214,21 +214,107 @@ def make_session_examen_note(
     return doc
 
 
+def make_academic_reregistration(
+    fos, niveau_label, academic_year, ues, student=None, semestre="Semestre 1", cycle="Licence"
+):
+    """Crée une réinscription académique validée avec les UE inscrites.
+
+    Reproduit le parcours de la Saisie des notes : réinscription
+    « Validée » + lignes Reregistration Course Item « Inscrit ».
+
+    Args:
+        fos: Document Field of study
+        niveau_label (str): label du niveau (ex : "BTS 1")
+        academic_year: Document Academic Year
+        ues (list): Teaching Units inscrites
+        student (Document, optional): étudiant (sinon créé)
+        semestre (str): "Semestre 1" / "Semestre 2"
+
+    Returns:
+        tuple: (reinscription, academic_reregistration, student)
+    """
+    if student is None:
+        niveau = None
+        for row in fos.field_of_study_level:
+            if row.level == niveau_label:
+                niveau = row
+                break
+        if niveau is None:
+            niveau = make_level(fos, level=niveau_label)
+        student = make_student(fos, niveau, cycle=cycle)
+
+    reinscription = frappe.new_doc("Reinscription")
+    reinscription.academic_year = academic_year.name
+    reinscription.statut = "Ouverte"
+    reinscription.date_ouverture = "2026-09-01"
+    reinscription.date_cloture = "2026-12-31"
+    reinscription.note_minimale = 0
+    reinscription.note_maximale = 20
+    reinscription.insert(ignore_permissions=True)
+
+    doc = frappe.new_doc("Academic Reregistration")
+    doc.student = student.name
+    doc.academic_year = academic_year.name
+    doc.filiere = fos.name
+    doc.niveau = niveau_label
+    doc.semestre = semestre
+    doc.reinscription_session = reinscription.name
+    doc.statut = "Validée"
+    for ue in ues:
+        doc.append(
+            "cours_inscrits",
+            {
+                "teaching_unit": ue.name,
+                "intitule": ue.intitule_cours or ue.name,
+                "semestre": semestre,
+                "statut": "Inscrit",
+            },
+        )
+    doc.insert(ignore_permissions=True)
+    return reinscription, doc, student
+
+
 # ---------------------------------------------------------------------- #
 #  Formules et grilles
 # ---------------------------------------------------------------------- #
-def seed_grade_formula(cycle, cc=30, examen=50, tp=20, seuil=None):
-    """Crée (ou remplace) la formule active d'un cycle.
+def seed_formule(cycle, composantes, pourcentages, seuil=None):
+    """Crée (ou réutilise) une formule active pour un (cycle, combinaison).
 
-    Décompose les pourcentages en composantes principales. Le total doit
-    être 100 % (ex: seed_grade_formula("BTS", 30, 50, 20)).
+    La combinaison est déduite des composantes (pourcentage > 0), triées.
+    Le total des pourcentages doit être 100.
+
+    Exemple :
+        seed_formule("BTS", ["Controle Continu(CC)", "Examen"], [40, 60])
+
+    Args:
+        cycle (str): "Licence", "BTS" ou "Master"
+        composantes (list[str]): labels des composantes principales
+        pourcentages (list[float]): pourcentages alignés sur composantes
+        seuil (float, optional): seuil de validation (défaut : SEUILS_DEFAUT)
 
     Returns:
         Document: Grade Formula active
     """
-    frappe.db.set_value(
-        "Grade Formula", {"cycle": cycle, "active": 1}, "active", 0
+    combinaison = " + ".join(sorted(composantes))
+    active = frappe.db.get_value(
+        "Grade Formula",
+        {"cycle": cycle, "combinaison": combinaison, "active": 1},
+        "name",
     )
+    if active:
+        return frappe.get_doc("Grade Formula", active)
+
+    existing = frappe.db.get_value(
+        "Grade Formula", {"cycle": cycle, "combinaison": combinaison}, "name"
+    )
+    if existing:
+        frappe.db.set_value(
+            "Grade Formula", {"cycle": cycle, "combinaison": combinaison}, "active", 0
+        )
+        doc = frappe.get_doc("Grade Formula", existing)
+        doc.active = 1
+        doc.save(ignore_permissions=True)
+        return doc
 
     doc = frappe.new_doc("Grade Formula")
     doc.name = _next("FORMULE")
@@ -240,14 +326,30 @@ def seed_grade_formula(cycle, cc=30, examen=50, tp=20, seuil=None):
     doc.methode_arrondi = "Au plus proche"
     doc.methode_calcul_cc = "Moyenne arithmétique"
     doc.nb_meilleures_notes_cc = 2
-    if cc:
-        doc.append("components", {"composante": "Controle Continu(CC)", "pourcentage": cc})
-    if examen:
-        doc.append("components", {"composante": "Examen", "pourcentage": examen})
-    if tp:
-        doc.append("components", {"composante": "Travaux Pratique (TP)", "pourcentage": tp})
+    for label, pct in zip(composantes, pourcentages):
+        doc.append("components", {"composante": label, "pourcentage": pct})
     doc.insert(ignore_permissions=True)
     return doc
+
+
+def seed_grade_formula(cycle, cc=30, examen=50, tp=20, seuil=None):
+    """Crée (ou remplace) la formule active CC+Examen+TP (Avec TP) d'un cycle.
+
+    Décompose les pourcentages en composantes principales. Le total doit
+    être 100 % (ex: seed_grade_formula("BTS", 30, 50, 20)).
+
+    Returns:
+        Document: Grade Formula active
+    """
+    frappe.db.set_value(
+        "Grade Formula", {"cycle": cycle, "active": 1}, "active", 0
+    )
+    return seed_formule(
+        cycle,
+        ["Controle Continu(CC)", "Examen", "Travaux Pratique (TP)"],
+        [cc, examen, tp],
+        seuil=seuil,
+    )
 
 
 def seed_grille_grades():

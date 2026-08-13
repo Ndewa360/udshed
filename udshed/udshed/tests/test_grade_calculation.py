@@ -17,13 +17,17 @@ from udshed.grade_calculation import (
     appliquer_arrondi,
     calculer_moyenne_cc,
     calculer_note_ue,
+    combinaison_formule,
+    combinaison_type_ue,
     est_valide,
+    get_active_formula,
+    get_formula,
     get_seuil_validation,
     get_student_cycle,
     is_formule_complete,
     rendre_apercu,
 )
-from udshed.udshed._fixture_factory import _next, seed_grade_formula
+from udshed.udshed._fixture_factory import _next, seed_formule, seed_grade_formula
 
 CC = "Controle Continu(CC)"
 EXAMEN = "Examen"
@@ -178,7 +182,7 @@ class TestSeuilsEtValidation(IntegrationTestCase):
         self.assertEqual(get_student_cycle(None), "Licence")
         self.assertEqual(get_student_cycle("STUDENT-INTROUVABLE"), "Licence")
 
-    def test_21_une_seule_formule_active_par_cycle(self):
+    def test_21_plusieurs_formules_actives_par_cycle(self):
         seed_grade_formula("Licence", 30, 50, 20)
         doc = frappe.new_doc("Grade Formula")
         doc.name = _next("FORMULE-TEST")
@@ -187,6 +191,20 @@ class TestSeuilsEtValidation(IntegrationTestCase):
         doc.seuil_validation = 50
         doc.methode_arrondi = "Au plus proche"
         doc.append("components", {"composante": CC, "pourcentage": 100})
+        doc.insert(ignore_permissions=True)
+        self.assertEqual(doc.combinaison, CC)
+
+    def test_21b_meme_combinaison_active_rejetee(self):
+        seed_grade_formula("Licence", 30, 50, 20)
+        doc = frappe.new_doc("Grade Formula")
+        doc.name = _next("FORMULE-TEST")
+        doc.cycle = "Licence"
+        doc.active = 1
+        doc.seuil_validation = 50
+        doc.methode_arrondi = "Au plus proche"
+        doc.append("components", {"composante": CC, "pourcentage": 30})
+        doc.append("components", {"composante": EXAMEN, "pourcentage": 50})
+        doc.append("components", {"composante": TP, "pourcentage": 20})
         with self.assertRaises(frappe.ValidationError):
             doc.insert(ignore_permissions=True)
 
@@ -281,3 +299,53 @@ class TestApercuEtCompletude(IntegrationTestCase):
         self.assertTrue(
             is_formule_complete(formula, {CC: 16, EXAMEN: 18, TP: 14})
         )
+
+
+class TestCombinaisonEtSelection(IntegrationTestCase):
+    """Combinaison d'évaluations et sélection automatique des formules."""
+
+    def test_combinaison_formule(self):
+        doc = frappe.new_doc("Grade Formula")
+        doc.name = _next("FORMULE-TEST")
+        doc.cycle = "Licence"
+        doc.active = 0
+        doc.seuil_validation = 50
+        doc.append("components", {"composante": EXAMEN, "pourcentage": 60})
+        doc.append("components", {"composante": CC, "pourcentage": 40})
+        doc.insert(ignore_permissions=True)
+        self.assertEqual(
+            combinaison_formule(doc), "Controle Continu(CC) + Examen"
+        )
+
+    def test_combinaison_type_ue(self):
+        self.assertEqual(
+            combinaison_type_ue("Sans TP"), "Controle Continu(CC) + Examen"
+        )
+        self.assertEqual(
+            combinaison_type_ue("Avec TP"),
+            "Controle Continu(CC) + Examen + Travaux Pratique (TP)",
+        )
+        self.assertEqual(combinaison_type_ue("Stage SMSB"), "Examen + Rapport")
+
+    def test_selection_automatique_par_combinaison(self):
+        seed_formule("Licence", [CC, EXAMEN], [40, 60])
+        seed_formule("Licence", [CC, EXAMEN, TP], [30, 50, 20])
+        seed_formule("Licence", [EXAMEN, "Rapport"], [70, 30])
+
+        sans_tp = get_formula("Licence", combinaison_type_ue("Sans TP"))
+        self.assertIsNotNone(sans_tp)
+        self.assertEqual(combinaison_formule(sans_tp), "Controle Continu(CC) + Examen")
+
+        avec_tp = get_formula("Licence", combinaison_type_ue("Avec TP"))
+        self.assertEqual(
+            combinaison_formule(avec_tp),
+            "Controle Continu(CC) + Examen + Travaux Pratique (TP)",
+        )
+
+        stage = get_formula("Licence", combinaison_type_ue("Stage SMSB"))
+        self.assertEqual(combinaison_formule(stage), "Examen + Rapport")
+
+    def test_aucune_formule_pour_combinaison_manquante(self):
+        self.assertIsNone(get_formula("Master", combinaison_type_ue("Stage SMSB")))
+        with self.assertRaises(frappe.ValidationError):
+            get_active_formula("Master", combinaison_type_ue("Stage SMSB"))

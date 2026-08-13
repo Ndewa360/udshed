@@ -138,8 +138,8 @@ def save_bulk_grades(planning_item_name, grades):
                     note_doc.teaching_unit = tu_name
                     note_doc.type_ue = type_ue
 
-            if not note_doc.statut:
-                note_doc.statut = "Brouillon"
+            if note_doc.statut in (None, "", "Brouillon"):
+                note_doc.statut = "Saisi"
 
             if is_cc:
                 note_doc.note_cc = note_value

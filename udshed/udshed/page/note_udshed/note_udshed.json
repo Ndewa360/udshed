@@ -5,16 +5,26 @@
  "doctype": "Page",
  "icon": "clipboard-list",
  "idx": 0,
- "modified": "2026-07-30 22:01:11.459564",
+ "modified": "2026-08-12 08:47:05.243159",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "note-udshed",
  "owner": "Administrator",
  "page_name": "note-udshed",
- "roles": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Coordonateur"
+  },
+  {
+   "role": "Teacher"
+  }
+ ],
  "script": null,
  "standard": "Yes",
  "style": null,
  "system_page": 0,
- "title": "Note"
+ "title": "Saisie des notes"
 }

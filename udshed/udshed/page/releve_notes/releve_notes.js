@@ -23,8 +23,11 @@ frappe.pages['releve_notes'].on_page_load = function (wrapper) {
 				<div class="row align-items-end">
 					<div class="col-md-7" id="rn-student-field"></div>
 					<div class="col-md-5 d-flex justify-content-end">
-						<button class="btn btn-primary btn-sm rn-print" disabled>
+						<button class="btn btn-primary btn-sm rn-print mr-2" disabled>
 							<i class="fa-solid fa-print mr-1"></i>${__('Imprimer le relevé')}
+						</button>
+						<button class="btn btn-success btn-sm rn-download" disabled>
+							<i class="fa-solid fa-download mr-1"></i>${__('Télécharger le PDF')}
 						</button>
 					</div>
 				</div>
@@ -46,7 +49,7 @@ frappe.pages['releve_notes'].on_page_load = function (wrapper) {
 			},
 			change: function () {
 				state.student = this.get_value() || null;
-				body.find('.rn-print').prop('disabled', !state.student);
+				body.find('.rn-print, .rn-download').prop('disabled', !state.student);
 				render_info();
 			}
 		},
@@ -100,5 +103,22 @@ frappe.pages['releve_notes'].on_page_load = function (wrapper) {
 		if (!state.student) return;
 		var url = '/printview?doctype=Student&name=' + encodeURIComponent(state.student) + '&format=' + encodeURIComponent('Releve Notes');
 		window.open(frappe.urllib.get_full_url(url), '_blank');
+	});
+
+	body.on('click', '.rn-download', function () {
+		if (!state.student) return;
+		$btn = $(this);
+		$btn.prop('disabled', true).attr('data-orig', $btn.html()).html(`<i class="fa-solid fa-spinner fa-spin mr-1"></i>${__('Génération…')}`);
+		var url = '/api/method/udshed.api.transcript.download_releve_pdf?student=' + encodeURIComponent(state.student);
+		var full = frappe.urllib.get_full_url(url);
+		var a = document.createElement('a');
+		a.href = full;
+		a.download = 'Releve_' + state.student + '.pdf';
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		setTimeout(function () {
+			$btn.prop('disabled', false).html($btn.attr('data-orig'));
+		}, 3000);
 	});
 };

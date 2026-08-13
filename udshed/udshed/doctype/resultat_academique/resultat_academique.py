@@ -12,15 +12,24 @@ class ResultatAcademique(Document):
         self.determiner_statut()
 
     def after_insert(self):
-        self.declencher_mps_mpc()
+        self._declencher_mps_mpc()
 
     def on_update(self):
         if not self.is_new():
-            self.declencher_mps_mpc()
+            self._declencher_mps_mpc()
 
-    def declencher_mps_mpc(self):
+    def _declencher_mps_mpc(self):
+        """Recalcule MPS/MPC uniquement si les données clés ont changé.
+
+        On évite la boucle infinie : ResultatAcademique.save() -> calculer_et_sauvegarder_mps_mpc
+        -> ResultatSemestre.save() -> (rien sur ResultatAcademique).
+        Le flag _skip_mps_mpc permet aux appels internes de court-circuiter le déclenchement.
+        """
+        if getattr(self, "_skip_mps_mpc", False):
+            return
+        if not (self.student and self.semestre and self.academic_year):
+            return
         from udshed.api.resultat_academique import calculer_et_sauvegarder_mps_mpc
-
         calculer_et_sauvegarder_mps_mpc(
             self.student, self.semestre, self.academic_year
         )

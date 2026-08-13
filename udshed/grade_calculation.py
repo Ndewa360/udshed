@@ -4,7 +4,8 @@
 """Moteur de calcul des notes (LMD) pour UDSHED.
 
 La source de vérité de la configuration est le doctype « Grade Formula » :
-une seule formule active par cycle (Licence / BTS / Master).
+plusieurs formules actives par cycle (Licence / BTS / Master) sont
+autorisées, une par combinaison d'évaluations.
 
 Règles métier LMD :
 - Le calcul porte sur les cours / matières.
@@ -12,6 +13,8 @@ Règles métier LMD :
   multiplication d'une note par des crédits).
 - La somme des pourcentages d'une formule est exactement 100 %.
 - Une composante peut intégrer une autre évaluation (composition interne).
+- La formule d'une note est sélectionnée automatiquement selon le cycle de
+  l'étudiant et la combinaison d'évaluations de son type d'UE.
 """
 
 import math
@@ -40,6 +43,14 @@ COMPOSANTES_PRINCIPALES = [
     "Examen",
     "Travaux Pratique (TP)",
 ]
+
+# Correspondance type d'UE -> combinaison d'évaluations utilisée.
+# La combinaison sert à sélectionner automatiquement la formule d'une note.
+TYPE_UE_COMBINAISON = {
+    "Sans TP": ["Controle Continu(CC)", "Examen"],
+    "Avec TP": ["Controle Continu(CC)", "Examen", "Travaux Pratique (TP)"],
+    "Stage SMSB": ["Examen", "Rapport"],
+}
 
 METHODES_CC = [
     "Moyenne arithmétique",
@@ -76,36 +87,103 @@ def get_student_cycle(student):
 
 
 # ---------------------------------------------------------------------- #
+#  Combinaison d'évaluations
+# ---------------------------------------------------------------------- #
+def combinaison_formule(formula):
+    """Combinaison canonique d'une formule = composantes principales (pourcentage > 0), triées.
+
+    Exemple : [CC (40 %), Examen (60 %)] -> "Controle Continu(CC) + Examen"
+
+    Args:
+        formula (Document): Grade Formula
+
+    Returns:
+        str: combinaison canonique ("" si aucune composante active)
+    """
+    labels = sorted(
+        c.composante
+        for c in (formula.get("components") or [])
+        if (c.pourcentage or 0) > 0
+    )
+    return " + ".join(labels)
+
+
+def combinaison_type_ue(type_ue):
+    """Combinaison d'évaluations attendue pour un type d'UE.
+
+    Args:
+        type_ue (str): "Sans TP", "Avec TP" ou "Stage SMSB"
+
+    Returns:
+        str: combinaison canonique (repli sur "Sans TP")
+    """
+    labels = TYPE_UE_COMBINAISON.get(type_ue)
+    if labels is None:
+        labels = TYPE_UE_COMBINAISON["Sans TP"]
+    return " + ".join(sorted(labels))
+
+
+# ---------------------------------------------------------------------- #
 #  Récupération de la formule
 # ---------------------------------------------------------------------- #
-def get_cycle_formula(cycle):
-    """Récupère la formule active d'un cycle, ou None.
+def get_formules_cycle(cycle, active=None):
+    """Noms des formules d'un cycle (optionnellement filtrées sur l'activation).
 
     Args:
         cycle (str): "Licence", "BTS" ou "Master"
+        active (bool | None): None = toutes, True = actives, False = inactives
 
     Returns:
-        Document | None: formule active (Grade Formula)
+        list[str]: noms des formules
     """
-    name = frappe.db.get_value(
-        "Grade Formula",
-        {"cycle": cycle, "active": 1},
-        "name",
+    filters = {"cycle": cycle}
+    if active is not None:
+        filters["active"] = 1 if active else 0
+    return frappe.get_all(
+        "Grade Formula", filters=filters, order_by="creation asc", pluck="name"
     )
-    return frappe.get_doc("Grade Formula", name) if name else None
 
 
-def get_active_formula(cycle):
+def get_formula(cycle, combinaison=None, active=True):
+    """Récupère la formule d'un cycle, idéalement pour une combinaison donnée.
+
+    La combinaison est comparée sur la forme canonique (composantes > 0 %
+    triées), de sorte que l'ordre des composantes n'a pas d'importance.
+
+    Args:
+        cycle (str): "Licence", "BTS" ou "Master"
+        combinaison (str, optional): combinaison canonique recherchée
+        active (bool): ne considérer que les formules actives
+
+    Returns:
+        Document | None: formule correspondante
+    """
+    for name in get_formules_cycle(cycle, active=active):
+        doc = frappe.get_doc("Grade Formula", name)
+        if not combinaison or combinaison_formule(doc) == combinaison:
+            return doc
+    return None
+
+
+def get_active_formula(cycle, combinaison=None):
     """Récupère la formule active d'un cycle (lève une erreur si absente).
 
     Args:
         cycle (str): "Licence", "BTS" ou "Master"
+        combinaison (str, optional): combinaison d'évaluations recherchée
 
     Returns:
-        Document: formule active (Grade Formula)
+        Document: formule active
     """
-    formula = get_cycle_formula(cycle)
+    formula = get_formula(cycle, combinaison)
     if not formula:
+        if combinaison:
+            frappe.throw(
+                _("Aucune formule active trouvée pour le cycle {0} et la combinaison "
+                  "d'évaluations « {1} ». Vérifiez la configuration dans Grade Formula.").format(
+                    cycle, combinaison
+                )
+            )
         frappe.throw(
             _("Aucune formule active trouvée pour le cycle {0}. "
               "Veuillez configurer une formule active dans Grade Formula.").format(cycle)
@@ -116,7 +194,9 @@ def get_active_formula(cycle):
 def get_seuil_validation(cycle):
     """Seuil de validation des UE (%) pour un cycle.
 
-    Priorité : Grade Formula active -> Udshed Setting -> défaut LMD.
+    Priorité : formule unique active du cycle -> Udshed Setting -> défaut LMD.
+    Avec plusieurs formules actives par cycle, le seuil revient à la
+    configuration globale (Udshed Setting) puis au défaut LMD.
 
     Args:
         cycle (str): "Licence", "BTS" ou "Master"
@@ -125,9 +205,11 @@ def get_seuil_validation(cycle):
         float: seuil en pourcentage (0-100)
     """
     cycle = cycle if cycle in CYCLES else "Licence"
-    formula = get_cycle_formula(cycle)
-    if formula and formula.seuil_validation is not None:
-        return float(formula.seuil_validation)
+    formules = get_formules_cycle(cycle, active=True)
+    if len(formules) == 1:
+        formula = frappe.get_doc("Grade Formula", formules[0])
+        if formula.seuil_validation is not None:
+            return float(formula.seuil_validation)
 
     setting = frappe.get_single("Udshed Setting")
     if cycle == "Licence":
@@ -408,6 +490,7 @@ def rendre_apercu(formula):
     """Représentation lisible de la formule pour l'interface.
 
     Exemples :
+        Combinaison : Controle Continu(CC) + Examen
         Note du cours = Controle Continu(CC) (40%) + Examen (60%)
         Controle Continu(CC) = Controle Continu(CC) (70%) + Travaux Pratique (TP) (30%)
 
@@ -418,6 +501,9 @@ def rendre_apercu(formula):
         str: aperçu multi-lignes
     """
     lignes = []
+    combinaison = combinaison_formule(formula)
+    if combinaison:
+        lignes.append("Combinaison : {0}".format(combinaison))
     principales = [c for c in (formula.get("components") or []) if c.pourcentage]
     parties = ["{0} ({1}%)".format(c.composante, int(c.pourcentage)) for c in principales]
     lignes.append("Note du cours = " + " + ".join(parties) if parties else "Aucune composante")

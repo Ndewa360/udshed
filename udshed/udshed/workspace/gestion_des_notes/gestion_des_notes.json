@@ -14,8 +14,20 @@
  "is_hidden": 0,
  "label": "Gestion des Notes",
  "link_type": "DocType",
- "links": [],
- "modified": "2026-07-30 22:35:43.000000",
+ "links": [
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "R\u00e9sultat Semestre",
+   "link_count": 0,
+   "link_to": "Resultat Semestre",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-08-13 08:04:58.400582",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Gestion des Notes",
@@ -46,8 +58,8 @@
   {
    "doc_view": "",
    "label": "Saisie des Notes",
-   "link_to": "Session Examen Note",
-   "type": "DocType"
+   "link_to": "note-udshed",
+   "type": "Page"
   },
   {
    "doc_view": "",
@@ -60,6 +72,13 @@
    "label": "Configuration Notes",
    "link_to": "Udshed Setting",
    "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Proc\u00e8s-Verbal r\u00e9capitulatif",
+   "link_to": "Proces Verbal Recapitulatif",
+   "report_ref_doctype": "Resultat Academique",
+   "type": "Report"
   }
  ],
  "title": "Gestion des Notes",

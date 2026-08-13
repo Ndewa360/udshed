@@ -6,6 +6,22 @@ frappe.ui.form.on("Session Examen", {
 		if (frm.is_new() || frm.doc.statut !== "Brouillon") {
 			return;
 		}
+		frm.add_custom_button(__("Valider les notes"), function() {
+			frappe.confirm(
+				__("Valider toutes les notes de la session {0} ? Elles seront ensuite publiables.", [frm.doc.name]),
+				() => {
+					frappe.call("udshed.api.saisie_notes.valider_notes", {
+						session: frm.doc.name
+					}).then(r => {
+						frappe.show_alert({
+							message: __("Notes validées ({0}).", [r.message.validated]),
+							indicator: "green"
+						});
+						frm.reload_doc();
+					});
+				}
+			);
+		});
 		frm.add_custom_button(__("Publier"), function() {
 			frappe.confirm(
 				__("Publier la session {0} ? Les notes seront verrouillées.", [frm.doc.name]),

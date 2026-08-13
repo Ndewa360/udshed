@@ -27,6 +27,11 @@ frappe.ui.form.on("Grade Formula", {
 		const lignes = [];
 
 		if (composants.length) {
+			const combinaison = composants
+				.map((c) => c.composante)
+				.sort()
+				.join(" + ");
+			lignes.push(`Combinaison : ${combinaison}`);
 			const parties = composants.map(
 				(c) => `${c.composante} (${c.pourcentage}%)`
 			);
