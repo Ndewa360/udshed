@@ -29,44 +29,44 @@
   }
  ],
  "sequence_id": 5.0,
-  "shortcuts": [
-   {
-    "doc_view": "",
-    "label": "Session Inscription",
-    "link_to": "Session Inscription",
-    "type": "DocType"
-   },
-   {
-    "doc_view": "",
-    "label": "Candidats",
-    "link_to": "Session Inscription Candidate",
-    "type": "DocType"
-   },
-   {
-    "doc_view": "",
-    "label": "Sessions Reinscription",
-    "link_to": "Reinscription",
-    "type": "DocType"
-   },
-   {
-    "doc_view": "",
-    "label": "Reinscriptions",
-    "link_to": "Academic Reregistration",
-    "type": "DocType"
-   },
-   {
-    "doc_view": "",
-    "label": "Etudiants",
-    "link_to": "Student",
-    "type": "DocType"
-   },
-   {
-    "doc_view": "",
-    "label": "Gestion des Niveaux",
-    "link_to": "gestion-des-niveaux",
-    "type": "Page"
-   }
-  ],
+ "shortcuts": [
+  {
+   "doc_view": "",
+   "label": "Session Inscription",
+   "link_to": "Session Inscription",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Candidats",
+   "link_to": "Session Inscription Candidate",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Sessions Reinscription",
+   "link_to": "Session Reinscription",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Reinscriptions",
+   "link_to": "Academic Reregistration",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Etudiants",
+   "link_to": "Student",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Gestion des Niveaux",
+   "link_to": "gestion-des-niveaux",
+   "type": "Page"
+  }
+ ],
  "title": "Inscription - Reinscription",
  "type": "Workspace"
 }
