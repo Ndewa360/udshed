@@ -1,34 +1,32 @@
 {
  "app": "udshed",
- "creation": "2026-07-29 10:15:26.579432",
+ "creation": "2026-08-14 11:31:48.971863",
  "docstatus": 0,
  "doctype": "Desktop Icon",
  "hidden": 0,
  "icon": "user-plus",
+ "icon_image": "/assets/udshed/images/logo-reinscription.png",
  "icon_type": "Link",
  "idx": 0,
  "label": "Inscription - Reinscription",
  "link_to": "Inscription - Reinscription",
  "link_type": "Workspace Sidebar",
- "modified": "2026-07-29 10:20:41.378488",
+ "modified": "2026-08-14 12:27:01.914989",
  "modified_by": "Administrator",
  "name": "Inscription - Reinscription",
  "owner": "Administrator",
  "restrict_removal": 0,
-  "roles": [
-   {
-    "role": "System Manager"
-   },
-   {
-    "role": "Coordonateur"
-   },
-   {
-    "role": "Agent de scolarité"
-   },
-   {
-    "role": "Comptable"
-   }
-  ],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Coordonateur"
+  },
+  {
+   "role": "student"
+  }
+ ],
  "sidebar": "Inscription - Reinscription",
  "standard": 1
 }
