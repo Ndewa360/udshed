@@ -1,4 +1,7 @@
+import os
+
 import frappe
+from frappe.utils.pdf import get_pdf
 from frappe.query_builder import DocType
 
 
@@ -6,7 +9,7 @@ from frappe.query_builder import DocType
 def get_open_sessions():
 	"""Retourne toutes les sessions de réinscription ouvertes"""
 	return frappe.get_all(
-		"Reinscription",
+		"Session Reinscription",
 		filters={"statut": "Ouverte"},
 		fields=["name", "academic_year", "date_ouverture", "date_cloture", "note_minimale"]
 	)
@@ -177,24 +180,35 @@ def get_reregistration_summary(student, academic_year):
 
 
 @frappe.whitelist()
+def soumettre_reregistration(reregistration_name):
+	"""Soumettre une réinscription pour validation (Brouillon -> En attente)"""
+	doc = frappe.get_doc("Academic Reregistration", reregistration_name)
+	doc.soumettre()
+	return {"status": True, "message": "Réinscription soumise pour validation"}
+
+
+@frappe.whitelist()
 def valider_reregistration(reregistration_name):
 	"""Valider une réinscription — action du coordonateur"""
 	doc = frappe.get_doc("Academic Reregistration", reregistration_name)
-
-	if doc.statut != "En attente":
-		frappe.throw("Seules les réinscriptions en attente peuvent être validées.")
-
 	doc.valider()
-
 	return {"status": True, "message": "Réinscription validée avec succès"}
 
 
 @frappe.whitelist()
-def rejeter_reregistration(reregistration_name, motif=None):
-	"""Rejeter une réinscription — action du coordonateur"""
+def refuser_reregistration(reregistration_name, motif=None):
+	"""Refuser une réinscription — action du coordonateur"""
 	doc = frappe.get_doc("Academic Reregistration", reregistration_name)
-	doc.rejeter(motif=motif)
-	return {"status": True, "message": "Réinscription rejetée"}
+	doc.refuser(motif=motif)
+	return {"status": True, "message": "Réinscription refusée"}
+
+
+@frappe.whitelist()
+def reouvrir_reregistration(reregistration_name):
+	"""Rouvrir une réinscription soumise pour correction (En attente -> Brouillon)"""
+	doc = frappe.get_doc("Academic Reregistration", reregistration_name)
+	doc.reouvrir()
+	return {"status": True, "message": "Réinscription rouvert en brouillon"}
 
 
 @frappe.whitelist()
@@ -219,6 +233,7 @@ def get_all_levels(faculty=None, filiere=None):
 				{
 					"name": l.name,
 					"level": l.level,
+					"cycle": l.cycle,
 					"order": l.order,
 					"coordonateur": l.coordonateur,
 					"calendrier": l.calendrier,
@@ -230,48 +245,64 @@ def get_all_levels(faculty=None, filiere=None):
 
 
 @frappe.whitelist()
+def add_level(filiere, level, cycle=None, coordonateur=None, calendrier="Defaut", gestionnaire_de_planning=None):
+	"""Ajoute un niveau à une filière. Le save() déclenche before_save
+	qui renumérote les ordres et déduit le cycle si non renseigné."""
+	doc = frappe.get_doc("Field of study", filiere)
+	if any(r.level == level for r in doc.field_of_study_level):
+		frappe.throw(f"Le niveau {level} existe déjà dans {filiere}")
+	doc.append("field_of_study_level", {
+		"level": level,
+		"cycle": cycle or None,
+		"order": (len(doc.field_of_study_level) or 0) + 1,
+		"coordonateur": coordonateur,
+		"calendrier": calendrier or "Defaut",
+		"gestionnaire_de_planning": gestionnaire_de_planning,
+	})
+	doc.save(ignore_permissions=True)
+	return {"status": True, "message": f"Niveau {level} ajouté à {filiere}"}
+
+
+@frappe.whitelist()
 def move_level(filiere, level_name, direction):
 	"""
 	Déplace un niveau vers le haut (up) ou vers le bas (down)
-	en permutant l'ordre avec le niveau adjacent
+	en réordonnant physiquement les lignes du tableau.
 	"""
 	doc = frappe.get_doc("Field of study", filiere)
-	levels = sorted(doc.field_of_study_level, key=lambda x: x.order or 0)
+	names = [r.name for r in sorted(doc.field_of_study_level, key=lambda x: x.order or 0)]
 
-	current_idx = None
-	for i, l in enumerate(levels):
-		if l.name == level_name:
-			current_idx = i
-			break
-
-	if current_idx is None:
+	if level_name not in names:
 		frappe.throw("Niveau introuvable")
+
+	current_idx = names.index(level_name)
 
 	if direction == "up":
 		if current_idx == 0:
 			frappe.throw("Le niveau est déjà en première position")
-		swap_idx = current_idx - 1
+		names[current_idx], names[current_idx - 1] = names[current_idx - 1], names[current_idx]
 	elif direction == "down":
-		if current_idx == len(levels) - 1:
+		if current_idx == len(names) - 1:
 			frappe.throw("Le niveau est déjà en dernière position")
-		swap_idx = current_idx + 1
+		names[current_idx], names[current_idx + 1] = names[current_idx + 1], names[current_idx]
 	else:
 		frappe.throw("Direction invalide. Utilisez 'up' ou 'down'")
 
-	levels[current_idx].order, levels[swap_idx].order = levels[swap_idx].order, levels[current_idx].order
-	doc.save()
-	return {"status": True, "message": f"Niveau déplacé vers le {'haut' if direction == 'up' else 'bas'}"}
+	return reorder_levels(filiere, names)
 
 
 @frappe.whitelist()
 def reorder_levels(filiere, level_names):
-	"""Réassigne l'ordre des niveaux selon l'ordre du tableau level_names"""
+	"""Réordonne physiquement les lignes de niveaux selon l'ordre de level_names.
+
+	Le save() déclenche before_save qui renumérote `order` = position de chaque ligne.
+	"""
 	doc = frappe.get_doc("Field of study", filiere)
 	name_to_row = {row.name: row for row in doc.field_of_study_level}
-	for i, name in enumerate(level_names):
-		if name in name_to_row:
-			name_to_row[name].order = i + 1
-	doc.save()
+	rows = [name_to_row[n] for n in level_names if n in name_to_row]
+	rows += [row for row in doc.field_of_study_level if row.name not in name_to_row]
+	doc.field_of_study_level = rows
+	doc.save(ignore_permissions=True)
 	return {"status": True, "message": "Ordre des niveaux mis à jour"}
 
 
@@ -292,7 +323,7 @@ def get_reregistrations_by_session(reinscription_session):
 	)
 
 	result = []
-	student_names = list(set(r.student for r in reregistrations))
+	student_names = list(set(r.get("student") for r in reregistrations))
 	student_map = {}
 	for s_name in student_names:
 		s = frappe.get_doc("Student", s_name)
@@ -305,7 +336,157 @@ def get_reregistrations_by_session(reinscription_session):
 	for r in reregistrations:
 		result.append({
 			**r,
-			**student_map.get(r.student, {})
+			**student_map.get(r.get("student"), {})
 		})
 
 	return result
+
+
+@frappe.whitelist()
+def get_reregistration_report(reinscription_session=None, filiere=None, statut=None):
+	"""
+	Rapport des réinscriptions : liste détaillée + statistiques
+	par statut, filière et niveau.
+
+	Args:
+		reinscription_session: name/ID de la Session Reinscription (optionnel)
+		filiere: name/ID de la Field of study (optionnel)
+		statut: Brouillon | En attente | Validée | Refusée (optionnel)
+
+	Returns:
+		dict: {rows, total, par_statut, par_filiere, par_niveau}
+	"""
+	filters = {}
+	if reinscription_session:
+		filters["reinscription_session"] = reinscription_session
+	if filiere:
+		filters["filiere"] = filiere
+	if statut:
+		filters["statut"] = statut
+
+	reregistrations = frappe.get_all(
+		"Academic Reregistration",
+		filters=filters,
+		fields=[
+			"name", "student", "academic_year", "reinscription_session",
+			"filiere", "niveau", "semestre", "statut", "creation"
+		],
+		order_by="creation desc"
+	)
+
+	student_names = list(set(r.get("student") for r in reregistrations))
+	student_map = {}
+	for s_name in student_names:
+		s = frappe.get_doc("Student", s_name)
+		student_map[s_name] = {
+			"matricule": s.name,
+			"nom_etudiant": f"{s.nom} {s.prenom}",
+			"email": s.email
+		}
+
+	filiere_names = list(set(r.get("filiere") for r in reregistrations))
+	filiere_map = {}
+	for f_name in filiere_names:
+		filiere_map[f_name] = (
+			frappe.db.get_value("Field of study", f_name, "name_of_field") or f_name
+		)
+
+	rows = []
+	for r in reregistrations:
+		rows.append({
+			**r,
+			"matricule": student_map.get(r.get("student"), {}).get("matricule", ""),
+			"nom_etudiant": student_map.get(r.get("student"), {}).get("nom_etudiant", ""),
+			"email": student_map.get(r.get("student"), {}).get("email", ""),
+			"filiere_label": filiere_map.get(r.get("filiere"), r.get("filiere"))
+		})
+
+	par_statut = {}
+	par_filiere = {}
+	par_niveau = {}
+	for r in rows:
+		statut = r.get("statut") or "Brouillon"
+		par_statut[statut] = par_statut.get(statut, 0) + 1
+		label = r.get("filiere_label") or "Non défini"
+		par_filiere[label] = par_filiere.get(label, 0) + 1
+		niveau = r.get("niveau") or "Non défini"
+		par_niveau[niveau] = par_niveau.get(niveau, 0) + 1
+
+	return {
+		"rows": rows,
+		"total": len(rows),
+		"par_statut": par_statut,
+		"par_filiere": par_filiere,
+		"par_niveau": par_niveau
+	}
+
+
+@frappe.whitelist()
+def telecharger_fiche_reinscription(reregistration_name):
+	"""Génère la fiche de réinscription en PDF.
+
+	L'étudiant lié ne peut la télécharger qu'une seule fois (fiche_telechargee).
+	Le personnel (Coordonateur / Agent de scolarité / Comptable / System Manager)
+	peut la re-télécharger sans consommer le téléchargement unique.
+	"""
+	doc = frappe.get_doc("Academic Reregistration", reregistration_name)
+	student = frappe.get_doc("Student", doc.student)
+
+	roles = frappe.get_roles()
+	is_student = student.utilisateur == frappe.session.user
+	is_staff = bool(set(roles) & {"System Manager", "Coordonateur", "Agent de scolarité", "Comptable"})
+	if not (is_student or is_staff):
+		frappe.throw("Vous n'avez pas accès à cette fiche de réinscription.")
+
+	if doc.statut != "Validée":
+		frappe.throw("La fiche de réinscription n'est disponible qu'après validation.")
+
+	if is_student and doc.fiche_telechargee:
+		frappe.throw("La fiche de réinscription a déjà été téléchargée.")
+
+	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") or doc.filiere
+	school_name = frappe.get_single("Udshed Setting").school_name or ""
+	coordonnateur = frappe.db.get_value("Field of study Level", doc.niveau, "coordonateur") or ""
+
+	template_path = os.path.join(frappe.get_app_path("udshed"), "templates", "reinscription_fiche.html")
+	with open(template_path, encoding="utf-8") as f:
+		html = frappe.render_template(f.read(), {
+			"school_name": school_name,
+			"student": {
+				"matricule": student.name,
+				"nom": student.nom or "",
+				"prenom": student.prenom or "",
+				"email": student.email
+			},
+			"doc": {
+				"name": doc.name,
+				"reinscription_session": doc.reinscription_session,
+				"academic_year": doc.academic_year,
+				"filiere_label": filiere_label,
+				"niveau": doc.niveau,
+				"semestre": doc.semestre,
+				"statut": doc.statut
+			},
+			"coordonnateur": coordonnateur,
+			"cours_inscrits": [
+				{"intitule": m.intitule, "teaching_unit": m.teaching_unit, "semestre": m.semestre, "statut": m.statut}
+				for m in doc.cours_inscrits
+			],
+			"resultats_precedents": [
+				{
+					"intitule": r.intitule, "teaching_unit": r.teaching_unit, "semestre": r.semestre,
+					"note": r.note, "valide": r.valide, "est_dette": r.est_dette
+				}
+				for r in doc.resultats_precedents
+			]
+		})
+
+	pdf = get_pdf(html)
+
+	if is_student:
+		doc.db_set("fiche_telechargee", 1)
+		frappe.db.commit()
+
+	frappe.local.response.filename = f"Fiche_Reinscription_{doc.name}.pdf"
+	frappe.local.response.filecontent = pdf
+	frappe.local.response.type = "pdf"

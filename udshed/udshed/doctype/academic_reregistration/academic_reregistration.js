@@ -4,8 +4,33 @@ frappe.ui.form.on("Academic Reregistration", {
 	// REFRESH
 	// =============================================
 	refresh(frm) {
-		if (!frm.is_new() && frm.doc.statut === "En attente") {
-			if (frappe.user.has_role("System Manager") || frappe.user.has_role("Coordonateur")) {
+		const isCoordinator = frappe.user.has_role("System Manager") || frappe.user.has_role("Coordonateur") || frappe.user.has_role("Agent de scolarité");
+
+		if (!frm.is_new() && isCoordinator) {
+			// Brouillon -> En attente
+			if (frm.doc.statut === "Brouillon") {
+				frm.add_custom_button("Soumettre", () => {
+					frappe.confirm(
+						"Soumettre cette réinscription pour validation ?",
+						() => {
+							frappe.call({
+								method: "udshed.api.reregistration.soumettre_reregistration",
+								args: { reregistration_name: frm.doc.name },
+								callback(r) {
+									frappe.show_alert({
+										message: r.message.message,
+										indicator: "blue"
+									}, 5);
+									frm.reload_doc();
+								}
+							});
+						}
+					);
+				}, "Actions").addClass("btn-primary");
+			}
+
+			// En attente -> Validée / Refusée (ou retour en brouillon)
+			if (frm.doc.statut === "En attente") {
 				frm.add_custom_button("Valider la réinscription", () => {
 					frappe.confirm(
 						"Voulez-vous vraiment valider cette réinscription ?",
@@ -25,12 +50,12 @@ frappe.ui.form.on("Academic Reregistration", {
 					);
 				}, "Actions").addClass("btn-success");
 
-				frm.add_custom_button("Rejeter", () => {
+				frm.add_custom_button("Refuser", () => {
 					frappe.prompt(
-						{ label: "Motif du rejet", fieldname: "motif", fieldtype: "Small Text" },
+						{ label: "Motif du refus", fieldname: "motif", fieldtype: "Small Text" },
 						(values) => {
 							frappe.call({
-								method: "udshed.api.reregistration.rejeter_reregistration",
+								method: "udshed.api.reregistration.refuser_reregistration",
 								args: {
 									reregistration_name: frm.doc.name,
 									motif: values.motif
@@ -44,19 +69,40 @@ frappe.ui.form.on("Academic Reregistration", {
 								}
 							});
 						},
-						"Rejeter la réinscription"
+						"Refuser la réinscription"
 					);
 				}, "Actions").addClass("btn-danger");
+
+				frm.add_custom_button("Rouvrir (brouillon)", () => {
+					frappe.confirm(
+						"Rouvrir cette réinscription en brouillon pour correction ?",
+						() => {
+							frappe.call({
+								method: "udshed.api.reregistration.reouvrir_reregistration",
+								args: { reregistration_name: frm.doc.name },
+								callback(r) {
+									frappe.show_alert({
+										message: r.message.message,
+										indicator: "orange"
+									}, 5);
+									frm.reload_doc();
+								}
+							});
+						}
+					);
+				}, "Actions");
 			}
 		}
 
 		// Afficher le statut en couleur
 		if (frm.doc.statut === "Validée") {
 			frm.set_intro("Réinscription validée", "green");
-		} else if (frm.doc.statut === "Rejetée") {
-			frm.set_intro("Réinscription rejetée", "red");
+		} else if (frm.doc.statut === "Refusée") {
+			frm.set_intro("Réinscription refusée", "red");
 		} else if (frm.doc.statut === "En attente") {
 			frm.set_intro("En attente de validation", "orange");
+		} else if (frm.doc.statut === "Brouillon") {
+			frm.set_intro("Brouillon - soumettez pour validation", "blue");
 		}
 
 		// Charger les niveaux si la filière est déjà définie
@@ -84,7 +130,7 @@ frappe.ui.form.on("Academic Reregistration", {
 	reinscription_session(frm) {
 		if (!frm.doc.reinscription_session) return;
 
-		frappe.db.get_doc("Reinscription", frm.doc.reinscription_session).then(session => {
+		frappe.db.get_doc("Session Reinscription", frm.doc.reinscription_session).then(session => {
 			frm.set_value("academic_year", session.academic_year);
 		});
 	},
@@ -201,7 +247,7 @@ function charger_matieres_precedentes(frm) {
 
 	// Récupérer la note minimale depuis la session
 	let note_minimale = 10;
-	frappe.db.get_value("Reinscription", frm.doc.reinscription_session, "note_minimale").then(r => {
+	frappe.db.get_value("Session Reinscription", frm.doc.reinscription_session, "note_minimale").then(r => {
 		if (r.message && r.message.note_minimale) {
 			note_minimale = r.message.note_minimale;
 		}

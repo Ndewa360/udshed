@@ -7,13 +7,14 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "level",
-  "order",
-  "column_break_kmxi",
-  "coordonateur",
-  "calendrier",
-  "gestionnaire_de_planning"
- ],
+   "level",
+   "cycle",
+   "order",
+   "column_break_kmxi",
+   "coordonateur",
+   "calendrier",
+   "gestionnaire_de_planning"
+  ],
  "fields": [
   {
    "fieldname": "level",
@@ -21,9 +22,16 @@
    "in_list_view": 1,
    "label": "Niveau",
    "options": "Licence 1\nLicence 2\nLicence 3\nBTS 1\nBTS 2\nMaster 1\nMaster 2",
-   "reqd": 1
-  },
-  {
+    "reqd": 1
+   },
+   {
+    "fieldname": "cycle",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "label": "Cycle",
+    "options": "Licence\nMaster\nBTS\nDoctorat\nAutre"
+   },
+   {
    "default": "1",
    "fieldname": "order",
    "fieldtype": "Int",

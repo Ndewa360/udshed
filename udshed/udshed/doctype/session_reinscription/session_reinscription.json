@@ -18,9 +18,7 @@
   "r\u00e8gles_section",
   "note_minimale",
   "column_break_yhpf",
-  "note_maximale",
-  "description_section",
-  "description"
+  "note_maximale"
  ],
  "fields": [
   {
@@ -93,25 +91,15 @@
    "fieldtype": "Float",
    "label": "Note maximale",
    "reqd": 1
-  },
-  {
-   "fieldname": "description_section",
-   "fieldtype": "Section Break",
-   "label": "Description"
-  },
-  {
-   "fieldname": "description",
-   "fieldtype": "Small Text",
-   "label": "Description"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-16 11:07:57.608052",
+ "modified": "2026-08-03 12:39:25.455769",
  "modified_by": "Administrator",
  "module": "Udshed",
- "name": "Reinscription",
+ "name": "Session Reinscription",
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
@@ -137,6 +125,24 @@
    "role": "Coordonateur",
    "share": 1,
    "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Agent de scolarité",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Comptable",
+   "share": 1
   }
  ],
  "row_format": "Dynamic",

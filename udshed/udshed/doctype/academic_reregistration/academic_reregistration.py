@@ -1,24 +1,37 @@
 import frappe
 from frappe.model.document import Document
 
+from udshed.utils.niveaux import niveau_precedent
+
 
 class AcademicReregistration(Document):
 
 	def validate(self):
+		if not self.statut:
+			self.statut = "Brouillon"
 		self.verifier_session_ouverte()
 		self.verifier_doublon()
+		self.verifier_verrouillage()
 		self.calculer_niveau_precedent()
 		self.charger_resultats_precedents()
 		self.calculer_cours_inscrits()
 
 	def verifier_session_ouverte(self):
 		"""Vérifie qu'une session de réinscription est ouverte"""
-		session = frappe.db.exists("Reinscription", {
+		session = frappe.db.exists("Session Reinscription", {
 			"name": self.reinscription_session,
 			"statut": "Ouverte"
 		})
 		if not session:
 			frappe.throw("La session de réinscription sélectionnée n'est pas ouverte.")
+
+	def verifier_verrouillage(self):
+		"""Verrouille une réinscription soumise, validée ou refusée"""
+		if not self.is_new() and self.statut in ("En attente", "Validée", "Refusée"):
+			frappe.throw(
+				f"Cette réinscription est {self.statut.lower()}. "
+				"Elle ne peut plus être modifiée. Utilisez les actions du formulaire."
+			)
 
 	def verifier_doublon(self):
 		"""Vérifie qu'un étudiant ne se réinscrit pas deux fois pour le même niveau et la même année"""
@@ -32,26 +45,10 @@ class AcademicReregistration(Document):
 			frappe.throw("Cet étudiant est déjà réinscrit pour cette année et ce niveau.")
 
 	def calculer_niveau_precedent(self):
-		"""Trouve automatiquement le niveau précédent selon le champ order"""
+		"""Trouve automatiquement le niveau précédent selon les règles de progression."""
 		if not self.niveau or not self.filiere:
 			return
-
-		filiere_doc = frappe.get_doc("Field of study", self.filiere)
-		niveau_actuel_order = None
-
-		for row in filiere_doc.field_of_study_level:
-			if row.level == self.niveau:
-				niveau_actuel_order = row.order
-				break
-
-		if not niveau_actuel_order:
-			return
-
-		self.niveau_precedent = None
-		for row in filiere_doc.field_of_study_level:
-			if row.order == (niveau_actuel_order - 1):
-				self.niveau_precedent = row.level
-				break
+		self.niveau_precedent = niveau_precedent(self.filiere, self.niveau)
 
 	def charger_resultats_precedents(self):
 		"""
@@ -111,7 +108,7 @@ class AcademicReregistration(Document):
 		notes_dict = {n.teaching_unit: n.note_finale or 0 for n in notes}
 
 		note_minimale = frappe.db.get_value(
-			"Reinscription", self.reinscription_session, "note_minimale"
+			"Session Reinscription", self.reinscription_session, "note_minimale"
 		) or 10
 
 		self.set("resultats_precedents", [])
@@ -221,6 +218,13 @@ class AcademicReregistration(Document):
 				"motif": motif
 			})
 
+	def soumettre(self):
+		"""Soumet la réinscription pour validation (Brouillon -> En attente)"""
+		if self.statut != "Brouillon":
+			frappe.throw("Seules les réinscriptions en brouillon peuvent être soumises.")
+
+		self.db_set("statut", "En attente")
+
 	def valider(self):
 		"""Valide la réinscription et met à jour le niveau de l'étudiant"""
 		if self.statut != "En attente":
@@ -229,17 +233,24 @@ class AcademicReregistration(Document):
 		self.db_set("statut", "Validée")
 
 		# Mettre à jour le niveau actuel de l'étudiant
-		frappe.db.set("Student", self.student, "niveau_actuel", self.niveau)
+		frappe.db.set_value("Student", self.student, "niveau_actuel", self.niveau)
 
 		self.envoyer_email_confirmation()
 
-	def rejeter(self, motif=None):
-		"""Rejette la réinscription"""
+	def refuser(self, motif=None):
+		"""Refuse la réinscription"""
 		if self.statut != "En attente":
-			frappe.throw("Seules les réinscriptions en attente peuvent être rejetées.")
+			frappe.throw("Seules les réinscriptions en attente peuvent être refusées.")
 
-		self.db_set("statut", "Rejetée")
-		self.envoyer_email_rejet(motif)
+		self.db_set("statut", "Refusée")
+		self.envoyer_email_refus(motif)
+
+	def reouvrir(self):
+		"""Rouvre une réinscription soumise pour correction (En attente -> Brouillon)"""
+		if self.statut != "En attente":
+			frappe.throw("Seules les réinscriptions en attente peuvent être rouvertes.")
+
+		self.db_set("statut", "Brouillon")
 
 	def envoyer_email_confirmation(self):
 		"""Envoie un email de confirmation à l'étudiant"""
@@ -260,19 +271,19 @@ class AcademicReregistration(Document):
 			"""
 		)
 
-	def envoyer_email_rejet(self, motif=None):
-		"""Envoie un email de rejet à l'étudiant"""
+	def envoyer_email_refus(self, motif=None):
+		"""Envoie un email de refus à l'étudiant"""
 		student = frappe.get_doc("Student", self.student)
 		if not student.email:
 			return
 
 		frappe.sendmail(
 			recipients=[student.email],
-			subject=f"Réinscription rejetée - {self.academic_year}",
+			subject=f"Réinscription refusée - {self.academic_year}",
 			message=f"""
 				Bonjour {student.nom} {student.prenom},<br><br>
 				Votre réinscription pour l'année académique
-				<b>{self.academic_year}</b> a été rejetée.<br>
+				<b>{self.academic_year}</b> a été refusée.<br>
 				{f"Motif : {motif}" if motif else ""}<br><br>
 				Veuillez contacter l'administration pour plus d'informations.<br><br>
 				Cordialement,<br>

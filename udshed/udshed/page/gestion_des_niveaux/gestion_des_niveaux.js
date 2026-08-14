@@ -9,6 +9,8 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 	let all_data = [];
 	let filiere_field = null;
 	let btn_ajouter = null;
+	let last_added = null;
+	let recap_datatable = null;
 
 	function setup_filters() {
 		page.add_field({
@@ -60,11 +62,14 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 
 	function show_add_level_dialog(filiere) {
 		frappe.call({
-			method: "frappe.client.get",
-			args: { doctype: "Field of study", name: filiere },
+			method: "frappe.client.get_list",
+			args: {
+				doctype: "Field of study Level",
+				filters: { parent: filiere },
+				fields: ["level"],
+			},
 			callback(r) {
-				let doc = r.message;
-				let existing_levels = (doc.field_of_study_level || []).map(l => l.level);
+				let existing_levels = (r.message || []).map(l => l.level);
 				let all_options = [
 					"Licence 1", "Licence 2", "Licence 3",
 					"BTS 1", "BTS 2",
@@ -84,6 +89,13 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 							description: available.length
 								? __("Choisissez le niveau à ajouter")
 								: __("Tous les niveaux existent déjà dans cette filière"),
+						},
+						{
+							fieldtype: "Select",
+							fieldname: "cycle",
+							label: __("Cycle"),
+							options: ["", "Licence", "Master", "BTS", "Doctorat", "Autre"],
+							description: __("Si vide, le cycle sera déduit automatiquement du niveau."),
 						},
 						{
 							fieldtype: "Link",
@@ -109,25 +121,28 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 					primary_action_label: __("Ajouter"),
 					primary_action(values) {
 						if (!values.level) return;
-						let new_row = doc.append("field_of_study_level", {
-							level: values.level,
-							order: (doc.field_of_study_level.length || 0) + 1,
-							coordonateur: values.coordonateur,
-							calendrier: values.calendrier || "Defaut",
-							gestionnaire_de_planning: values.gestionnaire_de_planning,
-						});
 						frappe.call({
-							method: "frappe.client.save",
-							args: { doc: doc },
+							method: "udshed.api.reregistration.add_level",
+							args: {
+								filiere,
+								level: values.level,
+								cycle: values.cycle || "",
+								coordonateur: values.coordonateur,
+								calendrier: values.calendrier || "Defaut",
+								gestionnaire_de_planning: values.gestionnaire_de_planning || "",
+							},
 							freeze: true,
 							freeze_message: __("Ajout du niveau..."),
 							callback(r2) {
 								d.hide();
-								frappe.show_alert({
-									message: __("Niveau {0} ajouté à {1}", [values.level, filiere]),
-									indicator: "green",
-								});
-								load_levels();
+								if (r2.message && r2.message.status) {
+									last_added = { filiere: filiere, level: values.level };
+									frappe.show_alert({
+										message: r2.message.message,
+										indicator: "green",
+									});
+									load_levels();
+								}
 							},
 						});
 					},
@@ -140,10 +155,7 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 	function load_levels() {
 		frappe.call({
 			method: "udshed.api.reregistration.get_all_levels",
-			args: {
-				faculty: filters.faculty || null,
-				filiere: filters.filiere || null,
-			},
+			args: { faculty: null, filiere: null },
 			callback(r) {
 				all_data = r.message || [];
 				render_table();
@@ -152,13 +164,111 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 	}
 
 	function render_table() {
-		let html = build_table_html();
-		let container = page.body;
-		container.innerHTML =
+		let html = build_table_html() + recap_container_html();
+		page.body.html(
 			'<div class="levels-management-container" style="padding: 15px;">' +
-			html +
-			"</div>";
+				html +
+				"</div>"
+		);
+		render_recap_datatable();
 		bind_events();
+		highlight_last_added();
+	}
+
+	function recap_container_html() {
+		return `
+			<div class="card mb-4">
+				<div class="card-header d-flex justify-content-between align-items-center">
+					<div>
+						<strong>${__("Récapitulatif de tous les niveaux")}</strong>
+						<span class="text-muted ml-2" id="recap-count-badge">0 niveau</span>
+					</div>
+				</div>
+				<div class="card-body">
+					<div id="recap-datatable"></div>
+				</div>
+			</div>`;
+	}
+
+	function recap_rows() {
+		let rows = [];
+		(all_data || []).forEach((fos) => {
+			(fos.levels || []).forEach((l) => {
+				rows.push([
+					{ content: l.level || "" },
+					{ content: l.cycle || "—" },
+					{ content: fos.filiere_label || "" },
+					{ content: fos.faculte || "" },
+					{ content: l.coordonateur || "" },
+					{ content: l.calendrier || "" },
+				]);
+			});
+		});
+		return rows;
+	}
+
+	function render_recap_datatable() {
+		let rows = recap_rows();
+		let $count = $("#recap-count-badge");
+		if ($count.length) {
+			$count.text(rows.length + (rows.length > 1 ? " niveaux" : " niveau"));
+		}
+		let $el = $("#recap-datatable");
+		if (!$el.length) return;
+
+		if (recap_datatable) {
+			recap_datatable.destroy();
+			recap_datatable = null;
+		}
+
+		if (!rows.length) {
+			$el.html(
+				'<div class="text-muted text-center" style="padding: 30px;">' +
+					__("Aucun niveau créé pour l'instant.") +
+					"</div>"
+			);
+			return;
+		}
+
+		let columns = [
+			{ name: __("Niveau"), id: "niveau", editable: false },
+			{ name: __("Cycle"), id: "cycle", editable: false },
+			{ name: __("Filière"), id: "filiere", editable: false },
+			{ name: __("Faculté"), id: "faculte", editable: false },
+			{ name: __("Coordonnateur"), id: "coordonateur", editable: false },
+			{ name: __("Calendrier"), id: "calendrier", editable: false },
+		];
+
+		recap_datatable = new frappe.DataTable($el[0], {
+			columns: columns,
+			data: rows,
+			inlineFilters: true,
+			language: frappe.boot.lang,
+			cellHeight: 33,
+			layout: "fixed",
+			serialNoColumn: true,
+			noDataMessage: __("Aucune donnée"),
+			direction: frappe.utils.is_rtl() ? "rtl" : "ltr",
+		});
+	}
+
+	function highlight_last_added() {
+		if (!last_added) return;
+		let { filiere, level } = last_added;
+		last_added = null;
+		$(".levels-table tbody").each(function () {
+			if ($(this).data("filiere") !== filiere) return;
+			$(this).find("tr").each(function () {
+				let $tr = $(this);
+				if ($tr.find("td").eq(2).text().trim() === level) {
+					$tr.addClass("level-row-highlight");
+					if ($tr[0].scrollIntoView) {
+						$tr[0].scrollIntoView({ behavior: "smooth", block: "center" });
+					}
+					setTimeout(() => $tr.removeClass("level-row-highlight"), 3000);
+				}
+			});
+		});
 	}
 
 	function build_table_html() {
@@ -179,42 +289,47 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 		}
 
 		let html = "";
+		let shown = 0;
 		all_data.forEach((fos) => {
-			let levels = fos.levels || [];
-			html += `
+			if (filters.faculty && fos.faculte !== filters.faculty) return;
+			if (filters.filiere && fos.filiere_name !== filters.filiere) return;
+			shown++;
+			let levels = fos.levels || [];			html += `
 				<div class="card mb-4">
 					<div class="card-header d-flex justify-content-between align-items-center">
 						<div>
 							<strong>${frappe.utils.escape_html(fos.filiere_label)}</strong>
 							<span class="text-muted ml-2">(${frappe.utils.escape_html(fos.filiere_name)})</span>
-							<span class="badge badge-info ml-2">${levels.length} niveau${levels.length > 1 ? "x" : ""}</span>
+							<span class="text-muted ml-2">${levels.length} niveau${levels.length > 1 ? "x" : ""}</span>
 						</div>
 						<div>
-							<button class="btn btn-sm btn-outline-primary add-level-btn mr-2"
+							<button class="btn btn-sm btn-primary add-level-btn mr-2"
 								data-filiere="${frappe.utils.escape_html(fos.filiere_name)}">
 								${__("+ Ajouter")}
 							</button>
-							<button class="btn btn-sm btn-outline-secondary open-filiere-btn"
+							<button class="btn btn-sm btn-secondary open-filiere-btn"
 								data-filiere="${frappe.utils.escape_html(fos.filiere_name)}">
 								${__("Modifier la filière")}
 							</button>
 						</div>
 					</div>
 					<div class="card-body p-0">
-						<table class="table table-hover mb-0">
+						<table class="table table-hover mb-0 levels-table">
 							<thead class="thead-light">
 								<tr>
+									<th style="width: 36px;"></th>
 									<th style="width: 60px;">${__("Ordre")}</th>
 									<th>${__("Niveau")}</th>
+									<th>${__("Cycle")}</th>
 									<th>${__("Coordonateur")}</th>
 									<th>${__("Calendrier")}</th>
 									<th style="width: 120px;">${__("Actions")}</th>
 								</tr>
 							</thead>
-							<tbody>
+							<tbody data-filiere="${frappe.utils.escape_html(fos.filiere_name)}">
 								${levels.length ? levels.map((l, idx) => build_level_row(fos.filiere_name, l, idx, levels.length)).join("") : `
 									<tr>
-										<td colspan="5" class="text-center text-muted" style="padding: 30px;">
+										<td colspan="7" class="text-center text-muted" style="padding: 30px;">
 											${__("Aucun niveau. Cliquez sur « + Ajouter » pour en créer un.")}
 										</td>
 									</tr>`}
@@ -223,6 +338,12 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 					</div>
 				</div>`;
 		});
+		if (!shown) {
+			return `
+				<div class="text-muted text-center" style="padding: 40px 20px;">
+					${__("Aucune filière ne correspond aux filtres sélectionnés.")}
+				</div>`;
+		}
 		return html;
 	}
 
@@ -231,22 +352,32 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 		let down_disabled = idx === total - 1;
 		return `
 			<tr data-filiere="${frappe.utils.escape_html(filiere)}" data-level-name="${frappe.utils.escape_html(level.name)}">
+				<td class="text-center drag-handle" style="cursor: grab;" title="${__("Glisser pour réordonner")}">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="opacity: .45;">
+						<circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>
+						<circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/>
+						<circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>
+					</svg>
+				</td>
 				<td class="text-center">
-					<span class="badge badge-secondary badge-order">${level.order}</span>
+					<span class="text-muted">${level.order}</span>
 				</td>
 				<td>
 					<strong>${frappe.utils.escape_html(level.level)}</strong>
 				</td>
+				<td>
+					<span class="indicator-pill ${cycle_badge_class(level.cycle)}">${frappe.utils.escape_html(level.cycle || "—")}</span>
+				</td>
 				<td>${frappe.utils.escape_html(level.coordonateur || "")}</td>
 				<td>${frappe.utils.escape_html(level.calendrier || "")}</td>
 				<td class="text-center">
-					<button class="btn btn-sm btn-outline-secondary move-up-btn" ${up_disabled ? "disabled" : ""}
+					<button class="btn btn-sm btn-secondary move-up-btn" ${up_disabled ? "disabled" : ""}
 						data-filiere="${frappe.utils.escape_html(filiere)}"
 						data-level-name="${frappe.utils.escape_html(level.name)}"
 						title="${__("Monter")}">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3l-5 5h10l-5-5z"/></svg>
 					</button>
-					<button class="btn btn-sm btn-outline-secondary move-down-btn" ${down_disabled ? "disabled" : ""}
+					<button class="btn btn-sm btn-secondary move-down-btn" ${down_disabled ? "disabled" : ""}
 						data-filiere="${frappe.utils.escape_html(filiere)}"
 						data-level-name="${frappe.utils.escape_html(level.name)}"
 						title="${__("Descendre")}">
@@ -254,6 +385,16 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 					</button>
 				</td>
 			</tr>`;
+	}
+
+	function cycle_badge_class(cycle) {
+		let map = {
+			"Licence": "blue",
+			"Master": "green",
+			"BTS": "orange",
+			"Doctorat": "purple",
+		};
+		return map[cycle] || "gray";
 	}
 
 	function bind_events() {
@@ -277,6 +418,48 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 		$(".add-level-btn").click(function () {
 			let filiere = $(this).data("filiere");
 			show_add_level_dialog(filiere);
+		});
+
+		bind_drag_drop();
+	}
+
+	function bind_drag_drop() {
+		if (typeof Sortable === "undefined") return;
+		$(".levels-table tbody").each(function () {
+			let tbody = this;
+			if (tbody._sortable) return;
+			tbody._sortable = new Sortable(tbody, {
+				handle: ".drag-handle",
+				draggable: "tr",
+				animation: 150,
+				ghostClass: "dnd-ghost",
+				onEnd() {
+					let filiere = $(tbody).data("filiere");
+					let names = [];
+					$(tbody).find("tr[data-level-name]").each(function () {
+						names.push($(this).data("level-name"));
+					});
+					if (filiere && names.length) reorder_levels(filiere, names);
+				},
+			});
+		});
+	}
+
+	function reorder_levels(filiere, level_names) {
+		frappe.call({
+			method: "udshed.api.reregistration.reorder_levels",
+			args: { filiere, level_names },
+			freeze: true,
+			freeze_message: __("Réorganisation en cours..."),
+			callback(r) {
+				if (r.message && r.message.status) {
+					frappe.show_alert({
+						message: r.message.message,
+						indicator: "green",
+					});
+					load_levels();
+				}
+			},
 		});
 	}
 

@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class Reinscription(Document):
-	_DOCTYPE_NAME = "Reinscription"
+class SessionReinscription(Document):
+	_DOCTYPE_NAME = "SessionReinscription"

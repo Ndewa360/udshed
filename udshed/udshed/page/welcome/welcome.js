@@ -12,7 +12,7 @@ frappe.pages['welcome'].on_page_load = function(wrapper) {
 			<div class="welcome-wrapper">
 				<div class="welcome-topbar">
 					<div class="welcome-logo">UDSHED</div>
-					<button class="btn welcome-btn-login" onclick="window.location.href='/login'">
+					<button class="btn welcome-btn-login" onclick="window.location.href='/connexion-etudiant'">
 						${__("Login")}
 					</button>
 				</div>
@@ -37,7 +37,7 @@ frappe.pages['welcome'].on_page_load = function(wrapper) {
 							${__("Register")}
 						</button>
 
-						<button class="btn welcome-action-btn welcome-btn-disabled" id="btn-reinscription">
+						<button class="btn welcome-action-btn" id="btn-reinscription">
 							<span class="welcome-btn-icon">🔄</span>
 							${__("Re-register")}
 						</button>
@@ -74,13 +74,9 @@ frappe.pages['welcome'].on_page_load = function(wrapper) {
 			window.location.href = "/app/student";
 		});
 
-		// Bouton Se réinscrire (désactivé pour l'instant)
+		// Bouton Se réinscrire → page de connexion (matricule + date de naissance) puis réinscription
 		document.getElementById("btn-reinscription").addEventListener("click", () => {
-			frappe.msgprint({
-				title: __("Coming Soon"),
-				message: __("This feature is not yet available."),
-				indicator: "orange"
-			});
+			window.location.href = "/connexion-etudiant";
 		});
 	});
 };

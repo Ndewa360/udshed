@@ -13,9 +13,9 @@ IGNORE_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
 
 
 
-class IntegrationTestReinscription(IntegrationTestCase):
+class IntegrationTestSessionReinscription(IntegrationTestCase):
 	"""
-	Integration tests for Reinscription.
+	Integration tests for SessionReinscription.
 	Use this class for testing interactions between multiple components.
 	"""
 

@@ -33,7 +33,7 @@ fixtures = [
     {
         "dt" : "Role",
         "filters": [
-            ["name","in",["Teacher","Coordonateur","Udshed Financial Admin", "Planning Manager", "Registration Manager"]]
+            ["name","in",["Teacher","Coordonateur","Udshed Financial Admin", "Planning Manager", "Registration Manager", "Agent de scolarité", "Comptable"]]
         ]
     },
     
@@ -266,6 +266,14 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Automatically update python controller files with type annotations for this app.
 # export_python_type_annotations = True
+
+# Website redirects
+# -----------------
+# Le login par email est remplacé par la connexion matricule + date de naissance.
+website_redirects = [
+	{"source": "/login", "target": "/connexion-etudiant", "redirect_http_status": 301},
+	{"source": "/login/", "target": "/connexion-etudiant", "redirect_http_status": 301},
+]
 
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs

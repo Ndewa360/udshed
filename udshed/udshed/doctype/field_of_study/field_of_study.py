@@ -4,33 +4,35 @@
 import frappe
 from frappe.model.document import Document
 
+from udshed.utils.niveaux import cycle_niveau
+
 
 class Fieldofstudy(Document):
 
 	def before_save(self):
 		self.normaliser_ordres_niveaux()
+		self.normaliser_cycles()
 		self.gerer_coordonateurs()
 
 	def normaliser_ordres_niveaux(self):
-		rows = self.get("field_of_study_level")
-		if not rows:
-			return
+		"""L'ordre de chaque niveau = sa position dans le tableau.
 
-		orders = {}
-		has_duplicate_or_zero = False
-		for row in rows:
-			o = row.get("order") or 0
-			if o == 0:
-				has_duplicate_or_zero = True
-				break
-			if o in orders:
-				has_duplicate_or_zero = True
-				break
-			orders[o] = row
+		La table de niveaux est reordonnable par drag & drop ; cette methode
+		garantit que le champ `order` refleche toujours la position des lignes
+		(1, 2, 3, ...), source du calcul du niveau precedent/suivant.
+		"""
+		for i, row in enumerate(self.get("field_of_study_level") or []):
+			row.order = i + 1
 
-		if has_duplicate_or_zero:
-			for i, row in enumerate(rows):
-				row.order = i + 1
+	def normaliser_cycles(self):
+		"""Le cycle est TOUJOURS déduit du libellé du niveau.
+
+		Frappe applique la première option d'un champ Select comme défaut à
+		l'insertion d'une ligne (cycle='Licence'), avant before_save. On force
+		donc le calcul pour éviter qu'un niveau BTS/Master reçoive 'Licence'.
+		"""
+		for row in self.get("field_of_study_level") or []:
+			row.cycle = cycle_niveau(row.get("level")) or row.cycle or "Autre"
 
 	def gerer_coordonateurs(self):
 		old_doc = self.get_doc_before_save()

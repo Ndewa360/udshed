@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+	body { font-family: sans-serif; margin: 30px; color: #1f2937; }
+	.header { text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 10px; }
+	h1 { font-size: 20px; margin: 4px 0; color: #0f766e; }
+	h2 { font-size: 14px; margin: 2px 0; text-transform: uppercase; letter-spacing: 1px; }
+	h3 { font-size: 13px; color: #0f766e; margin: 18px 0 6px; text-transform: uppercase; }
+	.info-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+	.info-table td { padding: 4px 6px; font-size: 12px; }
+	.info-table td.label { width: 200px; font-weight: bold; }
+	table.data { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 12px; }
+	table.data th, table.data td { border: 1px solid #9ca3af; padding: 5px 6px; text-align: left; }
+	table.data th { background: #0f766e; color: white; }
+	.badge-valid { color: #15803d; font-weight: bold; }
+	.badge-dette { color: #b91c1c; font-weight: bold; }
+	.statut { font-weight: bold; color: #0f766e; }
+	.footer { margin-top: 40px; display: flex; justify-content: space-between; }
+	.sig { text-align: center; font-size: 12px; width: 45%; }
+	.sig .line { margin-top: 44px; border-top: 1px solid #374151; padding-top: 4px; }
+</style>
+</head>
+<body>
+	<div class="header">
+		<h1>{{ school_name or "UDSHED" }}</h1>
+		<h2>Fiche de r&eacute;inscription</h2>
+	</div>
+
+	<table class="info-table">
+		<tr><td class="label">N&deg; fiche</td><td>{{ doc.name }}</td></tr>
+		<tr><td class="label">&Eacute;tudiant</td><td>{{ student.nom }} {{ student.prenom }} ({{ student.matricule }})</td></tr>
+		<tr><td class="label">Email</td><td>{{ student.email or "—" }}</td></tr>
+		<tr><td class="label">Fili&egrave;re</td><td>{{ doc.filiere_label }}</td></tr>
+		<tr><td class="label">Niveau</td><td>{{ doc.niveau }}</td></tr>
+		<tr><td class="label">Semestre</td><td>{{ doc.semestre }}</td></tr>
+		<tr><td class="label">Ann&eacute;e acad&eacute;mique</td><td>{{ doc.academic_year }}</td></tr>
+		<tr><td class="label">Session de r&eacute;inscription</td><td>{{ doc.reinscription_session }}</td></tr>
+		<tr><td class="label">Statut</td><td class="statut">{{ doc.statut }}</td></tr>
+	</table>
+
+	<h3>Mati&egrave;res inscrites</h3>
+	{% if cours_inscrits %}
+	<table class="data">
+		<thead><tr><th>#</th><th>Mati&egrave;re</th><th>Semestre</th><th>Statut</th></tr></thead>
+		<tbody>
+		{% for m in cours_inscrits %}
+			<tr><td>{{ loop.index }}</td><td>{{ m.intitule or m.teaching_unit }}</td><td>{{ m.semestre }}</td><td>{{ m.statut or "—" }}</td></tr>
+		{% endfor %}
+		</tbody>
+	</table>
+	{% else %}
+	<p>Aucune mati&egrave;re enregistr&eacute;e.</p>
+	{% endif %}
+
+	<h3>R&eacute;sultats de l'ann&eacute;e pr&eacute;c&eacute;dente</h3>
+	{% if resultats_precedents %}
+	<table class="data">
+		<thead><tr><th>#</th><th>Mati&egrave;re</th><th>Semestre</th><th>Note /20</th><th>Statut</th></tr></thead>
+		<tbody>
+		{% for r in resultats_precedents %}
+			<tr>
+				<td>{{ loop.index }}</td>
+				<td>{{ r.intitule or r.teaching_unit }}</td>
+				<td>{{ r.semestre }}</td>
+				<td>{{ r.note }}</td>
+				<td class="{% if r.valide %}badge-valid{% elif r.est_dette %}badge-dette{% endif %}">{{ "Valid&eacute;" if r.valide else ("Dette" if r.est_dette else "—") }}</td>
+			</tr>
+		{% endfor %}
+		</tbody>
+	</table>
+	{% else %}
+	<p>Aucun r&eacute;sultat enregistr&eacute;.</p>
+	{% endif %}
+
+	<div class="footer">
+		<div class="sig"><div class="line">L'&eacute;tudiant</div></div>
+		<div class="sig"><div class="line">Le coordonnateur{% if coordonnateur %}: {{ coordonnateur }}{% endif %}</div></div>
+	</div>
+</body>
+</html>
