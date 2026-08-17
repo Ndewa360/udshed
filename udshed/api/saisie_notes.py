@@ -83,13 +83,6 @@ def _get_or_create_session(args, type_dexamen):
             return session.name
 
     if sessions:
-        # Cherche une session existante qui concerne déjà cette filière/niveau
-        for session in sessions:
-            if frappe.db.exists(
-                "Session Examen Field of study Level",
-                {"parent": session.name, "filiere": filiere, "niveau": niveau},
-            ):
-                return session.name
         # Aucune session ne couvre encore cette filière/niveau : on l'ajoute à la première
         doc = frappe.get_doc("Session Examen", sessions[0].name)
         doc.append("classes_concernees", {"filiere": filiere, "niveau": niveau})

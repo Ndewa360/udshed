@@ -12,7 +12,7 @@ TYPE_RATTRAPAGE = "Examen de rattrapage"
 SEMESTRES = ["Semestre 1", "Semestre 2"]
 
 _MOIS_INDEX = {
-    "Janvier": 1, "Févriér": 2, "Mars": 3, "Avril": 4, "Mai": 5,
+    "Janvier": 1, "Février": 2, "Mars": 3, "Avril": 4, "Mai": 5,
     "Juin": 6, "Juillet": 7, "Aout": 8, "Septembre": 9, "Octobre": 10,
     "Novembre": 11, "Decembre": 12,
 }
@@ -420,13 +420,21 @@ def _get_credits(student, teaching_unit):
     Returns:
         int: Nombre de crédits (0 si non trouvé)
     """
-    student_niveau = frappe.db.get_value("Student", student, "niveau")
-    if not student_niveau:
-        student_niveau = frappe.db.get_value("Student", student, "niveau_actuel")
-    if student_niveau:
+    student_filiere = frappe.db.get_value("Student", student, "filiere")
+    student_niveau_label = frappe.db.get_value("Student", student, "niveau_actuel")
+
+    niveau_name = None
+    if student_filiere and student_niveau_label:
+        fos_doc = frappe.get_doc("Field of study", student_filiere)
+        for row in fos_doc.field_of_study_level:
+            if row.level == student_niveau_label:
+                niveau_name = row.name
+                break
+
+    if student_filiere and niveau_name:
         credits = frappe.db.get_value(
             "Course Field of study level item",
-            {"parent": teaching_unit, "niveau": student_niveau},
+            {"parent": teaching_unit, "filiere": student_filiere, "niveau": niveau_name},
             "course_poid",
         )
         if credits:

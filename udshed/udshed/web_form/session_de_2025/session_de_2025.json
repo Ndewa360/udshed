@@ -41,6 +41,10 @@
     "label": "Choix du (de la) Candidate (candidate selection)"
    },
    {
+    "fieldname": "column_break_etdp",
+    "fieldtype": "Column Break"
+   },
+   {
     "fieldname": "filiere",
     "fieldtype": "Link",
     "label": "Fili\u00e9re",
@@ -60,6 +64,10 @@
     "label": "Examination Centre",
     "options": "Bangangt\u00e9\nBafoussam\nYaound\u00e9\nDouala",
     "reqd": 1
+   },
+   {
+    "fieldname": "column_break_nmqp",
+    "fieldtype": "Column Break"
    },
    {
     "fieldname": "choix_de_formation",
@@ -109,6 +117,10 @@
     "label": "Sexe",
     "options": "Homme\nFemme",
     "reqd": 1
+   },
+   {
+    "fieldname": "column_break_xyrz",
+    "fieldtype": "Column Break"
    },
    {
     "fieldname": "phone",

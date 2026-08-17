@@ -243,7 +243,7 @@ def make_academic_reregistration(
             niveau = make_level(fos, level=niveau_label)
         student = make_student(fos, niveau, cycle=cycle)
 
-    reinscription = frappe.new_doc("Reinscription")
+    reinscription = frappe.new_doc("Session Reinscription")
     reinscription.academic_year = academic_year.name
     reinscription.statut = "Ouverte"
     reinscription.date_ouverture = "2026-09-01"

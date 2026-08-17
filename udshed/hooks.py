@@ -36,7 +36,9 @@ fixtures = [
             ["name","in",["Teacher","Coordonateur","Udshed Financial Admin", "Planning Manager", "Registration Manager", "Agent de scolarité", "Comptable"]]
         ]
     },
-    
+    {
+        "dt": "Web Page",
+    },
 ]
 
 
