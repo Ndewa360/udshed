@@ -18,9 +18,42 @@ TYPE_NORMALE = "Examen de session normal"
 
 # Grille des grades alignée sur la configuration réelle de l'application.
 GRADES = [
-    {"note_min": 0, "note_max": 49.99, "grade": "F", "point": 0, "mention": ""},
-    {"note_min": 50, "note_max": 79.99, "grade": "C", "point": 2, "mention": "Passable"},
-    {"note_min": 80, "note_max": 100, "grade": "A", "point": 4, "mention": "Très bien"},
+    {
+        "note_min_20": 0,
+        "note_max_20": 9.99,
+        "note_min_100": 0,
+        "note_max_100": 49.99,
+        "note_min": 0,
+        "note_max": 49.99,
+        "grade": "F",
+        "point": 0,
+        "mention": "",
+        "type_resultat": "Non capitalisé",
+    },
+    {
+        "note_min_20": 10,
+        "note_max_20": 15.99,
+        "note_min_100": 50,
+        "note_max_100": 79.99,
+        "note_min": 50,
+        "note_max": 79.99,
+        "grade": "C",
+        "point": 2,
+        "mention": "Passable",
+        "type_resultat": "Crédits capitalisés et transférables",
+    },
+    {
+        "note_min_20": 16,
+        "note_max_20": 20,
+        "note_min_100": 80,
+        "note_max_100": 100,
+        "note_min": 80,
+        "note_max": 100,
+        "grade": "A",
+        "point": 4,
+        "mention": "Très bien",
+        "type_resultat": "Crédits capitalisés et transférables",
+    },
 ]
 
 _COMPTEUR = {"n": 0}

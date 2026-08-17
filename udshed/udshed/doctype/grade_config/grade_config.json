@@ -8,11 +8,17 @@
  "engine": "InnoDB",
  "field_order": [
   "note_formula_config_section",
-  "note_min",
-  "note_max",
+  "note_min_20",
+  "note_max_20",
+  "note_min_100",
+  "note_max_100",
   "grade",
   "point",
-  "mention"
+  "mention",
+  "type_resultat",
+  "compat_section",
+  "note_min",
+  "note_max"
  ],
  "fields": [
   {
@@ -21,25 +27,44 @@
    "label": "Note Formula Config"
   },
   {
-   "fetch_if_empty": 1,
-   "fieldname": "note_min",
-   "fieldtype": "Percent",
+   "description": "Borne minimale de la tranche de note, sur 20.",
+   "fieldname": "note_min_20",
+   "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Note_min(%)",
+   "label": "Note Min /20",
    "non_negative": 1,
    "precision": "2",
-   "reqd": 1,
-   "search_index": 1
+   "reqd": 1
   },
   {
-   "fieldname": "note_max",
-   "fieldtype": "Percent",
+   "description": "Borne maximale de la tranche de note, sur 20.",
+   "fieldname": "note_max_20",
+   "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Note_max(%)",
+   "label": "Note Max /20",
    "non_negative": 1,
    "precision": "2",
-   "reqd": 1,
-   "search_index": 1
+   "reqd": 1
+  },
+  {
+   "description": "Borne minimale de la tranche de note, sur 100 (%).",
+   "fieldname": "note_min_100",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Note Min /100",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "description": "Borne maximale de la tranche de note, sur 100 (%).",
+   "fieldname": "note_max_100",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Note Max /100",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
   },
   {
    "fetch_if_empty": 1,
@@ -52,8 +77,9 @@
   },
   {
    "fetch_if_empty": 1,
+   "description": "Point pondéré (échelle 0 à 4) associé au grade.",
    "fieldname": "point",
-   "fieldtype": "Percent",
+   "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Point",
    "non_negative": 1,
@@ -65,14 +91,51 @@
    "fetch_if_empty": 1,
    "fieldname": "mention",
    "fieldtype": "Data",
-   "label": "Mention"
+   "in_list_view": 1,
+   "label": "Mention / Profil académique"
+  },
+  {
+   "description": "Capitalisation des crédits : « Crédits capitalisés et transférables », « Crédits capitalisés mais non transférables » ou « Non capitalisé ».",
+   "fieldname": "type_resultat",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Type de résultat / Capitalisation"
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:true",
+   "fieldname": "compat_section",
+   "fieldtype": "Section Break",
+   "label": "Compatibilité (échelle /100)"
+  },
+  {
+   "description": "Ancien champ, conservé pour compatibilité. Équivaut à Note Min /100.",
+   "fetch_if_empty": 1,
+   "fieldname": "note_min",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Note_min(%)",
+   "non_negative": 1,
+   "precision": "2",
+   "search_index": 1
+  },
+  {
+   "description": "Ancien champ, conservé pour compatibilité. Équivaut à Note Max /100.",
+   "fetch_if_empty": 1,
+   "fieldname": "note_max",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Note_max(%)",
+   "non_negative": 1,
+   "precision": "2",
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-07-10 08:46:01.142261",
+ "modified": "2026-08-14 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Grade Config",

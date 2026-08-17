@@ -72,7 +72,7 @@ def _resultat_ue(student, session_doc, note_normale):
                 "statut": "Publié",
             },
             ["name", "note_finale", "note_pct", "grade", "point", "mention",
-             "note_examen_rattrapage"],
+             "type_resultat", "capitalise", "note_examen_rattrapage"],
             as_dict=True,
         )
         if note_r and note_r.note_finale:
@@ -118,6 +118,8 @@ def _resultat_ue(student, session_doc, note_normale):
     res.grade = resultat_source.grade
     res.point = resultat_source.point
     res.mention = resultat_source.mention
+    res.type_resultat = resultat_source.type_resultat
+    res.capitalise = resultat_source.capitalise
     res.statut = statut
     res.est_rattrapage = est_rattrapage
     res.session_normale = note_normale.name
@@ -139,6 +141,8 @@ def _resultat_ue(student, session_doc, note_normale):
         "grade": res.grade,
         "point": res.point,
         "mention": res.mention,
+        "type_resultat": res.type_resultat,
+        "capitalise": res.capitalise,
         "statut": res.statut,
         "est_rattrapage": est_rattrapage,
         "session_normale": note_normale.name,
@@ -244,7 +248,7 @@ def calculer_resultat_semestre(student, semestre, academic_year):
         credits = frappe.db.get_value(
             "Teaching Unit", r["teaching_unit"], "credits"
         ) or 0
-        somme_cj_pj += credits * (r.get("point") or 0)
+        somme_cj_pj += credits * (r.get("note_pct") or 0)
         somme_cj += credits
 
     mps = round(somme_cj_pj / somme_cj, 2) if somme_cj > 0 else 0
@@ -440,7 +444,10 @@ def calculer_mps(student, semestre, academic_year):
     """Calcule la Moyenne Pondérée Semestrielle (MPS) d'un étudiant.
 
     MPS(i) = (Σ Cj × Pj) / (Σ Cj)
-    où Cj = crédits de l'UE j, Pj = point (grade) de l'UE j
+    où Cj = crédits de l'UE j, Pj = note en pourcentage (note_pct) de l'UE j
+
+    La MPS est exprimée sur l'échelle 0–100 (%), alignée sur les seuils de
+    validation (50/60 %) et sur les bornes de la grille des grades (/100).
 
     Args:
         student: Nom du Student
@@ -470,7 +477,7 @@ def calculer_mps(student, semestre, academic_year):
 
     for r in resultats:
         cj = _get_credits(student, r.teaching_unit)
-        pj = r.point or 0
+        pj = r.note_pct or 0
         somme_cj_pj += cj * pj
         somme_cj += cj
         if r.note_pct and r.note_pct >= seuil:

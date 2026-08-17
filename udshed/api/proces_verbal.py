@@ -57,7 +57,10 @@ def _notes_normales(academic_year, filiere, niveau, semestre):
             "session_examen": ["in", sessions],
             "statut": STATUT_NOTE_PUBLIE,
         },
-        fields=["student", "teaching_unit", "note_finale", "note_pct", "grade", "point"],
+        fields=[
+            "student", "teaching_unit", "note_finale", "note_pct",
+            "grade", "point", "mention", "type_resultat", "capitalise",
+        ],
     )
     return {(n.student, n.teaching_unit): n for n in notes}
 
@@ -166,6 +169,9 @@ def get_proces_verbal_data(academic_year, filiere, niveau, semestre):
                     "note_pct": None,
                     "grade": "",
                     "point": None,
+                    "mention": "",
+                    "type_resultat": "",
+                    "capitalise": False,
                     "valide": False,
                 }
                 continue
@@ -177,13 +183,16 @@ def get_proces_verbal_data(academic_year, filiere, niveau, semestre):
                 "note_pct": note_pct,
                 "grade": note.grade or "",
                 "point": note.point,
+                "mention": note.mention or "",
+                "type_resultat": note.type_resultat or "",
+                "capitalise": bool(note.capitalise),
                 "valide": valide,
             }
             cj = ue["credits"]
             if valide:
                 credits_obtenus += cj
             somme_cj += cj
-            somme_cj_pj += cj * (note.point or 0)
+            somme_cj_pj += cj * (note_pct or 0)
 
         mps = round(somme_cj_pj / somme_cj, 2) if somme_cj > 0 else 0
         pct_validation = round(credits_obtenus / total_credits * 100, 2) if total_credits else 0

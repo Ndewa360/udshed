@@ -484,6 +484,120 @@ def est_valide(note_finale, cycle="Licence"):
 
 
 # ---------------------------------------------------------------------- #
+#  Grille des grades (Grade Config)
+# ---------------------------------------------------------------------- #
+def get_grille_grades():
+    """Lignes de la grille des grades depuis Udshed Setting (source de vérité).
+
+    Returns:
+        list[Document]: lignes du tableau enfant « Grade Config »
+    """
+    setting = frappe.get_single("Udshed Setting")
+    return list(setting.get("grille_grades") or [])
+
+
+def _bornes_grade(ligne):
+    """Bornes (min, max) d'une ligne de grille, sur l'échelle 100.
+
+    Privilégie les nouvelles colonnes explicites (note_min_100 / note_max_100)
+    et retombe sur les anciens champs « note_min / note_max » pour la
+    compatibilité avec les données existantes.
+
+    Args:
+        ligne (Document): ligne de « Grade Config »
+
+    Returns:
+        tuple: (note_min_100, note_max_100)
+    """
+    note_min = ligne.get("note_min_100")
+    if note_min is None:
+        note_min = ligne.get("note_min") or 0
+    note_max = ligne.get("note_max_100")
+    if note_max is None:
+        note_max = ligne.get("note_max") or 0
+    return float(note_min), float(note_max)
+
+
+def get_grade_info(note, echelle=20):
+    """Détermine automatiquement le grade d'une note à partir de la grille.
+
+    Retourne le grade, le point pondéré, la mention et le type de résultat
+    (capitalisation des crédits) correspondant à la note.
+
+    Args:
+        note (float): note saisie (sur 20 par défaut, ou sur 100)
+        echelle (int): échelle de la note passée (« 20 » ou « 100 »)
+
+    Returns:
+        dict | None: {
+            "grade": str,
+            "point": float,
+            "mention": str,
+            "type_resultat": str,
+            "capitalise": bool,
+        } ou None si aucune ligne ne correspond.
+    """
+    if note is None:
+        return None
+    note_pct = (note / NOTE_MAX) * 100 if echelle == 20 else float(note)
+
+    for ligne in sorted(get_grille_grades(), key=lambda l: _bornes_grade(l)[0], reverse=True):
+        note_min, note_max = _bornes_grade(ligne)
+        if note_min <= note_pct <= note_max:
+            type_resultat = ligne.get("type_resultat") or ""
+            return {
+                "grade": ligne.grade,
+                "point": ligne.point,
+                "mention": ligne.mention,
+                "type_resultat": type_resultat,
+                "capitalise": bool(type_resultat.lower().startswith("crédits capitalisés")),
+            }
+    return None
+
+
+def determiner_statut_ue(note_finale, cycle="Licence"):
+    """Statut complet d'une note d'UE : validation (seuil du cycle) + grade.
+
+    Combine la validation selon le seuil de validation du cycle et les
+    informations de la grille des grades (grade, point, mention, type de
+    résultat).
+
+    Args:
+        note_finale (float): note finale de l'UE sur 20
+        cycle (str): "Licence", "BTS" ou "Master"
+
+    Returns:
+        dict: {
+            "valide": bool,
+            "seuil_pct": float,
+            "grade": str | None,
+            "point": float | None,
+            "mention": str | None,
+            "type_resultat": str | None,
+            "capitalise": bool,
+        }
+    """
+    seuil = get_seuil_validation(cycle)
+    valide = est_valide(note_finale, cycle)
+    info = get_grade_info(note_finale, echelle=20) or {
+        "grade": None,
+        "point": None,
+        "mention": None,
+        "type_resultat": None,
+        "capitalise": False,
+    }
+    return {
+        "valide": valide,
+        "seuil_pct": seuil,
+        "grade": info["grade"],
+        "point": info["point"],
+        "mention": info["mention"],
+        "type_resultat": info["type_resultat"],
+        "capitalise": bool(info["capitalise"] and valide),
+    }
+
+
+# ---------------------------------------------------------------------- #
 #  Aperçu lisible de la formule
 # ---------------------------------------------------------------------- #
 def rendre_apercu(formula):

@@ -238,6 +238,18 @@
    "read_only": 1
   },
   {
+   "fieldname": "type_resultat",
+   "fieldtype": "Data",
+   "label": "Type de résultat",
+   "read_only": 1
+  },
+  {
+   "fieldname": "capitalise",
+   "fieldtype": "Check",
+   "label": "Crédits capitalisés",
+   "read_only": 1
+  },
+  {
    "fieldname": "column_break_statut",
    "fieldtype": "Column Break"
   },

@@ -662,7 +662,7 @@
                     <td class="recap-value" style="width:25%;">{{ sem.total_credits or 0 }}</td>
                     <td class="recap-label" style="width:25%;">{{ _("MPS") }} :</td>
                     <td class="recap-value" style="width:25%;">
-                        {{ "%.2f" | format(sem.mps) if sem.mps is not none else "—" }} / 20
+                        {{ "%.2f" | format(sem.mps) if sem.mps is not none else "—" }} %
                     </td>
                 </tr>
                 <tr class="recap-row">
@@ -670,7 +670,7 @@
                     <td class="recap-value">{{ sem.credits_obtenus or 0 }}</td>
                     <td class="recap-label">{{ _("MPC") }} :</td>
                     <td class="recap-value">
-                        {{ "%.2f" | format(sem.mpc) if sem.mpc is not none else "—" }} / 20
+                        {{ "%.2f" | format(sem.mpc) if sem.mpc is not none else "—" }} %
                     </td>
                 </tr>
                 {% if sem.mention %}

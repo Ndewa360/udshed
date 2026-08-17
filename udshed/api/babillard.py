@@ -62,8 +62,14 @@ def _get_mention(mps):
 	"""Mention associée à une moyenne (%) selon la grille des grades."""
 	setting = frappe.get_single("Udshed Setting")
 	for g in setting.get("grille_grades"):
+		note_min = g.get("note_min_100")
+		if note_min is None:
+			note_min = g.get("note_min") or 0
+		note_max = g.get("note_max_100")
+		if note_max is None:
+			note_max = g.get("note_max") or 0
 		try:
-			if g.note_min <= mps <= g.note_max:
+			if note_min <= mps <= note_max:
 				return g.mention or ""
 		except TypeError:
 			continue
@@ -75,9 +81,15 @@ def _get_grade_scale():
 	setting = frappe.get_single("Udshed Setting")
 	scale = []
 	for g in setting.get("grille_grades"):
+		note_min = g.get("note_min_100")
+		if note_min is None:
+			note_min = g.get("note_min") or 0
+		note_max = g.get("note_max_100")
+		if note_max is None:
+			note_max = g.get("note_max") or 0
 		scale.append({
-			"note_min": g.note_min,
-			"note_max": g.note_max,
+			"note_min": note_min,
+			"note_max": note_max,
 			"grade": g.grade,
 			"point": g.point,
 			"mention": g.mention or "",

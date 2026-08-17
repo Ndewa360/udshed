@@ -201,7 +201,8 @@ def _get_ue_info(teaching_unit):
 
 
 def _get_etudiants(academic_year, filiere, niveau_label, teaching_unit):
-    """Étudiants réinscrits (Validée), inscrits à l'UE (Inscrit, hors dispensés/reportés)."""
+    """Étudiants réinscrits (Validée) dans la filière/niveau : ils participent aux cours de la
+    filière, sauf ceux explicitement « Dispensé » ou « Reporté » pour ce cours."""
     regs = frappe.get_all(
         "Academic Reregistration",
         filters={
@@ -216,14 +217,18 @@ def _get_etudiants(academic_year, filiere, niveau_label, teaching_unit):
         return []
 
     parents = [r.name for r in regs]
-    inscrits = frappe.get_all(
+    exclus = frappe.get_all(
         "Reregistration Course Item",
-        filters={"parent": ["in", parents], "teaching_unit": teaching_unit, "statut": "Inscrit"},
+        filters={
+            "parent": ["in", parents],
+            "teaching_unit": teaching_unit,
+            "statut": ["in", ["Dispensé", "Reporté"]],
+        },
         fields=["parent"],
     )
-    parents_inscrits = {i.parent for i in inscrits}
+    exclus_parents = {e.parent for e in exclus}
 
-    students = [r.student for r in regs if r.name in parents_inscrits]
+    students = [r.student for r in regs if r.name not in exclus_parents]
 
     resultats = []
     for student in students:

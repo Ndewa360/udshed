@@ -160,6 +160,11 @@
         font-weight: 700;
         font-size: 4.6pt;
     }
+    .pv-table td.mention {
+        font-size: 4pt;
+        line-height: 1.1;
+        max-width: 18mm;
+    }
     .pv-table tbody tr:nth-child(even) td {
         background: #f7f9fc;
     }
@@ -272,7 +277,7 @@
                 <tr class="ue-group">
                     <th colspan="3" style="background:#ffffff;color:#1a5276;font-size:5pt;">{{ _("Étudiants") }}</th>
                     {% for ue in ues %}
-                    <th colspan="3">
+                    <th colspan="4">
                         <span class="ue-code">{{ ue.code }}</span>
                         <span class="ue-sub">{{ ue.intitule }}</span>
                         <span class="ue-sub">({{ ue.credits }} {{ _("cr") }})</span>
@@ -288,6 +293,7 @@
                     <th>{{ _("Note %") }}</th>
                     <th>{{ _("Gr") }}</th>
                     <th>{{ _("Pt") }}</th>
+                    <th>{{ _("Mention") }}</th>
                     {% endfor %}
                     <th class="col-tci">{{ _("TCI") }}</th>
                     <th class="col-tcc">{{ _("TCC") }}</th>
@@ -312,6 +318,7 @@
                         </td>
                         <td>{{ r.get('grade') or "" }}</td>
                         <td>{{ "%.2f" | format(r.point) if r.get('point') is not none else "" }}</td>
+                        <td class="mention">{{ r.get('mention') or "" }}</td>
                     {% endfor %}
                     <td class="col-tci">{{ et.total_credits }}</td>
                     <td class="col-tcc">{{ et.credits_obtenus }}</td>

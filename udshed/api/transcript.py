@@ -153,9 +153,15 @@ def get_transcript_data(doc):
     grade_scale = []
     if settings.get("grille_grades"):
         for g in settings.grille_grades:
+            note_min = g.get("note_min_100")
+            if note_min is None:
+                note_min = g.get("note_min") or 0
+            note_max = g.get("note_max_100")
+            if note_max is None:
+                note_max = g.get("note_max") or 0
             grade_scale.append({
-                "note_min": g.note_min,
-                "note_max": g.note_max,
+                "note_min": note_min,
+                "note_max": note_max,
                 "grade": g.grade,
                 "point": g.point,
                 "mention": g.mention or "",

@@ -5,6 +5,7 @@ from frappe.model.document import Document
 from udshed.grade_calculation import (
     calculer_note_ue,
     combinaison_type_ue,
+    determiner_statut_ue,
     get_formula,
     get_student_cycle,
 )
@@ -234,22 +235,33 @@ class SessionExamenNote(Document):
     #  Grade / point / mention
     # ------------------------------------------------------------------ #
     def determiner_grade(self):
+        """Détermine grade, point, mention et type de résultat via le moteur.
+
+        Utilise ``determiner_statut_ue`` (grille des grades de Grade Config) :
+        la note est convertie sur 100 et comparée aux bornes de la grille.
+        Le statut capitalise les crédits lorsque l'UE est validée (seuil du
+        cycle) et que le grade correspond à des crédits capitalisables.
+        """
         if not self.note_finale:
             self.grade = None
             self.point = None
             self.mention = None
+            self.type_resultat = None
+            self.capitalise = 0
             return
 
-        setting = frappe.get_single("Udshed Setting")
-        for g in setting.grille_grades:
-            if g.note_min <= self.note_pct <= g.note_max:
-                self.grade = g.grade
-                self.point = g.point
-                self.mention = g.mention
-                return
-
-        frappe.throw(
-            _("Aucun grade trouvé pour la note <b>{0}%</b>. Vérifiez la grille des grades dans Udshed Setting.").format(
-                self.note_pct
-            )
+        statut = determiner_statut_ue(
+            self.note_finale, get_student_cycle(self.student)
         )
+        if statut["grade"] is None:
+            frappe.throw(
+                _("Aucun grade trouvé pour la note <b>{0}%</b>. Vérifiez la grille des grades dans Udshed Setting.").format(
+                    self.note_pct
+                )
+            )
+
+        self.grade = statut["grade"]
+        self.point = statut["point"]
+        self.mention = statut["mention"]
+        self.type_resultat = statut["type_resultat"]
+        self.capitalise = 1 if statut["capitalise"] else 0
