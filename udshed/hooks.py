@@ -39,6 +39,12 @@ fixtures = [
     {
         "dt": "Web Page",
     },
+    {
+        "dt": "Desktop Icon",
+        "filters": [
+            ["name","in",["Inscription - Reinscription","Gestion Des Notes","Insight","Planning Académique"]]
+        ]
+    },
 ]
 
 
