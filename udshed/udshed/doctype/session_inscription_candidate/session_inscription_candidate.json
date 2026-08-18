@@ -5,35 +5,40 @@
  "creation": "2026-04-11 06:46:47.537518",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": [
-  "choix_du_de_la_candidate_candidate_selection_section",
-  "column_break_etdp",
-  "filiere",
-  "niveau",
-  "examination_centre",
-  "column_break_nmqp",
-  "choix_de_formation",
-  "informations_personnellespersonal_informations_section",
-  "first_name",
-  "last_name",
-  "full_name",
-  "birthdate",
-  "birth_place",
-  "sexe",
-  "column_break_xyrz",
-  "phone",
-  "email",
-  "parent_phone",
-  "email_parent",
-  "home_city",
-  "diplome_acces_formation",
-  "diplome_formation",
-  "associated_document_section",
-  "birth_certificate",
-  "access_diploma_copy",
-  "id_photo",
-  "remittance_receipt"
- ],
+   "field_order": [
+   "choix_du_de_la_candidate_candidate_selection_section",
+   "column_break_etdp",
+   "filiere",
+   "niveau",
+   "examination_centre",
+   "column_break_nmqp",
+   "choix_de_formation",
+   "informations_personnellespersonal_informations_section",
+   "first_name",
+   "last_name",
+   "full_name",
+   "birthdate",
+   "birth_place",
+   "sexe",
+   "column_break_xyrz",
+   "phone",
+   "email",
+   "parent_phone",
+   "email_parent",
+   "home_city",
+   "diplome_acces_formation",
+   "diplome_formation",
+   "associated_document_section",
+   "birth_certificate",
+   "access_diploma_copy",
+   "id_photo",
+   "remittance_receipt",
+   "status_section",
+   "candidature_status",
+   "column_break_status",
+   "status_updated_on",
+   "status_comment"
+  ],
  "fields": [
   {
    "fieldname": "choix_du_de_la_candidate_candidate_selection_section",
@@ -180,13 +185,40 @@
    "label": "ID photo",
    "reqd": 1
   },
-  {
-   "fieldname": "remittance_receipt",
-   "fieldtype": "Attach",
-   "label": "Remittance Receipt ",
-   "reqd": 1
-  }
- ],
+   {
+    "fieldname": "remittance_receipt",
+    "fieldtype": "Attach",
+    "label": "Remittance Receipt ",
+    "reqd": 1
+   },
+   {
+    "fieldname": "status_section",
+    "fieldtype": "Section Break",
+    "label": "Statut de la candidature"
+   },
+   {
+    "default": "En attente",
+    "fieldname": "candidature_status",
+    "fieldtype": "Select",
+    "label": "Statut",
+    "options": "En attente\nDossier en cours d'examen\nAccepté\nRefusé\nInscrit"
+   },
+   {
+    "fieldname": "column_break_status",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "status_updated_on",
+    "fieldtype": "Datetime",
+    "label": "Dernière mise à jour",
+    "read_only": 1
+   },
+   {
+    "fieldname": "status_comment",
+    "fieldtype": "Small Text",
+    "label": "Observation"
+   }
+  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
@@ -196,20 +228,25 @@
  "name": "Session Inscription Candidate",
  "naming_rule": "Expression",
  "owner": "Administrator",
- "permissions": [
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
-   "write": 1
-  }
- ],
+  "permissions": [
+   {
+    "create": 1,
+    "delete": 1,
+    "email": 1,
+    "export": 1,
+    "print": 1,
+    "read": 1,
+    "report": 1,
+    "role": "System Manager",
+    "share": 1,
+    "write": 1
+   },
+   {
+    "create": 1,
+    "read": 1,
+    "role": "Guest"
+   }
+  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
