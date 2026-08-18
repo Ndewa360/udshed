@@ -1,0 +1,50 @@
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; border-radius: 12px; overflow: hidden; border: 1px solid #e2e4e9;">
+
+  <!-- Header -->
+  <div style="background: #1e2025; padding: 32px; text-align: center;">
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0; letter-spacing: -0.02em;">UDSHED</h1>
+    <p style="color: #9ca0a8; font-size: 13px; margin: 6px 0 0 0;">Université Dshang</p>
+  </div>
+
+  <!-- Body -->
+  <div style="padding: 32px; background: #ffffff;">
+    <h2 style="color: #1e2025; font-size: 18px; margin: 0 0 16px 0;">Accusé de réception</h2>
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Bonjour <strong>{{ first_name }} {{ last_name }}</strong>,
+    </p>
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Nous avons bien reçu votre candidature sur la plateforme UDSHED.
+    </p>
+
+    <!-- Numéro de dossier -->
+    <div style="background: #f5f6f8; border: 1px solid #e2e4e9; border-radius: 10px; padding: 20px; margin: 24px 0; text-align: center;">
+      <span style="display: block; color: #6b6d7a; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Votre numéro de dossier</span>
+      <span style="display: block; color: #1e2025; font-size: 24px; font-weight: bold; letter-spacing: 1px;">{{ doc_name }}</span>
+    </div>
+
+    {% if niveau or filiere %}
+    <div style="color: #6b6d7a; font-size: 13px; margin-bottom: 20px;">
+      {% if niveau %}<strong>Niveau :</strong> {{ niveau }}{% endif %}
+      {% if filiere %} · <strong>Filière :</strong> {{ filiere }}{% endif %}
+    </div>
+    {% endif %}
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Conservez ce numéro, il vous permettra de suivre l'état de votre candidature.
+    </p>
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Notre équipe examinera votre dossier dans les meilleurs délais.
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding: 20px 32px; background: #f5f6f8; border-top: 1px solid #e2e4e9; text-align: center;">
+    <p style="color: #9ca0a8; font-size: 12px; margin: 0;">
+      UDSHED — Plateforme de gestion des inscriptions académiques
+    </p>
+  </div>
+
+</div>
