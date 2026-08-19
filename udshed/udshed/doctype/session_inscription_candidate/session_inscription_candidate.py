@@ -29,15 +29,6 @@ class SessionInscriptionCandidate(Document):
 				update_modified=False,
 			)
 
-	def _get_sender(self):
-		"""Return the formatted sender name from Udshed Setting."""
-		setting = frappe.get_single("Udshed Setting")
-		sender_name = getattr(setting, "email_candidature_sender_name", None) or "UDSHED"
-		email_account = frappe.db.get_value("Email Account", {"default_outgoing": 1}, "email_id")
-		if email_account:
-			return f"{sender_name} <{email_account}>"
-		return None
-
 	def _send_candidate_email(self):
 		if not self.email:
 			frappe.logger().warning(
@@ -49,7 +40,7 @@ class SessionInscriptionCandidate(Document):
 		subject = getattr(setting, "email_candidature_subject", None) or _(
 			"Accusé de réception de votre candidature - UDSHED"
 		)
-		sender = self._get_sender()
+		sender = _get_sender()
 
 		try:
 			frappe.sendmail(
@@ -80,7 +71,7 @@ class SessionInscriptionCandidate(Document):
 			frappe.logger().info("Pas d'email coordonnateur configuré — notification non envoyée.")
 			return
 
-		sender = self._get_sender()
+		sender = _get_sender()
 
 		choix_text = ""
 		if self.choix_de_formation:
@@ -209,3 +200,428 @@ def get_session_status() -> dict:
 		"label": info["label"].format(year=year),
 		"css_class": info["css_class"],
 	}
+
+
+# ---------------------------------------------------------------------------
+# Dashboard API — Consultation des candidatures
+# ---------------------------------------------------------------------------
+
+def _build_filters(session=None, filiere=None, niveau=None, centre=None, statut=None):
+	"""Construit les filtres pour les requêtes dashboard."""
+	filters = {}
+	if session:
+		filters["session_inscription"] = session
+	if filiere:
+		filters["filiere"] = filiere
+	if niveau:
+		filters["niveau"] = niveau
+	if centre:
+		filters["examination_centre"] = centre
+	if statut:
+		filters["candidature_status"] = statut
+	return filters
+
+
+@frappe.whitelist()
+def get_candidate_dashboard_stats(
+	session=None, filiere=None, niveau=None, centre=None, statut=None
+):
+	"""Retourne les compteurs pour les cartes stats du dashboard."""
+	filters = _build_filters(session, filiere, niveau, centre, statut)
+
+	counts = {}
+	for label, status_val in [
+		("total", None),
+		("en_attente", "En attente"),
+		("en_cours", "Dossier en cours d'examen"),
+		("accepte", "Accepté"),
+		("refuse", "Refusé"),
+		("inscrit", "Inscrit"),
+	]:
+		if status_val:
+			counts[label] = frappe.db.count(
+				"Session Inscription Candidate",
+				{**filters, "candidature_status": status_val},
+			)
+		else:
+			counts[label] = frappe.db.count("Session Inscription Candidate", filters)
+
+	return counts
+
+
+@frappe.whitelist()
+def get_candidates_list(
+	session=None, filiere=None, niveau=None, centre=None,
+	statut=None, start=0, limit=20,
+):
+	"""Liste paginée des candidats avec infos clés."""
+	filters = _build_filters(session, filiere, niveau, centre, statut)
+
+	docs = frappe.get_all(
+		"Session Inscription Candidate",
+		filters=filters,
+		fields=[
+			"name", "first_name", "last_name", "filiere", "niveau",
+			"examination_centre", "candidature_status", "creation",
+		],
+		order_by="creation desc",
+		start=start,
+		limit_page_length=limit,
+	)
+
+	for d in docs:
+		d.filiere_label = (
+			frappe.db.get_value("Field of study", d.filiere, "name_of_field") or d.filiere
+			if d.filiere else ""
+		)
+		d.submitted_on = frappe.utils.format_datetime(d.creation, "dd/MM/yyyy")
+
+	total = frappe.db.count("Session Inscription Candidate", filters)
+	return {"candidates": docs, "total": total}
+
+
+@frappe.whitelist()
+def get_candidate_detail(name):
+	"""Détail complet d'un candidat (y compris child tables)."""
+	doc = frappe.get_doc("Session Inscription Candidate", name)
+
+	choix = []
+	for row in doc.choix_de_formation:
+		filiere_label = frappe.db.get_value("Field of study", row.filiere, "name_of_field") if row.filiere else ""
+		choix.append({"choix": row.choix, "filiere": filiere_label, "niveau": row.niveau})
+
+	diplomes = []
+	for row in doc.diplome_formation:
+		diplomes.append({
+			"diplome": row.diplome,
+			"year": row.year,
+			"serie": row.serie__field_of_study,
+			"lieu": row.place_of_acquisition,
+			"mention": row.mention,
+		})
+
+	return {
+		"name": doc.name,
+		"first_name": doc.first_name,
+		"last_name": doc.last_name,
+		"full_name": doc.full_name,
+		"birthdate": frappe.utils.format_date(doc.birthdate) if doc.birthdate else "",
+		"birth_place": doc.birth_place or "",
+		"sexe": doc.sexe or "",
+		"phone": doc.phone or "",
+		"email": doc.email or "",
+		"parent_phone": doc.parent_phone or "",
+		"email_parent": doc.email_parent or "",
+		"home_city": doc.home_city or "",
+		"filiere": doc.filiere or "",
+		"filiere_label": (
+			frappe.db.get_value("Field of study", doc.filiere, "name_of_field")
+			if doc.filiere else ""
+		),
+		"niveau": doc.niveau or "",
+		"examination_centre": doc.examination_centre or "",
+		"choix_de_formation": choix,
+		"diplome_formation": diplomes,
+		"birth_certificate": doc.birth_certificate or "",
+		"access_diploma_copy": doc.access_diploma_copy or "",
+		"id_photo": doc.id_photo or "",
+		"remittance_receipt": doc.remittance_receipt or "",
+		"candidature_status": doc.candidature_status or "En attente",
+		"status_updated_on": (
+			frappe.utils.format_datetime(doc.status_updated_on, "dd/MM/yyyy HH:mm")
+			if doc.status_updated_on else ""
+		),
+		"status_comment": doc.status_comment or "",
+		"submitted_on": frappe.utils.format_datetime(doc.creation, "dd/MM/yyyy HH:mm"),
+	}
+
+
+@frappe.whitelist()
+def update_candidate_status(name, new_status, comment=None):
+	"""Change le statut d'un candidat. Motif obligatoire si Refusé."""
+	if new_status == "Refusé" and not comment:
+		frappe.throw(_("Le motif du rejet est obligatoire."))
+
+	doc = frappe.get_doc("Session Inscription Candidate", name)
+	old_status = doc.candidature_status
+
+	doc.candidature_status = new_status
+	if comment:
+		doc.status_comment = comment
+	doc.status_updated_on = frappe.utils.now_datetime()
+	doc.save()
+
+	if new_status == "Accepté" and old_status != "Accepté":
+		_send_confirmation_email(doc)
+
+	if new_status == "Inscrit" and old_status != "Inscrit":
+		_send_validation_email(doc)
+
+	return {"ok": True, "old_status": old_status, "new_status": new_status}
+
+
+# ---------------------------------------------------------------------------
+# Emails — Confirmation + Validation
+# ---------------------------------------------------------------------------
+
+def _get_sender():
+	"""Return the formatted sender name from Udshed Setting."""
+	setting = frappe.get_single("Udshed Setting")
+	sender_name = getattr(setting, "email_candidature_sender_name", None) or "UDSHED"
+	email_account = frappe.db.get_value("Email Account", {"default_outgoing": 1}, "email_id")
+	if email_account:
+		return f"{sender_name} <{email_account}>"
+	return None
+
+
+def _send_confirmation_email(doc):
+	"""Email envoyé au candidat quand sa candidature est Acceptée."""
+	if not doc.email:
+		frappe.logger().warning(
+			f"Pas d'email pour {doc.name} — email confirmation non envoyé."
+		)
+		return
+
+	setting = frappe.get_single("Udshed Setting")
+	school_name = getattr(setting, "school_name", "UDSHED")
+	sender = _get_sender()
+	academic_year = frappe.db.get_value(
+		"Session Inscription", {}, "academic_year", order_by="creation desc"
+	)
+	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
+
+	try:
+		frappe.sendmail(
+			recipients=[doc.email],
+			sender=sender,
+			subject=_("Votre candidature a été acceptée - {0}").format(school_name),
+			template="candidature_confirmation",
+			args={
+				"first_name": doc.first_name,
+				"last_name": doc.last_name,
+				"doc_name": doc.name,
+				"filiere": filiere_label,
+				"niveau": doc.niveau or "",
+				"centre": doc.examination_centre or "",
+				"school_name": school_name,
+				"academic_year": academic_year or "",
+			},
+			now=True,
+		)
+		frappe.logger().info(f"Email confirmation envoyé à {doc.email} pour {doc.name}")
+	except Exception as e:
+		frappe.log_error(
+			message=str(e), title=f"Échec email confirmation {doc.name}"
+		)
+
+
+def _send_validation_email(doc):
+	"""Email envoyé au candidat quand son inscription est validée."""
+	if not doc.email:
+		frappe.logger().warning(
+			f"Pas d'email pour {doc.name} — email validation non envoyé."
+		)
+		return
+
+	setting = frappe.get_single("Udshed Setting")
+	school_name = getattr(setting, "school_name", "UDSHED")
+	sender = _get_sender()
+	academic_year = frappe.db.get_value(
+		"Session Inscription", {}, "academic_year", order_by="creation desc"
+	)
+	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
+
+	uv_liste = ""
+	student_name = frappe.db.get_value("Student", {"email": doc.email}, "name")
+	if student_name:
+		uv_records = frappe.get_all(
+			"Session Examen Note",
+			filters={"student": student_name},
+			fields=["teaching_unit"],
+			pluck="teaching_unit",
+		)
+		if uv_records:
+			uv_labels = []
+			for tu_name in uv_records:
+				course = frappe.db.get_value("Teaching Unit", tu_name, "course")
+				if course:
+					uv_labels.append(course)
+			uv_liste = ", ".join(uv_labels)
+
+	try:
+		frappe.sendmail(
+			recipients=[doc.email],
+			sender=sender,
+			subject=_("Inscription validée - {0}").format(school_name),
+			template="candidature_validation",
+			args={
+				"first_name": doc.first_name,
+				"last_name": doc.last_name,
+				"doc_name": doc.name,
+				"filiere": filiere_label,
+				"niveau": doc.niveau or "",
+				"centre": doc.examination_centre or "",
+				"school_name": school_name,
+				"academic_year": academic_year or "",
+				"uv_liste": uv_liste,
+			},
+			now=True,
+		)
+		frappe.logger().info(f"Email validation envoyé à {doc.email} pour {doc.name}")
+	except Exception as e:
+		frappe.log_error(
+			message=str(e), title=f"Échec email validation {doc.name}"
+		)
+
+
+# ---------------------------------------------------------------------------
+# Login + Inscription (page /inscription)
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist(allow_guest=True)
+def login_inscription(doc_name: str, password: str) -> dict:
+	"""Authentifie un candidat pour finaliser son inscription.
+
+	Identifiant = numéro de dossier (CAND-YYYY-#####)
+	Mot de passe = date de naissance (YYYYMMDD)
+	"""
+	if not doc_name or not password:
+		frappe.throw(_("Veuillez remplir tous les champs."))
+
+	doc_name = doc_name.strip().upper()
+
+	doc = frappe.db.get_value(
+		"Session Inscription Candidate",
+		doc_name,
+		["name", "first_name", "last_name", "filiere", "niveau",
+		 "candidature_status", "birthdate"],
+		as_dict=True,
+	)
+
+	if not doc:
+		frappe.throw(
+			_("Aucune candidature trouvée avec le numéro <b>{0}</b>.").format(doc_name)
+		)
+
+	if doc.candidature_status not in ("Accepté", "Inscrit"):
+		frappe.throw(
+			_("Votre candidature n'est pas encore acceptée. Statut actuel : {0}").format(
+				doc.candidature_status
+			)
+		)
+
+	if not doc.birthdate:
+		frappe.throw(_("Aucune date de naissance enregistrée."))
+
+	expected_password = frappe.utils.format_date(doc.birthdate, "YYYYMMDD")
+	if password != expected_password:
+		frappe.throw(_("Mot de passe incorrect."))
+
+	return {
+		"ok": True,
+		"doc_name": doc.name,
+		"first_name": doc.first_name,
+		"last_name": doc.last_name,
+		"filiere": doc.filiere or "",
+		"niveau": doc.niveau or "",
+		"candidature_status": doc.candidature_status,
+	}
+
+
+@frappe.whitelist(allow_guest=True)
+def submit_inscription(doc_name: str, data: str) -> dict:
+	"""Finalise l'inscription d'un candidat accepté.
+
+	1. Crée le record Student (STU-####)
+	2. Auto-inscrit aux Teaching Units de sa filière/niveau
+	3. Met le statut à Inscrit + envoie email validation
+	"""
+	if not doc_name:
+		frappe.throw(_("Numéro de dossier manquant."))
+
+	import json as _json
+	if isinstance(data, str):
+		data = _json.loads(data)
+
+	doc_name = doc_name.strip().upper()
+	candidate = frappe.get_doc("Session Inscription Candidate", doc_name)
+
+	if candidate.candidature_status != "Accepté":
+		frappe.throw(_("Seules les candidatures acceptées peuvent finaliser l'inscription."))
+
+	student = frappe.get_doc({
+		"doctype": "Student",
+		"nom": candidate.first_name,
+		"prenom": candidate.last_name,
+		"email": candidate.email,
+		"sexe": candidate.sexe,
+		"phone": candidate.phone,
+		"birth_date": candidate.birthdate,
+		"birth_place": candidate.birth_place,
+		"filiere": candidate.filiere,
+		"parent_phone": data.get("parent_phone", candidate.parent_phone or ""),
+		"email_parent": data.get("email_parent", candidate.email_parent or ""),
+		"photo": candidate.id_photo or "",
+	})
+	student.insert()
+
+	enrolled = _auto_enroll_student(student, candidate.filiere, candidate.niveau)
+
+	candidate.candidature_status = "Inscrit"
+	candidate.status_updated_on = frappe.utils.now_datetime()
+	candidate.status_comment = "Inscription finalisée. Matricule: {0}".format(student.matricule)
+	candidate.save()
+
+	_send_validation_email(candidate)
+
+	return {
+		"ok": True,
+		"student_name": student.name,
+		"matricule": student.matricule,
+		"enrolled_uv": len(enrolled),
+	}
+
+
+def _auto_enroll_student(student, filiere, niveau):
+	"""Inscrit automatiquement l'étudiant aux UV de sa filière/niveau."""
+	setting = frappe.get_single("Udshed Setting")
+	academic_year = getattr(setting, "current_year", None)
+
+	if not academic_year:
+		frappe.logger().warning(
+			"Aucune année académique courante configurée dans Udshed Setting."
+		)
+		return []
+
+	all_tu = frappe.get_all(
+		"Teaching Unit",
+		filters={"academic_year": academic_year},
+		fields=["name"],
+	)
+
+	enrolled = []
+	for tu in all_tu:
+		matches = frappe.get_all(
+			"Course Field of study level item",
+			filters={"parent": tu.name, "filiere": filiere, "niveau": niveau},
+		)
+		if matches:
+			enrolled.append(tu.name)
+
+	if enrolled:
+		reregistration = frappe.get_doc({
+			"doctype": "Academic Reregistration",
+			"student": student.name,
+			"academic_year": academic_year,
+			"filiere": student.filiere,
+			"semestre": "Les deux",
+			"statut": "Validee",
+			"cours_inscrits": [
+				{"teaching_unit": tu_name, "inscrire": 1, "est_obligatoire": 1}
+				for tu_name in enrolled
+			],
+		})
+		reregistration.insert()
+		frappe.db.commit()
+
+	return enrolled
