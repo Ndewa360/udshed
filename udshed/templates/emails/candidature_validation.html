@@ -1,0 +1,83 @@
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; border-radius: 12px; overflow: hidden; border: 1px solid #e2e4e9;">
+
+  <!-- Header -->
+  <div style="background: #1e2025; padding: 32px; text-align: center;">
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0; letter-spacing: -0.02em;">{{ school_name }}</h1>
+    <p style="color: #9ca0a8; font-size: 13px; margin: 6px 0 0 0;">Validation d'inscription</p>
+  </div>
+
+  <!-- Body -->
+  <div style="padding: 32px; background: #ffffff;">
+    <h2 style="color: #28a745; font-size: 18px; margin: 0 0 16px 0;">Inscription validée</h2>
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Bonjour <strong>{{ first_name }} {{ last_name }}</strong>,
+    </p>
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Nous avons le plaisir de vous informer que votre inscription a été
+      <strong>validée avec succès</strong> pour l'année académique <strong>{{ academic_year }}</strong>.
+    </p>
+
+    <!-- Détails -->
+    <div style="background: #f5f6f8; border: 1px solid #e2e4e9; border-radius: 10px; padding: 20px; margin: 24px 0;">
+      <span style="display: block; color: #6b6d7a; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Détails de l'inscription</span>
+
+      <table style="width: 100%; font-size: 14px; color: #3c3e44;">
+        <tr>
+          <td style="padding: 4px 0; color: #6b6d7a; width: 40%;">Numéro de dossier</td>
+          <td style="padding: 4px 0; font-weight: bold;">{{ doc_name }}</td>
+        </tr>
+        {% if filiere %}
+        <tr>
+          <td style="padding: 4px 0; color: #6b6d7a;">Filière</td>
+          <td style="padding: 4px 0;">{{ filiere }}</td>
+        </tr>
+        {% endif %}
+        {% if niveau %}
+        <tr>
+          <td style="padding: 4px 0; color: #6b6d7a;">Niveau</td>
+          <td style="padding: 4px 0;">{{ niveau }}</td>
+        </tr>
+        {% endif %}
+        {% if centre %}
+        <tr>
+          <td style="padding: 4px 0; color: #6b6d7a;">Centre d'examen</td>
+          <td style="padding: 4px 0;">{{ centre }}</td>
+        </tr>
+        {% endif %}
+      </table>
+    </div>
+
+    {% if uv_liste %}
+    <!-- UV inscrites -->
+    <div style="background: #eaf7ed; border: 1px solid #c3e6cb; border-radius: 10px; padding: 20px; margin: 24px 0;">
+      <span style="display: block; color: #155724; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Unités d'enseignement inscrites</span>
+      <p style="color: #155724; font-size: 14px; line-height: 1.6; margin: 0;">
+        {{ uv_liste }}
+      </p>
+    </div>
+    {% endif %}
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Prochaines étapes :
+    </p>
+    <ul style="color: #3c3e44; font-size: 14px; line-height: 1.8; padding-left: 20px;">
+      <li>Présentez-vous au secrétariat avec vos documents originaux</li>
+      <li>Procédez au paiement des frais d'inscription</li>
+      <li>Récupérez votre carte d'étudiant</li>
+    </ul>
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Nous vous souhaitons un excellent parcours universitaire.
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding: 20px 32px; background: #f5f6f8; border-top: 1px solid #e2e4e9; text-align: center;">
+    <p style="color: #9ca0a8; font-size: 12px; margin: 0;">
+      {{ school_name }} — Plateforme de gestion des inscriptions académiques
+    </p>
+  </div>
+
+</div>
