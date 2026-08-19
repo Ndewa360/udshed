@@ -39,6 +39,12 @@ fixtures = [
     {
         "dt": "Web Page",
     },
+    {
+        "dt": "Desktop Icon",
+        "filters": [
+            ["name","in",["Inscription - Reinscription","Gestion Des Notes","Insight","Planning Académique"]]
+        ]
+    },
 ]
 
 
@@ -283,5 +289,4 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-
 

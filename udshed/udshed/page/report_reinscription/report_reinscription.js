@@ -8,12 +8,9 @@ frappe.pages["report-reinscription"].on_page_load = function (wrapper) {
 	let filters = { reinscription_session: null, filiere: null, statut: null };
 	let report_data = null;
 
-	const STATUTS = ["Brouillon", "En attente", "Validée", "Refusée"];
+	const STATUTS = ["Validée"];
 	const STATUT_COLORS = {
-		"Brouillon": "blue",
-		"En attente": "orange",
-		"Validée": "green",
-		"Refusée": "red"
+		"Validée": "green"
 	};
 
 	function esc(s) {
@@ -80,8 +77,8 @@ frappe.pages["report-reinscription"].on_page_load = function (wrapper) {
 	}
 
 	function statut_badge(s) {
-		s = s || "Brouillon";
-		return `<span class="indicator ${STATUT_COLORS[s] || ""}">${esc(s)}</span>`;
+		s = s || "Validée";
+		return `<span class="indicator green">${esc(s)}</span>`;
 	}
 
 	function card(label, value, color) {
@@ -99,10 +96,7 @@ frappe.pages["report-reinscription"].on_page_load = function (wrapper) {
 		let d = report_data;
 		let html = `<div class="row">
 			${card("Total réinscriptions", d.total, "primary")}
-			${card("Brouillon", d.par_statut["Brouillon"] || 0, "blue")}
-			${card("En attente", d.par_statut["En attente"] || 0, "orange")}
 			${card("Validées", d.par_statut["Validée"] || 0, "green")}
-			${card("Refusées", d.par_statut["Refusée"] || 0, "red")}
 		</div>`;
 		page.main.append(html);
 	}

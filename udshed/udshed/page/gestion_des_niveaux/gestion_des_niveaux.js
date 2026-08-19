@@ -155,7 +155,10 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 	function load_levels() {
 		frappe.call({
 			method: "udshed.api.reregistration.get_all_levels",
-			args: { faculty: null, filiere: null },
+			args: {
+				faculty: filters.faculty || null,
+				filiere: filters.filiere || null,
+			},
 			callback(r) {
 				all_data = r.message || [];
 				render_table();

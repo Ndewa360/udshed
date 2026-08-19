@@ -20,9 +20,27 @@ class Fieldofstudy(Document):
 		La table de niveaux est reordonnable par drag & drop ; cette methode
 		garantit que le champ `order` refleche toujours la position des lignes
 		(1, 2, 3, ...), source du calcul du niveau precedent/suivant.
+		Ne reassigne que si des doublons ou des zeros sont detectes.
 		"""
-		for i, row in enumerate(self.get("field_of_study_level") or []):
-			row.order = i + 1
+		rows = self.get("field_of_study_level")
+		if not rows:
+			return
+
+		orders = {}
+		has_duplicate_or_zero = False
+		for row in rows:
+			o = row.get("order") or 0
+			if o == 0:
+				has_duplicate_or_zero = True
+				break
+			if o in orders:
+				has_duplicate_or_zero = True
+				break
+			orders[o] = row
+
+		if has_duplicate_or_zero:
+			for i, row in enumerate(rows):
+				row.order = i + 1
 
 	def normaliser_cycles(self):
 		"""Le cycle est TOUJOURS déduit du libellé du niveau.
@@ -60,5 +78,3 @@ class Fieldofstudy(Document):
 			if not frappe.db.exists("Has Role", { "parent": t_user.email, "role": "Coordonateur" }):
 				t_user.append("roles", {"role": "Coordonateur"})
 				t_user.save()
-
-		
