@@ -23,11 +23,51 @@
    "column_break_xyrz",
    "phone",
    "email",
-   "parent_phone",
-   "email_parent",
+   "nationality",
+   "religion",
+   "column_break_nationality",
+   "employment_status",
+   "marital_status",
+   "language",
+   "handicap",
    "home_city",
+   "identification_du_pere_section",
+   "father_name",
+   "father_phone",
+   "column_break_father",
+   "father_profession",
+   "father_email",
+   "father_city",
+   "father_country",
+   "identification_de_la_mere_section",
+   "mother_name",
+   "mother_phone",
+   "column_break_mother",
+   "mother_profession",
+   "mother_email",
+   "mother_city",
+   "mother_country",
+   "identification_du_sponsor_section",
+   "sponsor_name",
+   "sponsor_phone",
+   "column_break_sponsor",
+   "sponsor_profession",
+   "sponsor_email",
+   "sponsor_city",
+   "sponsor_country",
    "diplome_acces_formation",
    "diplome_formation",
+   "etudes_anterieures_section",
+   "last_establishment",
+   "entry_diploma",
+   "column_break_etudes",
+   "diploma_matricule",
+   "informations_complementaires_section",
+   "sports_activities",
+   "associative_activities",
+   "column_break_complementaires",
+   "cultural_activities",
+   "it_knowledge",
    "associated_document_section",
    "birth_certificate",
    "access_diploma_copy",
@@ -136,22 +176,240 @@
    "label": "Date de naissace / Birthdate",
    "reqd": 1
   },
-  {
-   "fieldname": "parent_phone",
-   "fieldtype": "Phone",
-   "label": "Contact Parent"
-  },
-  {
-   "fieldname": "diplome_acces_formation",
+   {
+    "fieldname": "home_city",
+    "fieldtype": "Data",
+    "label": "Home city"
+   },
+   {
+    "fieldname": "nationality",
+    "fieldtype": "Data",
+    "label": "Nationalit\u00e9",
+    "default": "CM"
+   },
+   {
+    "fieldname": "religion",
+    "fieldtype": "Select",
+    "label": "Religion",
+    "options": "CHR\u00c9TIEN\nCATHOLIQUE\nMUSULMAN\nPROTESTANT\nAUTRE"
+   },
+   {
+    "fieldname": "column_break_nationality",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "employment_status",
+    "fieldtype": "Select",
+    "label": "Situation d'emploi",
+    "options": "SANS EMPLOI\nEMPLOY\u00c9\nFONCTIONNAIRE\n\u00c9TUDIANT"
+   },
+   {
+    "fieldname": "marital_status",
+    "fieldtype": "Select",
+    "label": "Situation matrimoniale",
+    "options": "CELIBATAIRE\nMARI\u00c9(E)\nDIVORC\u00c9(E)\nVEUF(VE)"
+   },
+   {
+    "fieldname": "language",
+    "fieldtype": "Data",
+    "label": "Langue",
+    "default": "FR"
+   },
+   {
+    "fieldname": "handicap",
+    "fieldtype": "Select",
+    "label": "Handicap\u00e9",
+    "options": "NON\nOUI",
+    "default": "NON"
+   },
+   {
+    "fieldname": "identification_du_pere_section",
+    "fieldtype": "Section Break",
+    "label": "Identification du P\u00e8re"
+   },
+   {
+    "fieldname": "father_name",
+    "fieldtype": "Data",
+    "label": "Nom(s) et pr\u00e9nom(s) du p\u00e8re"
+   },
+   {
+    "fieldname": "father_phone",
+    "fieldtype": "Phone",
+    "label": "N\u00b0 T\u00e9l\u00e9phone du p\u00e8re"
+   },
+   {
+    "fieldname": "column_break_father",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "father_profession",
+    "fieldtype": "Data",
+    "label": "Profession du p\u00e8re"
+   },
+   {
+    "fieldname": "father_email",
+    "fieldtype": "Data",
+    "label": "Email du p\u00e8re",
+    "options": "Email"
+   },
+   {
+    "fieldname": "father_city",
+    "fieldtype": "Data",
+    "label": "Ville de r\u00e9sidence du p\u00e8re"
+   },
+   {
+    "fieldname": "father_country",
+    "fieldtype": "Data",
+    "label": "Pays de r\u00e9sidence du p\u00e8re",
+    "default": "CM"
+   },
+   {
+    "fieldname": "identification_de_la_mere_section",
+    "fieldtype": "Section Break",
+    "label": "Identification de la M\u00e8re"
+   },
+   {
+    "fieldname": "mother_name",
+    "fieldtype": "Data",
+    "label": "Nom(s) et pr\u00e9nom(s) de la m\u00e8re"
+   },
+   {
+    "fieldname": "mother_phone",
+    "fieldtype": "Phone",
+    "label": "N\u00b0 T\u00e9l\u00e9phone de la m\u00e8re"
+   },
+   {
+    "fieldname": "column_break_mother",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "mother_profession",
+    "fieldtype": "Data",
+    "label": "Profession de la m\u00e8re"
+   },
+   {
+    "fieldname": "mother_email",
+    "fieldtype": "Data",
+    "label": "Email de la m\u00e8re",
+    "options": "Email"
+   },
+   {
+    "fieldname": "mother_city",
+    "fieldtype": "Data",
+    "label": "Ville de r\u00e9sidence de la m\u00e8re"
+   },
+   {
+    "fieldname": "mother_country",
+    "fieldtype": "Data",
+    "label": "Pays de r\u00e9sidence de la m\u00e8re",
+    "default": "CM"
+   },
+   {
+    "fieldname": "identification_du_sponsor_section",
+    "fieldtype": "Section Break",
+    "label": "Identification du Sponsor"
+   },
+   {
+    "fieldname": "sponsor_name",
+    "fieldtype": "Data",
+    "label": "Nom(s) et pr\u00e9nom(s) du sponsor"
+   },
+   {
+    "fieldname": "sponsor_phone",
+    "fieldtype": "Phone",
+    "label": "N\u00b0 T\u00e9l\u00e9phone du sponsor"
+   },
+   {
+    "fieldname": "column_break_sponsor",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "sponsor_profession",
+    "fieldtype": "Data",
+    "label": "Profession du sponsor"
+   },
+   {
+    "fieldname": "sponsor_email",
+    "fieldtype": "Data",
+    "label": "Email du sponsor",
+    "options": "Email"
+   },
+   {
+    "fieldname": "sponsor_city",
+    "fieldtype": "Data",
+    "label": "Ville de r\u00e9sidence du sponsor"
+   },
+   {
+    "fieldname": "sponsor_country",
+    "fieldtype": "Data",
+    "label": "Pays de r\u00e9sidence du sponsor",
+    "default": "CM"
+   },
+   {
+    "fieldname": "diplome_acces_formation",
    "fieldtype": "Section Break",
    "label": "Dipl\u00f4me donnant acc\u00e8s \u00e0 la formation/Diploma giving access to training"
   },
-  {
-   "fieldname": "diplome_formation",
-   "fieldtype": "Table",
-   "options": "Choise Formation Diplome Inscription Candidat"
-  },
-  {
+   {
+    "fieldname": "diplome_formation",
+    "fieldtype": "Table",
+    "options": "Choise Formation Diplome Inscription Candidat"
+   },
+   {
+    "fieldname": "etudes_anterieures_section",
+    "fieldtype": "Section Break",
+    "label": "\u00c9tudes ant\u00e9rieures"
+   },
+   {
+    "fieldname": "last_establishment",
+    "fieldtype": "Data",
+    "label": "Dernier \u00e9tablissement fr\u00e9quent\u00e9"
+   },
+   {
+    "fieldname": "entry_diploma",
+    "fieldtype": "Select",
+    "label": "Dipl\u00f4me d'entr\u00e9e",
+    "options": "BAC\nGCE\nBTS\nLICENCE\nMASTER\nAUTRE"
+   },
+   {
+    "fieldname": "column_break_etudes",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "diploma_matricule",
+    "fieldtype": "Data",
+    "label": "Matricule du dipl\u00f4me"
+   },
+   {
+    "fieldname": "informations_complementaires_section",
+    "fieldtype": "Section Break",
+    "label": "Informations compl\u00e9mentaires"
+   },
+   {
+    "fieldname": "sports_activities",
+    "fieldtype": "Small Text",
+    "label": "Activit\u00e9(s) sportive(s)"
+   },
+   {
+    "fieldname": "associative_activities",
+    "fieldtype": "Small Text",
+    "label": "Activit\u00e9(s) associative(s)"
+   },
+   {
+    "fieldname": "column_break_complementaires",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "cultural_activities",
+    "fieldtype": "Small Text",
+    "label": "Activit\u00e9(s) culturelle(s)"
+   },
+   {
+    "fieldname": "it_knowledge",
+    "fieldtype": "Small Text",
+    "label": "Connaissances informatique"
+   },
+   {
    "fieldname": "examination_centre",
    "fieldtype": "Select",
    "label": "Examination Centre",
