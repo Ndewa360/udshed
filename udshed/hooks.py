@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-app_name = "udshed"
-app_title = "Udshed"
-app_publisher = "Cédric Nguendap Bedjama"
-app_description = "Outils de planification des cours"
-app_email = "c.nguendap@ndewa-360.com"
-app_license = "mit"
-
-=======
 app_name = "udshed"
 app_title = "Udshed"
 app_publisher = "Cédric Nguendap Bedjama"
@@ -305,7 +296,6 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 
-th.validate"
 # ]
 
 # Automatically update python controller files with type annotations for this app.
