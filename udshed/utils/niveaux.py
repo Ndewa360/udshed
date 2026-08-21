@@ -6,10 +6,11 @@ Source unique pour :
 - le calcul du niveau precedent (chargement des resultats)
 
 Conventions :
-- le champ `order` d'une ligne = sa position dans le tableau (renumerote a chaque
+- le champ `order` d'une ligne = sa position dans le tableau (renumere a chaque
   sauvegarde par `Field of study.before_save`)
-- la progression ne sort jamais du cycle (Licence -> Master est une admission
-  de cycle, pas une progression automatique)
+- la progression dans un meme cycle est automatique (L1->L2->L3, BTS1->BTS2)
+- fin BTS 2 -> Licence 3 si elle existe (chemin vers le Master)
+- fin Licence 3 -> None (admission Master = decision du jury)
 """
 
 import re
@@ -17,6 +18,7 @@ import re
 import frappe
 
 CYCLES = ("Doctorat", "Licence", "Master", "BTS")
+CYCLE_ORDER = {"BTS": 1, "Licence": 2, "Master": 3, "Doctorat": 4}
 
 
 def cycle_niveau(level_label):
@@ -34,26 +36,43 @@ def _cycle(row):
 	return row.get("cycle") or cycle_niveau(row.get("level"))
 
 
+def _level_rank(level_label):
+	"""Extrait le rang numerique d'un libelle (ex: 'Licence 2' -> 2)."""
+	if not level_label:
+		return 0
+	match = re.search(r"(\d+)", level_label)
+	return int(match.group(1)) if match else 0
+
+
 def lignes_filiere(filiere):
-	"""Retourne les lignes de niveau d'une filiere, triees par order."""
+	"""Retourne les lignes de niveau d'une filiere, triees par ordre."""
 	filiere_doc = frappe.get_doc("Field of study", filiere)
 	return sorted(filiere_doc.field_of_study_level, key=lambda r: r.order or 0)
 
 
 def prochain_niveau(filiere, niveau):
-	"""Niveau suivant dans le meme cycle (None si fin de cycle).
+	"""Niveau suivant dans le parcours academique.
 
-	Exemple : Licence 2 -> Licence 3 ; Licence 3 -> None (admission Master
-	decidee par le jury, pas automatique).
+	Dans un meme cycle : progression automatique (L1->L2->L3, BTS1->BTS2).
+	Fin de cycle BTS : retourne Licence 3 si elle existe (chemin vers Master).
+	Fin de cycle Licence : retourne None (admission Master = decision du jury).
 	"""
 	rows = lignes_filiere(filiere)
 	current = next((r for r in rows if r.level == niveau), None)
 	if not current:
 		return None
 	cycle = _cycle(current)
+	current_rank = _level_rank(current.level)
+
 	for row in rows:
-		if row.order == current.order + 1 and _cycle(row) == cycle:
+		if _cycle(row) == cycle and _level_rank(row.level) == current_rank + 1:
 			return row.level
+
+	if cycle == "BTS":
+		licences_3 = [r for r in rows if _cycle(r) == "Licence" and _level_rank(r.level) == 3]
+		if licences_3:
+			return licences_3[0].level
+
 	return None
 
 
@@ -69,9 +88,13 @@ def niveau_precedent(filiere, niveau):
 	if not current:
 		return None
 	cycle = _cycle(current)
-	precedents = [r for r in rows if _cycle(r) == cycle and r.order < current.order]
-	if precedents:
-		return max(precedents, key=lambda r: r.order).level
+	current_rank = _level_rank(current.level)
+
+	if current_rank > 1:
+		for row in rows:
+			if _cycle(row) == cycle and _level_rank(row.level) == current_rank - 1:
+				return row.level
+
 	if cycle == "Master":
 		licences = [r for r in rows if _cycle(r) == "Licence"]
 		if licences:

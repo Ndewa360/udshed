@@ -10,37 +10,8 @@ from udshed.utils.niveaux import cycle_niveau
 class Fieldofstudy(Document):
 
 	def before_save(self):
-		self.normaliser_ordres_niveaux()
 		self.normaliser_cycles()
 		self.gerer_coordonateurs()
-
-	def normaliser_ordres_niveaux(self):
-		"""L'ordre de chaque niveau = sa position dans le tableau.
-
-		La table de niveaux est reordonnable par drag & drop ; cette methode
-		garantit que le champ `order` refleche toujours la position des lignes
-		(1, 2, 3, ...), source du calcul du niveau precedent/suivant.
-		Ne reassigne que si des doublons ou des zeros sont detectes.
-		"""
-		rows = self.get("field_of_study_level")
-		if not rows:
-			return
-
-		orders = {}
-		has_duplicate_or_zero = False
-		for row in rows:
-			o = row.get("order") or 0
-			if o == 0:
-				has_duplicate_or_zero = True
-				break
-			if o in orders:
-				has_duplicate_or_zero = True
-				break
-			orders[o] = row
-
-		if has_duplicate_or_zero:
-			for i, row in enumerate(rows):
-				row.order = i + 1
 
 	def normaliser_cycles(self):
 		"""Le cycle est TOUJOURS déduit du libellé du niveau.
@@ -54,23 +25,31 @@ class Fieldofstudy(Document):
 
 	def gerer_coordonateurs(self):
 		old_doc = self.get_doc_before_save()
-		new_rows = {row.name: row for row in self.field_of_study_level}
+		new_rows = {}
+		for row in self.field_of_study_level:
+			key = row.get("name") or row.get("level") or id(row)
+			new_rows[key] = row
 		teacher_to_cordo_list = []
 
 		if old_doc:
-			old_rows = {row.name: row for row in old_doc.field_of_study_level}
-			for row_name in new_rows:
-				if row_name not in old_rows:
-					if new_rows[row_name].get("coordonateur") not in teacher_to_cordo_list:
-						teacher_to_cordo_list.append(new_rows[row_name].get("coordonateur"))
-			for row_name in new_rows:
-				if row_name in old_rows:
-					if old_rows[row_name].get("coordonateur") != new_rows[row_name].get("coordonateur") and new_rows[row_name].get("coordonateur") not in teacher_to_cordo_list:
-						teacher_to_cordo_list.append(new_rows[row_name].get("coordonateur"))
+			old_rows = {}
+			for row in old_doc.field_of_study_level:
+				key = row.get("name") or row.get("level") or id(row)
+				old_rows[key] = row
+			for row_key in new_rows:
+				if row_key not in old_rows:
+					cordo = new_rows[row_key].get("coordonateur")
+					if cordo and cordo not in teacher_to_cordo_list:
+						teacher_to_cordo_list.append(cordo)
+			for row_key in new_rows:
+				if row_key in old_rows:
+					if old_rows[row_key].get("coordonateur") != new_rows[row_key].get("coordonateur") and new_rows[row_key].get("coordonateur") not in teacher_to_cordo_list:
+						teacher_to_cordo_list.append(new_rows[row_key].get("coordonateur"))
 		else:
 			for row in self.field_of_study_level:
-				if row.get("coordonateur") and row.get("coordonateur") not in teacher_to_cordo_list:
-					teacher_to_cordo_list.append(row.get("coordonateur"))
+				cordo = row.get("coordonateur")
+				if cordo and cordo not in teacher_to_cordo_list:
+					teacher_to_cordo_list.append(cordo)
 
 		for teacher in teacher_to_cordo_list:
 			t = frappe.get_doc("Teacher", teacher)

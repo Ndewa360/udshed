@@ -351,10 +351,8 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 	}
 
 	function build_level_row(filiere, level, idx, total) {
-		let up_disabled = idx === 0;
-		let down_disabled = idx === total - 1;
 		return `
-			<tr data-filiere="${frappe.utils.escape_html(filiere)}" data-level-name="${frappe.utils.escape_html(level.name)}">
+			<tr data-filiere="${frappe.utils.escape_html(filiere)}" data-level-name="${frappe.utils.escape_html(level.level)}" data-row-name="${frappe.utils.escape_html(level.name)}">
 				<td class="text-center drag-handle" style="cursor: grab;" title="${__("Glisser pour réordonner")}">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="opacity: .45;">
 						<circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>
@@ -374,17 +372,11 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 				<td>${frappe.utils.escape_html(level.coordonateur || "")}</td>
 				<td>${frappe.utils.escape_html(level.calendrier || "")}</td>
 				<td class="text-center">
-					<button class="btn btn-sm btn-secondary move-up-btn" ${up_disabled ? "disabled" : ""}
+					<button class="btn btn-sm btn-dark delete-level-btn"
 						data-filiere="${frappe.utils.escape_html(filiere)}"
-						data-level-name="${frappe.utils.escape_html(level.name)}"
-						title="${__("Monter")}">
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3l-5 5h10l-5-5z"/></svg>
-					</button>
-					<button class="btn btn-sm btn-secondary move-down-btn" ${down_disabled ? "disabled" : ""}
-						data-filiere="${frappe.utils.escape_html(filiere)}"
-						data-level-name="${frappe.utils.escape_html(level.name)}"
-						title="${__("Descendre")}">
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 13l5-5H3l5 5z"/></svg>
+						data-level-name="${frappe.utils.escape_html(level.level)}"
+						title="${__("Supprimer")}">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14"/></svg>
 					</button>
 				</td>
 			</tr>`;
@@ -401,16 +393,13 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 	}
 
 	function bind_events() {
-		$(".move-up-btn").click(function () {
+		$(".delete-level-btn").click(function () {
 			let filiere = $(this).data("filiere");
 			let level_name = $(this).data("level-name");
-			move_level(filiere, level_name, "up");
-		});
-
-		$(".move-down-btn").click(function () {
-			let filiere = $(this).data("filiere");
-			let level_name = $(this).data("level-name");
-			move_level(filiere, level_name, "down");
+			frappe.confirm(
+				__("Voulez-vous vraiment supprimer ce niveau ?"),
+				() => delete_level(filiere, level_name)
+			);
 		});
 
 		$(".open-filiere-btn").click(function () {
@@ -438,40 +427,31 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 				ghostClass: "dnd-ghost",
 				onEnd() {
 					let filiere = $(tbody).data("filiere");
-					let names = [];
-					$(tbody).find("tr[data-level-name]").each(function () {
-						names.push($(this).data("level-name"));
+					let row_names = [];
+					$(tbody).find("tr[data-row-name]").each(function () {
+						row_names.push($(this).data("row-name"));
 					});
-					if (filiere && names.length) reorder_levels(filiere, names);
+					if (filiere && row_names.length) save_order(filiere, row_names);
 				},
 			});
 		});
 	}
 
-	function reorder_levels(filiere, level_names) {
+	function save_order(filiere, row_names) {
 		frappe.call({
 			method: "udshed.api.reregistration.reorder_levels",
-			args: { filiere, level_names },
-			freeze: true,
-			freeze_message: __("Réorganisation en cours..."),
-			callback(r) {
-				if (r.message && r.message.status) {
-					frappe.show_alert({
-						message: r.message.message,
-						indicator: "green",
-					});
-					load_levels();
-				}
-			},
+			args: { filiere, level_names: row_names },
+			freeze: false,
+			callback(r) {},
 		});
 	}
 
-	function move_level(filiere, level_name, direction) {
+	function delete_level(filiere, level_name) {
 		frappe.call({
-			method: "udshed.api.reregistration.move_level",
-			args: { filiere, level_name, direction },
+			method: "udshed.api.reregistration.delete_level",
+			args: { filiere, level_name },
 			freeze: true,
-			freeze_message: __("Réorganisation en cours..."),
+			freeze_message: __("Suppression du niveau..."),
 			callback(r) {
 				if (r.message && r.message.status) {
 					frappe.show_alert({

@@ -4,6 +4,8 @@ import frappe
 from frappe.utils.pdf import get_pdf
 from frappe.query_builder import DocType
 
+CYCLE_ORDER = {"BTS": 1, "Licence": 2, "Master": 3, "Doctorat": 4}
+
 
 @frappe.whitelist()
 def get_open_sessions():
@@ -181,7 +183,7 @@ def get_reregistration_summary(student, academic_year):
 
 @frappe.whitelist()
 def get_all_levels(faculty=None, filiere=None):
-	"""Retourne tous les niveaux groupés par filière, triés par ordre"""
+	"""Retourne tous les niveaux groupés par filière, triés par ordre."""
 	filters = {}
 	if filiere:
 		filters["name"] = filiere
@@ -191,38 +193,34 @@ def get_all_levels(faculty=None, filiere=None):
 	fields_of_study = frappe.get_all("Field of study", filters=filters, fields=["name", "name_of_field", "faculte"])
 	result = []
 	for fos in fields_of_study:
-		doc = frappe.get_doc("Field of study", fos.name)
-		levels = sorted(doc.field_of_study_level, key=lambda x: x.order or 0)
+		levels_data = frappe.db.get_all(
+			"Field of study Level",
+			filters={"parent": fos.name},
+			fields=["name", "level", "cycle", "order", "coordonateur", "calendrier"],
+		)
+		levels_data.sort(key=lambda x: x.get("order") or 0)
 		result.append({
 			"filiere_name": fos.name,
 			"filiere_label": fos.name_of_field,
 			"faculte": fos.faculte,
-			"levels": [
-				{
-					"name": l.name,
-					"level": l.level,
-					"cycle": l.cycle,
-					"order": l.order,
-					"coordonateur": l.coordonateur,
-					"calendrier": l.calendrier,
-				}
-				for l in levels
-			]
+			"levels": levels_data,
 		})
 	return result
 
 
 @frappe.whitelist()
 def add_level(filiere, level, cycle=None, coordonateur=None, calendrier="Defaut", gestionnaire_de_planning=None):
-	"""Ajoute un niveau à une filière. Le save() déclenche before_save
-	qui renumérote les ordres et déduit le cycle si non renseigné."""
+	"""Ajoute un niveau à une filière en l'insérant au bon endroit par cycle."""
 	doc = frappe.get_doc("Field of study", filiere)
 	if any(r.level == level for r in doc.field_of_study_level):
 		frappe.throw(f"Le niveau {level} existe déjà dans {filiere}")
+
+	new_cycle = cycle or _cycle_from_level(level)
+
 	doc.append("field_of_study_level", {
 		"level": level,
-		"cycle": cycle or None,
-		"order": (len(doc.field_of_study_level) or 0) + 1,
+		"cycle": new_cycle,
+		"order": 0,
 		"coordonateur": coordonateur,
 		"calendrier": calendrier or "Defaut",
 		"gestionnaire_de_planning": gestionnaire_de_planning,
@@ -231,46 +229,43 @@ def add_level(filiere, level, cycle=None, coordonateur=None, calendrier="Defaut"
 	return {"status": True, "message": f"Niveau {level} ajouté à {filiere}"}
 
 
+def _cycle_from_level(level_label):
+	"""Déduit le cycle depuis le libellé du niveau."""
+	if not level_label:
+		return None
+	for cycle in ("BTS", "Licence", "Master", "Doctorat"):
+		if level_label.startswith(cycle):
+			return cycle
+	return None
+
+
 @frappe.whitelist()
-def move_level(filiere, level_name, direction):
-	"""
-	Déplace un niveau vers le haut (up) ou vers le bas (down)
-	en réordonnant physiquement les lignes du tableau.
-	"""
-	doc = frappe.get_doc("Field of study", filiere)
-	names = [r.name for r in sorted(doc.field_of_study_level, key=lambda x: x.order or 0)]
-
-	if level_name not in names:
+def delete_level(filiere, level_name):
+	"""Supprime un niveau d'une filière via SQL direct."""
+	level = frappe.db.get_value(
+		"Field of study Level",
+		{"parent": filiere, "level": level_name},
+		"name",
+	)
+	if not level:
 		frappe.throw("Niveau introuvable")
-
-	current_idx = names.index(level_name)
-
-	if direction == "up":
-		if current_idx == 0:
-			frappe.throw("Le niveau est déjà en première position")
-		names[current_idx], names[current_idx - 1] = names[current_idx - 1], names[current_idx]
-	elif direction == "down":
-		if current_idx == len(names) - 1:
-			frappe.throw("Le niveau est déjà en dernière position")
-		names[current_idx], names[current_idx + 1] = names[current_idx + 1], names[current_idx]
-	else:
-		frappe.throw("Direction invalide. Utilisez 'up' ou 'down'")
-
-	return reorder_levels(filiere, names)
+	frappe.delete_doc("Field of study Level", level, ignore_permissions=True)
+	frappe.db.commit()
+	return {"status": True, "message": f"Niveau {level_name} supprimé de {filiere}"}
 
 
 @frappe.whitelist()
 def reorder_levels(filiere, level_names):
-	"""Réordonne physiquement les lignes de niveaux selon l'ordre de level_names.
+	"""Réordonne les niveaux selon l'ordre reçu du drag & drop.
 
-	Le save() déclenche before_save qui renumérote `order` = position de chaque ligne.
+	Met à jour directement en SQL pour éviter le cache Frappe.
 	"""
-	doc = frappe.get_doc("Field of study", filiere)
-	name_to_row = {row.name: row for row in doc.field_of_study_level}
-	rows = [name_to_row[n] for n in level_names if n in name_to_row]
-	rows += [row for row in doc.field_of_study_level if row.name not in name_to_row]
-	doc.field_of_study_level = rows
-	doc.save(ignore_permissions=True)
+	for i, row_name in enumerate(level_names):
+		frappe.db.sql(
+			"UPDATE `tabField of study Level` SET `order` = %s WHERE name = %s",
+			(i + 1, row_name),
+		)
+	frappe.db.commit()
 	return {"status": True, "message": "Ordre des niveaux mis à jour"}
 
 

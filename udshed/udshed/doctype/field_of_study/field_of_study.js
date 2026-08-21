@@ -27,12 +27,4 @@ frappe.ui.form.on("Field of study Level", {
 			frm.refresh_field("field_of_study_level");
 		}
 	},
-
-	field_of_study_level_move: function (frm, cdt, cdn) {
-		// Après un drag & drop, l'ordre = la position de la ligne dans le tableau
-		$.each(frm.doc.field_of_study_level, function (i, r) {
-			r.order = i + 1;
-		});
-		frm.refresh_field("field_of_study_level");
-	},
 });
