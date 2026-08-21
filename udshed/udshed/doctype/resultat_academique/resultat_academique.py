@@ -18,7 +18,12 @@ class ResultatAcademique(Document):
         if not self.is_new():
             self._declencher_mps_mpc()
 
-    def _declencher_mps_mpc(self):
+    def on_trash(self):
+        # on_trash s'exécute AVANT la suppression effective en base : on exclut
+        # cette UE pour ne pas la compter dans la MPS encore existante.
+        self._declencher_mps_mpc(teaching_unit_a_exclure=self.teaching_unit)
+
+    def _declencher_mps_mpc(self, teaching_unit_a_exclure=None):
         """Recalcule MPS/MPC uniquement si les données clés ont changé.
 
         On évite la boucle infinie : ResultatAcademique.save() -> calculer_et_sauvegarder_mps_mpc
@@ -31,7 +36,8 @@ class ResultatAcademique(Document):
             return
         from udshed.api.resultat_academique import calculer_et_sauvegarder_mps_mpc
         calculer_et_sauvegarder_mps_mpc(
-            self.student, self.semestre, self.academic_year
+            self.student, self.semestre, self.academic_year,
+            teaching_unit_a_exclure=teaching_unit_a_exclure,
         )
 
     def remplir_noms(self):

@@ -1,11 +1,25 @@
 frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	const API = "udshed.api.saisie_notes.";
-	const MAX_CC_COLUMNS = 5;
-	const TYPE_CC = "CC";
 	const TYPE_EXAMEN = "Examen";
 	const TYPE_RATTRAPAGE = "Rattrapage";
-	const TAB_CC = "cc";
-	const TAB_EXAMEN = "examen";
+
+	// Colonnes d'évaluations de la saisie unifiée (ordre d'affichage).
+	const EVALUATIONS = [
+		{ field: "cc", label: "CC" },
+		{ field: "cctp", label: "CCTP" },
+		{ field: "examtp", label: "EXAMTP" },
+		{ field: "examen", label: "EXAM" },
+	];
+
+	const COMPOSANTE_COURT = {
+		"Controle Continu(CC)": "CC",
+		"Controle Continu Travaux Pratiques(CCTP)": "CCTP",
+		"Examen": "EXAM",
+		"Examen Travaux Pratiques(EXAMTP)": "EXAMTP",
+		"Travaux Pratique (TP)": "TP",
+		"Rapport": "Rapport",
+		"Competence": "Compétence",
+	};
 
 	const state = {
 		filters: {
@@ -20,17 +34,13 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		ctx: null,
 		enseignant: null,
 		data: null,
-		cc_columns: [],
-		cc_cur: {},
-		cc_snap: {},
-		ex_cur: {},
-		ex_snap: {},
+		cur: {},
+		snap: {},
 		rt_cur: {},
 		rt_snap: {},
-		cc_full: false,
-		cc_counter: 0,
-		tab: TAB_CC,
 		busy: false,
+		preview: {},
+		ues_seq: 0,
 	};
 
 	// ------------------------------------------------------------------
@@ -124,9 +134,99 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		});
 	}
 
+	function is_rattrapage_view() {
+		return state.filters.session === "Rattrapage";
+	}
+
 	function active_type() {
-		if (state.tab === TAB_CC) return TYPE_CC;
-		return state.filters.session === "Rattrapage" ? TYPE_RATTRAPAGE : TYPE_EXAMEN;
+		return is_rattrapage_view() ? TYPE_RATTRAPAGE : TYPE_EXAMEN;
+	}
+
+	// ------------------------------------------------------------------
+	// aperçu automatique des calculs (moteur backend, debouncé)
+	// ------------------------------------------------------------------
+	let preview_timer = null;
+	let preview_dirty = {};
+
+	function preview_val(student, key, fallback) {
+		const pv = state.preview[student];
+		if (pv && pv[key] !== undefined && pv[key] !== null && pv[key] !== "") return pv[key];
+		return fallback;
+	}
+
+	function schedule_preview(student) {
+		preview_dirty[student] = true;
+		clearTimeout(preview_timer);
+		preview_timer = setTimeout(() => {
+			const dirty = Object.keys(preview_dirty);
+			preview_dirty = {};
+			dirty.forEach((s) => fire_preview(s));
+		}, 450);
+	}
+
+	function fire_preview(student) {
+		if (!state.data || !state.filters.cours || state.busy) return;
+		let args = { student, teaching_unit: state.filters.cours };
+		if (is_rattrapage_view()) {
+			const rt = to_num(state.rt_cur[student]);
+			if (rt == null) {
+				delete state.preview[student];
+				update_preview_cells(student);
+				return;
+			}
+			// On transmet CC (moyenne) et note initiale pour que l'aperçu
+			// reproduise exactement le calcul de la note de rattrapage enregistrée.
+			const cc = (state.data.notes.CC[student] || {}).note_cc_moyenne;
+			const initiale = (state.data.notes.Rattrapage[student] || {}).note_examen;
+			if (cc != null) args.notes_cc = JSON.stringify([{ cc_label: "CC", cc_weight: 1, note_cc: cc }]);
+			if (initiale != null) args.note_examen = initiale;
+			args.note_examen_rattrapage = rt;
+		} else {
+			const row = state.cur[student] || {};
+			const cc = to_num(row.cc);
+			const cctp = to_num(row.cctp);
+			const examtp = to_num(row.examtp);
+			const examen = to_num(row.examen);
+			if (cc == null && cctp == null && examtp == null && examen == null) {
+				delete state.preview[student];
+				update_preview_cells(student);
+				return;
+			}
+			args.notes_cc = cc == null ? "[]" : JSON.stringify([{ cc_label: "CC", cc_weight: 1, note_cc: cc }]);
+			args.note_cctp = cctp;
+			args.note_examtp = examtp;
+			args.note_examen = examen;
+		}
+		frappe.call({
+			method: API + "calculer_apercu",
+			args,
+			callback: (r) => {
+				state.preview[student] = r.message || {};
+				update_preview_cells(student);
+				if (r.message && r.message.formule && !is_rattrapage_view()) {
+					update_formule_banner(r.message.formule);
+				}
+			},
+			error: () => {
+				/* l'aperçu est facultatif : on garde les valeurs enregistrées */
+			},
+		});
+	}
+
+	function update_preview_cells(student) {
+		tableWrap.find('[data-pv-student="' + student + '"]').each(function () {
+			const key = $(this).data("pv");
+			const saved = $(this).attr("data-pv-saved");
+			const pv = state.preview[student];
+			if (pv && pv[key] !== undefined && pv[key] !== null && pv[key] !== "") {
+				const val = pv[key];
+				if (key === "note_pct") $(this).text(fmt_pct(val));
+				else if (key === "grade" || key === "mention" || key === "type_resultat") $(this).text(val);
+				else $(this).text(fmt_num(val));
+			} else if (saved !== undefined && saved !== "") {
+				$(this).text(saved);
+			}
+		});
 	}
 
 	// ------------------------------------------------------------------
@@ -145,26 +245,13 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		.appendTo("head");
 
 	const content = $('<div class="sn-page"></div>').appendTo(page.body);
-	const banner = $('<div class="sn-banner" hidden></div>').appendTo(content);
-	const infoBar = $('<div class="sn-info" hidden></div>').appendTo(content);
-	const tabsEl = $('<div class="sn-tabs" hidden></div>').appendTo(content);
-	const toolbar = $('<div class="sn-toolbar" hidden></div>').appendTo(content);
-	const tableWrap = $('<div class="sn-table-wrap" hidden></div>').appendTo(content);
-	const emptyEl = $('<div class="sn-empty" hidden></div>').appendTo(content);
-	const fileInput = $('<input type="file" accept=".xlsx,.xls" class="hidden">').appendTo(content);
-
-	tabsEl.html(
-		'<button type="button" class="sn-tab sn-tab-active" data-tab="' +
-			TAB_CC +
-			'">' +
-			__("Notes de contrôle continu") +
-			"</button>" +
-			'<button type="button" class="sn-tab" data-tab="' +
-			TAB_EXAMEN +
-			'">' +
-			__("Notes d'examen") +
-			"</button>"
-	);
+	const banner = $('<div class="sn-banner"></div>').css("display", "none").appendTo(content);
+	const infoBar = $('<div class="sn-info"></div>').css("display", "none").appendTo(content);
+	const formuleBar = $('<div class="sn-ue-formule sn-formule-bar"></div>').css("display", "none").appendTo(content);
+	const toolbar = $('<div class="sn-toolbar"></div>').css("display", "none").appendTo(content);
+	const tableWrap = $('<div class="sn-table-wrap"></div>').css("display", "none").appendTo(content);
+	const emptyEl = $('<div class="sn-empty"></div>').css("display", "none").appendTo(content);
+	const fileInput = $('<input type="file" accept=".xlsx,.xls" style="display:none">').appendTo(content);
 
 	// ------------------------------------------------------------------
 	// filters
@@ -183,7 +270,10 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		label: __("Faculté"),
 		fieldtype: "Link",
 		options: "Faculty",
-		change: () => reset_downstream("faculty"),
+		change: () => {
+			reset_downstream("faculty");
+			update_filiere_query();
+		},
 	});
 	fld.filiere = page.add_field({
 		fieldname: "filiere",
@@ -240,9 +330,12 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		options: ["Examen normal", "Rattrapage"],
 		change: () => {
 			read_filters();
-			if (state.tab === TAB_EXAMEN) render();
+			if (state.filters.cours) render();
 		},
 	});
+
+	fld.semestre.set_input("Semestre 1");
+	fld.session.set_input("Examen normal");
 
 	function read_filters() {
 		const vals = page.get_form_values();
@@ -255,25 +348,53 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		state.filters.session = vals.session || "Examen normal";
 	}
 
+	const FIELD_ORDER = ["academic_year", "faculty", "filiere", "niveau", "semestre", "cours"];
+
+	function update_filiere_query() {
+		read_filters();
+		const ctx = state.ctx;
+		let filters = {};
+		if (state.filters.faculty) filters.faculte = state.filters.faculty;
+		if (ctx && !ctx.is_admin && ctx.filieres.length) filters.name = ["in", ctx.filieres];
+		fld.filiere.df.get_query = () => ({ filters });
+		fld.filiere.refresh();
+	}
+
 	function reset_downstream(field) {
 		read_filters();
-		if (field !== "cours") {
-			fld.cours.set_input("");
-			state.filters.cours = null;
-		}
+		const idx = FIELD_ORDER.indexOf(field);
+		const downstream = idx >= 0 ? FIELD_ORDER.slice(idx + 1) : ["cours"];
+		downstream.forEach((f) => {
+			if (f === "filiere") {
+				fld.filiere.set_input("");
+				state.filters.filiere = null;
+			} else if (f === "niveau") {
+				fld.niveau.set_input("");
+				fld.niveau.df.options = [""];
+				fld.niveau.refresh();
+				state.filters.niveau = null;
+			} else if (f === "semestre") {
+				fld.semestre.set_input("Semestre 1");
+				state.filters.semestre = "Semestre 1";
+			} else if (f === "cours") {
+				fld.cours.set_input("");
+				fld.cours.df.options = [""];
+				fld.cours.refresh();
+				state.filters.cours = null;
+			}
+		});
 		clear_data();
 	}
 
 	function clear_data() {
 		state.data = null;
-		state.cc_columns = [];
-		state.cc_cur = {};
-		state.cc_snap = {};
-		state.ex_cur = {};
-		state.ex_snap = {};
+		state.cur = {};
+		state.snap = {};
 		state.rt_cur = {};
 		state.rt_snap = {};
-		state.cc_full = false;
+		state.preview = {};
+		preview_dirty = {};
+		clearTimeout(preview_timer);
 		render();
 	}
 
@@ -338,13 +459,12 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			if (ctx.faculties.length === 1) fld.faculty.set_input(ctx.faculties[0]);
 		}
 		if (is_restricted && ctx.filieres.length) {
-			fld.filiere.df.get_query = () => ({ filters: { name: ["in", ctx.filieres] } });
-			fld.filiere.refresh();
 			if (ctx.filieres.length === 1) fld.filiere.set_input(ctx.filieres[0]);
 		}
 		if (ctx.default_academic_year) {
 			fld.academic_year.set_input(ctx.default_academic_year);
 		}
+		update_filiere_query();
 		read_filters();
 		if (ctx.filieres.length === 1) load_levels();
 	}
@@ -361,6 +481,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			method: API + "get_enseignant_courant",
 			callback: (r) => {
 				state.enseignant = r.message || null;
+				if (state.ctx) apply_context();
 			},
 		});
 	}
@@ -387,6 +508,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				fld.niveau.refresh();
 				if (allowed.length === 1) {
 					fld.niveau.set_input(allowed[0].level);
+					maybe_load_cours();
 				}
 			},
 		});
@@ -394,14 +516,18 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 
 	function maybe_load_cours() {
 		read_filters();
-		fld.cours.df.options = [""];
-		fld.cours.refresh();
+		const previous = state.filters.cours;
+		if (!previous) {
+			fld.cours.df.options = [""];
+			fld.cours.refresh();
+		}
 		if (!state.filters.academic_year || !state.filters.filiere || !state.filters.niveau) return;
 		const ctx = state.ctx;
 		let teacher = null;
 		if (ctx && ctx.is_teacher && !ctx.is_admin && !ctx.is_coordinator) {
 			teacher = state.enseignant ? state.enseignant.name : null;
 		}
+		const seq = ++state.ues_seq;
 		frappe.call({
 			method: API + "get_ues",
 			args: {
@@ -412,17 +538,30 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				teacher: teacher || null,
 			},
 			callback: (r) => {
+				if (seq !== state.ues_seq) return;
 				const ues = r.message || [];
 				const opts = ues.map((u) => ({
 					value: u.name,
 					label: u.intitule + (u.code ? " (" + u.code + ")" : "") + (u.credits ? " — " + u.credits + " cr" : ""),
 				}));
+				const keep = previous && ues.some((u) => u.name === previous);
 				fld.cours.df.options = [""].concat(opts);
 				fld.cours.refresh();
+				if (previous && !keep) {
+					fld.cours.set_input("");
+					fld.cours.refresh();
+					read_filters();
+					clear_data();
+				}
 				if (!ues.length) {
 					show_banner(__("Aucun cours trouvé pour ces filtres."));
 				} else {
 					hide_banner();
+					if (ues.length === 1 && !state.filters.cours) {
+						fld.cours.set_input(ues[0].name);
+						read_filters();
+						load_data();
+					}
 				}
 			},
 		});
@@ -434,7 +573,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	function load_data() {
 		read_filters();
 		if (!state.filters.cours) return;
-		show_banner("");
+		show_banner(__("Chargement des notes..."));
 		frappe.call({
 			method: API + "charger_data",
 			args: {
@@ -449,8 +588,9 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			callback: (r) => {
 				state.data = r.message;
 				hide_banner();
-				load_cc_state();
-				load_ex_rt_state();
+				load_state();
+				state.preview = {};
+				preview_dirty = {};
 				render();
 			},
 			error: (e) => {
@@ -462,115 +602,74 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		});
 	}
 
-	function load_cc_state() {
-		const notes_cc = (state.data && state.data.notes && state.data.notes.CC) || {};
-		const columns = [];
-		const seen_labels = {};
-		const weights = {};
-		state.data.students.forEach((s) => {
-			const cc = notes_cc[s.student];
-			if (!cc) return;
-			(cc.notes_cc || []).forEach((item) => {
-				const label = item.cc_label;
-				if (label == null || label === "") return;
-				if (!seen_labels[label]) {
-					seen_labels[label] = state.cc_counter++;
-					columns.push({ key: "c" + seen_labels[label], label, weight: item.cc_weight != null ? item.cc_weight : 1 });
-					weights[label] = item.cc_weight != null ? item.cc_weight : 1;
-				}
-			});
-		});
-		if (!columns.length) {
-			columns.push({ key: "c" + state.cc_counter++, label: "CC 1", weight: 1 });
-		}
-		state.cc_columns = columns;
-		state.cc_cur = {};
-		state.data.students.forEach((s) => {
-			const cc = notes_cc[s.student];
-			const map = {};
-			if (cc) {
-				(cc.notes_cc || []).forEach((item) => {
-					const col = columns.find((c) => c.label === item.cc_label);
-					if (col) map[col.key] = item.note_cc == null ? "" : String(item.note_cc);
-				});
-			}
-			state.cc_cur[s.student] = map;
-		});
-		state.cc_full = false;
-		rebuild_cc_snap();
-	}
-
-	function load_ex_rt_state() {
-		const notes_ex = (state.data && state.data.notes && state.data.notes.Examen) || {};
-		const notes_rt = (state.data && state.data.notes && state.data.notes.Rattrapage) || {};
-		state.ex_cur = {};
-		state.ex_snap = {};
+	function load_state() {
+		state.cur = {};
+		state.snap = {};
 		state.rt_cur = {};
 		state.rt_snap = {};
-		state.data.students.forEach((s) => {
-			const ex = notes_ex[s.student];
-			state.ex_cur[s.student] = ex && ex.note_examen != null ? String(ex.note_examen) : "";
-			state.ex_snap[s.student] = ex && ex.note_examen != null ? to_num(ex.note_examen) : null;
-			const rt = notes_rt[s.student];
-			state.rt_cur[s.student] = rt && rt.note_examen_rattrapage != null ? String(rt.note_examen_rattrapage) : "";
-			state.rt_snap[s.student] = rt && rt.note_examen_rattrapage != null ? to_num(rt.note_examen_rattrapage) : null;
+		const notes_rt = (state.data && state.data.notes && state.data.notes.Rattrapage) || {};
+		(state.data.lignes || []).forEach((ligne) => {
+			const map = {};
+			EVALUATIONS.forEach((e) => {
+				const v = ligne[e.field];
+				map[e.field] = v == null ? "" : String(v);
+			});
+			state.cur[ligne.student] = map;
+			state.snap[ligne.student] = EVALUATIONS.reduce((acc, e) => {
+				acc[e.field] = to_num(ligne[e.field]);
+				return acc;
+			}, {});
+			const rt = notes_rt[ligne.student];
+			state.rt_cur[ligne.student] = rt && rt.note_examen_rattrapage != null ? String(rt.note_examen_rattrapage) : "";
+			state.rt_snap[ligne.student] = rt && rt.note_examen_rattrapage != null ? to_num(rt.note_examen_rattrapage) : null;
 		});
 	}
 
-	function cc_sig(student) {
-		const vals = state.cc_columns.map((c) => {
-			const v = state.cc_cur[student] ? state.cc_cur[student][c.key] : undefined;
-			return [c.label, c.weight || 1, to_num(v)];
-		});
-		return JSON.stringify(vals);
+	function ue_credits() {
+		return state.data && state.data.ue_info && state.data.ue_info.credits != null ? state.data.ue_info.credits : "";
 	}
 
-	function rebuild_cc_snap() {
-		const notes_cc = (state.data && state.data.notes && state.data.notes.CC) || {};
-		state.cc_snap = {};
-		state.data.students.forEach((s) => {
-			const cc = notes_cc[s.student];
-			const by_label = {};
-			if (cc) {
-				(cc.notes_cc || []).forEach((item) => {
-					by_label[item.cc_label] = item.note_cc;
-				});
-			}
-			const vals = state.cc_columns.map((c) => [
-				c.label,
-				c.weight || 1,
-				by_label[c.label] != null ? to_num(by_label[c.label]) : null,
-			]);
-			state.cc_snap[s.student] = JSON.stringify(vals);
-		});
+	// ------------------------------------------------------------------
+	// formule / aperçu
+	// ------------------------------------------------------------------
+	function formule_display(formule) {
+		const f = formule || (state.data && state.data.formule);
+		if (!f || !f.composantes || !f.composantes.length) {
+			return (
+				'<span class="sn-formule-warn">⚠ ' +
+				__("Aucune formule active trouvée pour cette combinaison (vérifier Grade Formula).") +
+				"</span>"
+			);
+		}
+		const chips = f.composantes
+			.map(
+				(c) =>
+					'<span class="sn-chip">' +
+					esc(COMPOSANTE_COURT[c.composante] || c.composante) +
+					" <strong>" +
+					esc(c.pourcentage) +
+					" %</strong></span>"
+			)
+			.join("");
+		return '<span class="sn-formule-label">' + __("Formule appliquée :") + "</span> " + chips;
 	}
 
-	function add_cc_column() {
-		if (state.cc_columns.length >= MAX_CC_COLUMNS) return;
-		const key = "c" + state.cc_counter++;
-		state.cc_columns.push({ key, label: "CC " + (state.cc_columns.length + 1), weight: 1 });
-		const notes_cc = (state.data && state.data.notes && state.data.notes.CC) || {};
-		state.data.students.forEach((s) => {
-			const cc = notes_cc[s.student];
-			let value = "";
-			if (cc) {
-				const item = (cc.notes_cc || []).find((i) => i.cc_label === "CC " + state.cc_columns.length);
-				if (item && item.note_cc != null) value = String(item.note_cc);
-			}
-			if (!state.cc_cur[s.student]) state.cc_cur[s.student] = {};
-			state.cc_cur[s.student][key] = value;
-		});
-		render_cc();
+	function update_formule_banner(formule) {
+		formuleBar.html(formule_display(formule)).show();
 	}
 
-	function remove_cc_column(index) {
-		const col = state.cc_columns[index];
-		state.cc_columns.splice(index, 1);
-		state.data.students.forEach((s) => {
-			delete state.cc_cur[s.student][col.key];
-		});
-		state.cc_full = true;
-		render_cc();
+	function formule_complete_msg() {
+		const f = state.data && state.data.formule;
+		if (!f || !f.composantes || !f.composantes.length) {
+			return __("Aucune formule active trouvée pour cette UE. Configurez une Grade Formula (Paramétrage des formules) pour générer le PDF.");
+		}
+		return null;
+	}
+
+	function row_changed(student) {
+		const cur = state.cur[student] || {};
+		const snap = state.snap[student] || {};
+		return EVALUATIONS.some((e) => to_num(cur[e.field]) !== snap[e.field]);
 	}
 
 	// ------------------------------------------------------------------
@@ -579,10 +678,10 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	function render() {
 		read_filters();
 		const has_data = !!state.data;
-		tabsEl.toggle(has_data);
 		toolbar.toggle(has_data);
 		tableWrap.toggle(has_data);
 		infoBar.toggle(has_data);
+		formuleBar.toggle(has_data);
 		if (!has_data) {
 			emptyEl.show().html(
 				'<div class="sn-empty-icon">' +
@@ -592,22 +691,16 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 					__("Sélectionnez un cours") +
 					"</div>" +
 					'<div class="sn-empty-sub">' +
-					__("Choisissez une année académique, une filière, un niveau et un cours pour afficher les étudiants et saisir les notes.") +
+					__("Sélectionnez une faculté, une filière, un niveau, un semestre et un cours pour afficher les étudiants inscrits.") +
 					"</div>"
 			);
 			return;
 		}
 		emptyEl.hide();
-		const cc_field = page.fields_dict.session;
-		if (cc_field) {
-			cc_field.df.hidden = state.tab === TAB_CC;
-			cc_field.refresh();
-		}
-		tabsEl.find(".sn-tab").toggleClass("sn-tab-active", (i, el) => $(el).data("tab") === state.tab);
 		render_info();
 		render_toolbar();
-		if (state.tab === TAB_CC) render_cc();
-		else render_examen();
+		if (is_rattrapage_view()) render_rattrapage();
+		else render_unifie();
 	}
 
 	function render_info() {
@@ -628,26 +721,38 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				'</div>' +
 				'<div class="sn-ue-sub">' +
 				(ue.semestre ? "Semestre " + esc(ue.semestre.replace("Semestre ", "")) + " · " : "") +
-				(ue.credits ? esc(ue.credits) + " crédits · " : "") +
+				(ue.credits ? '<span class="sn-credits">' + esc(ue.credits) + " crédits LMD</span> · " : "") +
 				(ue.type_ue ? esc(ue.type_ue) + " · " : "") +
 				(enseignant_names.length ? "Enseignant(s) : " + esc(enseignant_names.join(", ")) : "") +
 				'</div>' +
+				'<div class="sn-ue-students">' +
+				(state.data.students.length === 1 ? __("1 étudiant inscrit") : __("{0} étudiants inscrits", [state.data.students.length])) +
+				"</div>" +
 				"</div>" +
 				'<div class="sn-info-right">' +
-				"<div class=\"sn-session\"><span class=\"sn-session-label\">CC</span> " + session_dot("cc") + "</div>" +
 				"<div class=\"sn-session\"><span class=\"sn-session-label\">Examen</span> " + session_dot("normale") + "</div>" +
 				"<div class=\"sn-session\"><span class=\"sn-session-label\">Rattrapage</span> " + session_dot("rattrapage") + "</div>" +
 				"</div>"
 		);
+		update_formule_banner(state.data.formule);
+	}
+
+	function active_session_info() {
+		if (!state.data || !state.data.sessions) return null;
+		return is_rattrapage_view()
+			? state.data.sessions.rattrapage || null
+			: state.data.sessions.normale || null;
 	}
 
 	function render_toolbar() {
-		const is_cc = state.tab === TAB_CC;
-		const type = active_type();
-		const can_add = is_cc && state.cc_columns.length < MAX_CC_COLUMNS;
+		const is_rt = is_rattrapage_view();
+		const session = active_session_info();
+		const is_published = session && session.statut === "Publiée";
+		const pdf_msg = is_rt ? null : formule_complete_msg();
+		const pdf_disabled = is_rt ? false : !!pdf_msg;
 		toolbar.html(
 			'<button type="button" class="btn btn-primary btn-sm sn-btn sn-btn-save">' +
-				(is_cc ? __("Enregistrer le CC") : type === TYPE_RATTRAPAGE ? __("Enregistrer le rattrapage") : __("Enregistrer l'examen")) +
+				(is_rt ? __("Enregistrer le rattrapage") : __("Enregistrer les évaluations")) +
 				"</button>" +
 				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-import">' +
 				"&#8681; " + __("Importer") +
@@ -655,63 +760,76 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-export">' +
 				"&#8679; " + __("Exporter") +
 				"</button>" +
-				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-modele">' +
-				__("Modèle Excel") +
-				"</button>" +
-				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-modele-pdf">' +
-				__("Modèle PDF") +
-				"</button>" +
-				(can_add
-					? '<button type="button" class="btn btn-secondary btn-sm sn-btn sn-btn-add-cc">+ ' + __("Ajouter CC") + "</button>"
+				(is_rt
+					? '<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-modele">' + __("Modèle Excel") + "</button>"
+					: '') +
+				(!is_rt
+					? '<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-pdf" ' + (pdf_disabled ? "disabled title=\"" + esc(pdf_msg) + "\"" : "") + ">" +
+						"&#128196; " + __("Télécharger PDF") +
+						"</button>"
 					: "") +
 				'<span class="sn-toolbar-hint">' +
-				(is_cc
-					? __("Jusqu'à " + MAX_CC_COLUMNS + " notes de CC, avec coefficient.")
-					: __("Les notes finales, grades et mentions sont calculés automatiquement.")) +
-				"</span>"
+				(is_rt
+					? __("La note retenue = MAX(note initiale, note de rattrapage).")
+					: __("La combinaison (CC, CCTP, EXAMTP, EXAM) est détectée automatiquement ; les poids proviennent de la Grade Formula.")) +
+				"</span>" +
+				'<span class="sn-toolbar-sep"></span>' +
+				'<button type="button" class="btn btn-success btn-sm sn-btn sn-btn-valider" ' + (is_published ? "disabled" : "") + ">" +
+				__("Valider") +
+				"</button>" +
+				'<button type="button" class="btn btn-danger btn-sm sn-btn sn-btn-publier" ' + (is_published ? "disabled" : "") + ">" +
+				__("Publier") +
+				"</button>" +
+				'<span class="sn-session-label">' +
+				(session ? esc(session.statut || "Brouillon") : "") +
+				"</span>" +
+				(pdf_disabled && pdf_msg ? '<span class="sn-pdf-msg">' + esc(pdf_msg) + "</span>" : "")
 		);
 	}
 
-	function render_cc() {
+	// ------------------------------------------------------------------
+	// tableau unifié (Examen normal)
+	// ------------------------------------------------------------------
+	function render_unifie() {
 		const headers =
-			"<th>" + __("Matricule") + "</th><th>" + __("Étudiant") + "</th>" +
-			state.cc_columns
-				.map(
-					(c, i) =>
-						'<th class="sn-cc-col">' +
-						'<input type="text" class="sn-cc-label" data-i="' + i + '" value="' + esc(c.label) + '" title="Libellé">' +
-						'<span class="sn-cc-weight-label">coef</span>' +
-						'<input type="number" class="sn-cc-weight" data-i="' + i + '" min="0" max="10" step="0.25" value="' + esc(c.weight != null ? c.weight : 1) + '" title="Coefficient">' +
-						'<button type="button" class="sn-cc-del" data-i="' + i + '" title="Supprimer cette colonne">&times;</button>' +
-						"</th>"
-				)
-				.join("") +
-			"<th>" + __("Moyenne CC") + "</th>";
+			"<th>" + __("N°") + "</th><th>" + __("Matricule") + "</th><th>" + __("Nom et Prénoms") + "</th>" +
+			EVALUATIONS.map((e) => '<th class="sn-ev-head">' + esc(e.label) + "</th>").join("") +
+			"<th>" + __("MOY") + "</th><th>" + __("GRD") + "</th><th>" + __("PTS") + "</th>";
 
-		const notes_cc = (state.data.notes && state.data.notes.CC) || {};
-		const body = state.data.students
-			.map((s) => {
-				const cc = notes_cc[s.student] || {};
-				const cells = state.cc_columns
-					.map((c) => {
-						const v = state.cc_cur[s.student] ? state.cc_cur[s.student][c.key] : "";
-						return (
-							'<td class="sn-num"><input type="number" class="sn-note sn-cc-note" data-student="' +
-							esc(s.student) +
-							'" data-key="' +
-							esc(c.key) +
-							'" min="0" max="20" step="0.25" value="' +
-							esc(v) +
-							'"></td>'
-						);
-					})
-					.join("");
+		const body = (state.data.lignes || [])
+			.map((ligne, idx) => {
+				const row = state.cur[ligne.student] || {};
+				const inputs = EVALUATIONS.map(
+					(e) =>
+						'<td class="sn-num"><input type="number" class="sn-note sn-ev-note" data-student="' +
+						esc(ligne.student) +
+						'" data-field="' +
+						esc(e.field) +
+						'" min="0" max="20" step="0.25" value="' +
+						esc(row[e.field] || "") +
+						'"></td>'
+				).join("");
 				return (
 					"<tr>" +
-					'<td class="sn-mono">' + esc(s.matricule) + "</td>" +
-					"<td>" + esc(s.nom) + " " + esc(s.prenom) + "</td>" +
-					cells +
-					'<td class="sn-num sn-moy">' + fmt_num(cc.note_cc_moyenne) + "</td>" +
+					'<td class="sn-num">' + (idx + 1) + "</td>" +
+					'<td class="sn-mono">' + esc(ligne.matricule) + "</td>" +
+					"<td>" + esc(ligne.nom) + " " + esc(ligne.prenom) + "</td>" +
+					inputs +
+					'<td class="sn-num sn-strong" data-pv-student="' + esc(ligne.student) + '" data-pv="note_finale" data-pv-saved="' +
+					esc(fmt_num(ligne.note_finale)) +
+					'">' +
+					fmt_num(preview_val(ligne.student, "note_finale", ligne.note_finale)) +
+					"</td>" +
+					'<td data-pv-student="' + esc(ligne.student) + '" data-pv="grade" data-pv-saved="' +
+					esc(ligne.grade || "") +
+					'">' +
+					esc(preview_val(ligne.student, "grade", ligne.grade || "")) +
+					"</td>" +
+					'<td class="sn-num" data-pv-student="' + esc(ligne.student) + '" data-pv="point" data-pv-saved="' +
+					esc(fmt_num(ligne.point)) +
+					'">' +
+					fmt_num(preview_val(ligne.student, "point", ligne.point)) +
+					"</td>" +
 					"</tr>"
 				);
 			})
@@ -721,86 +839,76 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			'<table class="sn-table"><thead><tr>' +
 				headers +
 				"</tr></thead><tbody>" +
-				(body || '<tr><td colspan="' + (2 + state.cc_columns.length + 1) + '" class="sn-norows">' + __("Aucun étudiant n'a été inscrit dans cette filière pour ce cours.") + "</td></tr>") +
+				(body || '<tr><td colspan="' + (3 + EVALUATIONS.length + 3) + '" class="sn-norows">' + __("Aucun étudiant inscrit à ce cours dans ce contexte académique.") + "</td></tr>") +
 				"</tbody></table>"
 		);
 		bind_table_events();
 	}
 
-	function render_examen() {
-		const is_rt = state.filters.session === "Rattrapage";
+	// ------------------------------------------------------------------
+	// tableau rattrapage
+	// ------------------------------------------------------------------
+	function render_rattrapage() {
 		const notes_cc = (state.data.notes && state.data.notes.CC) || {};
-		const notes_ex = (state.data.notes && state.data.notes.Examen) || {};
 		const notes_rt = (state.data.notes && state.data.notes.Rattrapage) || {};
 
-		let headers;
-		let body;
-		if (is_rt) {
-			headers =
-				"<th>" + __("Matricule") + "</th><th>" + __("Étudiant") + "</th><th>" + __("Moy. CC") + "</th>" +
-				"<th>" + __("Note initiale") + "</th>" +
-				"<th>" + __("Note de rattrapage") + "</th>" +
-				"<th>" + __("Note retenue") + "</th>" +
-				"<th>" + __("Note finale") + "</th>" +
-				"<th>" + __("Grade") + "</th><th>" + __("Points") + "</th><th>" + __("Mention") + "</th>";
-			body = state.data.students
-				.map((s) => {
-					const cc = notes_cc[s.student] || {};
-					const rt = notes_rt[s.student] || {};
-					const v = state.rt_cur[s.student] || "";
-					return (
-						"<tr>" +
-						'<td class="sn-mono">' + esc(s.matricule) + "</td>" +
-						"<td>" + esc(s.nom) + " " + esc(s.prenom) + "</td>" +
-						'<td class="sn-num sn-moy">' + fmt_num(cc.note_cc_moyenne) + "</td>" +
-						'<td class="sn-num">' + fmt_num(rt.note_examen) + "</td>" +
-						'<td class="sn-num"><input type="number" class="sn-note sn-rt-note" data-student="' + esc(s.student) + '" min="0" max="20" step="0.25" value="' + esc(v) + '"></td>' +
-						'<td class="sn-num sn-strong">' + fmt_num(rt.note_examen_active) + "</td>" +
-						'<td class="sn-num sn-strong">' + fmt_num(rt.note_finale) + "</td>" +
-						'<td>' + esc(rt.grade || "") + "</td>" +
-						'<td class="sn-num">' + fmt_num(rt.point) + "</td>" +
-						"<td>" + esc(rt.mention || "") + "</td>" +
-						"</tr>"
-					);
-				})
-				.join("");
-		} else {
-			headers =
-				"<th>" + __("Matricule") + "</th><th>" + __("Étudiant") + "</th><th>" + __("Moy. CC") + "</th>" +
-				"<th>" + __("Note d'examen") + "</th>" +
-				"<th>" + __("Rattrapage") + "</th>" +
-				"<th>" + __("Note retenue") + "</th>" +
-				"<th>" + __("Note finale") + "</th>" +
-				"<th>" + __("Grade") + "</th><th>" + __("Points") + "</th><th>" + __("Mention") + "</th>";
-			body = state.data.students
-				.map((s) => {
-					const cc = notes_cc[s.student] || {};
-					const ex = notes_ex[s.student] || {};
-					const rt = notes_rt[s.student] || {};
-					const v = state.ex_cur[s.student] || "";
-					return (
-						"<tr>" +
-						'<td class="sn-mono">' + esc(s.matricule) + "</td>" +
-						"<td>" + esc(s.nom) + " " + esc(s.prenom) + "</td>" +
-						'<td class="sn-num sn-moy">' + fmt_num(cc.note_cc_moyenne) + "</td>" +
-						'<td class="sn-num"><input type="number" class="sn-note sn-ex-note" data-student="' + esc(s.student) + '" min="0" max="20" step="0.25" value="' + esc(v) + '"></td>' +
-						'<td class="sn-num">' + fmt_num(rt.note_examen_rattrapage) + "</td>" +
-						'<td class="sn-num sn-strong">' + fmt_num(ex.note_examen_active) + "</td>" +
-						'<td class="sn-num sn-strong">' + fmt_num(ex.note_finale) + "</td>" +
-						'<td>' + esc(ex.grade || "") + "</td>" +
-						'<td class="sn-num">' + fmt_num(ex.point) + "</td>" +
-						"<td>" + esc(ex.mention || "") + "</td>" +
-						"</tr>"
-					);
-				})
-				.join("");
-		}
+		const headers = [__("Matricule"), __("Étudiant"), __("Moy. CC"), __("Note initiale"), __("Note de rattrapage"), __("Note retenue"), __("Note finale"), __("%"), __("Grade"), __("Points"), __("Mention")];
+		const headerHtml = headers.map((h) => "<th>" + esc(h) + "</th>").join("");
+
+		const body = (state.data.lignes || [])
+			.map((ligne) => {
+				const cc = notes_cc[ligne.student] || {};
+				const rt = notes_rt[ligne.student] || {};
+				const v = state.rt_cur[ligne.student] || "";
+				const src = rt;
+				return (
+					"<tr>" +
+					'<td class="sn-mono">' + esc(ligne.matricule) + "</td>" +
+					"<td>" + esc(ligne.nom) + " " + esc(ligne.prenom) + "</td>" +
+					'<td class="sn-num">' + fmt_num(cc.note_cc_moyenne) + "</td>" +
+					'<td class="sn-num">' + fmt_num(rt.note_examen) + "</td>" +
+					'<td class="sn-num"><input type="number" class="sn-note sn-rt-note" data-student="' + esc(ligne.student) +
+					'" min="0" max="20" step="0.25" value="' + esc(v) + '"></td>' +
+					'<td class="sn-num sn-strong" data-pv-student="' + esc(ligne.student) + '" data-pv="note_examen_active" data-pv-saved="' +
+					esc(fmt_num(src.note_examen_active)) +
+					'">' +
+					fmt_num(preview_val(ligne.student, "note_examen_active", src.note_examen_active)) +
+					"</td>" +
+					'<td class="sn-num sn-strong" data-pv-student="' + esc(ligne.student) + '" data-pv="note_finale" data-pv-saved="' +
+					esc(fmt_num(src.note_finale)) +
+					'">' +
+					fmt_num(preview_val(ligne.student, "note_finale", src.note_finale)) +
+					"</td>" +
+					'<td class="sn-num sn-strong" data-pv-student="' + esc(ligne.student) + '" data-pv="note_pct" data-pv-saved="' +
+					esc(fmt_pct(src.note_pct)) +
+					'">' +
+					fmt_pct(preview_val(ligne.student, "note_pct", src.note_pct)) +
+					"</td>" +
+					'<td data-pv-student="' + esc(ligne.student) + '" data-pv="grade" data-pv-saved="' +
+					esc(src.grade || "") +
+					'">' +
+					esc(preview_val(ligne.student, "grade", src.grade || "")) +
+					"</td>" +
+					'<td class="sn-num" data-pv-student="' + esc(ligne.student) + '" data-pv="point" data-pv-saved="' +
+					esc(fmt_num(src.point)) +
+					'">' +
+					fmt_num(preview_val(ligne.student, "point", src.point)) +
+					"</td>" +
+					'<td data-pv-student="' + esc(ligne.student) + '" data-pv="mention" data-pv-saved="' +
+					esc(src.mention || "") +
+					'">' +
+					esc(preview_val(ligne.student, "mention", src.mention || "")) +
+					"</td>" +
+					"</tr>"
+				);
+			})
+			.join("");
 
 		tableWrap.html(
 			'<table class="sn-table"><thead><tr>' +
-				headers +
+				headerHtml +
 				"</tr></thead><tbody>" +
-				(body || '<tr><td colspan="10" class="sn-norows">' + __("Aucun étudiant n'a été inscrit dans cette filière pour ce cours.") + "</td></tr>") +
+				(body || '<tr><td colspan="' + headers.length + '" class="sn-norows">' + __("Aucun étudiant inscrit à ce cours dans ce contexte académique.") + "</td></tr>") +
 				"</tbody></table>"
 		);
 		bind_table_events();
@@ -811,36 +919,25 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		return String(Number(v));
 	}
 
+	function fmt_pct(v) {
+		if (v === null || v === undefined || v === "") return "—";
+		return String(Number(v)) + " %";
+	}
+
 	function bind_table_events() {
 		tableWrap.off("input", ".sn-note");
-		tableWrap.off("input", ".sn-cc-label");
-		tableWrap.off("input", ".sn-cc-weight");
-		tableWrap.off("click", ".sn-cc-del");
 		tableWrap.on("input", ".sn-note", (e) => {
 			const input = $(e.currentTarget);
 			const student = input.data("student");
 			const value = input.val();
-			if (input.hasClass("sn-cc-note")) {
-				const key = input.data("key");
-				if (!state.cc_cur[student]) state.cc_cur[student] = {};
-				state.cc_cur[student][key] = value;
-			} else if (input.hasClass("sn-ex-note")) {
-				state.ex_cur[student] = value;
+			if (input.hasClass("sn-ev-note")) {
+				const field = input.data("field");
+				if (!state.cur[student]) state.cur[student] = {};
+				state.cur[student][field] = value;
 			} else if (input.hasClass("sn-rt-note")) {
 				state.rt_cur[student] = value;
 			}
-		});
-		tableWrap.on("input", ".sn-cc-label", (e) => {
-			const i = $(e.currentTarget).data("i");
-			state.cc_columns[i].label = $(e.currentTarget).val();
-		});
-		tableWrap.on("input", ".sn-cc-weight", (e) => {
-			const i = $(e.currentTarget).data("i");
-			const w = to_num($(e.currentTarget).val());
-			state.cc_columns[i].weight = w == null ? 1 : w;
-		});
-		tableWrap.on("click", ".sn-cc-del", (e) => {
-			remove_cc_column($(e.currentTarget).data("i"));
+			schedule_preview(student);
 		});
 	}
 
@@ -858,17 +955,27 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		return problems;
 	}
 
-	function save_cc() {
+	function save_evaluations() {
 		if (!state.data || state.busy) return;
 		const problems = [];
+		const rows = [];
 		state.data.students.forEach((s) => {
-			state.cc_columns.forEach((c) => {
-				const v = state.cc_cur[s.student] ? to_num(state.cc_cur[s.student][c.key]) : null;
-				if (v == null) return;
-				if (v < 0 || v > 20) {
-					problems.push(esc(s.matricule) + " — " + esc(c.label) + " : " + v);
+			const row = state.cur[s.student] || {};
+			EVALUATIONS.forEach((e) => {
+				const v = to_num(row[e.field]);
+				if (v != null && (v < 0 || v > 20)) {
+					problems.push(esc(s.matricule) + " — " + esc(e.label) + " : " + v);
 				}
 			});
+			if (row_changed(s.student)) {
+				rows.push({
+					student: s.student,
+					cc: to_num(row.cc),
+					note_cctp: to_num(row.cctp),
+					note_examtp: to_num(row.examtp),
+					note_examen: to_num(row.examen),
+				});
+			}
 		});
 		if (problems.length) {
 			msg_error(
@@ -879,45 +986,11 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			);
 			return;
 		}
-
-		const rows = [];
-		state.data.students.forEach((s) => {
-			if (state.cc_full || cc_sig(s.student) !== state.cc_snap[s.student]) {
-				rows.push({
-					student: s.student,
-					notes_cc: state.cc_columns.map((c) => ({
-						cc_label: c.label,
-						cc_weight: c.weight || 1,
-						note_cc: state.cc_cur[s.student] ? to_num(state.cc_cur[s.student][c.key]) : null,
-					})),
-				});
-			}
-		});
 		if (!rows.length) {
-			toast(__("Aucune modification de CC à enregistrer."), "blue");
+			toast(__("Aucune évaluation à enregistrer."), "blue");
 			return;
 		}
-		do_save("enregistrer_cc", rows, {});
-	}
-
-	function save_examen() {
-		if (!state.data || state.busy) return;
-		const problems = [];
-		const rows = [];
-		state.data.students.forEach((s) => {
-			const v = to_num(state.ex_cur[s.student]);
-			if (v != null && (v < 0 || v > 20)) problems.push(esc(s.matricule) + " : " + v);
-			if (v !== state.ex_snap[s.student]) rows.push({ student: s.student, note_examen: v });
-		});
-		if (problems.length) {
-			msg_error(__("Notes d'examen invalides (doivent être entre 0 et 20) : ") + problems.join(" ; "));
-			return;
-		}
-		if (!rows.length) {
-			toast(__("Aucune note d'examen à enregistrer."), "blue");
-			return;
-		}
-		do_save("enregistrer_examen", rows, {});
+		do_save("enregistrer_evaluations", rows, {});
 	}
 
 	function save_rattrapage() {
@@ -962,7 +1035,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				state.busy = false;
 				set_busy(false);
 				const n = r.message && r.message.saved != null ? r.message.saved : rows.length;
-				toast(__("{0} note(s) enregistrée(s).").format(n), "green");
+				toast(__("{0} note(s) enregistrée(s).", [n]), "green");
 				load_data();
 			},
 			error: (e) => {
@@ -994,20 +1067,17 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		set_busy(true);
 		upload_file(file)
 			.then((fd) => {
+				const is_rt = is_rattrapage_view();
 				frappe.call({
-					method: API + "importer_notes",
+					method: API + (is_rt ? "importer_notes" : "importer_evaluations"),
 					args: {
 						file_url: fd.file_url,
-						type_dexamen: active_type(),
+						type_dexamen: is_rt ? TYPE_RATTRAPAGE : undefined,
 						academic_year: state.filters.academic_year,
 						filiere: state.filters.filiere,
 						niveau: state.filters.niveau,
 						semestre: state.filters.semestre,
 						teaching_unit: state.filters.cours,
-						cc_columns:
-							active_type() === TYPE_CC
-								? JSON.stringify(state.cc_columns.map((c) => ({ label: c.label, weight: c.weight || 1 })))
-								: undefined,
 					},
 					freeze: true,
 					freeze_message: __("Import des notes..."),
@@ -1015,7 +1085,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 						state.busy = false;
 						set_busy(false);
 						const n = r.message && r.message.saved != null ? r.message.saved : 0;
-						toast(__("{0} note(s) importée(s).").format(n), "green");
+						toast(__("{0} note(s) importée(s).", [n]), "green");
 						load_data();
 					},
 					error: (e) => {
@@ -1034,63 +1104,83 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 
 	function export_current() {
 		if (!state.filters.cours) return;
-		api_download(API + "export_notes", {
+		const is_rt = is_rattrapage_view();
+		api_download(API + (is_rt ? "export_notes" : "export_evaluations"), {
 			academic_year: state.filters.academic_year,
 			filiere: state.filters.filiere,
 			niveau: state.filters.niveau,
 			semestre: state.filters.semestre,
 			teaching_unit: state.filters.cours,
-			type_dexamen: active_type(),
-			cc_columns:
-				active_type() === TYPE_CC
-					? JSON.stringify(state.cc_columns.map((c) => ({ label: c.label, weight: c.weight || 1 })))
-					: undefined,
+			type_dexamen: is_rt ? TYPE_RATTRAPAGE : undefined,
 		});
 	}
 
 	function export_modele() {
-		api_download(API + "export_modele", {
-			type_dexamen: active_type(),
-			cc_columns:
-				active_type() === TYPE_CC
-					? JSON.stringify(state.cc_columns.map((c) => ({ label: c.label, weight: c.weight || 1 })))
-					: undefined,
-		});
+		api_download(API + "export_modele", { type_dexamen: TYPE_RATTRAPAGE });
 	}
 
-	function export_modele_pdf() {
-		api_download(API + "export_modele_pdf", {
-			type_dexamen: active_type(),
-			cc_columns:
-				active_type() === TYPE_CC
-					? JSON.stringify(state.cc_columns.map((c) => ({ label: c.label, weight: c.weight || 1 })))
-					: undefined,
+	// ------------------------------------------------------------------
+	// toolbar events
+	// ------------------------------------------------------------------
+	toolbar.on("click", ".sn-btn-save", () => {
+		if (is_rattrapage_view()) save_rattrapage();
+		else save_evaluations();
+	});
+	toolbar.on("click", ".sn-btn-import", start_import);
+	toolbar.on("click", ".sn-btn-export", export_current);
+	toolbar.on("click", ".sn-btn-modele", export_modele);
+	toolbar.on("click", ".sn-btn-pdf", () => {
+		if (!state.filters.cours) return;
+		const msg = formule_complete_msg();
+		if (msg) {
+			msg_error(msg);
+			return;
+		}
+		api_download(API + "generer_pdf", {
 			academic_year: state.filters.academic_year,
 			filiere: state.filters.filiere,
 			niveau: state.filters.niveau,
 			semestre: state.filters.semestre,
 			teaching_unit: state.filters.cours,
 		});
-	}
-
-	// ------------------------------------------------------------------
-	// toolbar / tab events
-	// ------------------------------------------------------------------
-	toolbar.on("click", ".sn-btn-save", () => {
-		if (state.tab === TAB_CC) save_cc();
-		else if (state.filters.session === "Rattrapage") save_rattrapage();
-		else save_examen();
 	});
-	toolbar.on("click", ".sn-btn-import", start_import);
-	toolbar.on("click", ".sn-btn-export", export_current);
-	toolbar.on("click", ".sn-btn-modele", export_modele);
-	toolbar.on("click", ".sn-btn-modele-pdf", export_modele_pdf);
-	toolbar.on("click", ".sn-btn-add-cc", add_cc_column);
-
-	tabsEl.on("click", ".sn-tab", (e) => {
-		state.tab = $(e.currentTarget).data("tab");
-		read_filters();
-		render();
+	toolbar.on("click", ".sn-btn-valider", () => {
+		const session = active_session_info();
+		if (!session || !session.name) return;
+		frappe.confirm(__("Valider toutes les notes de cette session ?"), () => {
+			frappe.call({
+				method: API + "valider_notes",
+				args: { session: session.name },
+				freeze: true,
+				freeze_message: __("Validation des notes..."),
+				callback: (r) => {
+					const msg = r.message || {};
+					toast(__("{0} note(s) validée(s).", [msg.validated != null ? msg.validated : 0]), "green");
+					load_data();
+				},
+				error: (e) => msg_error(error_message(e)),
+			});
+		});
+	});
+	toolbar.on("click", ".sn-btn-publier", () => {
+		const session = active_session_info();
+		if (!session || !session.name) return;
+		frappe.confirm(
+			__("Publier les résultats de cette session ? Toutes les notes doivent être validées. Cette action est irréversible."),
+			() => {
+				frappe.call({
+					method: API + "publier_session",
+					args: { session: session.name },
+					freeze: true,
+					freeze_message: __("Publication des résultats..."),
+					callback: (r) => {
+						toast(__("Session publiée."), "green");
+						load_data();
+					},
+					error: (e) => msg_error(error_message(e)),
+				});
+			}
+		);
 	});
 
 	// ------------------------------------------------------------------
@@ -1107,20 +1197,20 @@ const STYLES =
 	".sn-ue-title{font-size:15px;font-weight:600;color:#1d273b;}" +
 	".sn-ue-code{display:inline-block;background:#e8ecf5;color:#4858b4;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:600;margin-left:6px;}" +
 	".sn-ue-sub{font-size:12px;color:#687178;margin-top:3px;}" +
+	".sn-ue-students{font-size:12px;font-weight:600;color:#4858b4;margin-top:6px;}" +
 	".sn-info-right{display:flex;gap:14px;flex-wrap:wrap;}" +
 	".sn-session{font-size:12px;color:#1d273b;background:#f7f9fc;border:1px solid #e2e6f0;border-radius:6px;padding:4px 9px;display:inline-flex;align-items:center;gap:6px;}" +
 	".sn-session-label{font-weight:600;}" +
 	".sn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;}" +
 	".sn-dot.gray{background:#a9b2c1;}.sn-dot.green{background:#4caf50;}.sn-dot.blue{background:#4858b4;}.sn-dot.orange{background:#f59e0b;}" +
-	".sn-tabs{display:flex;gap:6px;margin:14px 0 0;border-bottom:1px solid #e2e6f0;padding-bottom:0;}" +
-	".sn-tab{border:1px solid #e2e6f0;border-bottom:none;background:#fff;color:#687178;padding:8px 16px;border-radius:8px 8px 0 0;font-size:13px;font-weight:500;cursor:pointer;margin-bottom:-1px;}" +
-	".sn-tab:hover{background:#f7f9fc;color:#1d273b;}" +
-	".sn-tab-active{color:#1d273b;border-color:#d1d6e4;border-bottom-color:#fff;font-weight:600;}" +
 	".sn-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 10px;}" +
 	".sn-btn{display:inline-flex;align-items:center;gap:5px;}" +
 	".sn-toolbar-hint{font-size:12px;color:#8a93a3;margin-left:8px;}" +
+	".sn-toolbar-sep{display:inline-block;width:1px;height:22px;background:#e2e6f0;margin:0 6px;}" +
+	".sn-toolbar .sn-session-label{font-size:11px;color:#687178;background:#f7f9fc;border:1px solid #e2e6f0;border-radius:5px;padding:3px 8px;text-transform:capitalize;}" +
+	".sn-formule-bar{margin:10px 0 0;}" +
 	".sn-table-wrap{overflow-x:auto;background:#fff;border:1px solid #e2e6f0;border-radius:8px;}" +
-	".sn-table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}" +
+	".sn-table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px;}" +
 	".sn-table th{background:#f7f9fc;color:#475069;font-weight:600;font-size:12px;padding:9px 10px;border-bottom:1px solid #e2e6f0;text-align:left;white-space:nowrap;position:sticky;top:0;}" +
 	".sn-table td{padding:6px 10px;border-bottom:1px solid #eef1f7;vertical-align:middle;}" +
 	".sn-table tr:nth-child(even) td{background:#fafbfd;}" +
@@ -1128,17 +1218,17 @@ const STYLES =
 	".sn-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:#687178;white-space:nowrap;}" +
 	".sn-num{text-align:right;}" +
 	".sn-num input{text-align:right;}" +
-	".sn-moy{font-weight:600;color:#1d273b;}" +
+	".sn-credits{color:#4858b4;font-weight:600;}" +
 	".sn-strong{font-weight:600;color:#1d273b;}" +
 	".sn-note{width:72px;height:30px;border:1px solid #d1d6e4;border-radius:6px;padding:2px 6px;font-size:13px;color:#1d273b;}" +
 	".sn-note:focus{outline:none;border-color:#4858b4;box-shadow:0 0 0 2px rgba(72,88,180,0.15);}" +
-	".sn-cc-col{min-width:120px;padding:6px 8px !important;}" +
-	".sn-cc-label{width:74px;height:26px;border:1px solid #d1d6e4;border-radius:5px;padding:1px 5px;font-size:12px;font-weight:600;}" +
-	".sn-cc-weight-label{font-size:10px;color:#8a93a3;margin-left:5px;}" +
-	".sn-cc-weight{width:52px;height:26px;border:1px solid #d1d6e4;border-radius:5px;padding:1px 4px;font-size:12px;margin-left:4px;}" +
-	".sn-cc-label:focus,.sn-cc-weight:focus{outline:none;border-color:#4858b4;}" +
-	".sn-cc-del{border:none;background:transparent;color:#e24f3f;font-size:16px;line-height:1;cursor:pointer;padding:0 2px;margin-left:6px;vertical-align:middle;}" +
-	".sn-cc-del:hover{color:#b42318;}" +
+	".sn-ev-head{min-width:84px;text-align:center !important;}" +
+	".sn-ue-formule{font-size:12px;color:#475069;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}" +
+	".sn-formule-label{font-weight:600;color:#1d273b;}" +
+	".sn-chip{display:inline-flex;align-items:center;gap:4px;background:#eef1f8;border:1px solid #dfe4f2;border-radius:10px;padding:1px 9px;color:#3a478e;}" +
+	".sn-formule-warn{color:#b42318;font-weight:600;}" +
+	".sn-pdf-msg{font-size:11px;color:#8a93a3;}" +
+	".sn-btn-pdf[disabled]{opacity:.55;cursor:not-allowed;}" +
 	".sn-norows{padding:26px !important;text-align:center;color:#8a93a3;}" +
 	".sn-empty{text-align:center;padding:70px 20px;color:#8a93a3;}" +
 	".sn-empty-icon{font-size:34px;margin-bottom:10px;}" +

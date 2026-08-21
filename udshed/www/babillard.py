@@ -31,6 +31,17 @@ def get_context(context):
 	options = frappe.get_meta("Field of study Level").get_field("level").options or ""
 	context.niveaux = [n for n in options.split("\n") if n]
 
+	# Filières et leurs niveaux (pour la consultation « par filière »)
+	filieres = []
+	for f in frappe.get_all("Field of study", fields=["name"], order_by="name"):
+		doc = frappe.get_cached_doc("Field of study", f["name"])
+		filieres.append({
+			"name": f["name"],
+			"name_of_field": doc.get("name_of_field") or f["name"],
+			"niveaux": [row.level for row in (doc.get("field_of_study_level") or [])],
+		})
+	context.filieres = filieres
+
 	# Années académiques triées de la plus récente à la plus ancienne
 	years = frappe.get_all("Academic Year", fields=["name"])
 	years.sort(key=lambda y: _start_year(y["name"]), reverse=True)

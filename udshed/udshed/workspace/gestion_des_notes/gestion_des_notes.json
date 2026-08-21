@@ -6,7 +6,7 @@
    "label": "Activity"
   }
  ],
- "content": "[{\"id\":\"gn1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Gestion des Notes</span>\",\"col\":12}},{\"id\":\"gn2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"gn3\",\"type\":\"paragraph\",\"data\":{\"text\":\"\\nModule de gestion des notes et des r\u00e9sultats acad\u00e9miques.<br><br>\\n\ud83d\udd39 \u00c9valuations : Cr\u00e9ation de sessions d'\u00e9valuation (Normal, Rattrapage, CC), saisie des notes par enseignant.<br>\\n\ud83d\udd39 Calcul des notes : Calcul automatique selon des formules configurables, d\u00e9termination des grades, points et mentions.<br>\\n\ud83d\udd39 R\u00e9sultats acad\u00e9miques : Production des PV individuels, PV de classe et relev\u00e9s de notes.<br>\\n\ud83d\udd39 Babillard public : Consultation publique des notes par \u00e9tudiant.\\n\\n\",\"col\":12}},{\"id\":\"WvaE8rM7Rz\",\"type\":\"card\",\"data\":{\"card_name\":\"Lien\",\"col\":7}},{\"id\":\"4Jk0Lsbe34\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"k5E0ubQY3y\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Activity\",\"col\":12}}]",
+ "content": "[{\"id\":\"gn1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Gestion des Notes</span>\",\"col\":12}},{\"id\":\"gn2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"WvaE8rM7Rz\",\"type\":\"card\",\"data\":{\"card_name\":\"Lien\",\"col\":7}},{\"id\":\"4Jk0Lsbe34\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"k5E0ubQY3y\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Activity\",\"col\":12}}]",
  "creation": "2026-07-24 17:00:00",
  "custom_blocks": [],
  "docstatus": 0,
@@ -24,7 +24,7 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
-   "label": "R\u00e9sultat Semestre",
+   "label": "Résultat Semestre",
    "link_count": 0,
    "link_to": "Resultat Semestre",
    "link_type": "DocType",
@@ -51,7 +51,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-08-17 08:32:10.501455",
+ "modified": "2026-08-19 09:40:36.778811",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Gestion des Notes",
@@ -72,7 +72,39 @@
   }
  ],
  "sequence_id": 30.0,
- "shortcuts": [],
+ "shortcuts": [
+  {
+   "doc_view": "",
+   "label": "Session d'examen",
+   "link_to": "Session Examen",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Saisie des Notes",
+   "link_to": "note-udshed",
+   "type": "Page"
+  },
+  {
+   "doc_view": "",
+   "label": "Etudiants",
+   "link_to": "Student",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Configuration Notes",
+   "link_to": "Udshed Setting",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Procès-Verbal récapitulatif",
+   "link_to": "Proces Verbal Recapitulatif",
+   "report_ref_doctype": "Resultat Academique",
+   "type": "Report"
+  }
+ ],
  "title": "Gestion des Notes",
  "type": "Workspace"
 }

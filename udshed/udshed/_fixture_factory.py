@@ -12,7 +12,7 @@ import contextlib
 
 import frappe
 
-from udshed.grade_calculation import SEUILS_DEFAUT
+from udshed.grade_calculation import SEUILS_DEFAUT, combinaison_detectee
 
 TYPE_NORMALE = "Examen de session normal"
 
@@ -231,6 +231,8 @@ def make_session_examen_note(
     note_cc=None,
     note_examen=None,
     note_tp=None,
+    note_cctp=None,
+    note_examtp=None,
     statut="Publié",
 ):
     doc = frappe.new_doc("Session Examen Note")
@@ -242,6 +244,8 @@ def make_session_examen_note(
         doc.append("notes_cc", {"cc_label": "CC 1", "cc_weight": 1, "note_cc": note_cc})
     doc.note_examen = note_examen
     doc.note_tp = note_tp
+    doc.note_cctp = note_cctp
+    doc.note_examtp = note_examtp
     doc.statut = statut
     doc.insert(ignore_permissions=True)
     return doc
@@ -313,8 +317,8 @@ def make_academic_reregistration(
 def seed_formule(cycle, composantes, pourcentages, seuil=None):
     """Crée (ou réutilise) une formule active pour un (cycle, combinaison).
 
-    La combinaison est déduite des composantes (pourcentage > 0), triées.
-    Le total des pourcentages doit être 100.
+    La combinaison est déduite des composantes (pourcentage > 0), dans
+    l'ordre canonique du moteur (identique à la Grade Formula).
 
     Exemple :
         seed_formule("BTS", ["Controle Continu(CC)", "Examen"], [40, 60])
@@ -328,7 +332,7 @@ def seed_formule(cycle, composantes, pourcentages, seuil=None):
     Returns:
         Document: Grade Formula active
     """
-    combinaison = " + ".join(sorted(composantes))
+    combinaison = combinaison_detectee(composantes)
     active = frappe.db.get_value(
         "Grade Formula",
         {"cycle": cycle, "combinaison": combinaison, "active": 1},

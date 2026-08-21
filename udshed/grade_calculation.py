@@ -14,7 +14,8 @@ Règles métier LMD :
 - La somme des pourcentages d'une formule est exactement 100 %.
 - Une composante peut intégrer une autre évaluation (composition interne).
 - La formule d'une note est sélectionnée automatiquement selon le cycle de
-  l'étudiant et la combinaison d'évaluations de son type d'UE.
+  l'étudiant et la combinaison d'évaluations effectivement renseignées
+  (détection : CC + EXAM, CC + CCTP + EXAM, CC + EXAMTP + EXAM, ...).
 """
 
 import math
@@ -32,7 +33,9 @@ SEUILS_DEFAUT = {"Licence": 50, "BTS": 50, "Master": 60}
 # afin de rester compatibles avec les mappings déjà en place.
 COMPOSANTES = [
     "Controle Continu(CC)",
+    "Controle Continu Travaux Pratiques(CCTP)",
     "Examen",
+    "Examen Travaux Pratiques(EXAMTP)",
     "Travaux Pratique (TP)",
     "Rapport",
     "Competence",
@@ -40,9 +43,31 @@ COMPOSANTES = [
 
 COMPOSANTES_PRINCIPALES = [
     "Controle Continu(CC)",
+    "Controle Continu Travaux Pratiques(CCTP)",
     "Examen",
+    "Examen Travaux Pratiques(EXAMTP)",
     "Travaux Pratique (TP)",
 ]
+
+# Ordre canonique d'affichage des combinaisons d'évaluations. Toutes les
+# combinaisons (configurées ou détectées) sont comparées sur cet ordre afin
+# que « CC + CCTP + EXAMTP + EXAM » soit lisible et stable.
+ORDRE_COMPOSANTES = [
+    "Controle Continu(CC)",
+    "Controle Continu Travaux Pratiques(CCTP)",
+    "Examen",
+    "Examen Travaux Pratiques(EXAMTP)",
+    "Travaux Pratique (TP)",
+    "Rapport",
+    "Competence",
+]
+
+
+def _cle_tri(composante):
+    """Clé de tri canonique d'un label de composante."""
+    if composante in ORDRE_COMPOSANTES:
+        return ORDRE_COMPOSANTES.index(composante)
+    return len(ORDRE_COMPOSANTES) + ord((composante or "")[0] or "z")
 
 # Correspondance type d'UE -> combinaison d'évaluations utilisée.
 # La combinaison sert à sélectionner automatiquement la formule d'une note.
@@ -101,10 +126,25 @@ def combinaison_formule(formula):
         str: combinaison canonique ("" si aucune composante active)
     """
     labels = sorted(
-        c.composante
-        for c in (formula.get("components") or [])
-        if (c.pourcentage or 0) > 0
+        (c.composante for c in (formula.get("components") or []) if (c.pourcentage or 0) > 0),
+        key=_cle_tri,
     )
+    return " + ".join(labels)
+
+
+def combinaison_detectee(labels):
+    """Combinaison canonique détectée à partir des composantes renseignées.
+
+    Exemple : ["Examen", "Controle Continu(CC)", "Controle Continu Travaux Pratiques(CCTP)"]
+    -> "Controle Continu(CC) + Controle Continu Travaux Pratiques(CCTP) + Examen"
+
+    Args:
+        labels (list[str]): labels des composantes effectivement renseignées
+
+    Returns:
+        str: combinaison canonique
+    """
+    labels = sorted({l for l in labels if l in COMPOSANTES}, key=_cle_tri)
     return " + ".join(labels)
 
 
@@ -120,7 +160,7 @@ def combinaison_type_ue(type_ue):
     labels = TYPE_UE_COMBINAISON.get(type_ue)
     if labels is None:
         labels = TYPE_UE_COMBINAISON["Sans TP"]
-    return " + ".join(sorted(labels))
+    return " + ".join(sorted(labels, key=_cle_tri))
 
 
 # ---------------------------------------------------------------------- #

@@ -22,6 +22,8 @@
   "date_rattrapage",
   "note_examen_active",
   "note_tp",
+  "note_cctp",
+  "note_examtp",
   "note_rapport",
   "note_competence",
   "drapeaux_section",
@@ -29,6 +31,8 @@
   "examen_saisi",
   "rattrapage_saisi",
   "tp_saisi",
+  "cctp_saisi",
+  "examtp_saisi",
   "section_break_hvfb",
   "note_finale",
   "note_pct",
@@ -272,12 +276,40 @@
    "fieldname": "identification_section",
    "fieldtype": "Section Break",
    "label": "Identification"
+  },
+  {
+   "fieldname": "note_cctp",
+   "fieldtype": "Currency",
+   "label": "Note CCTP (/20)",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "note_examtp",
+   "fieldtype": "Currency",
+   "label": "Note EXAMTP (/20)",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "default": "0",
+   "fieldname": "cctp_saisi",
+   "fieldtype": "Check",
+   "label": "CCTP saisi",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "examtp_saisi",
+   "fieldtype": "Check",
+   "label": "EXAMTP saisi",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-06 00:00:00.000000",
+ "modified": "2026-08-20 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Examen Note",

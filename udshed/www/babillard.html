@@ -275,6 +275,59 @@ table.bab-table {
     </form>
   </section>
 
+  <section class="bab-card">
+    <h2>Notes d'une filière</h2>
+    <form id="babFiliereForm">
+      <div class="bab-form-grid">
+        <div class="bab-field">
+          <label for="babFiliere">Filière *</label>
+          <select id="babFiliere" required>
+            <option value="">— Choisir —</option>
+            {% for f in filieres %}
+              <option value="{{ f.name }}">{{ f.name_of_field }} ({{ f.name }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="bab-field">
+          <label for="babFiliereNiveau">Niveau *</label>
+          <select id="babFiliereNiveau" required>
+            <option value="">— Choisir d'abord la filière —</option>
+          </select>
+        </div>
+        <div class="bab-field">
+          <label for="babFiliereYear">Année académique</label>
+          <select id="babFiliereYear">
+            <option value="">— Année en cours —</option>
+            {% for y in academic_years %}
+              <option value="{{ y }}">{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="bab-field">
+          <label for="babFiliereSemestre">Semestre</label>
+          <select id="babFiliereSemestre">
+            <option value="">Toute l'année</option>
+            <option value="Semestre 1">Semestre 1</option>
+            <option value="Semestre 2">Semestre 2</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="bab-btn" id="babFiliereSubmit">Afficher les notes</button>
+    </form>
+  </section>
+
+  <div id="babFiliereAlert" class="bab-alert" hidden></div>
+  <div id="babFiliereResult" hidden>
+    <div class="bab-card">
+      <h2>Bulletin de la filière</h2>
+      <div class="bab-student" id="babFiliereInfo"></div>
+      <div class="bab-table-wrap">
+        <table class="bab-table" id="babFiliereTable"></table>
+      </div>
+      <div class="bab-empty" id="babFiliereEmpty" hidden>Aucun étudiant à afficher.</div>
+    </div>
+  </div>
+
   <div id="babLoading" class="bab-loading" hidden>
     <span class="bab-spinner"></span>Recherche des notes…
   </div>
@@ -582,10 +635,191 @@ table.bab-table {
     });
   }
 
+  // ------------------------------------------------------------------ //
+  //  Consultation « par filière »
+  // ------------------------------------------------------------------ //
+  var FILIERES = {{ filieres | tojson }};
+
+  function filiereNiveaux(name) {
+    for (var i = 0; i < FILIERES.length; i++) {
+      if (FILIERES[i].name === name) return FILIERES[i].niveaux || [];
+    }
+    return [];
+  }
+
+  function showFiliereAlert(message, type) {
+    var alert = $("babFiliereAlert");
+    alert.hidden = false;
+    alert.className = "bab-alert " + (type === "error" ? "bab-alert-error" : "bab-alert-info");
+    setText(alert, message);
+  }
+  function hideFiliereAlert() { $("babFiliereAlert").hidden = true; }
+
+  function consultFiliere() {
+    var filiere = $("babFiliere").value.trim();
+    var niveau = $("babFiliereNiveau").value.trim();
+    var year = $("babFiliereYear").value.trim();
+    var semestre = $("babFiliereSemestre").value;
+
+    if (!filiere || !niveau) {
+      showFiliereAlert("Veuillez sélectionner une filière et un niveau.", "error");
+      return;
+    }
+
+    var params = new URLSearchParams();
+    params.set("filiere", filiere);
+    params.set("niveau", niveau);
+    if (year) params.set("academic_year", year);
+    if (semestre) params.set("semestre", semestre);
+
+    var btn = $("babFiliereSubmit");
+    btn.disabled = true;
+    hideFiliereAlert();
+    $("babFiliereResult").hidden = true;
+
+    fetch("/api/method/udshed.api.babillard.consulter_notes_filiere?" + params.toString(), {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { "Accept": "application/json" }
+    })
+      .then(function (resp) { return resp.json(); })
+      .then(function (json) {
+        var data = json && json.message ? json.message : json;
+        if (!data || !data.success) {
+          showFiliereAlert((data && data.message) || "Impossible de récupérer les notes.", "error");
+          return;
+        }
+        renderFiliere(data);
+      })
+      .catch(function () {
+        showFiliereAlert("Erreur réseau. Veuillez réessayer.", "error");
+      })
+      .finally(function () { btn.disabled = false; });
+  }
+
+  function renderFiliereInfo(data) {
+    var wrap = $("babFiliereInfo");
+    wrap.innerHTML = "";
+    var items = [
+      ["Filière", data.filiere_name || data.filiere],
+      ["Niveau", data.niveau || ""],
+      ["Année académique", data.academic_year || ""],
+      ["Semestre", data.semestre || "Toute l'année"],
+      ["Seuil de validation", data.seuil != null ? data.seuil + " %" : ""]
+    ];
+    items.forEach(function (it) {
+      var d = document.createElement("div");
+      var k = document.createElement("div"); k.className = "bab-k"; k.textContent = it[0];
+      var v = document.createElement("div"); v.className = "bab-v"; v.textContent = it[1];
+      d.appendChild(k); d.appendChild(v);
+      wrap.appendChild(d);
+    });
+  }
+
+  function renderFiliere(data) {
+    hideFiliereAlert();
+    renderFiliereInfo(data);
+    var table = $("babFiliereTable");
+    var empty = $("babFiliereEmpty");
+    var students = data.students || [];
+    var ues = data.ues || [];
+
+    empty.hidden = students.length > 0;
+    table.hidden = !students.length;
+    if (!students.length) {
+      $("babFiliereResult").hidden = false;
+      return;
+    }
+
+    var thead = document.createElement("thead");
+    var tr = document.createElement("tr");
+    ["Matricule", "Nom"].forEach(function (h) {
+      var th = document.createElement("th");
+      th.textContent = h;
+      tr.appendChild(th);
+    });
+    ues.forEach(function (u) {
+      var th = document.createElement("th");
+      th.title = u.intitule || "";
+      th.textContent = (u.code || u.teaching_unit || u.name || "") + " (" + (u.credits != null ? u.credits : "?") + " cr)";
+      tr.appendChild(th);
+    });
+    ["MPS (%)", "Crédits", "Décision"].forEach(function (h) {
+      var th = document.createElement("th");
+      th.textContent = h;
+      tr.appendChild(th);
+    });
+    thead.appendChild(tr);
+    table.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    students.forEach(function (s) {
+      var row = document.createElement("tr");
+      var tdM = document.createElement("td");
+      tdM.textContent = s.matricule || "";
+      row.appendChild(tdM);
+      var tdN = document.createElement("td");
+      tdN.textContent = (s.nom || "") + " " + (s.prenom || "");
+      row.appendChild(tdN);
+
+      ues.forEach(function (u) {
+        var key = u.teaching_unit || u.name;
+        var res = (s.resultats || {})[key];
+        var td = document.createElement("td");
+        td.className = "num";
+        if (res) {
+          td.textContent = fmt(res.note_finale) + " — " + (res.grade || "");
+          td.title = "Note (%) : " + fmt(res.note_pct) + " % — " + (res.mention || "") + " — " + (res.statut || "");
+          td.style.color = res.statut === "Validé" ? "#166534" : "#991b1b";
+        } else {
+          td.textContent = "—";
+          td.style.color = "#9ca3af";
+        }
+        row.appendChild(td);
+      });
+
+      var tdMps = document.createElement("td");
+      tdMps.className = "num";
+      tdMps.textContent = fmt(s.mps);
+      row.appendChild(tdMps);
+      var tdC = document.createElement("td");
+      tdC.className = "num";
+      tdC.textContent = (s.credits_obtenus || 0) + " / " + (s.total_credits || 0);
+      row.appendChild(tdC);
+      var tdD = document.createElement("td");
+      tdD.appendChild(badge(s.decision === "Admis" ? "Admis" : "Ajourné", s.decision === "Admis" ? "bab-badge-ok" : "bab-badge-ko"));
+      row.appendChild(tdD);
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    $("babFiliereResult").hidden = false;
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     $("babForm").addEventListener("submit", function (e) {
       e.preventDefault();
       consult();
+    });
+
+    $("babFiliere").addEventListener("change", function () {
+      var niveaux = filiereNiveaux(this.value);
+      var sel = $("babFiliereNiveau");
+      sel.innerHTML = "";
+      var empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = niveaux.length ? "— Choisir —" : "Aucun niveau";
+      sel.appendChild(empty);
+      niveaux.forEach(function (n) {
+        var opt = document.createElement("option");
+        opt.value = n;
+        opt.textContent = n;
+        sel.appendChild(opt);
+      });
+    });
+
+    $("babFiliereForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      consultFiliere();
     });
 
     // Consultation automatique si la page est ouverte avec un lien pré-rempli
