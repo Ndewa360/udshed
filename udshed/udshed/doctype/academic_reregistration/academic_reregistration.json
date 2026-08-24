@@ -139,15 +139,15 @@
    "label": "Mati\u00e8res inscrites",
    "options": "Reregistration Course Item"
   },
-  {
-   "default": "Brouillon",
-   "fieldname": "statut",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Statut",
-   "options": "Brouillon\nEn attente\nValid\u00e9e\nRefus\u00e9e",
-   "read_only": 1
-  }
+   {
+    "default": "Validée",
+    "fieldname": "statut",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "label": "Statut",
+    "options": "Validée",
+    "read_only": 1
+   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,

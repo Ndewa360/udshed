@@ -86,7 +86,7 @@ def mes_reinscriptions(matricule):
 			"semestre": r.semestre or "",
 			"statut": r.statut or "",
 			"creation": str(r.creation),
-			"fiche_disponible": r.statut == "Validée" and not r.fiche_telechargee,
+			"fiche_disponible": not r.fiche_telechargee,
 			"fiche_telechargee": bool(r.fiche_telechargee),
 		})
 	return resultat
@@ -148,9 +148,6 @@ def telecharger_fiche_reinscription(matricule, reinscription):
 
 	if doc.student != matricule:
 		frappe.throw("Cette fiche ne correspond pas au matricule saisi.")
-
-	if doc.statut != "Validée":
-		frappe.throw("La fiche de réinscription n'est disponible qu'après validation par le coordinateur.")
 
 	if doc.fiche_telechargee:
 		frappe.throw("Cette fiche a déjà été téléchargée. Contactez la scolarité pour tout complément.")

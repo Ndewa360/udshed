@@ -179,36 +179,7 @@ def get_reregistration_summary(student, academic_year):
 	}
 
 
-@frappe.whitelist()
-def soumettre_reregistration(reregistration_name):
-	"""Soumettre une réinscription pour validation (Brouillon -> En attente)"""
-	doc = frappe.get_doc("Academic Reregistration", reregistration_name)
-	doc.soumettre()
-	return {"status": True, "message": "Réinscription soumise pour validation"}
 
-
-@frappe.whitelist()
-def valider_reregistration(reregistration_name):
-	"""Valider une réinscription — action du coordonateur"""
-	doc = frappe.get_doc("Academic Reregistration", reregistration_name)
-	doc.valider()
-	return {"status": True, "message": "Réinscription validée avec succès"}
-
-
-@frappe.whitelist()
-def refuser_reregistration(reregistration_name, motif=None):
-	"""Refuser une réinscription — action du coordonateur"""
-	doc = frappe.get_doc("Academic Reregistration", reregistration_name)
-	doc.refuser(motif=motif)
-	return {"status": True, "message": "Réinscription refusée"}
-
-
-@frappe.whitelist()
-def reouvrir_reregistration(reregistration_name):
-	"""Rouvrir une réinscription soumise pour correction (En attente -> Brouillon)"""
-	doc = frappe.get_doc("Academic Reregistration", reregistration_name)
-	doc.reouvrir()
-	return {"status": True, "message": "Réinscription rouvert en brouillon"}
 
 
 @frappe.whitelist()
@@ -483,7 +454,7 @@ def get_reregistration_report(reinscription_session=None, filiere=None, statut=N
 	par_filiere = {}
 	par_niveau = {}
 	for r in rows:
-		statut = r.get("statut") or "Brouillon"
+		statut = r.get("statut") or "Validée"
 		par_statut[statut] = par_statut.get(statut, 0) + 1
 		label = r.get("filiere_label") or "Non défini"
 		par_filiere[label] = par_filiere.get(label, 0) + 1

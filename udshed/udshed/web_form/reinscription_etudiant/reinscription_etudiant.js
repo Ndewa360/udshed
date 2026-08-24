@@ -180,13 +180,7 @@ frappe.ready(() => {
 	}
 
 	function badgeStatut(statut) {
-		const couleurs = {
-			"Brouillon": "badge-secondary",
-			"En attente": "badge-warning",
-			"Validée": "badge-success",
-			"Refusée": "badge-danger"
-		};
-		return `<span class="badge ${couleurs[statut] || "badge-secondary"}">${statut || ""}</span>`;
+		return `<span class="badge badge-success">${statut || "Validée"}</span>`;
 	}
 
 	function fmtDate(date_str) {
