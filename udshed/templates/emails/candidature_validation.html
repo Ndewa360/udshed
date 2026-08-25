@@ -24,6 +24,12 @@
       <span style="display: block; color: #6b6d7a; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Détails de l'inscription</span>
 
       <table style="width: 100%; font-size: 14px; color: #3c3e44;">
+        {% if matricule %}
+        <tr>
+          <td style="padding: 4px 0; color: #6b6d7a; width: 40%;">Matricule étudiant</td>
+          <td style="padding: 4px 0; font-weight: bold; color: #28a745; font-size: 16px;">{{ matricule }}</td>
+        </tr>
+        {% endif %}
         <tr>
           <td style="padding: 4px 0; color: #6b6d7a; width: 40%;">Numéro de dossier</td>
           <td style="padding: 4px 0; font-weight: bold;">{{ doc_name }}</td>

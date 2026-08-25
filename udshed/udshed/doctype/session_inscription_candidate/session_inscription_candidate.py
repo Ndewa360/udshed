@@ -432,8 +432,10 @@ def _send_validation_email(doc):
 	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
 
 	uv_liste = ""
+	matricule = ""
 	student_name = frappe.db.get_value("Student", {"email": doc.email}, "name")
 	if student_name:
+		matricule = frappe.db.get_value("Student", student_name, "matricule") or student_name
 		uv_records = frappe.get_all(
 			"Session Examen Note",
 			filters={"student": student_name},
@@ -458,6 +460,7 @@ def _send_validation_email(doc):
 				"first_name": doc.first_name,
 				"last_name": doc.last_name,
 				"doc_name": doc.name,
+				"matricule": matricule,
 				"filiere": filiere_label,
 				"niveau": doc.niveau or "",
 				"centre": doc.examination_centre or "",
@@ -494,7 +497,10 @@ def login_inscription(doc_name: str, password: str) -> dict:
 		"Session Inscription Candidate",
 		doc_name,
 		["name", "first_name", "last_name", "filiere", "niveau",
-		 "candidature_status", "birthdate"],
+		 "candidature_status", "birthdate", "email", "phone", "sexe",
+		 "birth_place", "nationality", "examination_centre",
+		 "father_name", "father_phone", "father_profession",
+		 "mother_name", "mother_phone", "mother_profession"],
 		as_dict=True,
 	)
 
@@ -517,14 +523,30 @@ def login_inscription(doc_name: str, password: str) -> dict:
 	if password != expected_password:
 		frappe.throw(_("Mot de passe incorrect."))
 
+	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
+
 	return {
 		"ok": True,
 		"doc_name": doc.name,
-		"first_name": doc.first_name,
-		"last_name": doc.last_name,
+		"first_name": doc.first_name or "",
+		"last_name": doc.last_name or "",
 		"filiere": doc.filiere or "",
+		"filiere_label": filiere_label,
 		"niveau": doc.niveau or "",
 		"candidature_status": doc.candidature_status,
+		"email": doc.email or "",
+		"phone": doc.phone or "",
+		"sexe": doc.sexe or "",
+		"birthdate": frappe.utils.format_date(doc.birthdate) if doc.birthdate else "",
+		"birth_place": doc.birth_place or "",
+		"nationality": doc.nationality or "",
+		"examination_centre": doc.examination_centre or "",
+		"father_name": doc.father_name or "",
+		"father_phone": doc.father_phone or "",
+		"father_profession": doc.father_profession or "",
+		"mother_name": doc.mother_name or "",
+		"mother_phone": doc.mother_phone or "",
+		"mother_profession": doc.mother_profession or "",
 	}
 
 
@@ -549,6 +571,14 @@ def submit_inscription(doc_name: str, data: str) -> dict:
 	if candidate.candidature_status != "Accepté":
 		frappe.throw(_("Seules les candidatures acceptées peuvent finaliser l'inscription."))
 
+	_niveau = (candidate.niveau or "").upper()
+	if "BTS" in _niveau:
+		cycle = "BTS"
+	elif "MASTER" in _niveau:
+		cycle = "Master"
+	else:
+		cycle = "Licence"
+
 	student = frappe.get_doc({
 		"doctype": "Student",
 		"nom": candidate.first_name,
@@ -556,11 +586,12 @@ def submit_inscription(doc_name: str, data: str) -> dict:
 		"email": candidate.email,
 		"sexe": candidate.sexe,
 		"phone": candidate.phone,
+		"cycle": cycle,
 		"birth_date": candidate.birthdate,
 		"birth_place": candidate.birth_place,
 		"filiere": candidate.filiere,
-		"parent_phone": data.get("parent_phone", candidate.parent_phone or ""),
-		"email_parent": data.get("email_parent", candidate.email_parent or ""),
+		"parent_phone": data.get("parent_phone", ""),
+		"email_parent": data.get("email_parent", ""),
 		"photo": candidate.id_photo or "",
 	})
 	student.insert()
@@ -574,10 +605,23 @@ def submit_inscription(doc_name: str, data: str) -> dict:
 
 	_send_validation_email(candidate)
 
+	filiere_label = frappe.db.get_value("Field of study", candidate.filiere, "name_of_field") if candidate.filiere else ""
+	uv_labels = []
+	for tu_name in enrolled:
+		course = frappe.db.get_value("Teaching Unit", tu_name, "course")
+		if course:
+			uv_labels.append(course)
+
 	return {
 		"ok": True,
 		"student_name": student.name,
 		"matricule": student.matricule,
+		"first_name": candidate.first_name or "",
+		"last_name": candidate.last_name or "",
+		"filiere_label": filiere_label,
+		"niveau": candidate.niveau or "",
+		"centre": candidate.examination_centre or "",
+		"uv_labels": uv_labels,
 		"enrolled_uv": len(enrolled),
 	}
 
