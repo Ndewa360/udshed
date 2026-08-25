@@ -203,11 +203,7 @@ class SessionExamenNote(Document):
             else (setting.methode_calcul_cc or "Moyenne arithmétique")
         )
 
-        if methode == "Moyenne pondérée":
-            somme_produits = sum(w * n for w, n in valeurs)
-            somme_coeffs = sum(w for w, _ in valeurs) or 1
-            moyenne = somme_produits / somme_coeffs
-        elif methode == "Moyenne des N meilleures notes":
+        if methode == "Moyenne des N meilleures notes":
             nb = int(
                 formula.nb_meilleures_notes_cc
                 if formula and formula.nb_meilleures_notes_cc

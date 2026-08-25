@@ -42,6 +42,15 @@ def get_context(context):
 		})
 	context.filieres = filieres
 
+	# Matières (cours) disponibles pour le filtre « Cours »
+	cours = []
+	for c in frappe.get_all("Course", fields=["name", "code", "intitule"], order_by="intitule"):
+		intitule = c["intitule"] or ""
+		code = c["code"] or c["name"]
+		label = "{0} ({1})".format(intitule, code) if intitule else code
+		cours.append({"name": c["name"], "label": label})
+	context.cours = cours
+
 	# Années académiques triées de la plus récente à la plus ancienne
 	years = frappe.get_all("Academic Year", fields=["name"])
 	years.sort(key=lambda y: _start_year(y["name"]), reverse=True)

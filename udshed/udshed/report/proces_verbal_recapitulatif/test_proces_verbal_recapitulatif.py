@@ -127,14 +127,14 @@ class TestProcesVerbalRecapitulatif(IntegrationTestCase):
 
         # Notes / grades / points / mentions (CC 30 %, Examen 50 %, TP 0 % si absent)
         self.assertEqual(row[f"ue_{self.tu1.name}_note"], 69.0)
-        self.assertEqual(row[f"ue_{self.tu1.name}_grade"], "C")
-        self.assertEqual(row[f"ue_{self.tu1.name}_point"], 2.0)
-        self.assertEqual(row[f"ue_{self.tu1.name}_mention"], "Passable")
+        self.assertEqual(row[f"ue_{self.tu1.name}_grade"], "B")
+        self.assertEqual(row[f"ue_{self.tu1.name}_point"], 3.0)
+        self.assertEqual(row[f"ue_{self.tu1.name}_mention"], "Assez Bien")
         self.assertEqual(row[f"ue_{self.tu1.name}_non_valide"], 0)
         self.assertEqual(row[f"ue_{self.tu2.name}_note"], 24.0)
         self.assertEqual(row[f"ue_{self.tu2.name}_grade"], "F")
         self.assertEqual(row[f"ue_{self.tu2.name}_point"], 0.0)
-        self.assertEqual(row[f"ue_{self.tu2.name}_mention"], "")
+        self.assertEqual(row[f"ue_{self.tu2.name}_mention"], "Échec")
         self.assertEqual(row[f"ue_{self.tu2.name}_non_valide"], 1)
 
         # Synthèse : TCI = 6 crédits, TCC = 3 (une seule UE validée),

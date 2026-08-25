@@ -12,49 +12,39 @@ import contextlib
 
 import frappe
 
+from udshed.grade_calculation import GRILLE_OFFICIELLE
+
 from udshed.grade_calculation import SEUILS_DEFAUT, combinaison_detectee
 
 TYPE_NORMALE = "Examen de session normal"
 
-# Grille des grades alignée sur la configuration réelle de l'application.
-GRADES = [
-    {
-        "note_min_20": 0,
-        "note_max_20": 9.99,
-        "note_min_100": 0,
-        "note_max_100": 49.99,
-        "note_min": 0,
-        "note_max": 49.99,
-        "grade": "F",
-        "point": 0,
-        "mention": "",
-        "type_resultat": "Non capitalisé",
-    },
-    {
-        "note_min_20": 10,
-        "note_max_20": 15.99,
-        "note_min_100": 50,
-        "note_max_100": 79.99,
-        "note_min": 50,
-        "note_max": 79.99,
-        "grade": "C",
-        "point": 2,
-        "mention": "Passable",
-        "type_resultat": "Crédits capitalisés et transférables",
-    },
-    {
-        "note_min_20": 16,
-        "note_max_20": 20,
-        "note_min_100": 80,
-        "note_max_100": 100,
-        "note_min": 80,
-        "note_max": 100,
-        "grade": "A",
-        "point": 4,
-        "mention": "Très bien",
-        "type_resultat": "Crédits capitalisés et transférables",
-    },
-]
+
+def _lignes_grille_officielle():
+    """Lignes « Grade Config » construites depuis la grille officielle du moteur.
+
+    Aucune grille locale : les tests utilisent exactement la même source de
+    vérité que l'application (``udshed.grade_calculation.GRILLE_OFFICIELLE``).
+    """
+    rows = []
+    for note_min_20, note_max_20, note_min_pct, note_max_pct, grade, point, mention in GRILLE_OFFICIELLE:
+        capitalise = note_min_20 >= 10.0
+        rows.append({
+            "note_min_20": note_min_20,
+            "note_max_20": note_max_20,
+            "note_min_100": note_min_pct,
+            "note_max_100": note_max_pct,
+            "note_min": note_min_pct,
+            "note_max": note_max_pct,
+            "grade": grade,
+            "point": point,
+            "mention": mention,
+            "type_resultat": (
+                "Crédits capitalisés et transférables"
+                if capitalise
+                else "Non capitalisé"
+            ),
+        })
+    return rows
 
 _COMPTEUR = {"n": 0}
 
@@ -280,7 +270,7 @@ def make_academic_reregistration(
             niveau = make_level(fos, level=niveau_label)
         student = make_student(fos, niveau, cycle=cycle)
 
-    reinscription = frappe.new_doc("Reinscription")
+    reinscription = frappe.new_doc("Session Reinscription")
     reinscription.academic_year = academic_year.name
     reinscription.statut = "Ouverte"
     reinscription.date_ouverture = "2026-09-01"
@@ -390,10 +380,10 @@ def seed_grade_formula(cycle, cc=30, examen=50, tp=20, seuil=None):
 
 
 def seed_grille_grades():
-    """Renseigne la grille des grades dans Udshed Setting."""
+    """Renseigne la grille des grades dans Udshed Setting (grille officielle)."""
     setting = frappe.get_single("Udshed Setting")
     setting.set("grille_grades", [])
-    for row in GRADES:
+    for row in _lignes_grille_officielle():
         setting.append("grille_grades", dict(row))
     setting.save(ignore_permissions=True)
     return setting

@@ -117,7 +117,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Mention",
-   "options": "\nHonorable\nExcellent\nTr\u00e8s bien\nBien\nAssez-bien\nPassable\nAvertissement",
+   "options": "\nExcellent / Très Honorable avec Félicitations du Jury\nTrès Bien / Très Honorable\nTrès Bien\nAssez Bien\nPassable\nInsuffisant\nÉchec",
    "read_only": 1
   },
   {

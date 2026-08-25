@@ -22,12 +22,32 @@ import math
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 NOTE_MAX = 20
 
 CYCLES = ["Licence", "BTS", "Master"]
 
 SEUILS_DEFAUT = {"Licence": 50, "BTS": 50, "Master": 60}
+
+# Grille officielle des grades et des points UDSHED (référence unique).
+# (min /20, max /20, min %, max %, grade, point, mention)
+# La capitalisation LMD est déduite : >= 10/20 -> capitalisé et transférable.
+GRILLE_OFFICIELLE = [
+    (16.00, 20.00, 80.00, 100.00, "A", 4.00,
+     "Excellent / Très Honorable avec Félicitations du Jury"),
+    (15.00, 15.99, 75.00, 79.99, "A-", 3.70, "Très Bien / Très Honorable"),
+    (14.00, 14.99, 70.00, 74.99, "B+", 3.30, "Très Bien"),
+    (13.00, 13.99, 65.00, 69.99, "B", 3.00, "Assez Bien"),
+    (12.00, 12.99, 60.00, 64.99, "B-", 2.70, "Assez Bien"),
+    (11.00, 11.99, 55.00, 59.99, "C+", 2.30, "Passable"),
+    (10.00, 10.99, 50.00, 54.99, "C", 2.00, "Passable"),
+    (9.00, 9.99, 45.00, 49.99, "C-", 1.70, "Insuffisant"),
+    (8.00, 8.99, 40.00, 44.99, "D+", 1.30, "Insuffisant"),
+    (7.00, 7.99, 35.00, 39.99, "D", 1.00, "Insuffisant"),
+    (6.00, 6.99, 30.00, 34.99, "E", 0.00, "Échec"),
+    (0.00, 5.99, 0.00, 29.99, "F", 0.00, "Échec"),
+]
 
 # Labels alignés avec les options existantes de « Note Formule Config »
 # afin de rester compatibles avec les mappings déjà en place.
@@ -80,7 +100,6 @@ TYPE_UE_COMBINAISON = {
 METHODES_CC = [
     "Moyenne arithmétique",
     "Moyenne des N meilleures notes",
-    "Moyenne pondérée",
 ]
 
 METHODES_ARRONDI = [
@@ -262,17 +281,13 @@ def get_seuil_validation(cycle):
 # ---------------------------------------------------------------------- #
 #  Moyenne CC
 # ---------------------------------------------------------------------- #
-def calculer_moyenne_cc(notes_cc, methode="Moyenne arithmétique", nombre_min=1, pondérations=None):
+def calculer_moyenne_cc(notes_cc, methode="Moyenne arithmétique", nombre_min=1):
     """Calcule la moyenne des Contrôles Continus selon la méthode choisie.
-
-    Les pondérations ne sont pas des crédits LMD : ce sont uniquement des
-    poids de calcul pour les évaluations CC.
 
     Args:
         notes_cc (list): notes CC (float ou (pondération, note))
         methode (str): méthode de calcul
         nombre_min (int): nombre minimum de notes CC requises
-        pondérations (list, optional): poids pour la moyenne pondérée
 
     Returns:
         float: moyenne CC sur 20
@@ -302,22 +317,6 @@ def calculer_moyenne_cc(notes_cc, methode="Moyenne arithmétique", nombre_min=1,
         n = min(nombre_min, len(valeurs))
         meilleures = sorted((n for _, n in valeurs), reverse=True)[:n]
         return sum(meilleures) / len(meilleures)
-
-    if methode == "Moyenne pondérée":
-        if pondérations is not None:
-            if len(pondérations) != len(valeurs):
-                frappe.throw(
-                    _("Le nombre de pondérations doit correspondre au nombre de notes CC "
-                      "pour le calcul de la moyenne pondérée.")
-                )
-            total_pondere = sum(n * p for (_, n), p in zip(valeurs, pondérations))
-            total_poids = sum(pondérations)
-        else:
-            total_pondere = sum(w * n for w, n in valeurs)
-            total_poids = sum(w for w, _ in valeurs)
-        if total_poids == 0:
-            return 0
-        return total_pondere / total_poids
 
     frappe.throw(_("Méthode de calcul CC inconnue : {0}").format(methode))
 
@@ -536,33 +535,77 @@ def get_grille_grades():
     return list(setting.get("grille_grades") or [])
 
 
-def _bornes_grade(ligne):
-    """Bornes (min, max) d'une ligne de grille, sur l'échelle 100.
-
-    Privilégie les nouvelles colonnes explicites (note_min_100 / note_max_100)
-    et retombe sur les anciens champs « note_min / note_max » pour la
-    compatibilité avec les données existantes.
+def _borne_min_20(ligne):
+    """Borne minimale /20 d'une ligne de grille (repli sur l'ancien champ %).
 
     Args:
         ligne (Document): ligne de « Grade Config »
 
     Returns:
-        tuple: (note_min_100, note_max_100)
+        float: note minimale sur 20
     """
-    note_min = ligne.get("note_min_100")
-    if note_min is None:
-        note_min = ligne.get("note_min") or 0
-    note_max = ligne.get("note_max_100")
-    if note_max is None:
-        note_max = ligne.get("note_max") or 0
-    return float(note_min), float(note_max)
+    note_min_20 = ligne.get("note_min_20")
+    if note_min_20 is not None:
+        return float(note_min_20)
+    # Données anciennes : seul le % était renseigné.
+    note_min_pct = ligne.get("note_min_100")
+    if note_min_pct is None:
+        note_min_pct = ligne.get("note_min") or 0
+    return float(note_min_pct) * NOTE_MAX / 100.0
+
+
+def get_grade_scale():
+    """Grille officielle triée (du grade le plus haut au plus bas).
+
+    Vue normalisée partagée par tous les affichages (transcript, babillard,
+    PDF...) afin qu'aucun module ne reconstruise sa propre lecture de la
+    grille.
+
+    Returns:
+        list[dict]: [{
+            "note_min_20": float, "note_max_20": float,
+            "note_min_pct": float, "note_max_pct": float,
+            "grade": str, "point": float, "mention": str,
+        }, ...]
+    """
+    scale = []
+    for ligne in get_grille_grades():
+        note_max_20 = ligne.get("note_max_20")
+        if note_max_20 is None:
+            note_max_pct = ligne.get("note_max_100")
+            if note_max_pct is None:
+                note_max_pct = ligne.get("note_max") or 0
+            note_max_20 = float(note_max_pct) * NOTE_MAX / 100.0
+
+        note_min_pct = ligne.get("note_min_100")
+        if note_min_pct is None:
+            note_min_pct = _borne_min_20(ligne) * 100.0 / NOTE_MAX
+        note_max_pct = ligne.get("note_max_100")
+        if note_max_pct is None:
+            note_max_pct = float(note_max_20) * 100.0 / NOTE_MAX
+
+        scale.append({
+            "note_min_20": _borne_min_20(ligne),
+            "note_max_20": float(note_max_20),
+            "note_min_pct": round(float(note_min_pct), 2),
+            "note_max_pct": round(float(note_max_pct), 2),
+            "grade": ligne.grade or "",
+            "point": flt(ligne.point),
+            "mention": ligne.mention or "",
+        })
+    scale.sort(key=lambda x: x["note_min_20"], reverse=True)
+    return scale
 
 
 def get_grade_info(note, echelle=20):
-    """Détermine automatiquement le grade d'une note à partir de la grille.
+    """Détermine le grade d'une note à partir de la grille officielle.
 
-    Retourne le grade, le point pondéré, la mention et le type de résultat
-    (capitalisation des crédits) correspondant à la note.
+    Règle unique de résolution (source : Udshed Setting › grille_grades) :
+    la recherche se fait sur la note ramenée sur 20, arrondie à 2 décimales ;
+    on retient la première tranche (triée de la plus haute à la plus basse)
+    dont la borne minimale est atteinte. Le pourcentage n'est que la
+    représentation équivalente de la note /20 et n'est jamais utilisé comme
+    seconde règle.
 
     Args:
         note (float): note saisie (sur 20 par défaut, ou sur 100)
@@ -575,22 +618,27 @@ def get_grade_info(note, echelle=20):
             "mention": str,
             "type_resultat": str,
             "capitalise": bool,
-        } ou None si aucune ligne ne correspond.
+            "note_20": float,
+            "note_pct": float,
+        } ou None si aucune tranche ne correspond.
     """
     if note is None:
         return None
-    note_pct = (note / NOTE_MAX) * 100 if echelle == 20 else float(note)
 
-    for ligne in sorted(get_grille_grades(), key=lambda l: _bornes_grade(l)[0], reverse=True):
-        note_min, note_max = _bornes_grade(ligne)
-        if note_min <= note_pct <= note_max:
+    note_20 = round(float(note) * NOTE_MAX / 100.0, 2) if echelle == 100 else round(float(note), 2)
+    note_pct = round(note_20 * 100.0 / NOTE_MAX, 2)
+
+    for ligne in sorted(get_grille_grades(), key=_borne_min_20, reverse=True):
+        if note_20 >= _borne_min_20(ligne):
             type_resultat = ligne.get("type_resultat") or ""
             return {
                 "grade": ligne.grade,
-                "point": ligne.point,
+                "point": flt(ligne.point),
                 "mention": ligne.mention,
                 "type_resultat": type_resultat,
                 "capitalise": bool(type_resultat.lower().startswith("crédits capitalisés")),
+                "note_20": note_20,
+                "note_pct": note_pct,
             }
     return None
 

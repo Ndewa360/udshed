@@ -366,9 +366,11 @@ def _get_ue_info(teaching_unit, filiere=None, niveau=None):
         course = course_doc or {}
 
     enseignants = []
+    vus = set()
     for row in tu.table_enseignant or []:
-        if not row.enseignant:
+        if not row.enseignant or row.enseignant in vus:
             continue
+        vus.add(row.enseignant)
         nom = frappe.db.get_value("Teacher", row.enseignant, "full_name") or ""
         enseignants.append({"name": row.enseignant, "full_name": nom})
 
@@ -1503,7 +1505,7 @@ def _fmt_pct(v):
     return "{0} %".format(flt(v))
 
 
-def _html_fiche_pdf(titre, faculte="", filiere="", niveau="", semestre="", cours="", code="", ue="", credits="", session="", enseignants="", formule=None, entetes=None, lignes=None):
+def _html_fiche_pdf(titre, faculte="", filiere="", niveau="", semestre="", cours="", code="", ue="", session="", enseignants="", entetes=None, lignes=None):
     """Construit le HTML d'une fiche de notes PDF avec les données réelles de la saisie."""
 
     def bloc(label, valeur):
@@ -1520,21 +1522,6 @@ def _html_fiche_pdf(titre, faculte="", filiere="", niveau="", semestre="", cours
         lignes_html = "<tr><td colspan='{0}' style='text-align:center;color:#888;'>Aucun étudiant</td></tr>".format(
             len(entetes or [])
         )
-
-    formule_html = ""
-    if formule and formule.get("composantes"):
-        court = {
-            "Controle Continu(CC)": "CC",
-            "Travaux Pratique (TP)": "TP",
-            "Rapport": "Rapport",
-            "Competence": "Compétence",
-            "Examen": "Examen",
-        }
-        parties = " + ".join(
-            "{0} ({1}%)".format(court.get(c["composante"], c["composante"]), int(c["pourcentage"]))
-            for c in formule["composantes"]
-        )
-        formule_html = '<p><strong>Formule appliquée :</strong> {0}</p>'.format(frappe.utils.escape_html(parties))
 
     return """
     <!DOCTYPE html>
@@ -1556,11 +1543,11 @@ def _html_fiche_pdf(titre, faculte="", filiere="", niveau="", semestre="", cours
     <body>
         <h1>{0}</h1>
         <div class="infos">
-            {1}{2}{3}{4}{5}{6}{7}{8}{9}{10}
+            {1}{2}{3}{4}{5}{6}{7}{8}
         </div>
         <table>
-            <thead><tr>{11}</tr></thead>
-            <tbody>{12}</tbody>
+            <thead><tr>{9}</tr></thead>
+            <tbody>{10}</tbody>
         </table>
     </body>
     </html>
@@ -1572,10 +1559,8 @@ def _html_fiche_pdf(titre, faculte="", filiere="", niveau="", semestre="", cours
         bloc("Semestre", semestre),
         bloc("Cours", cours + ((" (" + code + ")") if code else "")),
         bloc("UE", ue),
-        bloc("Crédits", credits),
         bloc("Session", session),
         bloc("Enseignant(s)", enseignants),
-        formule_html,
         entetes_html,
         lignes_html,
     )
@@ -1608,14 +1593,13 @@ def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
         "rattrapage": _get_or_create_session(args, TYPE_RATTRAPAGE),
     }
     notes = _charger_notes(students, teaching_unit, sessions)
-    formule = _formule_detectee(teaching_unit, filiere, niveau, notes, students)
 
     fos_doc = frappe.get_doc("Field of study", filiere)
     faculte = ""
     if fos_doc.faculte:
         faculte = frappe.db.get_value("Faculty", fos_doc.faculte, "faculty_name") or ""
 
-    entetes = ["N°", "Matricule", "Nom et Prénoms", "CC", "CCTP", "EXAMTP", "EXAM", "MOY", "GRD", "PTS"]
+    entetes = ["N°", "Matricule", "Nom et Prénoms", "CC", "CCTP", "EXAMTP", "EXAM", "MOY (%)", "GRD", "PTS"]
 
     lignes = []
     for i, ligne in enumerate(_lignes_unifiees(students, notes), start=1):
@@ -1628,7 +1612,7 @@ def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
                 _fmt(ligne.get("cctp")),
                 _fmt(ligne.get("examtp")),
                 _fmt(ligne.get("examen")),
-                _fmt(ligne.get("note_finale")),
+                _fmt_pct(ligne.get("note_pct")),
                 ligne.get("grade") or "",
                 _fmt(ligne.get("point")),
             ]
@@ -1644,10 +1628,8 @@ def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
         cours=ue_info.get("intitule") or "",
         code=ue_info.get("code") or "",
         ue=teaching_unit,
-        credits=ue_info.get("credits") or "",
         session="Examen normal",
         enseignants=", ".join(e.get("full_name") or e.get("name") for e in ue_info.get("enseignants", [])),
-        formule=formule,
         entetes=entetes,
         lignes=lignes,
     )

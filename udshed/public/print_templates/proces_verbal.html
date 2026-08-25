@@ -3,6 +3,7 @@
 {% set etudiants = data.etudiants %}
 {% set stats = data.statistiques %}
 {% set logo_url = ctx.school_logo %}
+{% set watermark_url = "/assets/udshed/images/logo.png" %}
 {% set nb_ues = ues | length %}
 <!DOCTYPE html>
 <html lang="fr">
@@ -55,16 +56,16 @@
         align-items: center;
         justify-content: space-between;
         border-bottom: 2px solid #1a5276;
-        padding-bottom: 4px;
-        margin-bottom: 5px;
+        padding-bottom: 3px;
+        margin-bottom: 4px;
     }
     .header .logo-box {
-        width: 52px;
+        width: 48px;
         text-align: center;
     }
     .header .logo-box img {
-        max-width: 48px;
-        max-height: 48px;
+        max-width: 44px;
+        max-height: 44px;
     }
     .header .center {
         flex: 1;
@@ -72,7 +73,7 @@
         padding: 0 10px;
     }
     .header .school-name {
-        font-size: 12pt;
+        font-size: 10.5pt;
         font-weight: 700;
         color: #1a5276;
         text-transform: uppercase;
@@ -80,7 +81,7 @@
         margin: 0;
     }
     .header .doc-title {
-        font-size: 11pt;
+        font-size: 9pt;
         font-weight: 800;
         color: #ffffff;
         background: #1a5276;
@@ -88,14 +89,14 @@
         padding: 2px 14px;
         border-radius: 3px;
         letter-spacing: 1px;
-        margin-top: 3px;
+        margin-top: 2px;
     }
     .header .right {
-        width: 64px;
-        font-size: 5.2pt;
+        width: 62px;
+        font-size: 5pt;
         color: #7f8c8d;
         text-align: right;
-        line-height: 1.4;
+        line-height: 1.35;
         word-wrap: break-word;
     }
 
@@ -103,12 +104,12 @@
     .context {
         width: 100%;
         border-collapse: collapse;
-        margin: 0 0 5px 0;
-        font-size: 7.5pt;
+        margin: 0 0 4px 0;
+        font-size: 6.8pt;
     }
     .context td {
-        border: 0.7px solid #b8c2d0;
-        padding: 2px 6px;
+        border: 0.6px solid #b8c2d0;
+        padding: 1.5px 5px;
     }
     .context .label {
         background: #eaf2f8;
@@ -127,12 +128,12 @@
         width: 100%;
         border-collapse: collapse;
         table-layout: fixed;
-        font-size: 4.6pt;
-        line-height: 1.2;
+        font-size: 4.2pt;
+        line-height: 1.15;
     }
     .pv-table th, .pv-table td {
-        border: 0.6px solid #6b7a90;
-        padding: 0.5px 1px;
+        border: 0.5px solid #7d8b9e;
+        padding: 0.6px 1px;
         text-align: center;
         vertical-align: middle;
     }
@@ -140,41 +141,46 @@
         background: #1a5276;
         color: #ffffff;
         font-weight: 700;
-        font-size: 4.4pt;
-        padding: 1.5px 1px;
+        font-size: 4pt;
+        padding: 1px 1px;
     }
     .pv-table thead tr.ue-group th .ue-code {
         display: block;
         font-weight: 800;
-        font-size: 4.8pt;
+        font-size: 4.3pt;
     }
     .pv-table thead tr.ue-group th .ue-sub {
         display: block;
         font-weight: 400;
-        font-size: 4pt;
-        line-height: 1.1;
+        font-size: 3.7pt;
+        line-height: 1.05;
     }
     .pv-table thead tr.sub-head th {
         background: #eaf2f8;
         color: #1a5276;
         font-weight: 700;
-        font-size: 4.6pt;
+        font-size: 4.2pt;
     }
     .pv-table td.mention {
-        font-size: 4pt;
-        line-height: 1.1;
-        max-width: 18mm;
+        font-size: 3.9pt;
+        line-height: 1.05;
     }
     .pv-table tbody tr:nth-child(even) td {
-        background: #f7f9fc;
+        background: #f4f7fb;
     }
-    .pv-table .col-no { width: 6mm; }
-    .pv-table .col-matricule { width: 16mm; }
-    .pv-table .col-nom { width: 28mm; text-align: left; padding-left: 3px; }
-    .pv-table .col-tci, .pv-table .col-tcc { width: 7mm; }
-    .pv-table .col-pct { width: 8mm; }
-    .pv-table .col-mps, .pv-table .col-mpc { width: 8mm; }
-    .pv-table .col-statut { width: 11mm; }
+    .pv-table .col-no { width: 5mm; }
+    .pv-table .col-matricule { width: 21mm; white-space: nowrap; }
+    .pv-table .col-nom {
+        width: 44mm;
+        text-align: left;
+        padding-left: 2.5px;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+    .pv-table .col-tci, .pv-table .col-tcc { width: 6mm; }
+    .pv-table .col-pct { width: 7mm; }
+    .pv-table .col-mps, .pv-table .col-mpc { width: 7mm; }
+    .pv-table .col-statut { width: 10.5mm; }
 
     .pv-table td.statut-admis {
         font-weight: 700;
@@ -205,7 +211,7 @@
     .pv-table tfoot td {
         background: #eaf2f8;
         font-weight: 700;
-        font-size: 4.4pt;
+        font-size: 4pt;
         color: #1a5276;
     }
 
@@ -225,17 +231,15 @@
         margin: 30px auto 3px auto;
     }
     .signatures .sig-box .sig-label {
-        font-size: 7pt;
+        font-size: 6.5pt;
         color: #34495e;
     }
 </style>
 </head>
 <body>
-    {% if logo_url %}
     <div class="watermark">
-        <img src="{{ frappe.utils.get_url(logo_url) }}" alt="">
+        <img src="{{ frappe.utils.get_url(watermark_url) }}" alt="">
     </div>
-    {% endif %}
 
     <div class="content">
         {# ---------------- EN-TÊTE ---------------- #}
@@ -329,7 +333,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="{{ 3 + 3 * nb_ues + 6 }}">{{ _("Aucun étudiant inscrit pour cette classe.") }}</td>
+                    <td colspan="{{ 3 + 4 * nb_ues + 6 }}">{{ _("Aucun étudiant inscrit pour cette classe.") }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -339,7 +343,7 @@
                     <td colspan="3" style="text-align:left;">{{ _("Taux de réussite") }}</td>
                     {% for ue in ues %}
                         {% set t = stats.taux_par_ue.get(ue.name) or {} %}
-                        <td colspan="3">
+                        <td colspan="4">
                             {{ "%.0f" | format(t.get('taux') or 0) }}%
                             <span style="font-weight:400;">({{ t.get('validees') or 0 }}/{{ t.get('presentes') or 0 }})</span>
                         </td>

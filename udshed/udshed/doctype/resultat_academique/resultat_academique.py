@@ -69,16 +69,15 @@ class ResultatAcademique(Document):
             self.statut_color = "red"
 
     def determiner_grade_et_mention(self):
-        setting = frappe.get_single("Udshed Setting")
+        from udshed.grade_calculation import get_grade_info
 
-        for g in setting.grille_grades:
-            if g.note_min <= self.note_pct <= g.note_max:
-                self.grade = g.grade
-                self.point = g.point
-                self.mention = g.mention
-                return
+        info = get_grade_info(self.note_pct, echelle=100)
+        if not info:
+            frappe.throw(
+                f"Aucun grade trouvé pour la note <b>{self.note_pct}%</b>. "
+                f"Vérifiez la grille des grades dans Udshed Setting"
+            )
 
-        frappe.throw(
-            f"Aucun grade trouvé pour la note <b>{self.note_pct}%</b>. "
-            f"Vérifiez la grille des grades dans Udshed Setting"
-        )
+        self.grade = info["grade"]
+        self.point = info["point"]
+        self.mention = info["mention"]

@@ -707,6 +707,10 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		const ue = state.data.ue_info || {};
 		const sessions = state.data.sessions || {};
 		const enseignant_names = (ue.enseignants || []).map((e) => e.full_name || e.name).filter(Boolean);
+		const combinaison_labels = ((state.data.formule || {}).combinaison || "")
+			.split(" + ")
+			.map((c) => COMPOSANTE_COURT[c.trim()] || c.trim())
+			.filter(Boolean);
 		const session_dot = (name) => {
 			const s = sessions[name];
 			const statut = s ? s.statut : "";
@@ -722,7 +726,11 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				'<div class="sn-ue-sub">' +
 				(ue.semestre ? "Semestre " + esc(ue.semestre.replace("Semestre ", "")) + " · " : "") +
 				(ue.credits ? '<span class="sn-credits">' + esc(ue.credits) + " crédits LMD</span> · " : "") +
-				(ue.type_ue ? esc(ue.type_ue) + " · " : "") +
+				(combinaison_labels.length
+					? '<span class="sn-chip">' +
+						esc("Évaluations : " + combinaison_labels.join(" + ")) +
+						"</span> · "
+					: "") +
 				(enseignant_names.length ? "Enseignant(s) : " + esc(enseignant_names.join(", ")) : "") +
 				'</div>' +
 				'<div class="sn-ue-students">' +
@@ -794,7 +802,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		const headers =
 			"<th>" + __("N°") + "</th><th>" + __("Matricule") + "</th><th>" + __("Nom et Prénoms") + "</th>" +
 			EVALUATIONS.map((e) => '<th class="sn-ev-head">' + esc(e.label) + "</th>").join("") +
-			"<th>" + __("MOY") + "</th><th>" + __("GRD") + "</th><th>" + __("PTS") + "</th>";
+			"<th>" + __("MOY (%)") + "</th><th>" + __("GRD") + "</th><th>" + __("PTS") + "</th>";
 
 		const body = (state.data.lignes || [])
 			.map((ligne, idx) => {
@@ -815,10 +823,10 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 					'<td class="sn-mono">' + esc(ligne.matricule) + "</td>" +
 					"<td>" + esc(ligne.nom) + " " + esc(ligne.prenom) + "</td>" +
 					inputs +
-					'<td class="sn-num sn-strong" data-pv-student="' + esc(ligne.student) + '" data-pv="note_finale" data-pv-saved="' +
-					esc(fmt_num(ligne.note_finale)) +
+					'<td class="sn-num sn-strong" data-pv-student="' + esc(ligne.student) + '" data-pv="note_pct" data-pv-saved="' +
+					esc(fmt_pct(ligne.note_pct)) +
 					'">' +
-					fmt_num(preview_val(ligne.student, "note_finale", ligne.note_finale)) +
+					fmt_pct(preview_val(ligne.student, "note_pct", ligne.note_pct)) +
 					"</td>" +
 					'<td data-pv-student="' + esc(ligne.student) + '" data-pv="grade" data-pv-saved="' +
 					esc(ligne.grade || "") +
@@ -1134,6 +1142,19 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		const msg = formule_complete_msg();
 		if (msg) {
 			msg_error(msg);
+			return;
+		}
+		const non_enregistre =
+			(state.data.lignes || []).some((ligne) => row_changed(ligne.student)) ||
+			(state.data.students || []).some(
+				(s) => to_num(state.rt_cur[s.student]) !== state.rt_snap[s.student]
+			);
+		if (non_enregistre) {
+			msg_error(
+				__(
+					"Des notes saisies ne sont pas encore enregistrées. Cliquez d'abord sur « Enregistrer les évaluations » avant de télécharger le PDF."
+				)
+			);
 			return;
 		}
 		api_download(API + "generer_pdf", {
