@@ -285,17 +285,7 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # --------------------------------
 
 # auth_hooks = [
-# 	"udshed.au# Aucune redirection automatique entre les deux.
-
-# default_log_clearing_doctypes = {
-# 	"Logging DocType Name": 30  # days to retain logs
-# }
-
-# Translation
-# ------------
-# List of apps whose translatable strings should be excluded from this app's translations.
-# ignore_translatable_strings_from = []
-
+# 	"udshed.auth.validate"
 # ]
 
 # Automatically update python controller files with type annotations for this app.
@@ -305,3 +295,13 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # -----------------
 # /login → Frappe login (desk / personnel administratif).
 # /connexion-etudiant → portail de connexion par matricule pour les étudiants.
+# Aucune redirection automatique entre les deux.
+
+# default_log_clearing_doctypes = {
+# 	"Logging DocType Name": 30  # days to retain logs
+# }
+
+# Translation
+# ------------
+# List of apps whose translatable strings should be excluded from this app's translations.
+# ignore_translatable_strings_from = []

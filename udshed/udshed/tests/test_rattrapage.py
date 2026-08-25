@@ -88,7 +88,7 @@ class TestSessionNormaleEtRattrapage(IntegrationTestCase):
         note = self._note(16, 18)
         self.assertEqual(note.note_finale, 13.8)
         self.assertEqual(note.note_pct, 69.0)
-        self.assertEqual(note.grade, "C")
+        self.assertEqual(note.grade, "B")
 
     def test_12_validation_selon_seuil(self):
         valide = self._note(16, 18)

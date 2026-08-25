@@ -22,35 +22,21 @@ frappe.ui.form.on("Student", {
 		frm.set_value("nom_complet", `${frm.doc.matricule || ""} - ${frm.doc.nom || ""} ${frm.doc.prenom || ""}`.replace(/ - $/, "").replace(/^ - /, "").trim());
 	},
 
-	niveau(frm) {
-		if (!frm.doc.niveau) {
+	niveau_actuel(frm) {
+		let level = frm.doc.niveau_actuel || "";
+		if (!level) {
 			frm.set_value("cycle", "");
 			return;
 		}
 
-		frappe.call({
-			method: "frappe.client.get_value",
-			args: {
-				doctype: "Field of study Level",
-				filters: { name: frm.doc.niveau },
-				fieldname: "level"
-			},
-			callback(r) {
-				if (r.message && r.message.level) {
-					let level = r.message.level;
-					let cycle = "";
-					if (level.startsWith("Licence")) {
-						cycle = "Licence";
-					} else if (level.startsWith("Master")) {
-						cycle = "Master";
-					} else if (level.startsWith("BTS")) {
-						cycle = "BTS";
-					} else {
-						cycle = "Licence";
-					}
-					frm.set_value("cycle", cycle);
-				}
-			}
-		});
+		let cycle = "Licence";
+		if (level.startsWith("Licence")) {
+			cycle = "Licence";
+		} else if (level.startsWith("Master")) {
+			cycle = "Master";
+		} else if (level.startsWith("BTS")) {
+			cycle = "BTS";
+		}
+		frm.set_value("cycle", cycle);
 	}
 });

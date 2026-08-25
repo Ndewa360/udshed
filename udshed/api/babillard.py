@@ -15,7 +15,12 @@ statut **Publié** sont prises en compte. Les notes en Brouillon / Saisi
 import frappe
 from frappe import _
 
-from udshed.grade_calculation import get_seuil_validation, get_student_cycle
+from udshed.grade_calculation import (
+	get_grade_info,
+	get_grade_scale,
+	get_seuil_validation,
+	get_student_cycle,
+)
 from udshed.api.resultat_academique import _get_credits
 
 SEMESTRES = ["Semestre 1", "Semestre 2"]
@@ -60,30 +65,13 @@ def _get_seuil_validation(cycle):
 
 def _get_mention(mps):
 	"""Mention associée à une moyenne (%) selon la grille des grades."""
-	setting = frappe.get_single("Udshed Setting")
-	for g in setting.get("grille_grades"):
-		try:
-			if g.note_min <= mps <= g.note_max:
-				return g.mention or ""
-		except TypeError:
-			continue
-	return ""
+	info = get_grade_info(mps, echelle=100)
+	return info["mention"] if info else ""
 
 
 def _get_grade_scale():
-	"""Grille des grades triée (du plus haut au plus bas)."""
-	setting = frappe.get_single("Udshed Setting")
-	scale = []
-	for g in setting.get("grille_grades"):
-		scale.append({
-			"note_min": g.note_min,
-			"note_max": g.note_max,
-			"grade": g.grade,
-			"point": g.point,
-			"mention": g.mention or "",
-		})
-	scale.sort(key=lambda x: x.get("note_min") or 0, reverse=True)
-	return scale
+	"""Grille des grades triée (du plus haut au plus bas) — moteur central."""
+	return get_grade_scale()
 
 
 def _get_filiere_name(filiere):
@@ -94,11 +82,38 @@ def _get_filiere_name(filiere):
 
 
 def _get_ue_label(teaching_unit):
-	"""Code + intitulé d'une Teaching Unit."""
+	"""Détails de la matière consultée : UE (intitulé) + Cours rattaché (code, intitulé).
+
+	Returns:
+		dict: {
+			"teaching_unit":    nom du document Teaching Unit,
+			"ue_intitule":      intitulé de la matière (Teaching Unit),
+			"course":           nom du Cours rattaché,
+			"course_code":      code du Cours,
+			"course_intitule":  intitulé du Cours,
+			"code":             code d'affichage (cours sinon vide),
+			"intitule":         libellé principal (cours sinon UE sinon TU),
+		}
+	"""
 	tu = frappe.get_cached_value(
-		"Teaching Unit", teaching_unit, ["course", "intitule_cours"], as_dict=True
+		"Teaching Unit", teaching_unit, ["name", "course", "intitule_cours"], as_dict=True
 	) or {}
-	return (tu.get("course") or ""), (tu.get("intitule_cours") or teaching_unit)
+	course_name = tu.get("course") or ""
+	course_code = ""
+	course_intitule = ""
+	if course_name:
+		row = frappe.db.get_value("Course", course_name, ["code", "intitule"], as_dict=True) or {}
+		course_code = row.get("code") or course_name
+		course_intitule = row.get("intitule") or ""
+	return {
+		"teaching_unit": teaching_unit,
+		"ue_intitule": tu.get("intitule_cours") or "",
+		"course": course_name,
+		"course_code": course_code,
+		"course_intitule": course_intitule,
+		"code": course_code,
+		"intitule": course_intitule or tu.get("intitule_cours") or teaching_unit,
+	}
 
 
 # ---------------------------------------------------------------------------
@@ -196,11 +211,14 @@ def _resultat_semestre(student, academic_year, semestre, seuil):
 		if note_pct >= seuil:
 			credits_obtenus += credits
 
-		code, intitule = _get_ue_label(tu_name)
+		label = _get_ue_label(tu_name)
 		ues.append({
 			"teaching_unit": tu_name,
-			"code": code,
-			"intitule": intitule,
+			"course": label["course"],
+			"code": label["code"],
+			"intitule": label["intitule"],
+			"ue_intitule": label["ue_intitule"],
+			"course_intitule": label["course_intitule"],
 			"credits": credits,
 			"note_finale": m["note_finale"],
 			"note_pct": note_pct,
@@ -249,6 +267,146 @@ def _semestre_vide(academic_year, semestre):
 # ---------------------------------------------------------------------------
 # Endpoint public
 # ---------------------------------------------------------------------------
+def _get_etudiants_filiere(academic_year, filiere, niveau):
+	"""Étudiants inscrits (réinscription validée) d'une filière/niveau pour une année."""
+	regs = frappe.get_all(
+		"Academic Reregistration",
+		filters={"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "statut": "Validée"},
+		fields=["student"],
+	)
+	return [r.student for r in regs if frappe.db.exists("Student", r.student)]
+
+
+def _lier_niveau(filiere, niveau):
+	"""Vérifie que le niveau appartient à la filière (Field of study Level)."""
+	doc = frappe.get_cached_doc("Field of study", filiere)
+	return any(row.level == niveau for row in (doc.get("field_of_study_level") or []))
+
+
+@frappe.whitelist(allow_guest=True)
+def consulter_notes_filiere(filiere=None, niveau=None, academic_year=None, semestre=None):
+	"""Consulte les notes *publiées* de toute une filière (tableau par étudiant).
+
+	Pour une filière/niveau/année/semestre donnés, renvoie pour chaque étudiant
+	sa note par UE (finale, %, grade, statut) ainsi que MPS, crédits et décision.
+	Seules les notes publiées sont exposées (règle du babillard).
+
+	Returns:
+		dict: ``{"success": bool, ...données...}``
+	"""
+	filiere = (filiere or "").strip()
+	niveau = (niveau or "").strip()
+
+	if not filiere:
+		return _erreur(_("Veuillez sélectionner une filière."))
+	if not niveau:
+		return _erreur(_("Veuillez sélectionner un niveau."))
+	if not frappe.db.exists("Field of study", filiere):
+		return _erreur(_("La filière « {0} » est introuvable.").format(filiere))
+	if not _lier_niveau(filiere, niveau):
+		return _erreur(_("Le niveau « {0} » n'appartient pas à la filière sélectionnée.").format(niveau))
+
+	year = (academic_year or "").strip() or _get_current_academic_year()
+	if not frappe.db.exists("Academic Year", year):
+		return _erreur(_("L'année académique « {0} » est introuvable.").format(year))
+
+	if semestre and semestre not in SEMESTRES:
+		semestre = None
+
+	students = _get_etudiants_filiere(year, filiere, niveau)
+	if not students:
+		return _erreur(_("Aucun étudiant inscrit en {0} / {1} pour l'année {2}.").format(filiere, niveau, year))
+
+	# Seuil de validation selon le cycle (on prend le cycle du premier étudiant ;
+	# en pratique les étudiants d'une même filière/niveau partagent le cycle).
+	cycle = get_student_cycle(students[0])
+	seuil = _get_seuil_validation(cycle)
+
+	colonnes_ues = {}
+	lignes = []
+	for student_name in sorted(students, key=lambda n: (frappe.db.get_value("Student", n, "nom") or "", n)):
+		student = frappe.get_doc("Student", student_name)
+		if semestre:
+			res = _resultat_semestre(student, year, semestre, seuil)
+			selection = [res]
+		else:
+			annees = [y for (y, s) in _semestres_publies(student_name) if y == year]
+			selection = []
+			for y in sorted(set(annees), key=_start_year):
+				for s in SEMESTRES:
+					_r = _resultat_semestre(student, y, s, seuil)
+					if _r["ues"]:
+						selection.append(_r)
+		# MPC simple sur les semestres sélectionnés
+		mpc = round(sum(r["mps"] for r in selection) / len(selection), 2) if selection else 0
+		decision = "Admis" if (selection and max(r["mps"] for r in selection) >= seuil) else "Ajourné"
+		mention = max((r["mention"] for r in selection), key=lambda m: _poids_mention(m)) if selection else ""
+
+		resultats = {}
+		for r in selection:
+			for u in r["ues"]:
+				colonnes_ues[u["teaching_unit"]] = {
+					"teaching_unit": u["teaching_unit"],
+					"course": u["course"],
+					"code": u["code"],
+					"intitule": u["intitule"],
+					"ue_intitule": u["ue_intitule"],
+					"course_intitule": u["course_intitule"],
+					"credits": u["credits"],
+				}
+				resultats[u["teaching_unit"]] = {
+					"note_finale": u["note_finale"],
+					"note_pct": u["note_pct"],
+					"grade": u["grade"],
+					"point": u["point"],
+					"mention": u["mention"],
+					"statut": u["statut"],
+					"session": u["session"],
+				}
+
+		lignes.append({
+			"student": student.name,
+			"matricule": student.matricule or "",
+			"nom": student.nom or "",
+			"prenom": student.prenom or "",
+			"resultats": resultats,
+			"mps": max(r["mps"] for r in selection) if selection else 0,
+			"mpc": mpc,
+			"credits_obtenus": max(r["credits_obtenus"] for r in selection) if selection else 0,
+			"total_credits": max(r["total_credits"] for r in selection) if selection else 0,
+			"decision": decision,
+			"mention": mention,
+		})
+
+	ues = sorted(colonnes_ues.values(), key=lambda u: (u["intitule"] or u["code"] or "").lower())
+
+	return {
+		"success": True,
+		"filiere": filiere,
+		"filiere_name": _get_filiere_name(filiere),
+		"niveau": niveau,
+		"academic_year": year,
+		"semestre": semestre,
+		"cycle": cycle,
+		"seuil": seuil,
+		"ues": ues,
+		"students": lignes,
+		"school_name": frappe.db.get_single_value("Udshed Setting", "school_name") or "",
+	}
+
+
+def _poids_mention(mention):
+	"""Ordre des mentions pour retenir la meilleure (Valeur faible si inconnue).
+
+	L'ordre est dérivé dynamiquement de la grille officielle (du grade le
+	plus haut au plus bas) : aucune liste de mentions n'est codée en dur."""
+	ordre = [g["mention"] for g in get_grade_scale() if g["mention"]]
+	try:
+		return ordre.index(mention) + 1
+	except ValueError:
+		return 0
+
+
 @frappe.whitelist(allow_guest=True)
 def consulter_notes(niveau=None, matricule=None, academic_year=None, semestre=None):
 	"""Consulte les notes publiées d'un étudiant.

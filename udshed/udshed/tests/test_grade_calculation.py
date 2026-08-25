@@ -150,12 +150,6 @@ class TestArrondiEtMoyennes(IntegrationTestCase):
             13.0,
         )
 
-    def test_moyenne_ponderee(self):
-        self.assertEqual(
-            calculer_moyenne_cc([(1, 10), (3, 20)], "Moyenne pondérée"),
-            17.5,
-        )
-
     def test_notes_insuffisantes(self):
         with self.assertRaises(frappe.ValidationError):
             calculer_moyenne_cc([10], "Moyenne arithmétique", nombre_min=2)

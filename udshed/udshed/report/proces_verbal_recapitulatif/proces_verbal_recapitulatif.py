@@ -90,7 +90,7 @@ def _build_columns(ues):
         {"fieldname": "student_name", "label": _("Nom complet"), "fieldtype": "Data", "width": 220},
     ]
 
-    # Trois colonnes par UE : Note %, Grade et Point
+    # Quatre colonnes par UE : Note %, Grade, Point et Mention
     for ue in ues:
         key = _ue_key(ue["name"])
         columns += [
@@ -103,6 +103,7 @@ def _build_columns(ues):
             },
             {"fieldname": f"{key}_grade", "label": _("Gr"), "fieldtype": "Data", "width": 45},
             {"fieldname": f"{key}_point", "label": _("Pt"), "fieldtype": "Float", "width": 50, "precision": 2},
+            {"fieldname": f"{key}_mention", "label": _("Mention"), "fieldtype": "Data", "width": 130},
         ]
 
     columns += [
@@ -134,6 +135,7 @@ def _build_rows(ues, etudiants):
             row[f"{key}_note"] = note
             row[f"{key}_grade"] = r.get("grade") or ""
             row[f"{key}_point"] = r.get("point")
+            row[f"{key}_mention"] = r.get("mention") or ""
             row[f"{key}_non_valide"] = (
                 1 if (note is not None and not r.get("valide")) else 0
             )

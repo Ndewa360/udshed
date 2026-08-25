@@ -72,7 +72,7 @@ def _resultat_ue(student, session_doc, note_normale):
                 "statut": "Publié",
             },
             ["name", "note_finale", "note_pct", "grade", "point", "mention",
-             "note_examen_rattrapage"],
+             "type_resultat", "capitalise", "note_examen_rattrapage"],
             as_dict=True,
         )
         if note_r and note_r.note_finale:
@@ -118,6 +118,8 @@ def _resultat_ue(student, session_doc, note_normale):
     res.grade = resultat_source.grade
     res.point = resultat_source.point
     res.mention = resultat_source.mention
+    res.type_resultat = resultat_source.type_resultat
+    res.capitalise = resultat_source.capitalise
     res.statut = statut
     res.est_rattrapage = est_rattrapage
     res.session_normale = note_normale.name
@@ -139,6 +141,8 @@ def _resultat_ue(student, session_doc, note_normale):
         "grade": res.grade,
         "point": res.point,
         "mention": res.mention,
+        "type_resultat": res.type_resultat,
+        "capitalise": res.capitalise,
         "statut": res.statut,
         "est_rattrapage": est_rattrapage,
         "session_normale": note_normale.name,
@@ -175,7 +179,8 @@ def calculer_resultat_session(student, session_examen, teaching_unit=None):
         "Session Examen Note",
         filters=filters,
         fields=["name", "teaching_unit", "note_finale", "note_pct", "grade",
-                "point", "mention", "note_examen_active", "note_examen_rattrapage"],
+                "point", "mention", "type_resultat", "capitalise",
+                "note_examen_active", "note_examen_rattrapage"],
         order_by="teaching_unit",
     )
 
@@ -241,10 +246,8 @@ def calculer_resultat_semestre(student, semestre, academic_year):
     somme_cj_pj = 0
     somme_cj = 0
     for r in resultats:
-        credits = frappe.db.get_value(
-            "Teaching Unit", r["teaching_unit"], "credits"
-        ) or 0
-        somme_cj_pj += credits * (r.get("point") or 0)
+        credits = _get_credits(student, r["teaching_unit"])
+        somme_cj_pj += credits * (r.get("note_pct") or 0)
         somme_cj += credits
 
     mps = round(somme_cj_pj / somme_cj, 2) if somme_cj > 0 else 0
@@ -313,7 +316,7 @@ def calculer_resultat_annee(student, academic_year):
     somme_cp = 0.0
     somme_c = 0
     for r in tous_resultats:
-        credits = frappe.db.get_value("Teaching Unit", r["teaching_unit"], "credits") or 0
+        credits = _get_credits(student, r["teaching_unit"])
         somme_cp += credits * (r["note_pct"] or 0)
         somme_c += credits
     moyenne_annuelle = round(somme_cp / somme_c, 2) if somme_c > 0 else 0
@@ -444,11 +447,14 @@ def _get_credits(student, teaching_unit):
     return int(credits) if credits else 0
 
 
-def calculer_mps(student, semestre, academic_year):
+def calculer_mps(student, semestre, academic_year, teaching_unit_a_exclure=None):
     """Calcule la Moyenne Pondérée Semestrielle (MPS) d'un étudiant.
 
     MPS(i) = (Σ Cj × Pj) / (Σ Cj)
-    où Cj = crédits de l'UE j, Pj = point (grade) de l'UE j
+    où Cj = crédits de l'UE j, Pj = note en pourcentage (note_pct) de l'UE j
+
+    La MPS est exprimée sur l'échelle 0–100 (%), alignée sur les seuils de
+    validation (50/60 %) et sur les bornes de la grille des grades (/100).
 
     Args:
         student: Nom du Student
@@ -464,6 +470,7 @@ def calculer_mps(student, semestre, academic_year):
             "student": student,
             "semestre": semestre,
             "academic_year": academic_year,
+            **({"teaching_unit": ["!=", teaching_unit_a_exclure]} if teaching_unit_a_exclure else {}),
         },
         fields=["name", "teaching_unit", "note_pct", "point", "statut", "grade", "mention"],
     )
@@ -478,7 +485,7 @@ def calculer_mps(student, semestre, academic_year):
 
     for r in resultats:
         cj = _get_credits(student, r.teaching_unit)
-        pj = r.point or 0
+        pj = r.note_pct or 0
         somme_cj_pj += cj * pj
         somme_cj += cj
         if r.note_pct and r.note_pct >= seuil:
@@ -570,7 +577,7 @@ def calculer_mpc(student, academic_year, semestre=None):
 
 
 @frappe.whitelist()
-def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year):
+def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year, teaching_unit_a_exclure=None):
     """Calcule la MPS et MPC d'un étudiant et sauvegarde le Resultat Semestre.
 
     Args:
@@ -581,7 +588,7 @@ def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year):
     Returns:
         dict: {mps, mpc, total_credits, credits_obtenus, mention, decision}
     """
-    mps_data = calculer_mps(student, semestre, academic_year)
+    mps_data = calculer_mps(student, semestre, academic_year, teaching_unit_a_exclure)
     mps = mps_data["mps"]
     total_credits = mps_data["total_credits"]
     credits_obtenus = mps_data["credits_obtenus"]
@@ -597,6 +604,14 @@ def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year):
         },
         "name",
     )
+
+    # Plus aucun Resultat Academique pour ce semestre : le Resultat Semestre
+    # devient obsolète et doit être supprimé (sinon MPS/MPC resteraient figés).
+    if not mps_data["resultats"]:
+        if existing:
+            frappe.delete_doc("Resultat Semestre", existing, force=True)
+        _recalculer_mpc(student)
+        return {"mps": 0, "mpc": _mpc_actuelle(student), "deleted": True}
 
     if existing:
         rs = frappe.get_doc("Resultat Semestre", existing)
@@ -622,21 +637,7 @@ def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year):
     else:
         rs.insert()
 
-    tous_resultats = frappe.get_all(
-        "Resultat Semestre",
-        filters={"student": student},
-        fields=["mps", "semester_index"],
-        order_by="semester_index asc",
-    )
-
-    mpc = 0
-    for i, res in enumerate(tous_resultats, 1):
-        if i == 1:
-            mpc = res.mps
-        else:
-            mpc = round((mpc * (i - 1) + res.mps) / i, 2)
-
-    frappe.db.set_value("Resultat Semestre", rs.name, "mpc", mpc)
+    mpc = _recalculer_mpc(student, jusqu_a=rs.name)
 
     return {
         "name": rs.name,
@@ -647,3 +648,55 @@ def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year):
         "mention": rs.mention,
         "decision": rs.decision,
     }
+
+
+def _mpc_actuelle(student):
+    """MPC courante de l'étudiant (dernier semestre connu), sans sauvegarde."""
+    tous_resultats = frappe.get_all(
+        "Resultat Semestre",
+        filters={"student": student},
+        fields=["mps"],
+        order_by="semester_index asc",
+    )
+    if not tous_resultats:
+        return 0
+    mpc = 0
+    for i, res in enumerate(tous_resultats, 1):
+        if i == 1:
+            mpc = res.mps
+        else:
+            mpc = round((mpc * (i - 1) + res.mps) / i, 2)
+    return mpc
+
+
+def _recalculer_mpc(student, jusqu_a=None):
+    """Recalcule et réécrit la MPC de chaque Resultat Semestre de l'étudiant.
+
+    Args:
+        student: Nom du Student
+        jusqu_a (str, optional): nom du Resultat Semestre à retourner comme
+            « MPC courante » (sinon retourne la MPC du dernier semestre).
+
+    Returns:
+        float: MPC du semestre ciblé (ou du dernier semestre).
+    """
+    tous_resultats = frappe.get_all(
+        "Resultat Semestre",
+        filters={"student": student},
+        fields=["name", "mps", "semester_index"],
+        order_by="semester_index asc",
+    )
+    if not tous_resultats:
+        return 0
+
+    mpc = 0
+    for i, res in enumerate(tous_resultats, 1):
+        if i == 1:
+            mpc = res.mps
+        else:
+            mpc = round((mpc * (i - 1) + res.mps) / i, 2)
+        frappe.db.set_value("Resultat Semestre", res.name, "mpc", mpc)
+        if jusqu_a and res.name == jusqu_a:
+            return mpc
+
+    return mpc

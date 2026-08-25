@@ -112,10 +112,11 @@
    "fieldname": "methode_calcul_cc",
    "fieldtype": "Select",
    "label": "Méthode de calcul de la moyenne CC",
-   "options": "Moyenne arithmétique\nMoyenne pondérée\nMoyenne des N meilleures notes"
+   "options": "Moyenne arithmétique\nMoyenne des N meilleures notes"
   },
   {
    "default": "2",
+   "depends_on": "eval:doc.methode_calcul_cc=='Moyenne des N meilleures notes'",
    "fieldname": "nb_meilleures_notes_cc",
    "fieldtype": "Int",
    "label": "Nombre de meilleures notes CC (N)",
