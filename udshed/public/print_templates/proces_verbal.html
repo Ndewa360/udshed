@@ -4,6 +4,15 @@
 {% set stats = data.statistiques %}
 {% set logo_url = ctx.school_logo %}
 {% set nb_ues = ues | length %}
+{% set mentions_finales = {} %}
+{% for et_m in etudiants %}
+    {% set m = frappe.db.get_value(
+        "Resultat Semestre",
+        {"student": et_m.student, "academic_year": ctx.academic_year, "semestre": ctx.semestre},
+        "mention"
+    ) %}
+    {% if m %}{% set _ = mentions_finales.update({et_m.student: m}) %}{% endif %}
+{% endfor %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -168,9 +177,9 @@
         background: #f4f7fb;
     }
     .pv-table .col-no { width: 5mm; }
-    .pv-table .col-matricule { width: 21mm; white-space: nowrap; }
+    .pv-table .col-matricule { width: 28mm; white-space: nowrap; }
     .pv-table .col-nom {
-        width: 44mm;
+        width: 60mm;
         text-align: left;
         padding-left: 2.5px;
         white-space: nowrap;
@@ -179,6 +188,7 @@
     .pv-table .col-tci, .pv-table .col-tcc { width: 6mm; }
     .pv-table .col-pct { width: 7mm; }
     .pv-table .col-mps, .pv-table .col-mpc { width: 7mm; }
+    .pv-table .col-mention { width: 18mm; }
     .pv-table .col-statut { width: 10.5mm; }
 
     .pv-table td.statut-admis {
@@ -196,6 +206,7 @@
         color: #b9770e;
         background: #fdebd0;
     }
+
     .pv-table .valide {
         font-weight: 700;
         color: #1e8449;
@@ -282,13 +293,12 @@
                 <tr class="ue-group">
                     <th colspan="3" style="background:#ffffff;color:#1a5276;font-size:5pt;">{{ _("Étudiants") }}</th>
                     {% for ue in ues %}
-                    <th colspan="4">
+                    <th colspan="3">
                         <span class="ue-code">{{ ue.code }}</span>
-                        <span class="ue-sub">{{ ue.intitule }}</span>
                         <span class="ue-sub">({{ ue.credits }} {{ _("cr") }})</span>
                     </th>
                     {% endfor %}
-                    <th colspan="6" style="background:#ffffff;color:#1a5276;font-size:5pt;">{{ _("Résultats du semestre") }}</th>
+                    <th colspan="7" style="background:#ffffff;color:#1a5276;font-size:5pt;">{{ _("Résultats du semestre") }}</th>
                 </tr>
                 <tr class="sub-head">
                     <th class="col-no">N°</th>
@@ -298,13 +308,13 @@
                     <th>{{ _("Note %") }}</th>
                     <th>{{ _("Gr") }}</th>
                     <th>{{ _("Pt") }}</th>
-                    <th>{{ _("Mention") }}</th>
                     {% endfor %}
                     <th class="col-tci">{{ _("TCI") }}</th>
                     <th class="col-tcc">{{ _("TCC") }}</th>
                     <th class="col-pct">{{ _("%EVAL") }}</th>
                     <th class="col-mps">{{ _("MPS") }}</th>
                     <th class="col-mpc">{{ _("MPC") }}</th>
+                    <th class="col-mention">{{ _("Mention") }}</th>
                     <th class="col-statut">{{ _("Statut") }}</th>
                 </tr>
             </thead>
@@ -323,18 +333,18 @@
                         </td>
                         <td>{{ r.get('grade') or "" }}</td>
                         <td>{{ "%.2f" | format(r.point) if r.get('point') is not none else "" }}</td>
-                        <td class="mention">{{ r.get('mention') or "" }}</td>
                     {% endfor %}
                     <td class="col-tci">{{ et.total_credits }}</td>
                     <td class="col-tcc">{{ et.credits_obtenus }}</td>
                     <td class="col-pct">{{ "%.2f" | format(et.pct_validation) }}</td>
                     <td class="col-mps">{{ "%.2f" | format(et.mps) }}</td>
                     <td class="col-mpc">{{ "%.2f" | format(et.mpc) if et.mpc is not none else "" }}</td>
+                    <td class="col-mention mention">{{ mentions_finales.get(et.student) or "" }}</td>
                     <td class="col-statut statut-{{ 'admis' if et.statut == 'Admis' else ('ajourne' if et.statut == 'Ajourné' else 'attente') }}">{{ et.statut }}</td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="{{ 3 + 4 * nb_ues + 6 }}">{{ _("Aucun étudiant inscrit pour cette classe.") }}</td>
+                    <td colspan="{{ 3 + 3 * nb_ues + 7 }}">{{ _("Aucun étudiant inscrit pour cette classe.") }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -344,12 +354,12 @@
                     <td colspan="3" style="text-align:left;">{{ _("Taux de réussite") }}</td>
                     {% for ue in ues %}
                         {% set t = stats.taux_par_ue.get(ue.name) or {} %}
-                        <td colspan="4">
+                        <td colspan="3">
                             {{ "%.0f" | format(t.get('taux') or 0) }}%
                             <span style="font-weight:400;">({{ t.get('validees') or 0 }}/{{ t.get('presentes') or 0 }})</span>
                         </td>
                     {% endfor %}
-                    <td colspan="6">
+                    <td colspan="7">
                         {{ _("Global") }} : {{ "%.1f" | format(stats.taux_reussite) }}%
                         — {{ _("Admis") }} {{ stats.admis }} / {{ stats.total_etudiants }}
                     </td>

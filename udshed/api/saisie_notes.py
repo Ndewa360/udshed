@@ -591,9 +591,12 @@ def _charger_notes(students, teaching_unit, sessions):
 
 
 def _verifier_non_publiee(session):
-    statut = frappe.db.get_value("Session Examen", session, "statut")
-    if statut == "Publiée":
-        frappe.throw(_("La session {0} est publiée : les notes sont verrouillées.").format(session))
+    """Publication non verrouillante.
+
+    Une session publiée reste modifiable : des requêtes (réclamations) et des
+    corrections de notes peuvent survenir après la publication. Ce contrôle ne
+    bloque donc plus la saisie, quelle que soit l'état de la session.
+    """
 
 
 def _passer_saisi(note):
@@ -606,14 +609,7 @@ def _passer_saisi(note):
 
 
 def _verifier_cc_modifiable(note):
-    """Le CC validé ou publié ne peut plus être modifié (immutabilité du CC)."""
-    if note.statut in ("Validé", "Publié"):
-        frappe.throw(
-            _("Les notes de CC de l'étudiant <b>{0}</b> sont {1} : elles ne peuvent plus être modifiées. "
-              "Ne validez les notes de CC que lorsque la saisie est terminée.").format(
-                note.student, note.statut.lower()
-            )
-        )
+    """Le CC reste modifiable, même après validation/publication (requêtes)."""
 
 
 def _copier_cc_dans_note(args, student, note):
@@ -1137,10 +1133,6 @@ def valider_notes(session):
     Returns:
         dict: {"session": ..., "validated": n}
     """
-    statut_session = frappe.db.get_value("Session Examen", session, "statut")
-    if statut_session == "Publiée":
-        frappe.throw(_("La session {0} est publiée : impossible de valider les notes.").format(session))
-
     names = frappe.get_all(
         "Session Examen Note",
         filters={"session_examen": session, "statut": ["in", ["Brouillon", "Saisi"]]},
@@ -1498,13 +1490,21 @@ def _fmt_pct(v):
     return "{0} %".format(flt(v))
 
 
-def _html_fiche_pdf(titre, faculte="", filiere="", niveau="", semestre="", cours="", code="", ue="", session="", enseignants="", entetes=None, lignes=None):
+def _html_fiche_pdf(titre, annee="", faculte="", filiere="", niveau="", semestre="", cours="", code="", ue="", session="", enseignants="", entetes=None, lignes=None):
     """Construit le HTML d'une fiche de notes PDF avec les données réelles de la saisie."""
 
-    def bloc(label, valeur):
+    def esc(v):
+        return frappe.utils.escape_html(v or "")
+
+    def cell(label, valeur, extra_cls=""):
         if not valeur:
             return ""
-        return "<p><strong>{0} :</strong> {1}</p>".format(label, frappe.utils.escape_html(valeur))
+        return (
+            '<div class="meta-cell {0}">'
+            '<span class="meta-label">{1}</span>'
+            '<span class="meta-value">{2}</span>'
+            "</div>"
+        ).format(extra_cls, esc(label), esc(valeur))
 
     entetes_html = "".join("<th>{0}</th>".format(frappe.utils.escape_html(h)) for h in entetes or [])
     lignes_html = ""
@@ -1516,17 +1516,102 @@ def _html_fiche_pdf(titre, faculte="", filiere="", niveau="", semestre="", cours
             len(entetes or [])
         )
 
+    setting = frappe.get_single("Udshed Setting")
+    school_name = setting.school_name or ""
+    school_logo = setting.school_logo or ""
+
+    logo_html = ""
+    if school_logo:
+        logo_url = school_logo
+        if school_logo.startswith("/"):
+            logo_url = frappe.utils.get_url(school_logo)
+        logo_html = '<img class="logo-img" src="{0}" alt="logo">'.format(esc(logo_url))
+
+    school_html = '<span class="school-name">{0}</span>'.format(esc(school_name)) if school_name else ""
+
+    cours_valeur = cours + ((" (" + code + ")") if code else "")
+    titre_esc = esc(titre)
+
+    # Blocs principaux en 2 colonnes (Année, Faculté, Filière, Niveau, Semestre, Cours).
+    primaire = (
+        cell("Année académique", annee)
+        + cell("Faculté", faculte)
+        + cell("Filière", filiere)
+        + cell("Niveau", niveau)
+        + cell("Semestre", semestre)
+        + cell("Cours", cours_valeur, "meta-wide")
+    )
+    # Blocs secondaires compacts (UE, Session, Enseignant(s)).
+    secondaire = (
+        cell("UE", ue)
+        + cell("Session", session)
+        + cell("Enseignant(s)", enseignants, "meta-wide")
+    )
+
     return """
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="utf-8">
         <style>
-            @page {{ size: A4 landscape; margin: 16mm 14mm; }}
-            body {{ font-family: Helvetica, Arial, sans-serif; color: #1d273b; }}
-            h1 {{ font-size: 16px; margin: 0 0 8px; color: #1d273b; }}
-            .infos {{ border: 1px solid #c4c9d1; border-radius: 6px; padding: 6px 12px; margin: 10px 0 14px; font-size: 12px; }}
-            .infos p {{ margin: 3px 0; }}
+            @page {{ size: A4 landscape; margin: 14mm 14mm; }}
+            body {{ font-family: Helvetica, Arial, sans-serif; color: #1d273b; margin: 0; }}
+            *, *:before, *:after {{ box-sizing: border-box; }}
+
+            /* ---------- bandeau institutionnel ---------- */
+            .doc-head {{ border: 1px solid #d6dbe6; border-radius: 8px; overflow: hidden; }}
+            .head-top {{
+                display: flex; align-items: center; gap: 18px;
+                padding: 14px 20px;
+                background: linear-gradient(90deg, #f7f9ff 0%, #ffffff 60%);
+                border-bottom: 3px solid #4858b4;
+            }}
+            .school-brand {{ display: flex; align-items: center; gap: 12px; }}
+
+            /* ---------- filigrane logo UDSHED ---------- */
+            .doc-watermark {{
+                position: fixed; top: 50%; left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: -1; opacity: 0.10;
+                display: flex; align-items: center; justify-content: center;
+            }}
+            .doc-watermark .logo-img {{
+                width: 340px; height: auto; max-width: 70%;
+                opacity: 1;
+            }}
+
+            .school-name {{ font-size: 17px; font-weight: 800; color: #4858b4; letter-spacing: 1px; text-transform: uppercase; }}
+            .head-title {{ flex: 1; text-align: center; }}
+            .doc-title {{
+                font-size: 19px; font-weight: 700; color: #1d273b;
+                letter-spacing: .4px; margin: 0;
+            }}
+            .doc-subtitle {{ font-size: 10px; color: #6b7280; letter-spacing: 2px; text-transform: uppercase; margin-top: 3px; }}
+            .head-subtitle {{
+                font-size: 12px; color: #4858b4; font-weight: 600;
+                text-align: center; padding: 6px 12px; background: #eef1f8;
+                border-bottom: 1px solid #d6dbe6;
+            }}
+
+            /* ---------- contexte académique ---------- */
+            .head-meta {{ padding: 10px 14px 12px; }}
+            .meta-group {{ display: flex; flex-wrap: wrap; }}
+            .meta-group + .meta-group {{ margin-top: 6px; border-top: 1px dashed #dde2ee; padding-top: 8px; }}
+            .meta-cell {{
+                width: 50%; padding: 3px 10px 3px 0;
+                display: flex; flex-direction: column;
+            }}
+            .meta-cell.meta-wide {{ width: 100%; }}
+            .meta-label {{
+                font-size: 9px; color: #8a93a3; text-transform: uppercase;
+                letter-spacing: .7px; font-weight: 700; margin-bottom: 1px;
+            }}
+            .meta-value {{ font-size: 13px; color: #1d273b; font-weight: 600; line-height: 1.3; }}
+
+            /* ---------- séparation élégante avant le tableau ---------- */
+            .head-sep {{ border: none; height: 3px; margin: 12px 0 10px; background: linear-gradient(90deg, #4858b4, #9aa6e8, #4858b4); }}
+
+            /* ---------- tableau étudiants (inchangé) ---------- */
             table {{ width: 100%; border-collapse: collapse; font-size: 11px; }}
             th, td {{ border: 1px solid #c4c9d1; padding: 5px 7px; text-align: left; }}
             th {{ background: #f4f6f9; font-weight: 600; }}
@@ -1534,26 +1619,34 @@ def _html_fiche_pdf(titre, faculte="", filiere="", niveau="", semestre="", cours
         </style>
     </head>
     <body>
-        <h1>{0}</h1>
-        <div class="infos">
-            {1}{2}{3}{4}{5}{6}{7}{8}
+        <div class="doc-watermark">{0}</div>
+        <div class="doc-head">
+            <div class="head-top">
+                <div class="school-brand">{1}</div>
+                <div class="head-title">
+                    <div class="doc-title">RELEVÉ DE SAISIE DES NOTES</div>
+                    <div class="doc-subtitle">Document de saisie</div>
+                </div>
+            </div>
+            <div class="head-subtitle">{2}</div>
+            <div class="head-meta">
+                <div class="meta-group">{3}</div>
+                <div class="meta-group">{4}</div>
+            </div>
         </div>
+        <hr class="head-sep">
         <table>
-            <thead><tr>{9}</tr></thead>
-            <tbody>{10}</tbody>
+            <thead><tr>{5}</tr></thead>
+            <tbody>{6}</tbody>
         </table>
     </body>
     </html>
     """.format(
-        frappe.utils.escape_html(titre),
-        bloc("Faculté", faculte),
-        bloc("Filière", filiere),
-        bloc("Niveau", niveau),
-        bloc("Semestre", semestre),
-        bloc("Cours", cours + ((" (" + code + ")") if code else "")),
-        bloc("UE", ue),
-        bloc("Session", session),
-        bloc("Enseignant(s)", enseignants),
+        logo_html,
+        school_html,
+        titre_esc,
+        primaire,
+        secondaire,
         entetes_html,
         lignes_html,
     )
@@ -1561,11 +1654,13 @@ def _html_fiche_pdf(titre, faculte="", filiere="", niveau="", semestre="", cours
 
 @frappe.whitelist()
 def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
-    """Génère le PDF de saisie / résultats de l'UE à partir des données réellement enregistrées.
+    """Génère le relevé de notes au format PDF à partir des données réellement enregistrées.
 
-    Le tableau reflète la saisie unifiée (CC, CCTP, EXAMTP, EXAM). Notes,
-    poids, grades, points et mentions proviennent du moteur central (Session
-    Examen Note) — aucune donnée fictive, aucun recalcul local.
+    Le tableau présente, pour chaque étudiant : Session examen, Session
+    rattrapage, Note retenue (= MAX(examen, rattrapage)), Note finale, %,
+    Grade et Points. Notes, grades, points et la note retenue proviennent du
+    moteur central (Session Examen Note) — aucune donnée fictive, aucun
+    recalcul local.
     """
     _verifier_acces_enseignant(teaching_unit)
     args = {
@@ -1592,28 +1687,31 @@ def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
     if fos_doc.faculte:
         faculte = frappe.db.get_value("Faculty", fos_doc.faculte, "faculty_name") or ""
 
-    entetes = ["N°", "Matricule", "Nom et Prénoms", "CC", "CCTP", "EXAMTP", "EXAM", "MOY (%)", "GRD", "PTS"]
+    entetes = ["N°", "Matricule", "Nom et Prénoms", "Session examen", "Session rattrapage", "Note retenue", "Note finale", "%", "Grade", "Points"]
 
+    notes_rt = notes.get("Rattrapage", {})
     lignes = []
-    for i, ligne in enumerate(_lignes_unifiees(students, notes), start=1):
+    for i, s in enumerate(students, start=1):
+        rt = notes_rt.get(s["student"]) or {}
         lignes.append(
             [
                 i,
-                ligne.get("matricule") or "",
-                "{} {}".format(ligne.get("nom") or "", ligne.get("prenom") or "").strip(),
-                _fmt(ligne.get("cc")),
-                _fmt(ligne.get("cctp")),
-                _fmt(ligne.get("examtp")),
-                _fmt(ligne.get("examen")),
-                _fmt_pct(ligne.get("note_pct")),
-                ligne.get("grade") or "",
-                _fmt(ligne.get("point")),
+                s.get("matricule") or "",
+                "{} {}".format(s.get("nom") or "", s.get("prenom") or "").strip(),
+                _fmt(rt.get("note_examen")),
+                _fmt(rt.get("note_examen_rattrapage")),
+                _fmt(rt.get("note_examen_active")),
+                _fmt(rt.get("note_finale")),
+                _fmt_pct(rt.get("note_pct")),
+                rt.get("grade") or "",
+                _fmt(rt.get("point")),
             ]
         )
 
     titre = "{0} — {1} — {2}".format(ue_info.get("intitule") or teaching_unit, niveau, semestre_effectif)
     html = _html_fiche_pdf(
         titre,
+        annee=academic_year,
         faculte=faculte,
         filiere=fos_doc.name_of_field,
         niveau=niveau,
@@ -1621,7 +1719,7 @@ def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
         cours=ue_info.get("intitule") or "",
         code=ue_info.get("code") or "",
         ue=teaching_unit,
-        session="Examen normal",
+        session="Examen normal + Rattrapage",
         enseignants=", ".join(e.get("full_name") or e.get("name") for e in ue_info.get("enseignants", [])),
         entetes=entetes,
         lignes=lignes,

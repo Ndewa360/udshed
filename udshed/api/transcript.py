@@ -64,6 +64,7 @@ def get_transcript_data(doc):
         return {}
 
     student_doc = frappe.get_doc("Student", student)
+    settings = frappe.get_single("Udshed Setting")
 
     semesters = frappe.get_all(
         "Resultat Semestre",
