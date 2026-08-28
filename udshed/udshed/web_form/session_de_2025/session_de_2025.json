@@ -2,7 +2,7 @@
  "allow_comments": 0,
  "allow_delete": 0,
  "allow_edit": 0,
- "allow_incomplete": 0,
+ "allow_incomplete": 1,
  "allow_multiple": 0,
  "allow_print": 0,
  "anonymous": 0,
@@ -17,12 +17,12 @@
  "hide_footer": 0,
  "hide_navbar": 0,
  "idx": 0,
- "introduction_text": "<div class=\"ql-editor read-mode\"><h1 style=\"text-align: center;\">FICHE DE CANDIDATURE</h1><h3 style=\"text-align: center;\">APPLICATION FORM</h3></div>",
+ "introduction_text": "<div class=\"ql-editor read-mode\"><h1 style=\"text-align: center; color: #1e2025;\">FICHE DE CANDIDATURE</h1><h3 style=\"text-align: center; color: #525462;\">Session 2025-2026 — UDSHED</h3><p style=\"text-align: center; color: #6b6d7a;\">Remplissez ce formulaire pour déposer votre candidature. Les champs marqués d'un astérisque (*) sont obligatoires.</p></div>",
  "is_standard": 1,
  "list_columns": [],
  "login_required": 0,
  "max_attachment_size": 10,
- "modified": "2026-04-15 10:24:13.121155",
+ "modified": "2026-08-28 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "session-de-2025",
@@ -32,7 +32,7 @@
  "show_attachments": 0,
  "show_list": 0,
  "show_sidebar": 0,
- "success_message": "Votre candidature \u00e0 bien \u00e9t\u00e9 enregistrer. \n\nVous serez contacter pour plus d'inscription",
+ "success_message": "Votre candidature a bien été enregistrée.\n\nVous serez contacté pour la suite de l'inscription.\n\nVotre numéro de dossier : {{ name }}",
  "title": "Session de 2025",
   "web_form_fields": [
    {
@@ -165,29 +165,33 @@
     "fieldtype": "Section Break",
     "label": "Associated Document"
    },
-   {
-    "fieldname": "birth_certificate",
-    "fieldtype": "Attach",
-    "label": "Birth Certificate",
-    "reqd": 1
-   },
-   {
-    "fieldname": "access_diploma_copy",
-    "fieldtype": "Attach",
-    "label": "Access Diploma Copy",
-    "reqd": 1
-   },
-   {
-    "fieldname": "id_photo",
-    "fieldtype": "Attach",
-    "label": "ID photo",
-    "reqd": 1
-   },
-   {
-    "fieldname": "remittance_receipt",
-    "fieldtype": "Attach",
-    "label": "Remittance Receipt",
-    "reqd": 1
-   }
+{
+     "fieldname": "birth_certificate",
+     "fieldtype": "Attach",
+     "label": "Acte de naissance",
+     "description": "Format accepté : PDF, JPG, PNG (max 10 Mo)",
+     "reqd": 1
+    },
+    {
+     "fieldname": "access_diploma_copy",
+     "fieldtype": "Attach",
+     "label": "Copie du diplôme d'accès",
+     "description": "Format accepté : PDF, JPG, PNG (max 10 Mo)",
+     "reqd": 1
+    },
+    {
+     "fieldname": "id_photo",
+     "fieldtype": "Attach",
+     "label": "Photo d'identité",
+     "description": "Format accepté : JPG, PNG (max 10 Mo)",
+     "reqd": 1
+    },
+    {
+     "fieldname": "remittance_receipt",
+     "fieldtype": "Attach",
+     "label": "Reçu de versement",
+     "description": "Format accepté : PDF, JPG, PNG (max 10 Mo)",
+     "reqd": 1
+    }
   ]
 }
