@@ -1,18 +1,9 @@
 import frappe
-from frappe import _
 
 from frappe.query_builder import DocType
 
 @frappe.whitelist()
 def get_user_context():
-    try:
-        return _get_user_context_impl()
-    except Exception:
-        frappe.log_error(" user_data get_user_context")
-        frappe.throw(_("Erreur lors du chargement du contexte utilisateur."))
-
-
-def _get_user_context_impl():
 	user = frappe.session.user
 	default_academic_year = frappe.db.get_single_value('Udshed Setting', 'current_year')
 	academic_year_list = frappe.get_all('Academic Year')
@@ -32,42 +23,44 @@ def _get_user_context_impl():
 			"academic_year_list": academic_year_list
 		}]
 
-	print("Frappe role ", frappe.get_roles(user))
-	# COORDINATEUR DE NIVEAU
+	# COORDINATEUR DE NIVEAU / GESTIONNAIRE DE PLANNING
 	role = None
 	if "Planning Manager" in roles:
-		role="Planning Manager"
-	if "Coordinateur" in roles:
-		role="Coordinateur"
-	
-	if "Coordonateur" or "Planning Manager" in roles:
+		role = "Planning Manager"
+	if "Coordinateur" in roles or "Coordonateur" in roles:
+		role = "Coordonateur"
+
+	if role is not None:
 		Teacher = DocType("Teacher")
 		FieldOfStudy = DocType("Field of study")
 		FieldOfStudyLevel = DocType("Field of study Level")
-	
+
 		query_coordo = (
 			frappe.qb.from_(FieldOfStudy)
 			.join(FieldOfStudyLevel)
 			.on(FieldOfStudyLevel.parent == FieldOfStudy.name)
 			.join(Teacher)
 			.on(
-				( FieldOfStudyLevel.coordonateur == Teacher.name ) |
+				(FieldOfStudyLevel.coordonateur == Teacher.name) |
 				(FieldOfStudyLevel.gestionnaire_de_planning == Teacher.name)
 			)
 			.select(
-				FieldOfStudyLevel.name,
+				FieldOfStudy.name.as_("filiere_name"),
+				FieldOfStudyLevel.name.as_("niveau_name"),
 				FieldOfStudyLevel.coordonateur,
 				FieldOfStudyLevel.gestionnaire_de_planning,
 				FieldOfStudy.name_of_field,
+				FieldOfStudy.field_of_study_code,
+				FieldOfStudy.faculte,
 				FieldOfStudyLevel.level
 			)
 			.where(
 				(Teacher.email == user)
 			)
 		)
-		
+
 		coord = query_coordo.run(as_dict=True)
-		
+
 		if len(coord) > 0:
 			coordo_data = {
 				"role": role,
@@ -83,13 +76,14 @@ def _get_user_context_impl():
 				"academic_year_list": academic_year_list
 			}
 			for c in coord:
-				filiere = frappe.get_doc("Field of study", {"name_of_field": c.name_of_field})
-				faculte = frappe.get_doc("Faculty", {"name": filiere.faculte})
+				faculte_name = frappe.db.get_value("Faculty", c.faculte, "name")
+				faculty_name = frappe.db.get_value("Faculty", c.faculte, "faculty_name")
 
-				coordo_data["filiere"].append({"name": c.name, "filiere": filiere.name_of_field, "code":filiere.field_of_study_code, "faculte": filiere.faculte})
-				coordo_data["faculty"].append({"name": faculte.name, "faculte": faculte.faculty_name})
-				coordo_data["niveau"].append({"name": c.name, "level": c.level})
-			
+				coordo_data["filiere"].append({"name": c.filiere_name, "filiere": c.name_of_field, "code": c.field_of_study_code, "faculte": c.faculte})
+				if faculte_name:
+					coordo_data["faculty"].append({"name": faculte_name, "faculte": faculty_name})
+				coordo_data["niveau"].append({"name": c.niveau_name, "level": c.level})
+
 			data_result.append(coordo_data.copy())
 
 	if "Teacher" in roles:
@@ -133,19 +127,24 @@ def _get_user_context_impl():
 				"academic_year_list": academic_year_list
 			}
 			for t in teacher:
-				filiere = frappe.get_doc("Field of study", {"name": t.filiere})
-				faculte = frappe.get_doc("Faculty", {"name": filiere.faculte})
-				level = frappe.get_doc("Field of study Level", {"name": t.niveau})
+				filiere_name = frappe.db.get_value("Field of study", t.filiere, "name")
+				name_of_field = frappe.db.get_value("Field of study", t.filiere, "name_of_field")
+				faculte = frappe.db.get_value("Field of study", t.filiere, "faculte")
+				faculte_name = frappe.db.get_value("Faculty", faculte, "name")
+				faculty_name = frappe.db.get_value("Faculty", faculte, "faculty_name")
+				level_name = frappe.db.get_value("Field of study Level", t.niveau, "name")
+				level_label = frappe.db.get_value("Field of study Level", t.niveau, "level")
 
-				teacher_data["filiere"].append({"name": filiere.name, "filiere": filiere.name_of_field, "faculte": filiere.faculte})
-				teacher_data["faculty"].append({"name": faculte.name, "faculte": faculte.faculty_name})
-				teacher_data["niveau"].append({"name": level.name, "level": level.level})
+				teacher_data["filiere"].append({"name": filiere_name, "filiere": name_of_field, "faculte": faculte})
+				if faculte_name:
+					teacher_data["faculty"].append({"name": faculte_name, "faculte": faculty_name})
+				teacher_data["niveau"].append({"name": level_name, "level": level_label})
 			
 			data_result.append(teacher_data.copy())
 
 		
 
-	if not data_result or "Guest" in roles:
+	if not data_result:
 			# AUTRES UTILISATEURS
 		data_result.append({
 			"role": "Guest",
@@ -160,23 +159,19 @@ def _get_user_context_impl():
 
 
 def get_field_of_study_and_levels_for_coordinator(user):
-    list_of_fields_of_study = frappe.db.get_all('Field of study Level', filters={"coordinator": user.name}, fields=['field_of_study'])
+    list_of_fields_of_study = frappe.db.get_all('Field of study Level', filters={"coordonateur": user.name}, fields=['parent'])
     return {
-        "fields_of_study": [field.field_of_study for field in list_of_fields_of_study],
+        "fields_of_study": [field.parent for field in list_of_fields_of_study],
         "levels": ["Licence 1", "Licence 2"]
     }
 
 
 @frappe.whitelist()
 def get_teacher_ues(teacher):
-    try:
-        return frappe.db.get_all(
-            "Course Teacher Item",
-            filters={"enseignant": teacher},
-            pluck="parent",
-            distinct=True,
-        )
-    except Exception:
-        frappe.log_error(" user_data get_teacher_ues")
-        frappe.throw(_("Erreur lors du chargement des UE de l'enseignant."))
-
+    """Retourne la liste des UE assignées à un enseignant."""
+    return frappe.db.get_all(
+        "Course Teacher Item",
+        filters={"enseignant": teacher},
+        pluck="parent",
+        distinct=True,
+    )

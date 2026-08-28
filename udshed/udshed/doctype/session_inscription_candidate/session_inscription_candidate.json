@@ -23,6 +23,7 @@
    "column_break_xyrz",
    "phone",
    "email",
+   "email_parent",
    "nationality",
    "religion",
    "column_break_nationality",

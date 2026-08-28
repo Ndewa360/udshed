@@ -1,6 +1,8 @@
 import frappe
 from frappe import _
 
+from udshed.grade_calculation import get_grade_scale
+
 
 def pdf_body_html(template, args, **kwargs):
     """Hook `pdf_body_html`: injects `data` (transcript context) into the
@@ -153,18 +155,16 @@ def get_transcript_data(doc):
     prev_mpc = semesters[-1].mpc if semesters else 0
     prev_credits = semesters[-1].credits_obtenus if semesters else 0
 
-    settings = frappe.get_single("Udshed Setting")
-    grade_scale = []
-    if settings.get("grille_grades"):
-        for g in settings.grille_grades:
-            grade_scale.append({
-                "note_min": g.note_min,
-                "note_max": g.note_max,
-                "grade": g.grade,
-                "point": g.point,
-                "mention": g.mention or "",
-            })
-        grade_scale.sort(key=lambda x: x.get("note_min", 0), reverse=True)
+    grade_scale = [
+        {
+            "note_min": g["note_min_pct"],
+            "note_max": g["note_max_pct"],
+            "grade": g["grade"],
+            "point": g["point"],
+            "mention": g["mention"],
+        }
+        for g in get_grade_scale()
+    ]
 
     filiere_name = ""
     if student_doc.filiere:

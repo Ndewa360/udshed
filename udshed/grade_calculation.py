@@ -14,13 +14,15 @@ Règles métier LMD :
 - La somme des pourcentages d'une formule est exactement 100 %.
 - Une composante peut intégrer une autre évaluation (composition interne).
 - La formule d'une note est sélectionnée automatiquement selon le cycle de
-  l'étudiant et la combinaison d'évaluations de son type d'UE.
+  l'étudiant et la combinaison d'évaluations effectivement renseignées
+  (détection : CC + EXAM, CC + CCTP + EXAM, CC + EXAMTP + EXAM, ...).
 """
 
 import math
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 NOTE_MAX = 20
 
@@ -28,11 +30,32 @@ CYCLES = ["Licence", "BTS", "Master"]
 
 SEUILS_DEFAUT = {"Licence": 50, "BTS": 50, "Master": 60}
 
+# Grille officielle des grades et des points UDSHED (référence unique).
+# (min /20, max /20, min %, max %, grade, point, mention)
+# La capitalisation LMD est déduite : >= 10/20 -> capitalisé et transférable.
+GRILLE_OFFICIELLE = [
+    (16.00, 20.00, 80.00, 100.00, "A", 4.00,
+     "Excellent / Très Honorable avec Félicitations du Jury"),
+    (15.00, 15.99, 75.00, 79.99, "A-", 3.70, "Très Bien / Très Honorable"),
+    (14.00, 14.99, 70.00, 74.99, "B+", 3.30, "Très Bien"),
+    (13.00, 13.99, 65.00, 69.99, "B", 3.00, "Assez Bien"),
+    (12.00, 12.99, 60.00, 64.99, "B-", 2.70, "Assez Bien"),
+    (11.00, 11.99, 55.00, 59.99, "C+", 2.30, "Passable"),
+    (10.00, 10.99, 50.00, 54.99, "C", 2.00, "Passable"),
+    (9.00, 9.99, 45.00, 49.99, "C-", 1.70, "Insuffisant"),
+    (8.00, 8.99, 40.00, 44.99, "D+", 1.30, "Insuffisant"),
+    (7.00, 7.99, 35.00, 39.99, "D", 1.00, "Insuffisant"),
+    (6.00, 6.99, 30.00, 34.99, "E", 0.00, "Échec"),
+    (0.00, 5.99, 0.00, 29.99, "F", 0.00, "Échec"),
+]
+
 # Labels alignés avec les options existantes de « Note Formule Config »
 # afin de rester compatibles avec les mappings déjà en place.
 COMPOSANTES = [
     "Controle Continu(CC)",
+    "Controle Continu Travaux Pratiques(CCTP)",
     "Examen",
+    "Examen Travaux Pratiques(EXAMTP)",
     "Travaux Pratique (TP)",
     "Rapport",
     "Competence",
@@ -40,9 +63,31 @@ COMPOSANTES = [
 
 COMPOSANTES_PRINCIPALES = [
     "Controle Continu(CC)",
+    "Controle Continu Travaux Pratiques(CCTP)",
     "Examen",
+    "Examen Travaux Pratiques(EXAMTP)",
     "Travaux Pratique (TP)",
 ]
+
+# Ordre canonique d'affichage des combinaisons d'évaluations. Toutes les
+# combinaisons (configurées ou détectées) sont comparées sur cet ordre afin
+# que « CC + CCTP + EXAMTP + EXAM » soit lisible et stable.
+ORDRE_COMPOSANTES = [
+    "Controle Continu(CC)",
+    "Controle Continu Travaux Pratiques(CCTP)",
+    "Examen",
+    "Examen Travaux Pratiques(EXAMTP)",
+    "Travaux Pratique (TP)",
+    "Rapport",
+    "Competence",
+]
+
+
+def _cle_tri(composante):
+    """Clé de tri canonique d'un label de composante."""
+    if composante in ORDRE_COMPOSANTES:
+        return ORDRE_COMPOSANTES.index(composante)
+    return len(ORDRE_COMPOSANTES) + ord((composante or "")[0] or "z")
 
 # Correspondance type d'UE -> combinaison d'évaluations utilisée.
 # La combinaison sert à sélectionner automatiquement la formule d'une note.
@@ -55,7 +100,6 @@ TYPE_UE_COMBINAISON = {
 METHODES_CC = [
     "Moyenne arithmétique",
     "Moyenne des N meilleures notes",
-    "Moyenne pondérée",
 ]
 
 METHODES_ARRONDI = [
@@ -101,10 +145,25 @@ def combinaison_formule(formula):
         str: combinaison canonique ("" si aucune composante active)
     """
     labels = sorted(
-        c.composante
-        for c in (formula.get("components") or [])
-        if (c.pourcentage or 0) > 0
+        (c.composante for c in (formula.get("components") or []) if (c.pourcentage or 0) > 0),
+        key=_cle_tri,
     )
+    return " + ".join(labels)
+
+
+def combinaison_detectee(labels):
+    """Combinaison canonique détectée à partir des composantes renseignées.
+
+    Exemple : ["Examen", "Controle Continu(CC)", "Controle Continu Travaux Pratiques(CCTP)"]
+    -> "Controle Continu(CC) + Controle Continu Travaux Pratiques(CCTP) + Examen"
+
+    Args:
+        labels (list[str]): labels des composantes effectivement renseignées
+
+    Returns:
+        str: combinaison canonique
+    """
+    labels = sorted({l for l in labels if l in COMPOSANTES}, key=_cle_tri)
     return " + ".join(labels)
 
 
@@ -120,7 +179,7 @@ def combinaison_type_ue(type_ue):
     labels = TYPE_UE_COMBINAISON.get(type_ue)
     if labels is None:
         labels = TYPE_UE_COMBINAISON["Sans TP"]
-    return " + ".join(sorted(labels))
+    return " + ".join(sorted(labels, key=_cle_tri))
 
 
 # ---------------------------------------------------------------------- #
@@ -222,17 +281,13 @@ def get_seuil_validation(cycle):
 # ---------------------------------------------------------------------- #
 #  Moyenne CC
 # ---------------------------------------------------------------------- #
-def calculer_moyenne_cc(notes_cc, methode="Moyenne arithmétique", nombre_min=1, pondérations=None):
+def calculer_moyenne_cc(notes_cc, methode="Moyenne arithmétique", nombre_min=1):
     """Calcule la moyenne des Contrôles Continus selon la méthode choisie.
-
-    Les pondérations ne sont pas des crédits LMD : ce sont uniquement des
-    poids de calcul pour les évaluations CC.
 
     Args:
         notes_cc (list): notes CC (float ou (pondération, note))
         methode (str): méthode de calcul
         nombre_min (int): nombre minimum de notes CC requises
-        pondérations (list, optional): poids pour la moyenne pondérée
 
     Returns:
         float: moyenne CC sur 20
@@ -262,22 +317,6 @@ def calculer_moyenne_cc(notes_cc, methode="Moyenne arithmétique", nombre_min=1,
         n = min(nombre_min, len(valeurs))
         meilleures = sorted((n for _, n in valeurs), reverse=True)[:n]
         return sum(meilleures) / len(meilleures)
-
-    if methode == "Moyenne pondérée":
-        if pondérations is not None:
-            if len(pondérations) != len(valeurs):
-                frappe.throw(
-                    _("Le nombre de pondérations doit correspondre au nombre de notes CC "
-                      "pour le calcul de la moyenne pondérée.")
-                )
-            total_pondere = sum(n * p for (_, n), p in zip(valeurs, pondérations))
-            total_poids = sum(pondérations)
-        else:
-            total_pondere = sum(w * n for w, n in valeurs)
-            total_poids = sum(w for w, _ in valeurs)
-        if total_poids == 0:
-            return 0
-        return total_pondere / total_poids
 
     frappe.throw(_("Méthode de calcul CC inconnue : {0}").format(methode))
 
@@ -481,6 +520,169 @@ def est_valide(note_finale, cycle="Licence"):
     """
     note_pct = (note_finale / NOTE_MAX) * 100
     return note_pct >= get_seuil_validation(cycle)
+
+
+# ---------------------------------------------------------------------- #
+#  Grille des grades (Grade Config)
+# ---------------------------------------------------------------------- #
+def get_grille_grades():
+    """Lignes de la grille des grades depuis Udshed Setting (source de vérité).
+
+    Returns:
+        list[Document]: lignes du tableau enfant « Grade Config »
+    """
+    setting = frappe.get_single("Udshed Setting")
+    return list(setting.get("grille_grades") or [])
+
+
+def _borne_min_20(ligne):
+    """Borne minimale /20 d'une ligne de grille (repli sur l'ancien champ %).
+
+    Args:
+        ligne (Document): ligne de « Grade Config »
+
+    Returns:
+        float: note minimale sur 20
+    """
+    note_min_20 = ligne.get("note_min_20")
+    if note_min_20 is not None:
+        return float(note_min_20)
+    # Données anciennes : seul le % était renseigné.
+    note_min_pct = ligne.get("note_min_100")
+    if note_min_pct is None:
+        note_min_pct = ligne.get("note_min") or 0
+    return float(note_min_pct) * NOTE_MAX / 100.0
+
+
+def get_grade_scale():
+    """Grille officielle triée (du grade le plus haut au plus bas).
+
+    Vue normalisée partagée par tous les affichages (transcript, babillard,
+    PDF...) afin qu'aucun module ne reconstruise sa propre lecture de la
+    grille.
+
+    Returns:
+        list[dict]: [{
+            "note_min_20": float, "note_max_20": float,
+            "note_min_pct": float, "note_max_pct": float,
+            "grade": str, "point": float, "mention": str,
+        }, ...]
+    """
+    scale = []
+    for ligne in get_grille_grades():
+        note_max_20 = ligne.get("note_max_20")
+        if note_max_20 is None:
+            note_max_pct = ligne.get("note_max_100")
+            if note_max_pct is None:
+                note_max_pct = ligne.get("note_max") or 0
+            note_max_20 = float(note_max_pct) * NOTE_MAX / 100.0
+
+        note_min_pct = ligne.get("note_min_100")
+        if note_min_pct is None:
+            note_min_pct = _borne_min_20(ligne) * 100.0 / NOTE_MAX
+        note_max_pct = ligne.get("note_max_100")
+        if note_max_pct is None:
+            note_max_pct = float(note_max_20) * 100.0 / NOTE_MAX
+
+        scale.append({
+            "note_min_20": _borne_min_20(ligne),
+            "note_max_20": float(note_max_20),
+            "note_min_pct": round(float(note_min_pct), 2),
+            "note_max_pct": round(float(note_max_pct), 2),
+            "grade": ligne.grade or "",
+            "point": flt(ligne.point),
+            "mention": ligne.mention or "",
+        })
+    scale.sort(key=lambda x: x["note_min_20"], reverse=True)
+    return scale
+
+
+def get_grade_info(note, echelle=20):
+    """Détermine le grade d'une note à partir de la grille officielle.
+
+    Règle unique de résolution (source : Udshed Setting › grille_grades) :
+    la recherche se fait sur la note ramenée sur 20, arrondie à 2 décimales ;
+    on retient la première tranche (triée de la plus haute à la plus basse)
+    dont la borne minimale est atteinte. Le pourcentage n'est que la
+    représentation équivalente de la note /20 et n'est jamais utilisé comme
+    seconde règle.
+
+    Args:
+        note (float): note saisie (sur 20 par défaut, ou sur 100)
+        echelle (int): échelle de la note passée (« 20 » ou « 100 »)
+
+    Returns:
+        dict | None: {
+            "grade": str,
+            "point": float,
+            "mention": str,
+            "type_resultat": str,
+            "capitalise": bool,
+            "note_20": float,
+            "note_pct": float,
+        } ou None si aucune tranche ne correspond.
+    """
+    if note is None:
+        return None
+
+    note_20 = round(float(note) * NOTE_MAX / 100.0, 2) if echelle == 100 else round(float(note), 2)
+    note_pct = round(note_20 * 100.0 / NOTE_MAX, 2)
+
+    for ligne in sorted(get_grille_grades(), key=_borne_min_20, reverse=True):
+        if note_20 >= _borne_min_20(ligne):
+            type_resultat = ligne.get("type_resultat") or ""
+            return {
+                "grade": ligne.grade,
+                "point": flt(ligne.point),
+                "mention": ligne.mention,
+                "type_resultat": type_resultat,
+                "capitalise": bool(type_resultat.lower().startswith("crédits capitalisés")),
+                "note_20": note_20,
+                "note_pct": note_pct,
+            }
+    return None
+
+
+def determiner_statut_ue(note_finale, cycle="Licence"):
+    """Statut complet d'une note d'UE : validation (seuil du cycle) + grade.
+
+    Combine la validation selon le seuil de validation du cycle et les
+    informations de la grille des grades (grade, point, mention, type de
+    résultat).
+
+    Args:
+        note_finale (float): note finale de l'UE sur 20
+        cycle (str): "Licence", "BTS" ou "Master"
+
+    Returns:
+        dict: {
+            "valide": bool,
+            "seuil_pct": float,
+            "grade": str | None,
+            "point": float | None,
+            "mention": str | None,
+            "type_resultat": str | None,
+            "capitalise": bool,
+        }
+    """
+    seuil = get_seuil_validation(cycle)
+    valide = est_valide(note_finale, cycle)
+    info = get_grade_info(note_finale, echelle=20) or {
+        "grade": None,
+        "point": None,
+        "mention": None,
+        "type_resultat": None,
+        "capitalise": False,
+    }
+    return {
+        "valide": valide,
+        "seuil_pct": seuil,
+        "grade": info["grade"],
+        "point": info["point"],
+        "mention": info["mention"],
+        "type_resultat": info["type_resultat"],
+        "capitalise": bool(info["capitalise"] and valide),
+    }
 
 
 # ---------------------------------------------------------------------- #

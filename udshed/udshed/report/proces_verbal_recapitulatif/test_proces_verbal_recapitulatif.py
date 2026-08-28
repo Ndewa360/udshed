@@ -111,12 +111,11 @@ class TestProcesVerbalRecapitulatif(IntegrationTestCase):
         self.assertIn("mps", noms)
         self.assertIn("mpc", noms)
         self.assertIn("statut", noms)
-        self.assertNotIn("mention", noms)
 
-        # Trois colonnes par UE du semestre
+        # Quatre colonnes par UE du semestre (dont Mention)
         for ue in (self.tu1, self.tu2):
             prefix = f"ue_{ue.name}"
-            for suffix in ("_note", "_grade", "_point"):
+            for suffix in ("_note", "_grade", "_point", "_mention"):
                 self.assertIn(prefix + suffix, noms)
 
         # Une ligne par étudiant réinscrit
@@ -126,22 +125,24 @@ class TestProcesVerbalRecapitulatif(IntegrationTestCase):
         self.assertEqual(row["matricule"], self.student.matricule)
         self.assertEqual(row["student_name"], f"{self.student.nom} {self.student.prenom}")
 
-        # Notes / grades / points (CC 30 %, Examen 50 %, TP 0 % si absent)
+        # Notes / grades / points / mentions (CC 30 %, Examen 50 %, TP 0 % si absent)
         self.assertEqual(row[f"ue_{self.tu1.name}_note"], 69.0)
-        self.assertEqual(row[f"ue_{self.tu1.name}_grade"], "C")
-        self.assertEqual(row[f"ue_{self.tu1.name}_point"], 2.0)
+        self.assertEqual(row[f"ue_{self.tu1.name}_grade"], "B")
+        self.assertEqual(row[f"ue_{self.tu1.name}_point"], 3.0)
+        self.assertEqual(row[f"ue_{self.tu1.name}_mention"], "Assez Bien")
         self.assertEqual(row[f"ue_{self.tu1.name}_non_valide"], 0)
         self.assertEqual(row[f"ue_{self.tu2.name}_note"], 24.0)
         self.assertEqual(row[f"ue_{self.tu2.name}_grade"], "F")
         self.assertEqual(row[f"ue_{self.tu2.name}_point"], 0.0)
+        self.assertEqual(row[f"ue_{self.tu2.name}_mention"], "Échec")
         self.assertEqual(row[f"ue_{self.tu2.name}_non_valide"], 1)
 
         # Synthèse : TCI = 6 crédits, TCC = 3 (une seule UE validée),
-        # MPS = (3×2 + 3×0) / 6 = 1.0 ; pas de Resultat Semestre -> MPC None
+        # MPS (%) = (3×69 + 3×24) / 6 = 46.5 ; pas de Resultat Semestre -> MPC None
         self.assertEqual(row["tci"], 6)
         self.assertEqual(row["tcc"], 3)
         self.assertEqual(row["pct_validation"], 50.0)
-        self.assertEqual(row["mps"], 1.0)
+        self.assertEqual(row["mps"], 46.5)
         self.assertIsNone(row["mpc"])
         self.assertEqual(row["statut"], "Ajourné")
 
@@ -163,4 +164,5 @@ class TestProcesVerbalRecapitulatif(IntegrationTestCase):
         self.assertIn(f"ue_{self.tu2.name}_note", noms)
         self.assertIsNone(row[f"ue_{self.tu1.name}_note"])
         self.assertEqual(row[f"ue_{self.tu1.name}_grade"], "")
+        self.assertEqual(row[f"ue_{self.tu1.name}_mention"], "")
         self.assertIsNone(row[f"ue_{self.tu1.name}_point"])

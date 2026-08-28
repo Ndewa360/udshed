@@ -57,7 +57,10 @@ def _notes_normales(academic_year, filiere, niveau, semestre):
             "session_examen": ["in", sessions],
             "statut": STATUT_NOTE_PUBLIE,
         },
-        fields=["student", "teaching_unit", "note_finale", "note_pct", "grade", "point"],
+        fields=[
+            "student", "teaching_unit", "note_finale", "note_pct",
+            "grade", "point", "mention", "type_resultat", "capitalise",
+        ],
     )
     return {(n.student, n.teaching_unit): n for n in notes}
 
@@ -166,6 +169,9 @@ def get_proces_verbal_data(academic_year, filiere, niveau, semestre):
                     "note_pct": None,
                     "grade": "",
                     "point": None,
+                    "mention": "",
+                    "type_resultat": "",
+                    "capitalise": False,
                     "valide": False,
                 }
                 continue
@@ -177,13 +183,16 @@ def get_proces_verbal_data(academic_year, filiere, niveau, semestre):
                 "note_pct": note_pct,
                 "grade": note.grade or "",
                 "point": note.point,
+                "mention": note.mention or "",
+                "type_resultat": note.type_resultat or "",
+                "capitalise": bool(note.capitalise),
                 "valide": valide,
             }
             cj = ue["credits"]
             if valide:
                 credits_obtenus += cj
             somme_cj += cj
-            somme_cj_pj += cj * (note.point or 0)
+            somme_cj_pj += cj * (note_pct or 0)
 
         mps = round(somme_cj_pj / somme_cj, 2) if somme_cj > 0 else 0
         pct_validation = round(credits_obtenus / total_credits * 100, 2) if total_credits else 0
@@ -282,20 +291,16 @@ def download_proces_verbal_pdf(academic_year, filiere, niveau, semestre):
     if not data["etudiants"]:
         frappe.throw(_("Aucun étudiant inscrit pour ces critères."))
 
-    try:
-        from weasyprint import HTML
+    from weasyprint import HTML
 
-        template_path = frappe.get_app_path(
-            "udshed", "public", "print_templates", "proces_verbal.html"
-        )
-        with open(template_path, encoding="utf-8") as f:
-            template = f.read()
+    template_path = frappe.get_app_path(
+        "udshed", "public", "print_templates", "proces_verbal.html"
+    )
+    with open(template_path, encoding="utf-8") as f:
+        template = f.read()
 
-        html = frappe.render_template(template, {"data": data})
-        pdf = HTML(string=html, base_url=frappe.utils.get_url()).write_pdf()
-    except Exception:
-        frappe.log_error(" proces_verbal download_proces_verbal_pdf")
-        frappe.throw(_("Erreur lors de la génération du procès-verbal PDF."))
+    html = frappe.render_template(template, {"data": data})
+    pdf = HTML(string=html, base_url=frappe.utils.get_url()).write_pdf()
 
     nom = "PV_{0}_{1}_{2}_{3}.pdf".format(
         filiere.replace("/", "-"),
