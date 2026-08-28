@@ -1,9 +1,18 @@
 import frappe
+from frappe import _
 
 from frappe.query_builder import DocType
 
 @frappe.whitelist()
 def get_user_context():
+    try:
+        return _get_user_context_impl()
+    except Exception:
+        frappe.log_error(" user_data get_user_context")
+        frappe.throw(_("Erreur lors du chargement du contexte utilisateur."))
+
+
+def _get_user_context_impl():
 	user = frappe.session.user
 	default_academic_year = frappe.db.get_single_value('Udshed Setting', 'current_year')
 	academic_year_list = frappe.get_all('Academic Year')
@@ -160,11 +169,14 @@ def get_field_of_study_and_levels_for_coordinator(user):
 
 @frappe.whitelist()
 def get_teacher_ues(teacher):
-    """Retourne la liste des UE assignées à un enseignant."""
-    return frappe.db.get_all(
-        "Course Teacher Item",
-        filters={"enseignant": teacher},
-        pluck="parent",
-        distinct=True,
-    )
+    try:
+        return frappe.db.get_all(
+            "Course Teacher Item",
+            filters={"enseignant": teacher},
+            pluck="parent",
+            distinct=True,
+        )
+    except Exception:
+        frappe.log_error(" user_data get_teacher_ues")
+        frappe.throw(_("Erreur lors du chargement des UE de l'enseignant."))
 

@@ -352,6 +352,14 @@ def generer_classe_resultat(filiere, niveau, academic_year):
     Returns:
         dict: Résultats de la classe avec statistiques
     """
+    try:
+        return _generer_classe_resultat_impl(filiere, niveau, academic_year)
+    except Exception:
+        frappe.log_error(" resultat_academique generer_classe_resultat")
+        frappe.throw(_("Erreur lors de la génération des résultats de la classe."))
+
+
+def _generer_classe_resultat_impl(filiere, niveau, academic_year):
     students = frappe.get_all(
         "Student",
         filters={"filiere": filiere, "niveau_actuel": niveau},
@@ -581,6 +589,14 @@ def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year):
     Returns:
         dict: {mps, mpc, total_credits, credits_obtenus, mention, decision}
     """
+    try:
+        return _calculer_et_sauvegarder_mps_mpc_impl(student, semestre, academic_year)
+    except Exception:
+        frappe.log_error(" resultat_academique calculer_et_sauvegarder_mps_mpc")
+        frappe.throw(_("Erreur lors du calcul MPS/MPC."))
+
+
+def _calculer_et_sauvegarder_mps_mpc_impl(student, semestre, academic_year):
     mps_data = calculer_mps(student, semestre, academic_year)
     mps = mps_data["mps"]
     total_credits = mps_data["total_credits"]

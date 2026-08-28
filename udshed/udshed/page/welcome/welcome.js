@@ -48,10 +48,19 @@ frappe.pages['welcome'].on_page_load = function(wrapper) {
 
 		// Bouton Soumettre une candidature
 		document.getElementById("btn-submit-candidature").addEventListener("click", () => {
+			if (!navigator.onLine) {
+				frappe.msgprint({
+					title: __("Offline"),
+					message: __("Vous êtes hors ligne. Vérifiez votre connexion internet."),
+					indicator: "red"
+				});
+				return;
+			}
+
 			frappe.call({
 				method: "udshed.udshed.doctype.session_inscription.session_inscription.get_open_session",
 				callback: (r) => {
-					if (r.message) {
+					if (r && r.message) {
 						window.location.href = "/session-de-2025";
 					} else {
 						frappe.msgprint({
@@ -60,18 +69,25 @@ frappe.pages['welcome'].on_page_load = function(wrapper) {
 							indicator: "red"
 						});
 					}
+				},
+				error: () => {
+					frappe.msgprint({
+						title: __("Error"),
+						message: __("Unable to verify session availability. Please try again later."),
+						indicator: "red"
+					});
 				}
 			});
 		});
 
 		// Bouton Suivre ma candidature
 		document.getElementById("btn-track-candidature").addEventListener("click", () => {
-			window.location.href = "/track-application";
+			window.location.href = "/suivi-candidature";
 		});
 
 		// Bouton S'inscrire
 		document.getElementById("btn-inscription").addEventListener("click", () => {
-			window.location.href = "/app/student";
+			window.location.href = "/inscription/inscription";
 		});
 
 		// Bouton Se réinscrire → page de connexion (matricule + date de naissance) puis réinscription

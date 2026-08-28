@@ -357,6 +357,9 @@ def update_candidate_status(name, new_status, comment=None):
 	if new_status == "Inscrit" and old_status != "Inscrit":
 		_send_validation_email(doc)
 
+	if new_status == "Refusé":
+		_send_rejection_email(doc, comment)
+
 	return {"ok": True, "old_status": old_status, "new_status": new_status}
 
 
@@ -477,6 +480,47 @@ def _send_validation_email(doc):
 		)
 
 
+def _send_rejection_email(doc, motif=None):
+	"""Email envoyé au candidat quand sa candidature est Refusée."""
+	if not doc.email:
+		frappe.logger().warning(
+			f"Pas d'email pour {doc.name} — email rejet non envoyé."
+		)
+		return
+
+	setting = frappe.get_single("Udshed Setting")
+	school_name = getattr(setting, "school_name", "UDSHED")
+	sender = _get_sender()
+	academic_year = frappe.db.get_value(
+		"Session Inscription", {}, "academic_year", order_by="creation desc"
+	)
+	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
+
+	try:
+		frappe.sendmail(
+			recipients=[doc.email],
+			sender=sender,
+			subject=_("Résultat de votre candidature - {0}").format(school_name),
+			template="candidature_rejection",
+			args={
+				"first_name": doc.first_name,
+				"last_name": doc.last_name,
+				"doc_name": doc.name,
+				"filiere": filiere_label,
+				"niveau": doc.niveau or "",
+				"school_name": school_name,
+				"academic_year": academic_year or "",
+				"motif": motif or "",
+			},
+			now=True,
+		)
+		frappe.logger().info(f"Email rejet envoyé à {doc.email} pour {doc.name}")
+	except Exception as e:
+		frappe.log_error(
+			message=str(e), title=f"Échec email rejet {doc.name}"
+		)
+
+
 # ---------------------------------------------------------------------------
 # Login + Inscription (page /inscription)
 # ---------------------------------------------------------------------------
@@ -498,9 +542,14 @@ def login_inscription(doc_name: str, password: str) -> dict:
 		doc_name,
 		["name", "first_name", "last_name", "filiere", "niveau",
 		 "candidature_status", "birthdate", "email", "phone", "sexe",
-		 "birth_place", "nationality", "examination_centre",
-		 "father_name", "father_phone", "father_profession",
-		 "mother_name", "mother_phone", "mother_profession"],
+		 "birth_place", "nationality", "examination_centre", "religion",
+		 "employment_status", "marital_status", "language", "handicap", "home_city",
+		 "father_name", "father_phone", "father_profession", "father_email", "father_city", "father_country",
+		 "mother_name", "mother_phone", "mother_profession", "mother_email", "mother_city", "mother_country",
+		 "sponsor_name", "sponsor_phone", "sponsor_profession", "sponsor_email", "sponsor_city", "sponsor_country",
+		 "last_establishment", "entry_diploma", "diploma_matricule",
+		 "sports_activities", "associative_activities", "cultural_activities", "it_knowledge",
+		 "email_parent"],
 		as_dict=True,
 	)
 
@@ -541,12 +590,38 @@ def login_inscription(doc_name: str, password: str) -> dict:
 		"birth_place": doc.birth_place or "",
 		"nationality": doc.nationality or "",
 		"examination_centre": doc.examination_centre or "",
+		"religion": doc.religion or "",
+		"employment_status": doc.employment_status or "",
+		"marital_status": doc.marital_status or "",
+		"language": doc.language or "",
+		"handicap": doc.handicap or "",
+		"home_city": doc.home_city or "",
 		"father_name": doc.father_name or "",
 		"father_phone": doc.father_phone or "",
 		"father_profession": doc.father_profession or "",
+		"father_email": doc.father_email or "",
+		"father_city": doc.father_city or "",
+		"father_country": doc.father_country or "",
 		"mother_name": doc.mother_name or "",
 		"mother_phone": doc.mother_phone or "",
 		"mother_profession": doc.mother_profession or "",
+		"mother_email": doc.mother_email or "",
+		"mother_city": doc.mother_city or "",
+		"mother_country": doc.mother_country or "",
+		"sponsor_name": doc.sponsor_name or "",
+		"sponsor_phone": doc.sponsor_phone or "",
+		"sponsor_profession": doc.sponsor_profession or "",
+		"sponsor_email": doc.sponsor_email or "",
+		"sponsor_city": doc.sponsor_city or "",
+		"sponsor_country": doc.sponsor_country or "",
+		"last_establishment": doc.last_establishment or "",
+		"entry_diploma": doc.entry_diploma or "",
+		"diploma_matricule": doc.diploma_matricule or "",
+		"sports_activities": doc.sports_activities or "",
+		"associative_activities": doc.associative_activities or "",
+		"cultural_activities": doc.cultural_activities or "",
+		"it_knowledge": doc.it_knowledge or "",
+		"email_parent": doc.email_parent or "",
 	}
 
 
@@ -556,7 +631,8 @@ def submit_inscription(doc_name: str, data: str) -> dict:
 
 	1. Crée le record Student (STU-####)
 	2. Auto-inscrit aux Teaching Units de sa filière/niveau
-	3. Met le statut à Inscrit + envoie email validation
+	3. Crée le compte utilisateur
+	4. Met le statut à Inscrit + envoie email validation
 	"""
 	if not doc_name:
 		frappe.throw(_("Numéro de dossier manquant."))
@@ -587,14 +663,17 @@ def submit_inscription(doc_name: str, data: str) -> dict:
 		"sexe": candidate.sexe,
 		"phone": candidate.phone,
 		"cycle": cycle,
+		"niveau_actuel": candidate.niveau or "",
 		"birth_date": candidate.birthdate,
 		"birth_place": candidate.birth_place,
 		"filiere": candidate.filiere,
-		"parent_phone": data.get("parent_phone", ""),
-		"email_parent": data.get("email_parent", ""),
+		"parent_phone": data.get("parent_phone", candidate.father_phone or ""),
+		"email_parent": data.get("email_parent", candidate.email_parent or ""),
 		"photo": candidate.id_photo or "",
 	})
 	student.insert()
+
+	_cree_compte_utilisateur(student, candidate)
 
 	enrolled = _auto_enroll_student(student, candidate.filiere, candidate.niveau)
 
@@ -606,11 +685,8 @@ def submit_inscription(doc_name: str, data: str) -> dict:
 	_send_validation_email(candidate)
 
 	filiere_label = frappe.db.get_value("Field of study", candidate.filiere, "name_of_field") if candidate.filiere else ""
-	uv_labels = []
-	for tu_name in enrolled:
-		course = frappe.db.get_value("Teaching Unit", tu_name, "course")
-		if course:
-			uv_labels.append(course)
+
+	semestre_courses = _organiser_cours_par_semestre(enrolled)
 
 	return {
 		"ok": True,
@@ -621,9 +697,43 @@ def submit_inscription(doc_name: str, data: str) -> dict:
 		"filiere_label": filiere_label,
 		"niveau": candidate.niveau or "",
 		"centre": candidate.examination_centre or "",
-		"uv_labels": uv_labels,
+		"semestre_courses": semestre_courses,
 		"enrolled_uv": len(enrolled),
 	}
+
+
+def _cree_compte_utilisateur(student, candidate):
+	"""Crée le compte utilisateur pour l'étudiant inscrit."""
+	email = candidate.email or f"{student.name}@udshed.local"
+	if not frappe.db.exists("User", email):
+		user = frappe.get_doc({
+			"doctype": "User",
+			"email": email,
+			"first_name": candidate.first_name or "",
+			"last_name": candidate.last_name or "",
+			"send_welcome_email": 0,
+			"roles": [{"role": "Student"}],
+		})
+		user.insert(ignore_permissions=True)
+	frappe.db.set_value("Student", student.name, "utilisateur", email)
+
+
+def _organiser_cours_par_semestre(enrolled):
+	"""Organise les UV inscrites par semestre."""
+	semestres = {}
+	for tu_name in enrolled:
+		tu = frappe.db.get_value("Teaching Unit", tu_name, ["name", "course", "semestre", "credits"], as_dict=True)
+		if not tu:
+			continue
+		semestre = tu.semestre or "Semestre 1"
+		if semestre not in semestres:
+			semestres[semestre] = []
+		semestres[semestre].append({
+			"code": tu.name,
+			"intitule": tu.course or tu.name,
+			"credits": tu.credits or 0,
+		})
+	return semestres
 
 
 def _auto_enroll_student(student, filiere, niveau):

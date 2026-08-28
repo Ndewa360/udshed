@@ -7,28 +7,37 @@ import udshed.utils.email_utils as email_utils
 import udshed.api.school_setting as school_setting
 
 def send_planning_to_teacher_email(filters,teacher,school_name,school_logo):
-    pdf, planning_name,items, start_date,end_date = planning_calendar_pdf.generate_planning_pdf(filters)
-    
-    frappe.sendmail(
-        recipients = [teacher.email],
-        subject =  f"UdM: {planning_name}",
-        message =  email_html_template(school_name,school_logo,teacher.name,start_date,end_date),
-        attachments= [{
-            "fname": planning_name + ".pdf",
-            "fcontent": pdf
-        }],
-        delayed=False,
-        sender = email_utils.get_formatted_sender()
-    )
+    try:
+        pdf, planning_name,items, start_date,end_date = planning_calendar_pdf.generate_planning_pdf(filters)
+        
+        frappe.sendmail(
+            recipients = [teacher.email],
+            subject =  f"UdM: {planning_name}",
+            message =  email_html_template(school_name,school_logo,teacher.name,start_date,end_date),
+            attachments= [{
+                "fname": planning_name + ".pdf",
+                "fcontent": pdf
+            }],
+            delayed=False,
+            sender = email_utils.get_formatted_sender()
+        )
+    except Exception:
+        frappe.log_error(" planning_calendar_email send_planning_to_teacher_email")
 
 
 @frappe.whitelist()
 def send_planning_to_mail(filters,to_all_teacher=None,to_teacher=None,to_me=None):
-    frappe.publish_progress(10, title="Préparation du planning")
-    filters = json.loads(filters)
-
-    school_name, school_logo = school_setting.get_school_data()
-    pdf, planning_name,items, start_date,end_date = planning_calendar_pdf.generate_planning_pdf(filters)
+    try:
+        frappe.publish_progress(10, title="Préparation du planning")
+        filters = json.loads(filters)
+    except (json.JSONDecodeError, TypeError):
+        frappe.throw("Filtres invalides.")
+    try:
+        school_name, school_logo = school_setting.get_school_data()
+        pdf, planning_name,items, start_date,end_date = planning_calendar_pdf.generate_planning_pdf(filters)
+    except Exception:
+        frappe.log_error(" planning_calendar_email send_planning_to_mail generate")
+        frappe.throw(_("Erreur lors de la génération du planning PDF."))
     if to_teacher and filters["teacher"]:
         teacher= frappe.get_doc("Teacher", {"name":filters["teacher"]}) 
         frappe.publish_progress(50, title="Préparation des recepteurs")

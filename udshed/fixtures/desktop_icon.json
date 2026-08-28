@@ -1,0 +1,136 @@
+[
+ {
+  "app": "udshed",
+  "bg_color": "blue",
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": "graduation-cap",
+  "icon_image": "/assets/udshed/images/logo1.png",
+  "icon_type": "Link",
+  "label": "Gestion Des Notes",
+  "link": null,
+  "link_to": "Gestion des Notes",
+  "link_type": "Workspace Sidebar",
+  "logo_url": null,
+  "modified": "2026-08-08 14:20:23.562099",
+  "name": "Gestion Des Notes",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "System Manager"
+   },
+   {
+    "role": "Coordonateur"
+   },
+   {
+    "role": "Teacher"
+   }
+  ],
+  "sidebar": null,
+  "standard": 1
+ },
+ {
+  "app": "udshed",
+  "bg_color": "blue",
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": "calendar",
+  "icon_image": "/assets/udshed/images/logo.png",
+  "icon_type": "Link",
+  "label": "Planning Academique",
+  "link": null,
+  "link_to": "Planning Academique",
+  "link_type": "Workspace Sidebar",
+  "logo_url": null,
+  "modified": "2026-02-15 07:04:40.693342",
+  "name": "Planning Academique",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "Teacher"
+   },
+   {
+    "role": "Coordonateur"
+   },
+   {
+    "role": "Enseignant"
+   },
+   {
+    "role": "System Manager"
+   }
+  ],
+  "sidebar": "Planning Academique",
+  "standard": 1
+ },
+ {
+  "app": "udshed",
+  "bg_color": null,
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": "user-plus",
+  "icon_image": "/assets/udshed/images/logo-reinscription.png",
+  "icon_type": "Link",
+  "label": "Inscription - Reinscription",
+    "link": null,
+    "link_to": "Inscription - Reinscription",
+    "link_type": "Workspace Sidebar",
+  "logo_url": null,
+  "modified": "2026-08-24 14:43:50.701295",
+  "name": "Inscription - Reinscription",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "System Manager"
+   },
+   {
+    "role": "Coordonateur"
+   },
+   {
+    "role": "Student"
+   }
+  ],
+  "sidebar": "Inscription - Reinscription",
+  "standard": 1
+ },
+ {
+  "app": "udshed",
+  "bg_color": "blue",
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": null,
+  "icon_image": "/files/logo-insight-mini.png",
+  "icon_type": "Link",
+  "label": "Insight",
+  "link": null,
+  "link_to": "Insight",
+  "link_type": "Workspace Sidebar",
+  "logo_url": null,
+  "modified": "2026-02-23 07:09:57.824875",
+  "name": "Insight",
+  "parent_icon": "",
+  "restrict_removal": 0,
+  "roles": [
+   {
+    "role": "Coordonateur"
+   },
+   {
+    "role": "System Manager"
+   },
+   {
+    "role": "Udshed Financial Admin"
+   },
+   {
+    "role": "Teacher"
+   }
+  ],
+  "sidebar": "Insight",
+  "standard": 1
+ }
+]

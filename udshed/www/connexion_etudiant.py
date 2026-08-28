@@ -18,13 +18,24 @@ def get_context(context):
 		context.error = _("Veuillez renseigner le matricule et le mot de passe.")
 		return context
 
-	student = _verifier_identifiants(matricule, mot_de_passe)
+	try:
+		student = _verifier_identifiants(matricule, mot_de_passe)
+	except Exception:
+		frappe.log_error(" connexion_etudiant _verifier_identifiants")
+		context.error = _("Une erreur est survenue lors de la vérification. Réessayez.")
+		return context
+
 	if not student:
 		context.error = _("Matricule ou mot de passe incorrect.")
 		return context
 
-	user_email = _assurer_compte_utilisateur(student)
-	_login(user_email)
+	try:
+		user_email = _assurer_compte_utilisateur(student)
+		_login(user_email)
+	except Exception:
+		frappe.log_error(" connexion_etudiant _assurer_compte_utilisateur / _login")
+		context.error = _("Une erreur est survenue lors de la connexion. Réessayez.")
+		return context
 
 	frappe.local.flags.redirect_location = "/desk"
 	raise frappe.Redirect

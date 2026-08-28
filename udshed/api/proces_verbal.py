@@ -282,16 +282,20 @@ def download_proces_verbal_pdf(academic_year, filiere, niveau, semestre):
     if not data["etudiants"]:
         frappe.throw(_("Aucun étudiant inscrit pour ces critères."))
 
-    from weasyprint import HTML
+    try:
+        from weasyprint import HTML
 
-    template_path = frappe.get_app_path(
-        "udshed", "public", "print_templates", "proces_verbal.html"
-    )
-    with open(template_path, encoding="utf-8") as f:
-        template = f.read()
+        template_path = frappe.get_app_path(
+            "udshed", "public", "print_templates", "proces_verbal.html"
+        )
+        with open(template_path, encoding="utf-8") as f:
+            template = f.read()
 
-    html = frappe.render_template(template, {"data": data})
-    pdf = HTML(string=html, base_url=frappe.utils.get_url()).write_pdf()
+        html = frappe.render_template(template, {"data": data})
+        pdf = HTML(string=html, base_url=frappe.utils.get_url()).write_pdf()
+    except Exception:
+        frappe.log_error(" proces_verbal download_proces_verbal_pdf")
+        frappe.throw(_("Erreur lors de la génération du procès-verbal PDF."))
 
     nom = "PV_{0}_{1}_{2}_{3}.pdf".format(
         filiere.replace("/", "-"),

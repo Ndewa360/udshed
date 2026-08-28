@@ -22,29 +22,33 @@ def download_releve_pdf(student):
     Construit le corps HTML via le même pipeline que /printview (le hook
     `pdf_body_html` injecte `data`), puis le convertit en PDF avec WeasyPrint.
     """
-    doc = frappe.get_doc("Student", student)
-    doc.check_permission("print")
+    try:
+        doc = frappe.get_doc("Student", student)
+        doc.check_permission("print")
 
-    from frappe.www.printview import get_rendered_template
+        from frappe.www.printview import get_rendered_template
 
-    print_format = frappe.get_doc("Print Format", "Releve Notes")
-    body = get_rendered_template(
-        doc,
-        print_format=print_format,
-        meta=frappe.get_meta("Student"),
-        no_letterhead=1,
-        trigger_print=False,
-    )
+        print_format = frappe.get_doc("Print Format", "Releve Notes")
+        body = get_rendered_template(
+            doc,
+            print_format=print_format,
+            meta=frappe.get_meta("Student"),
+            no_letterhead=1,
+            trigger_print=False,
+        )
 
-    html = (
-        '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'
-        + body
-        + "</body></html>"
-    )
+        html = (
+            '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'
+            + body
+            + "</body></html>"
+        )
 
-    from weasyprint import HTML
+        from weasyprint import HTML
 
-    pdf = HTML(string=html, base_url=frappe.utils.get_url()).write_pdf()
+        pdf = HTML(string=html, base_url=frappe.utils.get_url()).write_pdf()
+    except Exception:
+        frappe.log_error(" transcript download_releve_pdf")
+        frappe.throw(_("Erreur lors de la génération du relevé de notes."))
 
     frappe.response["filename"] = "Releve_{0}.pdf".format(student.replace("/", "-"))
     frappe.response["filecontent"] = pdf

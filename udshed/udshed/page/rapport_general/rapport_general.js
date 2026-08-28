@@ -1,7 +1,7 @@
 frappe.pages["rapport-general"].on_page_load = function (wrapper) {
 	let page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: "Bureau",
+		title: "Rapport général",
 		single_column: true,
 	});
 

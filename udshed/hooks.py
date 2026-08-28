@@ -61,6 +61,12 @@ fixtures = [
             ["name","in",["Inscription - Reinscription","Gestion Des Notes","Insight","Planning Académique"]]
         ]
     },
+    {
+        "dt": "Workspace Sidebar",
+        "filters": [
+            ["name","in",["Inscription - Reinscription"]]
+        ]
+    },
 ]
 
 
@@ -72,7 +78,7 @@ fixtures = [
 # app_include_js = "/assets/udshed/js/udshed.js"
 
 # include js, css files in header of web template
-# web_include_css = "/assets/udshed/css/udshed.css"
+web_include_css = "/assets/udshed/css/inscription.css"
 # web_include_js = "/assets/udshed/js/udshed.js"
 
 # include custom scss in every website theme (without file extension ".scss")

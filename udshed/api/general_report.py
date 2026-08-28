@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 
 from udshed.api.inscription import get_inscription_report
 from udshed.api.reregistration import get_reregistration_report
@@ -23,14 +24,18 @@ def get_general_report(
 	Returns:
 		dict: {inscriptions: {...}, reinscriptions: {...}}
 	"""
-	return {
-		"inscriptions": get_inscription_report(
-			filiere=filiere,
-			candidature_status=candidature_status,
-		),
-		"reinscriptions": get_reregistration_report(
-			reinscription_session=reinscription_session,
-			filiere=filiere,
-			statut=statut,
-		),
-	}
+	try:
+		return {
+			"inscriptions": get_inscription_report(
+				filiere=filiere,
+				candidature_status=candidature_status,
+			),
+			"reinscriptions": get_reregistration_report(
+				reinscription_session=reinscription_session,
+				filiere=filiere,
+				statut=statut,
+			),
+		}
+	except Exception:
+		frappe.log_error(" general_report get_general_report")
+		frappe.throw(_("Erreur lors de la génération du rapport général."))

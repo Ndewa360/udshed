@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import frappe
+from frappe import _
 
 def get_unique_sorted_period(periods):
     set_period = {}
@@ -22,6 +23,14 @@ def get_unique_sorted_period(periods):
 
 @frappe.whitelist()
 def get_period(field_of_study_level,week_start,academic_year):
+    try:
+        return _get_period_impl(field_of_study_level,week_start,academic_year)
+    except Exception:
+        frappe.log_error(" planning_period get_period")
+        frappe.throw(_("Erreur lors du chargement des périodes."))
+
+
+def _get_period_impl(field_of_study_level,week_start,academic_year):
     session_exam = []
     print("Field of study level:", field_of_study_level)
     week_start_date = datetime.strptime(week_start, "%Y-%m-%d")
@@ -54,19 +63,26 @@ def get_period(field_of_study_level,week_start,academic_year):
 
 @frappe.whitelist()
 def get_all_periods():
-    periods = frappe.db.get_all('Planning Period',fields=["name","libelle","heure_de_debut","heure_de_fin"])
-    result_periods = []
-    calendar_list = {}
-    for period in periods:
-        if period.name not in calendar_list:
-            calendar_list[period.name] = frappe.get_doc("Calendar Planing", period.name)
-        result_periods.append({"name":period.name, "libelle": period.libelle, "fuseau_horaire":calendar_list[period.name].fuseau_horaire,"heure_de_debut":period.heure_de_debut,"heure_de_fin":period.heure_de_fin})
-    return get_unique_sorted_period(result_periods)
+    try:
+        periods = frappe.db.get_all('Planning Period',fields=["name","libelle","heure_de_debut","heure_de_fin"])
+        result_periods = []
+        calendar_list = {}
+        for period in periods:
+            if period.name not in calendar_list:
+                calendar_list[period.name] = frappe.get_doc("Calendar Planing", period.name)
+            result_periods.append({"name":period.name, "libelle": period.libelle, "fuseau_horaire":calendar_list[period.name].fuseau_horaire,"heure_de_debut":period.heure_de_debut,"heure_de_fin":period.heure_de_fin})
+        return get_unique_sorted_period(result_periods)
+    except Exception:
+        frappe.log_error(" planning_period get_all_periods")
+        frappe.throw(_("Erreur lors du chargement de toutes les périodes."))
 
 
 @frappe.whitelist()
 def get_default_period():
-    calendar = frappe.get_doc("Calendar Planing", "Defaut")
-    periods = frappe.get_all('Planning Period', filters={"parent":calendar.name},fields=["name","libelle","heure_de_debut","heure_de_fin"])
-    return  get_unique_sorted_period([{"name":p.name,"libelle": p.libelle,"fuseau_horaire":calendar.fuseau_horaire,"heure_de_debut":p.heure_de_debut,"heure_de_fin":p.heure_de_fin} for p in periods])
-
+    try:
+        calendar = frappe.get_doc("Calendar Planing", "Defaut")
+        periods = frappe.get_all('Planning Period', filters={"parent":calendar.name},fields=["name","libelle","heure_de_debut","heure_de_fin"])
+        return  get_unique_sorted_period([{"name":p.name,"libelle": p.libelle,"fuseau_horaire":calendar.fuseau_horaire,"heure_de_debut":p.heure_de_debut,"heure_de_fin":p.heure_de_fin} for p in periods])
+    except Exception:
+        frappe.log_error(" planning_period get_default_period")
+        frappe.throw(_("Erreur lors du chargement de la période par défaut."))
