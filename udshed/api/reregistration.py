@@ -444,7 +444,11 @@ def telecharger_fiche_reinscription(reregistration_name):
 			]
 		})
 
-	pdf = get_pdf(html)
+	try:
+		pdf = get_pdf(html)
+	except Exception:
+		frappe.log_error(" reregistration telecharger_fiche_reinscription get_pdf")
+		frappe.throw(_("Erreur lors de la génération du PDF. Veuillez réessayer."))
 
 	if is_student:
 		doc.db_set("fiche_telechargee", 1)

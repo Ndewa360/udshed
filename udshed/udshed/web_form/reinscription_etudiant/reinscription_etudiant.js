@@ -12,6 +12,10 @@ frappe.ready(() => {
 		}
 	});
 
+	function apiError(msg) {
+		frappe.msgprint({ message: msg || "Une erreur est survenue. Réessayez.", indicator: "red" });
+	}
+
 	function verifyStudent(matricule) {
 		frappe.call({
 			method: "udshed.udshed.web_form.reinscription_etudiant.reinscription_etudiant.verify_student",
@@ -25,7 +29,8 @@ frappe.ready(() => {
 				if (info.semestre) form.set_value("semestre", info.semestre);
 
 				showStudentInfo(info);
-			}
+			},
+			error: (r) => apiError("Impossible de vérifier l'étudiant.")
 		});
 	}
 
@@ -63,7 +68,8 @@ frappe.ready(() => {
 			args: { matricule },
 			callback: (r) => {
 				renderReinscriptions(r.message || []);
-			}
+			},
+			error: () => apiError("Impossible de charger les réinscriptions.")
 		});
 	}
 
@@ -129,6 +135,10 @@ frappe.ready(() => {
 					if (!r.message) return;
 					body.html(historiqueHtml(r.message)).slideDown();
 					el.text("Masquer l'historique");
+				},
+				error: () => {
+					apiError("Impossible de charger l'historique.");
+					el.text("Voir l'historique");
 				}
 			});
 		});

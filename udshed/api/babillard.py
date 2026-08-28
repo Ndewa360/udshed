@@ -428,6 +428,14 @@ def consulter_notes(niveau=None, matricule=None, academic_year=None, semestre=No
 	if not matricule:
 		return _erreur(_("Veuillez saisir le matricule de l'étudiant."))
 
+	try:
+		return _consulter_notes_impl(niveau, matricule, academic_year, semestre)
+	except Exception:
+		frappe.log_error(" babillard consulter_notes")
+		return _erreur(_("Une erreur est survenue. Veuillez réessayer plus tard."))
+
+
+def _consulter_notes_impl(niveau, matricule, academic_year, semestre):
 	year = (academic_year or "").strip() or _get_current_academic_year()
 	if not frappe.db.exists("Academic Year", year):
 		return _erreur(_("L'année académique « {0} » est introuvable.").format(year))

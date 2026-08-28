@@ -9,6 +9,14 @@ import udshed.utils.time_utils as time_utils
 
 @frappe.whitelist()
 def get_week_planning(academic_year,week_start,filiere=None, niveau=None,teacher=None):
+    try:
+        return _get_week_planning_impl(academic_year,week_start,filiere,niveau,teacher)
+    except Exception:
+        frappe.log_error(" planning_calendar get_week_planning")
+        frappe.throw(_("Erreur lors du chargement du planning."))
+
+
+def _get_week_planning_impl(academic_year,week_start,filiere=None, niveau=None,teacher=None):
     PlanningItem = DocType("Planning Item")
     TeachingUnit = DocType("Teaching Unit")
     CourseNiveauFiliere = DocType("Course Field of study level item")
@@ -249,24 +257,33 @@ def update_planning(planning_item_name,academic_year,cours,course_type, day_of_w
 
 @frappe.whitelist()
 def delete_planning(planning_name):
-    frappe.delete_doc("Planning Item",planning_name)
+    try:
+        frappe.delete_doc("Planning Item",planning_name)
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(" planning_calendar delete_planning")
+        frappe.throw(_("Erreur lors de la suppression du planning."))
     return True
 
 @frappe.whitelist()
 def get_planning_type(field_of_study_level,week_start,academic_year):
-    week_start_date = datetime.strptime(week_start, "%Y-%m-%d")
+    try:
+        week_start_date = datetime.strptime(week_start, "%Y-%m-%d")
 
-    session_exam = frappe.get_all("Session Examen", filters=[
-            ["academic_year", "=", academic_year], 
-            ["date_debut", "<=",    week_start_date], 
-            ["date_de_fin", ">=", week_start_date],
-            ["Session Examen Field of study Level", "niveau", "=", field_of_study_level]
-        ],
-        fields = ["name", "calendar"],
-        distinct = True,
-    )
+        session_exam = frappe.get_all("Session Examen", filters=[
+                ["academic_year", "=", academic_year], 
+                ["date_debut", "<=",    week_start_date], 
+                ["date_de_fin", ">=", week_start_date],
+                ["Session Examen Field of study Level", "niveau", "=", field_of_study_level]
+            ],
+            fields = ["name", "calendar"],
+            distinct = True,
+        )
 
-    if len(session_exam) > 0:
-        return "Examen"
-    return "Cours"
+        if len(session_exam) > 0:
+            return "Examen"
+        return "Cours"
+    except Exception:
+        frappe.log_error(" planning_calendar get_planning_type")
+        frappe.throw(_("Erreur lors de la détermination du type de planning."))
 

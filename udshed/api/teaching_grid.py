@@ -11,6 +11,14 @@ import udshed.api.course as cours_api
 
 @frappe.whitelist()
 def get_academic_teaching_unit(academic_year,faculty,filiere,niveau,semestre):
+    try:
+        return _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semestre)
+    except Exception:
+        frappe.log_error(" teaching_grid get_academic_teaching_unit")
+        frappe.throw(_("Erreur lors du chargement de la grille pédagogique."))
+
+
+def _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semestre):
     TeachingUnit = DocType("Teaching Unit")
     TeachingUnitValue = DocType("Teaching Unit Value")
     Course = DocType("Course")
