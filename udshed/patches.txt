@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 udshed.patches.ajout_lien_saisie_notes
 udshed.patches.remplacer_grille_officielle
+udshed.patches.filigrane_logo_impressions

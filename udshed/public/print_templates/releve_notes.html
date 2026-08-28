@@ -13,7 +13,21 @@
         padding: 0;
     }
 
+    .wm-logo {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-28deg);
+        opacity: 0.06;
+        z-index: 0;
+        pointer-events: none;
+    }
+    .wm-logo img {
+        width: 170mm;
+    }
     .transcript {
+        position: relative;
+        z-index: 1;
         max-width: 210mm;
         margin: 0 auto;
         padding: 0;
@@ -437,6 +451,10 @@
         }
     }
 </style>
+
+<div class="wm-logo">
+    <img src="{{ data.logo_file }}" alt="">
+</div>
 
 <div class="transcript">
     {#

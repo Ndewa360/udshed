@@ -242,6 +242,8 @@ def _contexte(academic_year, filiere, niveau, semestre):
         "semestre": semestre,
         "school_name": settings.school_name or "",
         "school_logo": settings.school_logo or "",
+        "logo_file": "file://"
+        + frappe.get_app_path("udshed", "public", "images", "logo.png"),
         "date_emission": frappe.utils.today(),
         "reference_no": "PV-{0}-{1}-{2}".format(
             filiere.replace("/", "-"),

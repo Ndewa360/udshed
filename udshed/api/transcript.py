@@ -192,6 +192,8 @@ def get_transcript_data(doc):
         "grade_scale": grade_scale,
         "school_name": settings.school_name or "",
         "school_logo": settings.school_logo or "",
+        "logo_file": "file://"
+        + frappe.get_app_path("udshed", "public", "images", "logo.png"),
         "prev_mpc": prev_mpc,
         "prev_credits": prev_credits,
         "overall_decision": overall_decision,

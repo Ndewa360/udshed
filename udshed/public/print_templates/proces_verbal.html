@@ -3,6 +3,7 @@
 {% set etudiants = data.etudiants %}
 {% set stats = data.statistiques %}
 {% set logo_url = ctx.school_logo %}
+{% set logo_file = ctx.logo_file %}
 {% set nb_ues = ues | length %}
 {% set mentions_finales = {} %}
 {% for et_m in etudiants %}
@@ -226,14 +227,26 @@
     }
 
     /* ---- Signatures ---- */
+    .signatures-title {
+        text-align: center;
+        font-size: 7.5pt;
+        font-weight: 700;
+        color: #1a5276;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 14px 0 2px 0;
+        border-bottom: 1px solid #1a5276;
+        padding-bottom: 2px;
+    }
     .signatures {
         display: flex;
         justify-content: space-between;
-        margin-top: 22px;
+        margin-top: 6px;
     }
     .signatures .sig-box {
         text-align: center;
         min-width: 110px;
+        flex: 1;
     }
     .signatures .sig-box .sig-line {
         border-top: 1px solid #1c2333;
@@ -247,9 +260,9 @@
 </style>
 </head>
 <body>
-    {% if logo_url %}
+    {% if logo_file %}
     <div class="watermark">
-        <img src="{{ frappe.utils.get_url(logo_url) }}" alt="">
+        <img src="{{ logo_file }}" alt="">
     </div>
     {% endif %}
 
@@ -369,6 +382,7 @@
         </table>
 
         {# ---------------- SIGNATURES ---------------- #}
+        <div class="signatures-title">{{ _("Espace Signature") }}</div>
         <div class="signatures">
             <div class="sig-box">
                 <div class="sig-line"></div>
@@ -376,7 +390,7 @@
             </div>
             <div class="sig-box">
                 <div class="sig-line"></div>
-                <div class="sig-label">{{ _("Le Secrétaire de délibération") }}</div>
+                <div class="sig-label">{{ _("Le Responsable Académique") }}</div>
             </div>
             <div class="sig-box">
                 <div class="sig-line"></div>
