@@ -9,7 +9,11 @@ from frappe import _
 @frappe.whitelist(allow_guest=True)
 def get_open_session():
 	"""Retourne la session ouverte s'il en existe une"""
-	return frappe.db.exists("Session Inscription", {"status": "Open"})
+	session = frappe.db.exists("Session Inscription", {"status": "Open"})
+	if not session:
+		return None
+	route = frappe.db.get_value("Web Form", {"doc_type": "Session Inscription Candidate", "published": 1}, "route")
+	return {"name": session, "route": route}
 
 
 class SessionInscription(Document):

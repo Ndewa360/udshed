@@ -146,7 +146,7 @@ function calculer_niveau_precedent_js(frm, callback) {
 // Charger les matières du niveau précédent
 // =============================================
 function charger_matieres_precedentes(frm) {
-	if (!frm.doc.filiere || !frm.doc.niveau || !frm.doc.academic_year) return;
+	if (!frm.doc.filiere || !frm.doc.niveau || !frm.doc.academic_year || !frm.doc.reinscription_session) return;
 
 	// Récupérer la note minimale depuis la session
 	let note_minimale = 10;

@@ -17,7 +17,7 @@ def get_context(context):
 	return context
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def verify_student(matricule):
 	"""Identifie un ancien étudiant par son matricule et prépare sa réinscription.
 
