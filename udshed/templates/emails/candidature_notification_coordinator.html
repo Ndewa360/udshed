@@ -1,0 +1,76 @@
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; border-radius: 12px; overflow: hidden; border: 1px solid #e2e4e9;">
+
+  <!-- Header -->
+  <div style="background: #1e2025; padding: 28px; text-align: center;">
+    <h1 style="color: #ffffff; font-size: 18px; margin: 0; letter-spacing: -0.02em;">📋 Nouvelle candidature reçue</h1>
+    <p style="color: #9ca0a8; font-size: 12px; margin: 6px 0 0 0;">UDSHED — Notification automatique</p>
+  </div>
+
+  <!-- Body -->
+  <div style="padding: 28px; background: #ffffff;">
+
+    <!-- Dossier badge -->
+    <div style="background: #f5f6f8; border: 1px solid #e2e4e9; border-radius: 10px; padding: 16px; margin-bottom: 24px; text-align: center;">
+      <span style="display: block; color: #6b6d7a; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px;">Numéro de dossier</span>
+      <span style="display: block; color: #1e2025; font-size: 22px; font-weight: bold; letter-spacing: 1px;">{{ doc_name }}</span>
+    </div>
+
+    <!-- Coordonnées du candidat -->
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+      <tr>
+        <td style="padding: 8px 0; color: #6b6d7a; font-size: 13px; width: 40%;">Nom complet</td>
+        <td style="padding: 8px 0; color: #1e2025; font-size: 14px; font-weight: 500;">{{ first_name }} {{ last_name }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; color: #6b6d7a; font-size: 13px;">Email</td>
+        <td style="padding: 8px 0; color: #1e2025; font-size: 14px;">{{ email }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; color: #6b6d7a; font-size: 13px;">Téléphone</td>
+        <td style="padding: 8px 0; color: #1e2025; font-size: 14px;">{{ phone }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; color: #6b6d7a; font-size: 13px;">Sexe</td>
+        <td style="padding: 8px 0; color: #1e2025; font-size: 14px;">{{ sexe }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; color: #6b6d7a; font-size: 13px;">Lieu de naissance</td>
+        <td style="padding: 8px 0; color: #1e2025; font-size: 14px;">{{ birth_place }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; color: #6b6d7a; font-size: 13px;">Centre d'examen</td>
+        <td style="padding: 8px 0; color: #1e2025; font-size: 14px;">{{ examination_centre }}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; color: #6b6d7a; font-size: 13px;">Niveau demandé</td>
+        <td style="padding: 8px 0; color: #1e2025; font-size: 14px;">{{ niveau }}</td>
+      </tr>
+      {% if filiere %}
+      <tr>
+        <td style="padding: 8px 0; color: #6b6d7a; font-size: 13px;">Filière</td>
+        <td style="padding: 8px 0; color: #1e2025; font-size: 14px;">{{ filiere }}</td>
+      </tr>
+      {% endif %}
+    </table>
+
+    {% if choix_text %}
+    <div style="margin-bottom: 20px;">
+      <span style="display: block; color: #6b6d7a; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Choix de formation</span>
+      <div style="color: #1e2025; font-size: 14px;">{{ choix_text }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Action -->
+    <div style="text-align: center; margin-top: 24px;">
+      <a href="/app/session-inscription-candidate/{{ doc_name }}" style="display: inline-block; background: #1e2025; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">Consulter le dossier</a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding: 16px 28px; background: #f5f6f8; border-top: 1px solid #e2e4e9; text-align: center;">
+    <p style="color: #9ca0a8; font-size: 12px; margin: 0;">
+      UDSHED — Plateforme de gestion des inscriptions académiques
+    </p>
+  </div>
+
+</div>

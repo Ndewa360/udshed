@@ -12,16 +12,39 @@ import contextlib
 
 import frappe
 
-from udshed.grade_calculation import SEUILS_DEFAUT
+from udshed.grade_calculation import GRILLE_OFFICIELLE
+
+from udshed.grade_calculation import SEUILS_DEFAUT, combinaison_detectee
 
 TYPE_NORMALE = "Examen de session normal"
 
-# Grille des grades alignée sur la configuration réelle de l'application.
-GRADES = [
-    {"note_min": 0, "note_max": 49.99, "grade": "F", "point": 0, "mention": ""},
-    {"note_min": 50, "note_max": 79.99, "grade": "C", "point": 2, "mention": "Passable"},
-    {"note_min": 80, "note_max": 100, "grade": "A", "point": 4, "mention": "Très bien"},
-]
+
+def _lignes_grille_officielle():
+    """Lignes « Grade Config » construites depuis la grille officielle du moteur.
+
+    Aucune grille locale : les tests utilisent exactement la même source de
+    vérité que l'application (``udshed.grade_calculation.GRILLE_OFFICIELLE``).
+    """
+    rows = []
+    for note_min_20, note_max_20, note_min_pct, note_max_pct, grade, point, mention in GRILLE_OFFICIELLE:
+        capitalise = note_min_20 >= 10.0
+        rows.append({
+            "note_min_20": note_min_20,
+            "note_max_20": note_max_20,
+            "note_min_100": note_min_pct,
+            "note_max_100": note_max_pct,
+            "note_min": note_min_pct,
+            "note_max": note_max_pct,
+            "grade": grade,
+            "point": point,
+            "mention": mention,
+            "type_resultat": (
+                "Crédits capitalisés et transférables"
+                if capitalise
+                else "Non capitalisé"
+            ),
+        })
+    return rows
 
 _COMPTEUR = {"n": 0}
 
@@ -198,6 +221,8 @@ def make_session_examen_note(
     note_cc=None,
     note_examen=None,
     note_tp=None,
+    note_cctp=None,
+    note_examtp=None,
     statut="Publié",
 ):
     doc = frappe.new_doc("Session Examen Note")
@@ -209,6 +234,8 @@ def make_session_examen_note(
         doc.append("notes_cc", {"cc_label": "CC 1", "cc_weight": 1, "note_cc": note_cc})
     doc.note_examen = note_examen
     doc.note_tp = note_tp
+    doc.note_cctp = note_cctp
+    doc.note_examtp = note_examtp
     doc.statut = statut
     doc.insert(ignore_permissions=True)
     return doc
@@ -280,8 +307,8 @@ def make_academic_reregistration(
 def seed_formule(cycle, composantes, pourcentages, seuil=None):
     """Crée (ou réutilise) une formule active pour un (cycle, combinaison).
 
-    La combinaison est déduite des composantes (pourcentage > 0), triées.
-    Le total des pourcentages doit être 100.
+    La combinaison est déduite des composantes (pourcentage > 0), dans
+    l'ordre canonique du moteur (identique à la Grade Formula).
 
     Exemple :
         seed_formule("BTS", ["Controle Continu(CC)", "Examen"], [40, 60])
@@ -295,7 +322,7 @@ def seed_formule(cycle, composantes, pourcentages, seuil=None):
     Returns:
         Document: Grade Formula active
     """
-    combinaison = " + ".join(sorted(composantes))
+    combinaison = combinaison_detectee(composantes)
     active = frappe.db.get_value(
         "Grade Formula",
         {"cycle": cycle, "combinaison": combinaison, "active": 1},
@@ -353,10 +380,10 @@ def seed_grade_formula(cycle, cc=30, examen=50, tp=20, seuil=None):
 
 
 def seed_grille_grades():
-    """Renseigne la grille des grades dans Udshed Setting."""
+    """Renseigne la grille des grades dans Udshed Setting (grille officielle)."""
     setting = frappe.get_single("Udshed Setting")
     setting.set("grille_grades", [])
-    for row in GRADES:
+    for row in _lignes_grille_officielle():
         setting.append("grille_grades", dict(row))
     setting.save(ignore_permissions=True)
     return setting

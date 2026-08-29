@@ -12,18 +12,15 @@ class Student(Document):
 		self.nom_complet = f"{self.matricule or ''} - {self.nom or ''} {self.prenom or ''}".strip()
 
 	def determiner_cycle(self):
-		if not self.niveau:
+		niveau = self.niveau_actuel
+		if not niveau:
 			return
 
-		level = frappe.db.get_value("Field of study Level", self.niveau, "level")
-		if not level:
-			return
-
-		if level.startswith("Licence"):
+		if niveau.startswith("Licence"):
 			self.cycle = "Licence"
-		elif level.startswith("Master"):
+		elif niveau.startswith("Master"):
 			self.cycle = "Master"
-		elif level.startswith("BTS"):
+		elif niveau.startswith("BTS"):
 			self.cycle = "BTS"
 		else:
 			self.cycle = "Licence"

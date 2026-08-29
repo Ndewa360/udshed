@@ -11,6 +11,11 @@
   "school_name",
   "school_logo",
   "section_break_bsrn",
+  "section_break_emails",
+  "email_coordinateur",
+  "column_break_emails",
+  "email_candidature_sender_name",
+  "email_candidature_subject",
   "configuration_des_paiements_par_grade",
   "tab_2_tab",
   "seuil_validation_licence",
@@ -56,10 +61,38 @@
   },
   {
    "fieldname": "section_break_bsrn",
-   "fieldtype": "Section Break"
+    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "configuration_des_paiements_par_grade",
+    "fieldname": "section_break_emails",
+    "fieldtype": "Section Break",
+    "label": "Notifications par email"
+  },
+  {
+    "fieldname": "email_coordinateur",
+    "fieldtype": "Data",
+    "label": "Email du coordonnateur",
+    "options": "Email",
+    "description": "Adresse email de notification pour les nouvelles candidatures"
+  },
+  {
+    "fieldname": "email_candidature_sender_name",
+    "fieldtype": "Data",
+    "label": "Nom de l'expéditeur",
+    "default": "UDSHED"
+  },
+  {
+    "fieldname": "column_break_emails",
+    "fieldtype": "Column Break"
+  },
+  {
+    "fieldname": "email_candidature_subject",
+    "fieldtype": "Data",
+    "label": "Objet de l'email candidat",
+    "default": "Accusé de réception de votre candidature - UDSHED"
+  },
+  {
+    "fieldname": "configuration_des_paiements_par_grade",
    "fieldtype": "Table",
    "label": "Configuration des paiements par grade",
    "options": "Financial Payment Grade Config"
@@ -79,10 +112,11 @@
    "fieldname": "methode_calcul_cc",
    "fieldtype": "Select",
    "label": "Méthode de calcul de la moyenne CC",
-   "options": "Moyenne arithmétique\nMoyenne pondérée\nMoyenne des N meilleures notes"
+   "options": "Moyenne arithmétique\nMoyenne des N meilleures notes"
   },
   {
    "default": "2",
+   "depends_on": "eval:doc.methode_calcul_cc=='Moyenne des N meilleures notes'",
    "fieldname": "nb_meilleures_notes_cc",
    "fieldtype": "Int",
    "label": "Nombre de meilleures notes CC (N)",

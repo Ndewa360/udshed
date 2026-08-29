@@ -26,9 +26,18 @@ class ResultatSemestre(Document):
 
         setting = frappe.get_single("Udshed Setting")
         for g in setting.grille_grades:
-            if g.note_min <= self.mps <= g.note_max:
-                self.mention = g.mention
-                return
+            note_min = g.get("note_min_100")
+            if note_min is None:
+                note_min = g.get("note_min") or 0
+            note_max = g.get("note_max_100")
+            if note_max is None:
+                note_max = g.get("note_max") or 0
+            try:
+                if note_min <= self.mps <= note_max:
+                    self.mention = g.mention
+                    return
+            except TypeError:
+                continue
 
         self.mention = ""
 

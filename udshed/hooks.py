@@ -5,6 +5,9 @@ app_description = "Outils de planification des cours"
 app_email = "c.nguendap@ndewa-360.com"
 app_license = "mit"
 
+# App logo for login page and navbar
+app_logo_url = ["/assets/udshed/images/logo1.png"]
+
 # Apps
 # ------------------
 
@@ -25,6 +28,18 @@ add_to_apps_screen = [
 	}
 ]
 
+role_home_page = {
+	"System Manager": "/desk",
+	"Workspace Manager": "/desk",
+	"Script Manager": "/desk",
+	"Coordinator": "/desk",
+	"Teacher": "/desk",
+	"Planning Manager": "/desk",
+	"Registration Manager": "/desk",
+	"Udshed Financial Admin": "/desk",
+	"Comptable": "/desk",
+	"Agent de scolarité": "/desk",
+}
 
 
 #Fixutres
@@ -286,6 +301,9 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Website redirects
 # -----------------
+# /login → Frappe login (desk / personnel administratif).
+# /connexion-etudiant → portail de connexion par matricule pour les étudiants.
+# Aucune redirection automatique entre les deux.
 
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs

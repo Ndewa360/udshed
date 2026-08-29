@@ -18,7 +18,12 @@ class ResultatAcademique(Document):
         if not self.is_new():
             self._declencher_mps_mpc()
 
-    def _declencher_mps_mpc(self):
+    def on_trash(self):
+        # on_trash s'exécute AVANT la suppression effective en base : on exclut
+        # cette UE pour ne pas la compter dans la MPS encore existante.
+        self._declencher_mps_mpc(teaching_unit_a_exclure=self.teaching_unit)
+
+    def _declencher_mps_mpc(self, teaching_unit_a_exclure=None):
         """Recalcule MPS/MPC uniquement si les données clés ont changé.
 
         On évite la boucle infinie : ResultatAcademique.save() -> calculer_et_sauvegarder_mps_mpc
@@ -31,7 +36,8 @@ class ResultatAcademique(Document):
             return
         from udshed.api.resultat_academique import calculer_et_sauvegarder_mps_mpc
         calculer_et_sauvegarder_mps_mpc(
-            self.student, self.semestre, self.academic_year
+            self.student, self.semestre, self.academic_year,
+            teaching_unit_a_exclure=teaching_unit_a_exclure,
         )
 
     def remplir_noms(self):
@@ -63,16 +69,15 @@ class ResultatAcademique(Document):
             self.statut_color = "red"
 
     def determiner_grade_et_mention(self):
-        setting = frappe.get_single("Udshed Setting")
+        from udshed.grade_calculation import get_grade_info
 
-        for g in setting.grille_grades:
-            if g.note_min <= self.note_pct <= g.note_max:
-                self.grade = g.grade
-                self.point = g.point
-                self.mention = g.mention
-                return
+        info = get_grade_info(self.note_pct, echelle=100)
+        if not info:
+            frappe.throw(
+                f"Aucun grade trouvé pour la note <b>{self.note_pct}%</b>. "
+                f"Vérifiez la grille des grades dans Udshed Setting"
+            )
 
-        frappe.throw(
-            f"Aucun grade trouvé pour la note <b>{self.note_pct}%</b>. "
-            f"Vérifiez la grille des grades dans Udshed Setting"
-        )
+        self.grade = info["grade"]
+        self.point = info["point"]
+        self.mention = info["mention"]

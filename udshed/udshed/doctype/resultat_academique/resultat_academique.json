@@ -138,10 +138,21 @@
   },
   {
    "fieldname": "mention",
-   "fieldtype": "Select",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Mention",
-   "options": "\nHonorable\nExcellent\nTr\u00e8s bien\nBien\nAssez-bien\nPassable\nAvertissement",
+   "read_only": 1
+  },
+  {
+   "fieldname": "type_resultat",
+   "fieldtype": "Data",
+   "label": "Type de résultat",
+   "read_only": 1
+  },
+  {
+   "fieldname": "capitalise",
+   "fieldtype": "Check",
+   "label": "Crédits capitalisés",
    "read_only": 1
   },
   {
