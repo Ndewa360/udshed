@@ -1,16 +1,15 @@
 <style>
     @page {
         size: A4;
-        margin: 15mm 15mm 20mm 15mm;
+        margin: 12mm 14mm 14mm 14mm;
     }
 
     body {
-        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-        font-size: 9pt;
-        line-height: 1.4;
-        color: #2c3e50;
+        font-family: "Times New Roman", Times, serif;
+        color: #111;
         margin: 0;
         padding: 0;
+        font-size: 10pt;
     }
 
     .wm-logo {
@@ -25,430 +24,279 @@
     .wm-logo img {
         width: 170mm;
     }
+
     .transcript {
         position: relative;
         z-index: 1;
         max-width: 210mm;
         margin: 0 auto;
-        padding: 0;
     }
 
-    /* ---- Header ---- */
+    /* ---------- En-tête ---------- */
     .header {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        padding: 12px 0;
-        border-bottom: 3px solid #1a5276;
-        margin-bottom: 0;
+        align-items: center;
+        min-height: 60px;
     }
 
-    .header .logo-box {
-        width: 80px;
-        height: 80px;
+    .university-logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .logo-symbol {
+        width: 55px;
+        height: 55px;
+        border: 3px solid #777;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-    }
-
-    .header .logo-box img {
-        max-width: 80px;
-        max-height: 80px;
-    }
-
-    .header .title-area {
-        flex: 1;
-        text-align: center;
-        padding: 0 15px;
-    }
-
-    .header .title-area .school-name {
-        font-size: 11pt;
-        font-weight: 700;
-        color: #1a5276;
-        margin: 0 0 2px 0;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .header .title-area .dept-name {
-        font-size: 9pt;
-        color: #34495e;
-        margin: 0 0 4px 0;
-    }
-
-    .header .title-area .doc-title {
-        font-size: 13pt;
-        font-weight: 800;
-        color: #fff;
-        background: #1a5276;
-        display: inline-block;
-        padding: 4px 30px;
-        border-radius: 3px;
-        letter-spacing: 1px;
-        margin-top: 4px;
-    }
-
-    /* ---- Student Info Block ---- */
-    .info-block {
-        border: 1px solid #d5dbdb;
-        border-radius: 4px;
-        padding: 10px 14px;
-        margin: 12px 0;
-        background: #f8f9fa;
-    }
-
-    .info-block table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .info-block td {
-        padding: 2px 8px;
-        vertical-align: top;
-        font-size: 9pt;
-    }
-
-    .info-block .label {
-        font-weight: 600;
-        color: #1a5276;
-        width: 50%;
-        white-space: nowrap;
-    }
-
-    .info-block .value {
-        font-weight: 400;
-        color: #2c3e50;
-    }
-
-    .info-block .ref-box {
-        text-align: right;
-        font-size: 8pt;
-        color: #7f8c8d;
-        padding-top: 6px;
-        border-top: 1px dashed #d5dbdb;
-        margin-top: 6px;
-    }
-
-    /* ---- Section Titles ---- */
-    .section-title {
-        font-size: 10pt;
-        font-weight: 700;
-        color: #fff;
-        background: #1a5276;
-        padding: 4px 12px;
-        border-radius: 3px;
-        margin: 14px 0 8px 0;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .section-title .badge {
-        font-size: 8pt;
-        font-weight: 400;
-        background: rgba(255,255,255,0.2);
-        padding: 1px 8px;
-        border-radius: 10px;
-        margin-left: 8px;
-    }
-
-    .sub-section-title {
-        font-size: 9pt;
-        font-weight: 700;
-        color: #1a5276;
-        border-bottom: 1px solid #1a5276;
-        padding: 6px 0 2px 0;
-        margin: 10px 0 6px 0;
-    }
-
-    /* ---- Semester Box ---- */
-    .semester-box {
-        border: 1px solid #d5dbdb;
-        border-radius: 4px;
-        margin: 10px 0;
         overflow: hidden;
     }
+    .logo-symbol img {
+        max-width: 48px;
+        max-height: 48px;
+    }
+    .logo-symbol .logo-letter {
+        font-size: 28pt;
+        font-weight: bold;
+        color: #356b50;
+    }
 
-    .semester-box .sem-header {
-        background: #1a5276;
-        color: #fff;
-        padding: 6px 12px;
-        font-size: 9pt;
-        font-weight: 700;
+    .university-name {
+        font-size: 13pt;
+        line-height: 1.1;
+    }
+
+    .institution {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        font-size: 12pt;
+        line-height: 1.4;
+    }
+
+    .separator {
+        border-top: 2px solid #222;
+        margin: 10px 0 12px;
+    }
+
+    /* ---------- Titre ---------- */
+    .document-title {
+        height: 30px;
+        background: #75b58c;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 15pt;
+        margin-bottom: 16px;
+    }
+    .document-title span {
+        color: #092a68;
+        font-weight: bold;
+    }
+    .document-title em {
+        color: #d72d27;
+        margin-left: 5px;
+    }
+
+    /* ---------- Informations étudiant ---------- */
+    .student-info {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-    }
-
-    .semester-box .sem-header .sem-stat {
-        font-size: 8pt;
-        font-weight: 400;
-    }
-
-    /* ---- Data Tables ---- */
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 8.5pt;
-    }
-
-    .data-table th {
-        background: #eaf2f8;
-        color: #1a5276;
-        font-weight: 600;
-        padding: 5px 6px;
-        text-align: left;
-        border-bottom: 2px solid #1a5276;
-        font-size: 8pt;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-    }
-
-    .data-table td {
-        padding: 4px 6px;
-        border-bottom: 1px solid #eef2f7;
-        vertical-align: middle;
-    }
-
-    .data-table tr:nth-child(even) {
-        background: #fafbfc;
-    }
-
-    .data-table tr:hover {
-        background: #f0f5fa;
-    }
-
-    .data-table .text-center {
-        text-align: center;
-    }
-
-    .data-table .text-right {
-        text-align: right;
-    }
-
-    .data-table .ue-code {
-        font-weight: 600;
-        color: #1a5276;
-        width: 80px;
-    }
-
-    .data-table .ue-name {
-        min-width: 180px;
-    }
-
-    .data-table .grade-badge {
-        display: inline-block;
-        padding: 1px 8px;
-        border-radius: 3px;
-        font-weight: 600;
-        font-size: 8pt;
-    }
-
-    .data-table .grade-valide {
-        background: #d5f5e3;
-        color: #1e8449;
-    }
-
-    .data-table .grade-non-valide {
-        background: #fadbd8;
-        color: #c0392b;
-    }
-
-    .data-table .grade-rattrapage {
-        background: #fdebd0;
-        color: #ca6f1e;
-    }
-
-    /* ---- Recap Row ---- */
-    .recap-row {
-        background: #f0f5fa;
-        border-top: 2px solid #1a5276;
-    }
-
-    .recap-row td {
-        font-weight: 600;
-        padding: 5px 6px;
-    }
-
-    .recap-row .recap-label {
-        color: #1a5276;
-    }
-
-    .recap-row .recap-value {
-        color: #2c3e50;
-    }
-
-    /* ---- Backlog ---- */
-    .backlog-box {
-        background: #fff9f0;
-        border-left: 3px solid #e67e22;
-        padding: 6px 10px;
-        margin: 6px 0;
-        border-radius: 2px;
-    }
-
-    .backlog-box .backlog-title {
-        font-weight: 600;
-        color: #e67e22;
-        font-size: 8pt;
-        text-transform: uppercase;
-        margin-bottom: 4px;
-    }
-
-    /* ---- Bilan Global ---- */
-    .bilan-box {
-        border: 2px solid #1a5276;
-        border-radius: 4px;
-        padding: 10px 14px;
-        margin: 12px 0;
-        background: #f8f9fa;
-    }
-
-    .bilan-box .bilan-title {
+        gap: 30px;
         font-size: 10pt;
-        font-weight: 700;
-        color: #1a5276;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-        text-align: center;
+        margin-bottom: 14px;
     }
 
-    .bilan-box table {
-        width: 100%;
-        border-collapse: collapse;
+    .info-column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
     }
 
-    .bilan-box td {
-        padding: 4px 10px;
+    .info-row {
+        display: flex;
+        gap: 10px;
+    }
+    .info-row label {
+        white-space: nowrap;
+        min-width: 150px;
+    }
+    .info-row .en {
+        font-style: italic;
         font-size: 9pt;
     }
-
-    .bilan-box .bilan-label {
-        font-weight: 600;
-        color: #34495e;
-        width: 50%;
+    .info-row strong {
+        font-weight: bold;
     }
 
-    .bilan-box .bilan-value {
-        font-weight: 700;
-        color: #1a5276;
-    }
-
-    .bilan-box .decision-box {
+    /* ---------- Récapitulatif général ---------- */
+    .global-summary h3 {
         text-align: center;
-        margin-top: 8px;
-        padding: 6px;
-        background: #1a5276;
-        color: #fff;
         font-size: 11pt;
-        font-weight: 800;
-        border-radius: 3px;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-    }
-
-    /* ---- Grade Equivalence Table ---- */
-    .grade-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 7.5pt;
         margin: 8px 0;
     }
 
-    .grade-table th {
-        background: #1a5276;
-        color: #fff;
-        font-weight: 600;
-        padding: 3px 4px;
-        text-align: center;
-        font-size: 7pt;
-        text-transform: uppercase;
-    }
-
-    .grade-table td {
-        padding: 2px 4px;
-        text-align: center;
-        border: 1px solid #d5dbdb;
-    }
-
-    .grade-table .grade-label {
-        font-weight: 700;
-        color: #1a5276;
-    }
-
-    .grade-table .grade-point {
-        font-weight: 400;
-        color: #2c3e50;
-    }
-
-    /* ---- Footer ---- */
-    .footer {
-        margin-top: 20px;
-        border-top: 2px solid #1a5276;
-        padding-top: 10px;
-    }
-
-    .footer .signature-area {
+    .summary-line {
         display: flex;
         justify-content: space-between;
+        font-size: 10pt;
         margin-bottom: 12px;
     }
+    .summary-line strong {
+        margin-left: 8px;
+    }
 
-    .footer .signature-area .sig-box {
+    /* ---------- Semestre ---------- */
+    .semester {
+        margin-top: 14px;
+    }
+
+    .semester-title {
         text-align: center;
-        min-width: 150px;
+        font-size: 11.5pt;
+        padding: 3px;
+        border: 1px solid #bbb;
+        border-bottom: none;
     }
 
-    .footer .signature-area .sig-box .sig-line {
-        border-top: 1px solid #2c3e50;
-        width: 150px;
-        margin: 30px auto 4px auto;
+    .grades-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9.5pt;
+    }
+    .grades-table th,
+    .grades-table td {
+        border: 1px solid #b8b8b8;
+        padding: 4px 6px;
+    }
+    .grades-table th {
+        text-align: center;
+        font-weight: normal;
+        background: #fafafa;
+    }
+    .grades-table th i {
+        font-size: 8.5pt;
+    }
+    .grades-table td:first-child {
+        width: 12%;
+    }
+    .grades-table td:nth-child(2) {
+        width: 44%;
+    }
+    .grades-table td:nth-child(3),
+    .grades-table td:nth-child(4),
+    .grades-table td:nth-child(5),
+    .grades-table td:nth-child(6) {
+        text-align: center;
+    }
+    .grades-table .rattrapage {
+        color: #c0392b;
+        font-weight: bold;
     }
 
-    .footer .signature-area .sig-box .sig-label {
-        font-size: 8pt;
-        color: #7f8c8d;
+    /* ---------- Récapitulatif semestre ---------- */
+    .semester-summary {
+        margin-top: 8px;
+    }
+    .semester-summary h4 {
+        text-align: center;
+        font-size: 10.5pt;
+        margin: 4px 0 6px;
+    }
+    .summary-grid {
+        display: flex;
+        justify-content: space-between;
+        font-size: 9.5pt;
+    }
+    .summary-grid p {
+        margin: 2px 0;
     }
 
-    .footer .contact-info {
+    /* ---------- Décision ---------- */
+    .decision {
+        width: 70%;
+        margin: 14px auto 16px;
+        font-size: 11pt;
+    }
+    .decision div {
+        display: flex;
+        justify-content: space-between;
+        margin: 4px 0;
+    }
+    .decision span {
+        font-weight: bold;
+    }
+
+    /* ---------- Échelle des notes ---------- */
+    .grading-scale {
+        width: 34%;
         font-size: 7.5pt;
-        color: #7f8c8d;
+        margin-top: 8px;
+    }
+    .grading-scale h4 {
         text-align: center;
+        margin: 0;
+        background: #111;
+        color: #fff;
+        padding: 2px;
+        font-size: 8pt;
+    }
+    .grading-scale table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .grading-scale td,
+    .grading-scale th {
+        border: 1px solid #aaa;
+        text-align: center;
+        padding: 1.5px 2px;
+    }
+
+    /* ---------- Signature ---------- */
+    .signature {
+        margin-top: 35px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 40px;
+        font-size: 10.5pt;
+    }
+    .date {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .signature-box {
+        width: 180px;
+        text-align: center;
+    }
+    .signature-box span {
+        display: block;
+        margin-bottom: 28px;
+    }
+    .signature-line {
+        border-top: 1px solid #333;
+    }
+
+    /* ---------- Pied de page ---------- */
+    .footer {
+        border-top: 2px solid #222;
+        margin-top: 20px;
         padding-top: 6px;
-        border-top: 1px solid #eef2f7;
+        text-align: center;
+        font-size: 8pt;
     }
 
-    .footer .ref-footer {
-        font-size: 7pt;
-        color: #bdc3c7;
-        text-align: right;
-        margin-top: 4px;
-    }
-
-    /* ---- Page Break ---- */
-    .page-break {
-        page-break-before: always;
-    }
-
-    /* ---- Empty State ---- */
     .empty-state {
         text-align: center;
-        padding: 30px;
+        padding: 25px;
         color: #95a5a6;
         font-size: 10pt;
-    }
-
-    /* ---- Print Adjustments ---- */
-    @media print {
-        .transcript {
-            max-width: 100%;
-        }
-        .data-table tr:nth-child(even) {
-            background: #fafbfc;
-        }
-        .data-table tr:hover {
-            background: none;
-        }
     }
 </style>
 
@@ -458,366 +306,326 @@
 
 <div class="transcript">
     {#
-        Document variables (from doc — Student):
-          doc.name, doc.matricule, doc.nom, doc.prenom,
-          doc.birth_date, doc.birth_place, doc.filiere, doc.niveau_actuel
-
-        Extended data (from get_transcript_data — available in `data`):
-          data.semesters[]          — list of semester objects
-          data.grade_scale[]        — grade equivalence table
-          data.student              — enriched student info
-          data.school_name          — from Udshed Setting
-          data.school_logo          — from Udshed Setting (file URL)
-          data.total_credits        — sum of all semester credits
-          data.total_credits_obtenus — validated credits
-          data.pct_validation       — % of credits validated
-          data.overall_decision     — final decision
-          data.reference_no         — document reference
-          data.date_emission        — issuance date
-          data.filiere_name         — field of study label
-          data.niveau_label         — current level label
-          data.cycle                — Licence / Master
+        Données (get_transcript_data — disponibles dans `data`) :
+          data.semesters[]            — semestres (ues, mps/mpc %, mps/mpc sur 4, crédits)
+          data.grade_scale[]          — grille d'équivalence des grades
+          data.student                — matricule, nom, prenom, birth_date, birth_place
+          data.school_name / data.school_logo
+          data.total_credits / data.total_credits_obtenus / data.pct_validation
+          data.cumulative_gpa         — MPC cumulée sur 4
+          data.highest_gpa            — meilleure MPS sur 4 du cycle
+          data.profil                 — dernière mention connue
+          data.overall_decision       — décision finale
+          data.reference_no / data.date_emission
+          data.filiere_name / data.niveau_label / data.cycle
     #}
 
-    {# ─────────────────────────────── #}
-    {#  HEADER                         #}
-    {# ─────────────────────────────── #}
+    {# ─────────────── EN-TÊTE ─────────────── #}
     <div class="header">
-        <div class="logo-box">
-            {% if data.school_logo %}
-                <img src="{{ data.school_logo }}" alt="Logo">
-            {% else %}
-                <div style="width:80px;height:80px;background:#eef2f7;border-radius:50%;"></div>
-            {% endif %}
-        </div>
-
-        <div class="title-area">
-            <div class="school-name">{{ data.school_name or _("UNIVERSITY") }}</div>
-            <div class="dept-name">{{ _("Faculty / Institute") }}</div>
-            <div class="doc-title">{{ _("RELEVÉ DE NOTES") }} / TRANSCRIPT</div>
-        </div>
-
-        <div class="logo-box">
-            <div style="width:80px;height:80px;background:#eef2f7;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7pt;color:#95a5a6;text-align:center;">
-                {{ _("Institut") }}
+        <div class="university-logo">
+            <div class="logo-symbol">
+                {% if data.school_logo %}
+                    <img src="{{ data.school_logo }}" alt="Logo">
+                {% else %}
+                    <span class="logo-letter">
+                        {{ (data.school_name or "U")[:1] | upper }}
+                    </span>
+                {% endif %}
             </div>
+            <div class="university-name">
+                <strong>{{ data.school_name or _("UNIVERSITÉ") }}</strong>
+            </div>
+        </div>
+
+        <div class="institution">
+            <strong>{{ data.school_name or _("UNIVERSITÉ") }}</strong>
         </div>
     </div>
 
-    {# ─────────────────────────────── #}
-    {#  STUDENT INFO BLOCK             #}
-    {# ─────────────────────────────── #}
-    <div class="info-block">
-        <table>
-            <tr>
-                <td class="label">{{ _("N° Matricule") }} :</td>
-                <td class="value">{{ data.student.matricule }}</td>
-                <td class="label">{{ _("Date de naissance") }} :</td>
-                <td class="value">
+    <div class="separator"></div>
+
+    {# ─────────────── TITRE ─────────────── #}
+    <div class="document-title">
+        <span>{{ _("RELEVÉ DE NOTES") }}</span>
+        <em>/ TRANSCRIPT</em>
+    </div>
+
+    {# ─────────────── INFORMATIONS ÉTUDIANT ─────────────── #}
+    <section class="student-info">
+        <div class="info-column">
+            <div class="info-row">
+                <label>
+                    {{ _("N° Matricule") }} /
+                    <span class="en">Registration Number:</span>
+                </label>
+                <strong>{{ data.student.matricule }}</strong>
+            </div>
+            <div class="info-row">
+                <label>
+                    {{ _("Nom(s) et Prénom(s)") }} /
+                    <span class="en">Name and surname:</span>
+                </label>
+                <strong>
+                    {{ (data.student.nom or "") | upper }} {{ data.student.prenom or "" }}
+                </strong>
+            </div>
+            <div class="info-row">
+                <label>
+                    {{ _("Né(e) le") }} /
+                    <span class="en">Born on:</span>
+                </label>
+                <strong>
                     {{ frappe.utils.formatdate(data.student.birth_date, "dd/mm/yyyy") if data.student.birth_date else "" }}
-                </td>
-            </tr>
-            <tr>
-                <td class="label">{{ _("Nom(s) et Prénom(s)") }} :</td>
-                <td class="value">
-                    {{ data.student.nom.upper() if data.student.nom else "" }}
-                    {{ data.student.prenom }}
-                </td>
-                <td class="label">{{ _("Diplôme préparé") }} :</td>
-                <td class="value">{{ data.cycle }}</td>
-            </tr>
-            <tr>
-                <td class="label">{{ _("Filière") }} :</td>
-                <td class="value">{{ data.filiere_name }}</td>
-                <td class="label">{{ _("Niveau") }} :</td>
-                <td class="value">{{ data.niveau_label }}</td>
-            </tr>
-            <tr>
-                <td class="label">{{ _("Année Académique") }} :</td>
-                <td class="value" colspan="3">
-                    {% if data.semesters %}
-                        {% set first_year = data.semesters | first %}
-                        {% set last_year = data.semesters | last %}
-                        {{ first_year.academic_year }}
-                        {% if first_year.academic_year != last_year.academic_year %}
-                            — {{ last_year.academic_year }}
-                        {% endif %}
-                    {% endif %}
-                </td>
-            </tr>
-        </table>
-        <div class="ref-box">
-            <strong>{{ _("N° Réf") }} :</strong> {{ data.reference_no }}
-            &nbsp;|&nbsp;
-            <strong>{{ _("Date d'émission") }} :</strong>
-            {{ frappe.utils.formatdate(data.date_emission, "dd/mm/yyyy") }}
-        </div>
-    </div>
-
-    {# ─────────────────────────────── #}
-    {#  PREVIOUS SEMESTER RECAP        #}
-    {# ─────────────────────────────── #}
-    {% if data.semesters and data.semesters | length > 0 and data.prev_credits > 0 %}
-        <div class="section-title">{{ _("Récapitulatif des Semestres Antérieurs") }}</div>
-        <table class="data-table">
-            <tr class="recap-row">
-                <td class="recap-label" style="width:50%;">{{ _("Crédits capitalisés") }} :</td>
-                <td class="recap-value" style="width:50%;">{{ data.prev_credits }}</td>
-            </tr>
-            <tr class="recap-row">
-                <td class="recap-label">{{ _("Moyenne Pondérée Cumulée (MPC)") }} :</td>
-                <td class="recap-value">{{ "%.2f" | format(data.prev_mpc) }} / 20</td>
-            </tr>
-        </table>
-    {% endif %}
-
-    {# ─────────────────────────────── #}
-    {#  PER SEMESTER                   #}
-    {# ─────────────────────────────── #}
-    {% for sem in data.semesters %}
-        <div class="semester-box">
-            <div class="sem-header">
-                <span>
-                    {{ sem.label }} — {{ sem.academic_year }}
-                    {% if sem.decision %}
-                        <span class="sem-stat">| {{ sem.decision }}</span>
-                    {% endif %}
-                </span>
-                <span class="sem-stat">
-                    {{ _("MPS") }} : {{ "%.2f" | format(sem.mps) if sem.mps is not none else "—" }}
-                    {% if sem.mpc is not none %}
-                        &nbsp;|&nbsp; {{ _("MPC") }} : {{ "%.2f" | format(sem.mpc) }}
-                    {% endif %}
-                </span>
+                </strong>
             </div>
+            <div class="info-row">
+                <label>
+                    {{ _("Diplôme préparé") }} /
+                    <span class="en">Degree:</span>
+                </label>
+                <strong>{{ data.cycle }} {{ data.filiere_name }}</strong>
+            </div>
+        </div>
 
-            {# ── UE Table ── #}
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th style="width:80px;">{{ _("Code UE") }}</th>
-                        <th>{{ _("Intitulé") }}</th>
-                        <th style="width:60px;" class="text-center">{{ _("Crédits") }}</th>
-                        <th style="width:70px;" class="text-center">{{ _("Note /20") }}</th>
-                        <th style="width:70px;" class="text-center">{{ _("Note %") }}</th>
-                        <th style="width:50px;" class="text-center">{{ _("Grade") }}</th>
-                        <th style="width:55px;" class="text-center">{{ _("Point") }}</th>
-                        <th style="width:70px;" class="text-center">{{ _("Session") }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for ue in sem.ues %}
-                    <tr>
-                        <td class="ue-code">{{ ue.code }}</td>
-                        <td class="ue-name">{{ ue.intitule }}</td>
-                        <td class="text-center">{{ ue.credits }}</td>
-                        <td class="text-center">{{ "%.2f" | format(ue.note_finale) if ue.note_finale is not none else "—" }}</td>
-                        <td class="text-center">
-                            {% if ue.note_pct is not none %}
-                                <span class="grade-badge {{ 'grade-valide' if ue.statut == 'Validé' else 'grade-non-valide' }}">
-                                    {{ "%.2f" | format(ue.note_pct) }}%
-                                </span>
+        <div class="info-column">
+            <div class="info-row">
+                <label>{{ _("N° RFE") }} :</label>
+                <strong>{{ data.reference_no }}</strong>
+            </div>
+            <div class="info-row">
+                <label>
+                    {{ _("à") }} /
+                    <span class="en">at:</span>
+                </label>
+                <strong>{{ data.student.birth_place or "" }}</strong>
+            </div>
+            <div class="info-row">
+                <label>
+                    {{ _("Niveau") }} /
+                    <span class="en">Level:</span>
+                </label>
+                <strong>{{ data.niveau_label }}</strong>
+            </div>
+            <div class="info-row">
+                <label>
+                    {{ _("Année Académique") }} /
+                    <span class="en">Academic Year:</span>
+                </label>
+                <strong>
+                    {% if data.semesters %}
+                        {{ (data.semesters | last).academic_year }}
+                    {% endif %}
+                </strong>
+            </div>
+        </div>
+    </section>
+
+    {% if data.semesters and data.semesters | length > 0 %}
+
+    {# ─────────────── RÉCAPITULATIF GÉNÉRAL ─────────────── #}
+    <section class="global-summary">
+        <h3>
+            {{ _("RÉCAPITULATIF SEMESTRE PAR") }} /
+            <i>SUMMARY TABLE FOR SEMESTER</i>
+        </h3>
+
+        <div class="summary-line">
+            <span>
+                {{ _("Total crédits capitalisés") }} /
+                <i>Total credits earned:</i>
+                <strong>{{ data.total_credits_obtenus }}</strong>
+            </span>
+            <span>
+                {{ _("Moyenne pondérée cumulée") }} /
+                <i>Cumulative GPA:</i>
+                <strong>
+                    {{ "%.2f" | format(data.cumulative_gpa) if data.cumulative_gpa is not none else "—" }}
+                </strong>
+            </span>
+        </div>
+    </section>
+
+    {# ─────────────── PAR SEMESTRE ─────────────── #}
+    {% for sem in data.semesters %}
+    <section class="semester">
+        <div class="semester-title">
+            {{ sem.label }} <i>/ {{ sem.label | replace("Semestre", "Semester") }}</i>
+            — {{ sem.academic_year }}
+        </div>
+
+        <table class="grades-table">
+            <thead>
+                <tr>
+                    <th>{{ _("Code UE") }}<br><i>Course code</i></th>
+                    <th>{{ _("Intitulé") }}<br><i>Course title</i></th>
+                    <th>{{ _("Crédits") }}<br><i>Credits</i></th>
+                    <th>{{ _("Note/100") }}<br><i>Mark/100</i></th>
+                    <th>{{ _("Grade") }}<br><i>Grade</i></th>
+                    <th>{{ _("Session") }}<br><i>Session</i></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ue in sem.ues %}
+                <tr>
+                    <td>{{ ue.code }}</td>
+                    <td>{{ ue.intitule }}</td>
+                    <td>{{ ue.credits }}</td>
+                    <td>
+                        {{ "%.2f" | format(ue.note_pct) if ue.note_pct is not none else "—" }}%
+                    </td>
+                    <td>{{ ue.grade }}</td>
+                    <td>
+                        {% if ue.est_rattrapage %}
+                            <span class="rattrapage">{{ ue.session }}</span>
+                        {% else %}
+                            {{ ue.session }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        {{ _("Aucune unité d'enseignement enregistrée.") }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="semester-summary">
+            <h4>
+                {{ _("RÉCAPITULATIF") }} {{ sem.label | upper }} /
+                <i>SUMMARY FOR {{ sem.label | replace("Semestre", "Semester") | upper }}</i>
+            </h4>
+
+            <div class="summary-grid">
+                <div>
+                    <p>
+                        {{ _("Crédits semestriels inscrits") }} :
+                        <strong>{{ sem.total_credits or 0 }}</strong>
+                    </p>
+                    <p>
+                        {{ _("Crédits semestriels validés") }} :
+                        <strong>{{ sem.credits_obtenus or 0 }}</strong>
+                    </p>
+                    <p>
+                        {{ _("Total crédits validés") }} :
+                        <strong>{{ sem.cum_credits_valides }}</strong>
+                    </p>
+                </div>
+                <div>
+                    <p>
+                        {{ _("Moyenne pondérée semestrielle") }} :
+                        <strong>
+                            {{ "%.2f" | format(sem.mps_sur_4) if sem.mps_sur_4 is not none else "—" }}
+                        </strong>
+                    </p>
+                    <p>
+                        {{ _("Meilleure MPS du cycle") }} /
+                        <i>Highest semester GPA:</i>
+                        <strong>
+                            {{ "%.2f" | format(sem.highest_gpa) if sem.highest_gpa is not none else "—" }}
+                        </strong>
+                    </p>
+                    <p>
+                        {{ _("Pourcentage de validation") }} :
+                        <strong>
+                            {% if sem.cum_credits_inscrits %}
+                                {{ "%.0f" | format(sem.cum_credits_valides * 100 / sem.cum_credits_inscrits) }}%
                             {% else %}
                                 —
                             {% endif %}
-                        </td>
-                        <td class="text-center">
-                            <strong>{{ ue.grade }}</strong>
-                        </td>
-                        <td class="text-center">{{ "%.2f" | format(ue.point) if ue.point is not none else "—" }}</td>
-                        <td class="text-center">
-                            {% if ue.est_rattrapage %}
-                                <span class="grade-badge grade-rattrapage">{{ ue.session }}</span>
-                            {% else %}
-                                {{ ue.session }}
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="8" class="empty-state">{{ _("Aucune unité d'enseignement enregistrée.") }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-
-            {# ── Backlogs ── #}
-            {% if sem.backlogs and sem.backlogs | length > 0 %}
-            <div class="backlog-box">
-                <div class="backlog-title">
-                    {{ _("Unités d'enseignement reprises / Backlogs") }}
-                    ({{ sem.backlogs | length }})
+                        </strong>
+                    </p>
                 </div>
-                <table class="data-table">
-                    <tr>
-                        <th style="width:80px;">{{ _("Code") }}</th>
-                        <th>{{ _("Intitulé") }}</th>
-                        <th style="width:50px;" class="text-center">{{ _("Crédits") }}</th>
-                        <th style="width:70px;" class="text-center">{{ _("Note %") }}</th>
-                        <th style="width:50px;" class="text-center">{{ _("Grade") }}</th>
-                    </tr>
-                    {% for bklg in sem.backlogs %}
-                    <tr>
-                        <td class="ue-code">{{ bklg.code }}</td>
-                        <td>{{ bklg.intitule }}</td>
-                        <td class="text-center">{{ bklg.credits }}</td>
-                        <td class="text-center">
-                            <span class="grade-badge grade-non-valide">
-                                {{ "%.2f" | format(bklg.note_pct) if bklg.note_pct is not none else "—" }}%
-                            </span>
-                        </td>
-                        <td class="text-center">{{ bklg.grade }}</td>
-                    </tr>
-                    {% endfor %}
-                </table>
             </div>
-            {% endif %}
-
-            {# ── Semester Recap ── #}
-            <table class="data-table">
-                <tr class="recap-row">
-                    <td class="recap-label" style="width:25%;">{{ _("Crédits inscrits") }} :</td>
-                    <td class="recap-value" style="width:25%;">{{ sem.total_credits or 0 }}</td>
-                    <td class="recap-label" style="width:25%;">{{ _("MPS") }} :</td>
-                    <td class="recap-value" style="width:25%;">
-                        {{ "%.2f" | format(sem.mps) if sem.mps is not none else "—" }} %
-                    </td>
-                </tr>
-                <tr class="recap-row">
-                    <td class="recap-label">{{ _("Crédits validés") }} :</td>
-                    <td class="recap-value">{{ sem.credits_obtenus or 0 }}</td>
-                    <td class="recap-label">{{ _("MPC") }} :</td>
-                    <td class="recap-value">
-                        {{ "%.2f" | format(sem.mpc) if sem.mpc is not none else "—" }} %
-                    </td>
-                </tr>
-                {% if sem.mention %}
-                <tr class="recap-row">
-                    <td class="recap-label">{{ _("Mention") }} :</td>
-                    <td class="recap-value">{{ sem.mention }}</td>
-                    <td colspan="2"></td>
-                </tr>
-                {% endif %}
-            </table>
         </div>
-    {% else %}
-        <div class="empty-state">
-            <p>{{ _("Aucun résultat de semestre disponible pour cet étudiant.") }}</p>
-        </div>
+    </section>
     {% endfor %}
 
-    {# ─────────────────────────────── #}
-    {#  BILAN GLOBAL                   #}
-    {# ─────────────────────────────── #}
-    {% if data.semesters and data.semesters | length > 0 %}
-    <div class="bilan-box">
-        <div class="bilan-title">{{ _("Bilan Global") }}</div>
-
-        <table>
-            <tr>
-                <td class="bilan-label">{{ _("Total des crédits inscrits") }} :</td>
-                <td class="bilan-value text-center">{{ data.total_credits }}</td>
-                <td class="bilan-label">{{ _("Total des crédits validés") }} :</td>
-                <td class="bilan-value text-center">{{ data.total_credits_obtenus }}</td>
-            </tr>
-            <tr>
-                <td class="bilan-label">{{ _("Pourcentage de validation") }} :</td>
-                <td class="bilan-value text-center">{{ "%.2f" | format(data.pct_validation) }}%</td>
-                <td class="bilan-label">{{ _("MPC Globale") }} :</td>
-                <td class="bilan-value text-center">
-                    {{ "%.2f" | format(data.semesters[-1].mpc) if data.semesters[-1].mpc is not none else "—" }} / 20
-                </td>
-            </tr>
-        </table>
-
-        <div class="decision-box">
-            {% if data.overall_decision == "Admis" %}
-                {{ _("ADMIS") }}
-            {% elif data.overall_decision == "Ajourné" %}
-                {{ _("AJOURNÉ") }}
-            {% elif data.overall_decision == "En attente" %}
-                {{ _("EN ATTENTE") }}
-            {% else %}
-                {{ data.overall_decision }}
-            {% endif %}
+    {# ─────────────── DÉCISION ─────────────── #}
+    <section class="decision">
+        <div>
+            <strong>
+                {{ _("PROFIL ACADÉMIQUE") }} /
+                <i>ACADEMIC STANDING:</i>
+            </strong>
+            <span>{{ data.profil or "—" }}</span>
         </div>
-    </div>
-    {% endif %}
+        <div>
+            <strong>
+                {{ _("DÉCISION") }} /
+                <i>DECISION:</i>
+            </strong>
+            <span>
+                {% if data.overall_decision == "Admis" %}
+                    {{ _("ADMIS(E)") }}
+                {% elif data.overall_decision == "Ajourné" %}
+                    {{ _("AJOURNÉ(E)") }}
+                {% elif data.overall_decision %}
+                    {{ data.overall_decision | upper }}
+                {% else %}
+                    —
+                {% endif %}
+            </span>
+        </div>
+    </section>
 
-    {# ─────────────────────────────── #}
-    {#  GRADE EQUIVALENCE TABLE        #}
-    {# ─────────────────────────────── #}
-    <div class="sub-section-title">{{ _("Tableau d'équivalence des grades") }}</div>
-
-    {% if data.grade_scale and data.grade_scale | length > 0 %}
-    <table class="grade-table">
-        <thead>
-            <tr>
-                <th>{{ _("Grade") }}</th>
-                {% for g in data.grade_scale %}
-                    <th>{{ g.grade }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td style="background:#eaf2f8;font-weight:600;">{{ _("Points") }}</td>
-                {% for g in data.grade_scale %}
-                    <td>{{ "%.2f" | format(g.point) }}</td>
-                {% endfor %}
-            </tr>
-            <tr>
-                <td style="background:#eaf2f8;font-weight:600;">{{ _("Note %") }}</td>
-                {% for g in data.grade_scale %}
-                    <td>{{ "%.0f" | format(g.note_min) }}–{{ "%.0f" | format(g.note_max) }}</td>
-                {% endfor %}
-            </tr>
-            {% if data.grade_scale | selectattr("mention") | first %}
-            <tr>
-                <td style="background:#eaf2f8;font-weight:600;">{{ _("Mention") }}</td>
-                {% for g in data.grade_scale %}
-                    <td style="font-size:6.5pt;">{{ g.mention }}</td>
-                {% endfor %}
-            </tr>
-            {% endif %}
-        </tbody>
-    </table>
     {% else %}
-        <p style="color:#95a5a6;font-size:8pt;text-align:center;">
-            {{ _("Aucune grille de grades configurée.") }}
-        </p>
+    <div class="empty-state">
+        {{ _("Aucun résultat de semestre disponible pour cet étudiant.") }}
+    </div>
     {% endif %}
 
-    {# ─────────────────────────────── #}
-    {#  FOOTER — SIGNATURE             #}
-    {# ─────────────────────────────── #}
-    <div class="footer">
-        <div class="signature-area">
-            <div class="sig-box">
-                <div class="sig-line"></div>
-                <div class="sig-label">{{ _("Le Chef d'Établissement") }}</div>
-            </div>
-            <div class="sig-box">
-                <div class="sig-line"></div>
-                <div class="sig-label">{{ _("Cachet & Date") }}</div>
-            </div>
-            <div class="sig-box">
-                <div class="sig-line"></div>
-                <div class="sig-label">{{ _("Le Responsable Pédagogique") }}</div>
-            </div>
-        </div>
+    {# ─────────────── ÉCHELLE DES NOTES ─────────────── #}
+    {% if data.grade_scale and data.grade_scale | length > 0 %}
+    <section class="grading-scale">
+        <h4>
+            {{ _("ÉCHELLE DE NOTES") }} /
+            <i>GRADING SCALE</i>
+        </h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>%</th>
+                    <th>/100</th>
+                    <th>{{ _("Grade") }}</th>
+                    <th>{{ _("Points") }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in data.grade_scale %}
+                <tr>
+                    <td>{{ "%.0f" | format(g.note_min) }}</td>
+                    <td>
+                        {{ "%.0f" | format(g.note_min) }}-{{ "%.0f" | format(g.note_max) }}
+                    </td>
+                    <td>{{ g.grade }}</td>
+                    <td>{{ "%.2f" | format(g.point) | replace(".00", "") }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
 
-        <div class="contact-info">
-            {{ data.school_name or "UNIVERSITY" }} —
-            {{ _("BP") }} : _________ —
-            {{ _("Tél") }} : (+237) ___ ___ ___ —
-            {{ _("Email") }} : contact@university.cm
+    {# ─────────────── SIGNATURE ─────────────── #}
+    <section class="signature">
+        <div class="date">
+            {{ _("Fait à") }}, {{ _("le") }}
+            <strong>
+                {{ frappe.utils.formatdate(data.date_emission, "dd MMMM yyyy") }}
+            </strong>
         </div>
+        <div class="signature-box">
+            <span>{{ _("Le Doyen") }}</span>
+            <div class="signature-line"></div>
+        </div>
+    </section>
 
-        <div class="ref-footer">
-            {{ _("Document généré le") }}
-            {{ frappe.utils.formatdate(data.date_emission, "dd/mm/yyyy") }}
-            — {{ _("Réf") }} : {{ data.reference_no }}
-        </div>
-    </div>
+    {# ─────────────── PIED DE PAGE ─────────────── #}
+    <footer class="footer">
+        {{ data.school_name or _("UNIVERSITÉ") }} —
+        {{ _("Réf") }} : {{ data.reference_no }}
+    </footer>
 </div>

@@ -1150,7 +1150,9 @@ def publier_session(session):
 
     Toutes les notes de la session doivent d'abord être validées
     (statut « Validé »). Elles passent alors au statut « Publié » et
-    deviennent consultables au babillard public. La session est clôturée.
+    deviennent consultables au babillard public. La publication n'est pas
+    définitive : les notes restent modifiables (corrections / réclamations)
+    après publication.
 
     Args:
         session: Nom du document Session Examen

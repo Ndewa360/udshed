@@ -80,7 +80,6 @@ class SessionExamenNote(Document):
         return self._formule_note() is None
 
     def validate(self):
-        self.verrouiller_si_publie()
         self.remplir_filiere_niveau()
         self.deriver_drapeaux_saisie()
         self.valider_saisie()
@@ -88,21 +87,6 @@ class SessionExamenNote(Document):
         self.calculer_note_examen_active()
         self.calculer_note_finale()
         self.determiner_grade()
-
-    # ------------------------------------------------------------------ #
-    #  Verrouillage
-    # ------------------------------------------------------------------ #
-    def verrouiller_si_publie(self):
-        """Empêche toute modification quand la session d'examen est publiée."""
-        if not self.session_examen:
-            return
-        statut_session = frappe.db.get_value("Session Examen", self.session_examen, "statut")
-        if statut_session == "Publiée" and not frappe.session.user == "Administrator":
-            frappe.throw(
-                _("Notes publiées — la session <b>{0}</b> est clôturée, toute modification est impossible.").format(
-                    self.session_examen
-                )
-            )
 
     # ------------------------------------------------------------------ #
     #  Identification
