@@ -1,0 +1,255 @@
+{
+	"doctype": "Web Form",
+	"translatable": 0,
+	"route": "depot-candidature",
+	"label": "Dépôt de candidature",
+	"workflow_state_field": "candidature_status",
+	"allow_guest": "1",
+	"hide_controller": "0",
+	"docstatus": "0",
+	"fields": [
+		{
+			"fieldname": "first_name",
+			"fieldtype": "Data",
+			"label": "Prénom(s)",
+			"reqd": 1
+		},
+		{
+			"fieldname": "last_name",
+			"fieldtype": "Data",
+			"label": "Nom",
+			"reqd": 1
+		},
+		{
+			"fieldname": "full_name",
+			"fieldtype": "Data",
+			"label": "Nom Complet",
+			"read_only": 1
+		},
+		{
+			"fieldname": "email",
+			"fieldtype": "Data",
+			"label": "Email",
+			"reqd": 1,
+			"description": "Email du candidat (reçu les notifications)"
+		},
+		{
+			"fieldname": "phone",
+			"fieldtype": "Phone",
+			"label": "Téléphone",
+			"description": "Numéro de téléphone WhatsApp"
+		},
+		{
+			"fieldname": "niveau",
+			"fieldtype": "Select",
+			"label": "Niveau",
+			"reqd": 1,
+			"options": "BTS\nLICENCE 1\nLICENCE 2\nLICENCE 3\nMASTER 1\nMASTER 2"
+		},
+		{
+			"fieldname": "filiere",
+			"fieldtype": "Link",
+			"label": "Filière",
+			"reqd": 1,
+			"options": "Field of study"
+		},
+		{
+			"fieldname": "sexe",
+			"fieldtype": "Select",
+			"label": "Sexe",
+			"reqd": 1,
+			"options": "Homme\nFemme"
+		},
+		{
+			"fieldname": "birth_place",
+			"fieldtype": "Data",
+			"label": "Lieu de naissance",
+			"reqd": 1
+		},
+		{
+			"fieldname": "examination_centre",
+			"fieldtype": "Select",
+			"label": "Centre d'examen",
+			"options": "Bangangté\nBafoussam\nYaoundé\nDouala"
+		},
+		{
+			"fieldname": "religion",
+			"fieldtype": "Select",
+			"label": "Religion",
+			"options": "CHRÉTIEN\nCATHOLIQUE\nMUSULMAN\nPROTESTANT\nAUTRE"
+		},
+		{
+			"fieldname": "nationality",
+			"fieldtype": "Data",
+			"label": "Nationalité",
+			"default": "CM"
+		},
+		{
+			"fieldname": "employment_status",
+			"fieldtype": "Select",
+			"label": "Situation d'emploi",
+			"options": "SANS EMPLOI\nEMPLOYÉ\nFONCTIONNAIRE\nÉTUDIANT"
+		},
+		{
+			"fieldname": "marital_status",
+			"fieldtype": "Select",
+			"label": "Situation matrimoniale",
+			"options": "CELIBATAIRE\nMARIÉ(E)\nDIVORCÉ(E)\nVEUF(VE)"
+		},
+		{
+			"fieldname": "language",
+			"fieldtype": "Data",
+			"label": "Langue",
+			"default": "FR"
+		},
+		{
+			"fieldname": "handicap",
+			"fieldtype": "Select",
+			"label": "Handicap",
+			"options": "NON\nOUI",
+			"default": "NON"
+		},
+		{
+			"fieldname": "father_name",
+			"fieldtype": "Data",
+			"label": "Nom et prénom du père"
+		},
+		{
+			"fieldname": "father_phone",
+			"fieldtype": "Phone",
+			"label": "Téléphone du père"
+		},
+		{
+			"fieldname": "father_profession",
+			"fieldtype": "Data",
+			"label": "Profession du père"
+		},
+		{
+			"fieldname": "father_city",
+			"fieldtype": "Data",
+			"label": "Ville du père"
+		},
+		{
+			"fieldname": "mother_name",
+			"fieldtype": "Data",
+			"label": "Nom et prénom de la mère"
+		},
+		{
+			"fieldname": "mother_phone",
+			"fieldtype": "Phone",
+			"label": "Téléphone de la mère"
+		},
+		{
+			"fieldname": "mother_profession",
+			"fieldtype": "Data",
+			"label": "Profession de la mère"
+		},
+		{
+			"fieldname": "mother_city",
+			"fieldtype": "Data",
+			"label": "Ville de la mère"
+		},
+		{
+			"fieldname": "sponsor_name",
+			"fieldtype": "Data",
+			"label": "Nom et prénom du sponsor"
+		},
+		{
+			"fieldname": "sponsor_phone",
+			"fieldtype": "Phone",
+			"label": "Téléphone du sponsor"
+		},
+		{
+			"fieldname": "sponsor_profession",
+			"fieldtype": "Data",
+			"label": "Profession du sponsor"
+		},
+		{
+			"fieldname": "sponsor_city",
+			"fieldtype": "Data",
+			"label": "Ville du sponsor"
+		},
+		{
+			"fieldname": "last_establishment",
+			"fieldtype": "Data",
+			"label": "Dernier établissement fréquenté"
+		},
+		{
+			"fieldname": "entry_diploma",
+			"fieldtype": "Select",
+			"label": "Diplôme d'entrée",
+			"options": "BAC\nGCE\nBTS\nLICENCE\nMASTER\nAUTRE"
+		},
+		{
+			"fieldname": "diploma_matricule",
+			"fieldtype": "Data",
+			"label": "Matricule du diplôme"
+		},
+		{
+			"fieldname": "sports_activities",
+			"fieldtype": "Small Text",
+			"label": "Activités sportives"
+		},
+		{
+			"fieldname": "associative_activities",
+			"fieldtype": "Small Text",
+			"label": "Activités associative(s)"
+		},
+		{
+			"fieldname": "cultural_activities",
+			"fieldtype": "Small Text",
+			"label": "Activités culturelle(s)"
+		},
+		{
+			"fieldname": "it_knowledge",
+			"fieldtype": "Small Text",
+			"label": "Connaissances informatique"
+		},
+		{
+			"fieldname": "birth_certificate",
+			"fieldtype": "Attach",
+			"label": "Certificat de naissance",
+			"reqd": 1
+		},
+		{
+			"fieldname": "access_diploma_copy",
+			"fieldtype": "Attach",
+			"label": "Copie du diplôme d'accès à la formation",
+			"reqd": 1
+		},
+		{
+			"fieldname": "id_photo",
+			"fieldtype": "Attach",
+			"label": "Photo d'identité",
+			"reqd": 1
+		},
+		{
+			"fieldname": "remittance_receipt",
+			"fieldtype": "Attach",
+			"label": "Quittance de paiement",
+			"reqd": 1
+		},
+		{
+			"fieldname": "candidature_status",
+			"fieldtype": "Select",
+			"label": "Statut",
+			"default": "En attente",
+			"options": "En attente\nDossier en cours d'examen\nAccepté\nRefusé\nInscrit"
+		},
+		{
+			"fieldname": "status_comment",
+			"fieldtype": "Small Text",
+			"label": "Observation / Motif de rejet"
+		}
+	],
+	"is_submittable": 1,
+	"submit_button_label": "Soumettre ma candidature",
+	"setup_screen_fields": [],
+	"submit_parms": [
+		{
+			"parm": "redirect",
+			"label": "Redirection après soumission",
+			"value": "/session-2025"
+		}
+	]
+}

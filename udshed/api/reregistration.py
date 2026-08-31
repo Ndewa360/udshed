@@ -5,6 +5,8 @@ import frappe
 from frappe.utils.pdf import get_pdf
 from frappe.query_builder import DocType
 
+CYCLE_ORDER = {"BTS": 1, "Licence": 2, "Master": 3, "Doctorat": 4}
+
 
 @frappe.whitelist()
 def get_open_sessions():
@@ -233,15 +235,17 @@ def get_all_levels(faculty=None, filiere=None):
 
 @frappe.whitelist()
 def add_level(filiere, level, cycle=None, coordonateur=None, calendrier="Defaut", gestionnaire_de_planning=None):
-	"""Ajoute un niveau à une filière. Le save() déclenche before_save
-	qui renumérote les ordres et déduit le cycle si non renseigné."""
+	"""Ajoute un niveau à une filière en l'insérant au bon endroit par cycle."""
 	doc = frappe.get_doc("Field of study", filiere)
 	if any(r.level == level for r in doc.field_of_study_level):
 		frappe.throw(f"Le niveau {level} existe déjà dans {filiere}")
+
+	new_cycle = cycle or _cycle_from_level(level)
+
 	doc.append("field_of_study_level", {
 		"level": level,
-		"cycle": cycle or None,
-		"order": (len(doc.field_of_study_level) or 0) + 1,
+		"cycle": new_cycle,
+		"order": 0,
 		"coordonateur": coordonateur,
 		"calendrier": calendrier or "Defaut",
 		"gestionnaire_de_planning": gestionnaire_de_planning,
@@ -250,32 +254,30 @@ def add_level(filiere, level, cycle=None, coordonateur=None, calendrier="Defaut"
 	return {"status": True, "message": f"Niveau {level} ajouté à {filiere}"}
 
 
+def _cycle_from_level(level_label):
+	"""Déduit le cycle depuis le libellé du niveau."""
+	if not level_label:
+		return None
+	for cycle in ("BTS", "Licence", "Master", "Doctorat"):
+		if level_label.startswith(cycle):
+			return cycle
+	return None
+
+
 
 
 @frappe.whitelist()
 def reorder_levels(filiere, level_names):
-	"""Réordonne les niveaux selon l'ordre du tableau level_names.
+	"""Réordonne les niveaux selon l'ordre reçu du drag & drop.
 
-	Le before_save du doc parent renumérote automatiquement les ordres
-	(1, 2, 3...) ; il suffit donc de réorganiser le tableau child.
+	Met à jour directement en SQL pour éviter le cache Frappe.
 	"""
-	if isinstance(level_names, str):
-		level_names = json.loads(level_names)
-	doc = frappe.get_doc("Field of study", filiere)
-	name_to_row = {row.name: row for row in doc.field_of_study_level}
-	ordered = []
-	for name in level_names:
-		if name in name_to_row:
-			ordered.append(name_to_row[name])
-		else:
-			frappe.msgprint(f"Niveau « {name} » introuvable, ignoré.", alert=True)
-	# conserver les lignes non mentionnées (sécurité)
-	existing_names = set(level_names)
-	for row in doc.field_of_study_level:
-		if row.name not in existing_names:
-			ordered.append(row)
-	doc.set("field_of_study_level", ordered)
-	doc.save(ignore_permissions=True)
+	for i, row_name in enumerate(level_names):
+		frappe.db.sql(
+			"UPDATE `tabField of study Level` SET `order` = %s WHERE name = %s",
+			(i + 1, row_name),
+		)
+	frappe.db.commit()
 	return {"status": True, "message": "Ordre des niveaux mis à jour"}
 
 
@@ -310,7 +312,7 @@ def delete_level(filiere, level_name):
 	"""Supprime un niveau d'une filière via SQL direct."""
 	level = frappe.db.get_value(
 		"Field of study Level",
-		{"name": level_name, "parent": filiere},
+		{"parent": filiere, "level": level_name},
 		"name",
 	)
 	if not level:
@@ -495,7 +497,11 @@ def telecharger_fiche_reinscription(reregistration_name):
 			]
 		})
 
-	pdf = get_pdf(html)
+	try:
+		pdf = get_pdf(html)
+	except Exception:
+		frappe.log_error("reregistration telecharger_fiche_reinscription get_pdf")
+		frappe.throw("Erreur lors de la génération du PDF. Veuillez réessayer.")
 
 	if is_student:
 		doc.db_set("fiche_telechargee", 1)

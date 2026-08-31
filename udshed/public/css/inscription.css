@@ -1,0 +1,234 @@
+/* Inscription Page Styles */
+.auth-container {
+  max-width: 440px;
+  margin: 48px auto;
+  padding: 32px 24px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.auth-container h3 {
+  color: var(--primary);
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.auth-container .form-group {
+  margin-bottom: 20px;
+}
+
+.auth-container label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--text-color);
+  font-size: 13px;
+}
+
+.auth-container .form-control {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--input-bg);
+  color: var(--text-color);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-container .form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(68, 138, 255, 0.15);
+}
+
+.auth-container .form-control[readonly] {
+  background: var(--input-readonly-bg);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
+
+.auth-container .btn-primary {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--border-radius);
+  border: none;
+  background: var(--primary);
+  color: white;
+  margin-top: 24px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.auth-container .btn-primary:hover {
+  opacity: 0.9;
+}
+
+.auth-container .btn-primary:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(68, 138, 255, 0.4);
+}
+
+.auth-container text-muted,
+.auth-container .text-muted {
+  color: var(--text-muted) !important;
+}
+
+.auth-container .text-center a {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.auth-container .text-center a:hover {
+  text-decoration: underline;
+}
+
+.alert-danger {
+  border: 1px solid #f8d7da;
+  background: #f8d7da;
+  color: #721c24;
+  padding: 12px 16px;
+  border-radius: var(--border-radius);
+  margin-bottom: 20px;
+}
+
+.alert-danger .alert-text {
+  margin: 0;
+}
+
+/* Inscription Form Page Styles */
+.inscription-form-container {
+  max-width: 760px;
+  margin: 40px auto;
+  padding: 32px 24px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.inscription-form-container h2 {
+  color: var(--primary);
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.inscription-form-container .card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.inscription-form-container .card h5 {
+  color: var(--text-color);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.inscription-form-container .form-group {
+  margin-bottom: 16px;
+}
+
+.inscription-form-container label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-color);
+}
+
+.inscription-form-container .form-control {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--input-bg);
+  color: var(--text-color);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.inscription-form-container .form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(68, 138, 255, 0.15);
+}
+
+.inscription-form-container .form-control[readonly] {
+  background: var(--input-readonly-bg);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
+
+.inscription-form-container select.form-control {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-right: 12px center;
+  padding-right: 28px;
+}
+
+.inscription-form-container .form-control[type="textarea"] {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.inscription-form-container .btn-primary {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--border-radius);
+  border: none;
+  background: var(--primary);
+  color: white;
+  margin-top: 24px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.inscription-form-container .btn-primary:hover {
+  opacity: 0.9;
+}
+
+.inscription-form-container .btn-primary:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(68, 138, 255, 0.4);
+}
+
+.inscription-form-container .btn-success {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: #28a745;
+  color: white;
+  text-decoration: none;
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 16px;
+}
+
+.inscription-form-container .btn-success:hover {
+  background-color: #218838;
+}
+
+.inscription-form-container .text-center {
+  text-align: center;
+}
+
+.inscription-form-container .mt-3 {
+  margin-top: 16px !important;
+}
+
+.inscription-form-container .pb-4 {
+  padding-bottom: 24px !important;
+}

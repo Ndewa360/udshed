@@ -1,0 +1,413 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "25C.###",
+ "creation": "2026-08-26 22:14:24.723115",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_identite",
+  "matricule",
+  "dossier_origine",
+  "column_break_id1",
+  "nom_prenom",
+  "email",
+  "date_naissance",
+  "lieu_naissance",
+  "telephone",
+  "section_academique",
+  "annee_academique",
+  "filiere",
+  "classe",
+  "column_break_ac1",
+  "sexe",
+  "nationalite",
+  "region_origine",
+  "langue",
+  "religion",
+  "column_break_ac2",
+  "situation_matrimoniale",
+  "situatio_emploi",
+  "handicape",
+  "section_etudes",
+  "dernier_etablissement",
+  "diplome_entree",
+  "column_break_et1",
+  "matricule_diplome",
+  "section_pere",
+  "nom_prenom_pere",
+  "pere_telephone",
+  "column_break_pr1",
+  "pere_profession",
+  "pere_ville",
+  "section_mere",
+  "nom_prenom_mere",
+  "telephone_mere",
+  "column_break_mr1",
+  "profession_mere",
+  "mere_ville",
+  "section_sponsor",
+  "nom_prenom_sponsor",
+  "telephone_sponsor",
+  "column_break_sp1",
+  "profession_sponsor",
+  "sponsor_ville",
+  "section_activites",
+  "activites_sportives",
+  "activites_associatives",
+  "column_break_act1",
+  "activites_culturelles",
+  "connaissances_informatiques"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_identite",
+   "fieldtype": "Section Break",
+   "label": "Identité de l'étudiant"
+  },
+  {
+   "fieldname": "matricule",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Matricule",
+   "read_only": 1,
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "dossier_origine",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Dossier d'origine",
+   "options": "Session Inscription Candidate",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_id1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "nom_prenom",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nom et Prénom",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "date_naissance",
+   "fieldtype": "Date",
+   "label": "Date de naissance",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lieu_naissance",
+   "fieldtype": "Data",
+   "label": "Lieu de naissance",
+   "read_only": 1
+  },
+  {
+   "fieldname": "telephone",
+   "fieldtype": "Phone",
+   "label": "Téléphone",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_academique",
+   "fieldtype": "Section Break",
+   "label": "Informations académiques"
+  },
+  {
+   "fieldname": "annee_academique",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Année académique",
+   "reqd": 1
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Filière",
+   "options": "Field of study",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "classe",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Niveau",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ac1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sexe",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Sexe",
+   "options": "\nMasculin\nFéminin",
+   "reqd": 1
+  },
+  {
+   "fieldname": "nationalite",
+   "fieldtype": "Data",
+   "label": "Nationalité",
+   "options": "Country"
+  },
+  {
+   "fieldname": "region_origine",
+   "fieldtype": "Data",
+   "label": "Région d'origine"
+  },
+  {
+   "fieldname": "langue",
+   "fieldtype": "Data",
+   "label": "Langue"
+  },
+  {
+   "fieldname": "religion",
+   "fieldtype": "Select",
+   "label": "Religion",
+   "options": "\nCHRÉTIEN\nCATHOLIQUE\nMUSULMAN\nPROTESTANT\nAUTRE"
+  },
+  {
+   "fieldname": "column_break_ac2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "situation_matrimoniale",
+   "fieldtype": "Select",
+   "label": "Situation matrimoniale",
+   "options": "\nCELIBATAIRE\nMARIE(E)\nDIVORCE(E)"
+  },
+  {
+   "fieldname": "situatio_emploi",
+   "fieldtype": "Select",
+   "label": "Situation d'emploi",
+   "options": "\nSANS EMPLOI\nEMPLOYÉ\nFONCTIONNAIRE\nÉTUDIANT"
+  },
+  {
+   "fieldname": "handicape",
+   "fieldtype": "Select",
+   "label": "Handicap",
+   "options": "\nOui\nNon"
+  },
+  {
+   "fieldname": "section_etudes",
+   "fieldtype": "Section Break",
+   "label": "Études antérieures"
+  },
+  {
+   "fieldname": "dernier_etablissement",
+   "fieldtype": "Data",
+   "label": "Dernier établissement fréquenté"
+  },
+  {
+   "fieldname": "diplome_entree",
+   "fieldtype": "Select",
+   "label": "Diplôme d'entrée",
+   "options": "\nBaccalauréat\nBTS\nLicense\nMaster\nGCE\nAutre"
+  },
+  {
+   "fieldname": "column_break_et1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "matricule_diplome",
+   "fieldtype": "Data",
+   "label": "Matricule du diplôme"
+  },
+  {
+   "fieldname": "section_pere",
+   "fieldtype": "Section Break",
+   "label": "Identification du Père"
+  },
+  {
+   "fieldname": "nom_prenom_pere",
+   "fieldtype": "Data",
+   "label": "Nom et prénom du père"
+  },
+  {
+   "fieldname": "pere_telephone",
+   "fieldtype": "Phone",
+   "label": "Téléphone du père"
+  },
+  {
+   "fieldname": "column_break_pr1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pere_profession",
+   "fieldtype": "Data",
+   "label": "Profession du père"
+  },
+  {
+   "fieldname": "pere_ville",
+   "fieldtype": "Data",
+   "label": "Ville du père"
+  },
+  {
+   "fieldname": "section_mere",
+   "fieldtype": "Section Break",
+   "label": "Identification de la Mère"
+  },
+  {
+   "fieldname": "nom_prenom_mere",
+   "fieldtype": "Data",
+   "label": "Nom et prénom de la mère"
+  },
+  {
+   "fieldname": "telephone_mere",
+   "fieldtype": "Phone",
+   "label": "Téléphone de la mère"
+  },
+  {
+   "fieldname": "column_break_mr1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "profession_mere",
+   "fieldtype": "Data",
+   "label": "Profession de la mère"
+  },
+  {
+   "fieldname": "mere_ville",
+   "fieldtype": "Data",
+   "label": "Ville de la mère"
+  },
+  {
+   "fieldname": "section_sponsor",
+   "fieldtype": "Section Break",
+   "label": "Identification du Sponsor"
+  },
+  {
+   "fieldname": "nom_prenom_sponsor",
+   "fieldtype": "Data",
+   "label": "Nom et prénom du sponsor"
+  },
+  {
+   "fieldname": "telephone_sponsor",
+   "fieldtype": "Phone",
+   "label": "Téléphone du sponsor"
+  },
+  {
+   "fieldname": "column_break_sp1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "profession_sponsor",
+   "fieldtype": "Data",
+   "label": "Profession du sponsor"
+  },
+  {
+   "fieldname": "sponsor_ville",
+   "fieldtype": "Data",
+   "label": "Ville du sponsor"
+  },
+  {
+   "fieldname": "section_activites",
+   "fieldtype": "Section Break",
+   "label": "Informations complémentaires"
+  },
+  {
+   "fieldname": "activites_sportives",
+   "fieldtype": "Small Text",
+   "label": "Activités sportives"
+  },
+  {
+   "fieldname": "activites_associatives",
+   "fieldtype": "Small Text",
+   "label": "Activités associatives"
+  },
+  {
+   "fieldname": "column_break_act1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "activites_culturelles",
+   "fieldtype": "Small Text",
+   "label": "Activités culturelles"
+  },
+  {
+   "fieldname": "connaissances_informatiques",
+   "fieldtype": "Small Text",
+   "label": "Connaissances informatiques"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-27 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Inscription Academique",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Agent de scolarité",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Comptable",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

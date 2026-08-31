@@ -1,0 +1,73 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container auth-container" style="max-width: 440px; margin: 48px auto; text-align: center;">
+    <img src="/assets/udshed/images/logo1.png" alt="UDSHED" style="max-width: 160px; margin-bottom: 24px;">
+    <h3 class="mb-2">Inscription académique</h3>
+    <p class="text-muted mb-4">
+        Saisissez votre numéro unique de dossier et le nom indiqué dans votre candidature.
+        <br>Format du dossier : <strong>CAND-AAAA-#####</strong>
+    </p>
+
+    <div class="form-group text-left">
+        <label for="num_dossier">Numéro unique de dossier</label>
+        <input type="text" id="num_dossier" class="form-control"
+            placeholder="Ex : CAND-2026-00001" required autofocus>
+    </div>
+
+    <div class="form-group text-left">
+        <label for="nom_candidat">Nom du candidat</label>
+        <input type="text" id="nom_candidat" class="form-control"
+            placeholder="Ex : KEYETAT NOUMEN" required>
+    </div>
+je
+    <button id="btn_soumettre" class="btn btn-primary btn-block">
+        Continuer
+    </button>
+    <p class="mt-3 mb-0"><a href="/">&larr; Retour à l'accueil</a></p>
+</div>
+
+<div id="inscription-form-container" style="display: none; max-width: 760px; margin: 40px auto; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+    <h2>Formulaire d'inscription académique</h2>
+    <p id="candidat-authentifie" style="color: #666;"></p>
+    <form id="form-inscription-academique">
+        <div class="row">
+            <div class="col-md-6 form-group"><label>Année académique</label><input name="annee_academique" class="form-control" value="2025-2026" required></div>
+            <div class="col-md-6 form-group"><label>Filière</label><input id="filiere" class="form-control" readonly></div>
+            <div class="col-md-6 form-group"><label>Niveau</label><input id="classe" class="form-control" readonly></div>
+            <div class="col-md-6 form-group"><label>Sexe</label><select name="sexe" class="form-control"><option value="">Sélectionner</option><option>Masculin</option><option>Féminin</option></select></div>
+            <div class="col-md-6 form-group"><label>Nationalité</label><input name="nationalite" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Région d'origine</label><input name="region_origine" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Langue</label><input name="langue" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Religion</label><input name="religion" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Situation matrimoniale</label><select name="situation_matrimoniale" class="form-control"><option value="">Sélectionner</option><option>CELIBATAIRE</option><option>MARIE(E)</option><option>DIVORCE(E)</option></select></div>
+            <div class="col-md-6 form-group"><label>Situation d'emploi</label><select name="situatio_emploi" class="form-control"><option value="">Sélectionner</option><option>SANS EMPLOI</option><option>EMPLOYE</option></select></div>
+            <div class="col-md-6 form-group"><label>Handicap</label><select name="handicape" class="form-control"><option value="">Sélectionner</option><option>Oui</option><option>Non</option></select></div>
+            <div class="col-md-6 form-group"><label>Dernier établissement</label><input name="dernier_etablissement" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Diplôme d'entrée</label><select name="diplome_entree" class="form-control"><option value="">Sélectionner</option><option>Baccalauréat</option><option>BTS</option><option>License</option></select></div>
+            <div class="col-md-6 form-group"><label>Matricule du diplôme</label><input name="matricule_diplome" class="form-control"></div>
+        </div>
+        <h4>Informations familiales</h4>
+        <div class="row">
+            <div class="col-md-6 form-group"><label>Nom et prénom du père</label><input name="nom_prenom_pere" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Téléphone du père</label><input name="pere_telephone" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Profession du père</label><input name="pere_profession" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Ville du père</label><input name="pere_ville" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Nom et prénom de la mère</label><input name="nom_prenom_mere" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Téléphone de la mère</label><input name="telephone_mere" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Profession de la mère</label><input name="profession_mere" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Ville de la mère</label><input name="mere_ville" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Nom et prénom du sponsor</label><input name="nom_prenom_sponsor" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Téléphone du sponsor</label><input name="telephone_sponsor" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Profession du sponsor</label><input name="profession_sponsor" class="form-control"></div>
+            <div class="col-md-6 form-group"><label>Ville du sponsor</label><input name="sponsor_ville" class="form-control"></div>
+        </div>
+        <h4>Informations complémentaires</h4>
+        <div class="form-group"><label>Activités sportives</label><textarea name="activites_sportives" class="form-control"></textarea></div>
+        <div class="form-group"><label>Activités associatives</label><textarea name="activites_associatives" class="form-control"></textarea></div>
+        <div class="form-group"><label>Activités culturelles</label><textarea name="activites_culturelles" class="form-control"></textarea></div>
+        <div class="form-group"><label>Connaissances informatiques</label><textarea name="connaissances_informatiques" class="form-control"></textarea></div>
+        <button type="submit" id="btn_enregistrer" class="btn btn-primary">Enregistrer mon inscription</button>
+    </form>
+</div>
+{% endblock %}

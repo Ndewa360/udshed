@@ -1,0 +1,120 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Dépôt de candidature{% endblock %}
+
+{% block page_content %}
+<div class="container" style="max-width: 760px; margin: 48px auto;">
+    <div class="text-center mb-4">
+        <img src="/assets/udshed/images/logo1.png" alt="UDSHED" style="max-width: 160px; margin-bottom: 24px;">
+        <h3 class="mb-2">Dépôt de candidature</h3>
+        <p class="text-muted">Remplissez ce formulaire pour soumettre votre candidature.</p>
+    </div>
+
+    <div id="form-error" class="alert alert-danger" style="display: none;"></div>
+    <div id="form-success" style="display: none; text-align: center; padding: 20px;">
+        <div style="font-size: 64px; color: #28a745; margin-bottom: 16px;">✓</div>
+        <h3 style="color: #2885a7; margin-bottom: 15px;">Candidature soumise avec succès !</h3>
+        <p style="margin-bottom: 5px; font-size: 14px;">Votre numéro de dossier unique :</p>
+        <div style="font-size: 22px; font-weight: bold; color: #007bff; background: #e9f5ff; padding: 8px 15px; border-radius: 4px; display: inline-block; margin-bottom: 20px; border: 1px dashed #007bff;">
+            <span id="dossier-number">CAND-XXXX-XXXXX</span>
+        </div>
+        <p style="color: #555; margin-bottom: 20px; font-size: 13px;">
+            Un email vous a été envoyé avec votre numéro de dossier.<br>
+            Conservez-le pour suivre l'état de votre candidature.
+        </p>
+        <a href="/" class="btn btn-primary" style="background-color: #2885a7;">Retour à l'accueil</a>
+    </div>
+
+    <form id="form-candidature" enctype="multipart/form-data">
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3" style="color: #2885a7; border-bottom: 1px solid #e2e4e9; padding-bottom: 12px;">Informations personnelles</h5>
+            <div class="row">
+                <div class="col-md-6 form-group"><label>Nom(s) *</label><input name="first_name" class="form-control" required></div>
+                <div class="col-md-6 form-group"><label>Prénom *</label><input name="last_name" class="form-control" required></div>
+                <div class="col-md-6 form-group"><label>Email *</label><input type="email" name="email" class="form-control" required placeholder="exemple@email.com"></div>
+                <div class="col-md-6 form-group"><label>Téléphone (WhatsApp) *</label><input name="phone" class="form-control" required></div>
+                <div class="col-md-6 form-group"><label>Date de naissance *</label><input type="date" name="birthdate" class="form-control" required></div>
+                <div class="col-md-6 form-group"><label>Sexe *</label><select name="sexe" class="form-control" required><option value="">Sélectionner</option><option>Homme</option><option>Femme</option></select></div>
+                <div class="col-md-6 form-group"><label>Née à *</label><input name="birth_place" class="form-control" required></div>
+                <div class="col-md-6 form-group"><label>Nationalité</label><input name="nationality" class="form-control" value="CM"></div>
+                <div class="col-md-6 form-group"><label>Ville de résidence</label><input name="home_city" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Religion</label><select name="religion" class="form-control"><option value="">Sélectionner</option><option>CHRÉTIEN</option><option>CATHOLIQUE</option><option>MUSULMAN</option><option>PROTESTANT</option><option>AUTRE</option></select></div>
+                <div class="col-md-6 form-group"><label>Situation matrimoniale</label><select name="marital_status" class="form-control"><option value="">Sélectionner</option><option>CELIBATAIRE</option><option>MARIÉ(E)</option><option>DIVORCÉ(E)</option></select></div>
+                <div class="col-md-6 form-group"><label>Situation d'emploi</label><select name="employment_status" class="form-control"><option value="">Sélectionner</option><option>SANS EMPLOI</option><option>EMPLOYÉ</option><option>FONCTIONNAIRE</option><option>ÉTUDIANT</option></select></div>
+                <div class="col-md-6 form-group"><label>Langue</label><input name="language" class="form-control" value="FR"></div>
+                <div class="col-md-6 form-group"><label>Handicap</label><select name="handicap" class="form-control"><option value="">Sélectionner</option><option>NON</option><option>OUI</option></select></div>
+            </div>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3" style="color: #2885a7; border-bottom: 1px solid #e2e4e9; padding-bottom: 12px;">Choix de formation</h5>
+            <div class="row">
+                <div class="col-md-6 form-group"><label>Filière *</label><select name="filiere" class="form-control" required><option value="">Sélectionner la filière</option></select></div>
+                <div class="col-md-6 form-group"><label>Niveau *</label><select name="niveau" class="form-control" required><option value="">Sélectionner le niveau</option><option>BTS</option><option>LICENCE 1</option><option>LICENCE 2</option><option>LICENCE 3</option><option>MASTER 1</option><option>MASTER 2</option></select></div>
+                <div class="col-md-6 form-group"><label>Centre d'examen</label><select name="examination_centre" class="form-control"><option value="">Sélectionner</option><option>Bangangté</option><option>Bafoussam</option><option>Yaoundé</option><option>Douala</option></select></div>
+            </div>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3" style="color: #2885a7; border-bottom: 1px solid #e2e4e9; padding-bottom: 12px;">Études antérieures</h5>
+            <div class="row">
+                <div class="col-md-6 form-group"><label>Dernier établissement fréquenté</label><input name="last_establishment" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Diplôme d'entrée</label><select name="entry_diploma" class="form-control"><option value="">Sélectionner</option><option>BAC</option><option>GCE</option><option>BTS</option><option>LICENCE</option><option>MASTER</option><option>AUTRE</option></select></div>
+                <div class="col-md-6 form-group"><label>Matricule du diplôme</label><input name="diploma_matricule" class="form-control"></div>
+            </div>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3" style="color: #2885a7; border-bottom: 1px solid #e2e4e9; padding-bottom: 12px;">Identification du Père</h5>
+            <div class="row">
+                <div class="col-md-6 form-group"><label>Nom et prénom du père</label><input name="father_name" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Téléphone du père</label><input name="father_phone" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Profession du père</label><input name="father_profession" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Email du père</label><input type="email" name="father_email" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Ville du père</label><input name="father_city" class="form-control"></div>
+            </div>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3" style="color: #2885a7; border-bottom: 1px solid #e2e4e9; padding-bottom: 12px;">Identification de la Mère</h5>
+            <div class="row">
+                <div class="col-md-6 form-group"><label>Nom et prénom de la mère</label><input name="mother_name" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Téléphone de la mère</label><input name="mother_phone" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Profession de la mère</label><input name="mother_profession" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Email de la mère</label><input type="email" name="mother_email" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Ville de la mère</label><input name="mother_city" class="form-control"></div>
+            </div>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3" style="color: #2885a7; border-bottom: 1px solid #e2e4e9; padding-bottom: 12px;">Identification du Sponsor</h5>
+            <div class="row">
+                <div class="col-md-6 form-group"><label>Nom et prénom du sponsor</label><input name="sponsor_name" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Téléphone du sponsor</label><input name="sponsor_phone" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Profession du sponsor</label><input name="sponsor_profession" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Email du sponsor</label><input type="email" name="sponsor_email" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Ville du sponsor</label><input name="sponsor_city" class="form-control"></div>
+            </div>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3" style="color: #2885a7; border-bottom: 1px solid #e2e4e9; padding-bottom: 12px;">Informations complémentaires</h5>
+            <div class="form-group"><label>Activités sportives</label><textarea name="sports_activities" class="form-control" rows="2"></textarea></div>
+            <div class="form-group"><label>Activités associatives</label><textarea name="associative_activities" class="form-control" rows="2"></textarea></div>
+            <div class="form-group"><label>Activités culturelles</label><textarea name="cultural_activities" class="form-control" rows="2"></textarea></div>
+            <div class="form-group"><label>Connaissances informatiques</label><textarea name="it_knowledge" class="form-control" rows="2"></textarea></div>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3" style="color: #2885a7; border-bottom: 1px solid #e2e4e9; padding-bottom: 12px;">Documents à fournir (facultatif ici)</h5>
+            <div class="form-group"><label>Certificat de naissance</label><input type="file" name="birth_certificate" class="form-control"></div>
+            <div class="form-group"><label>Copie du diplôme d'accès à la formation</label><input type="file" name="access_diploma_copy" class="form-control"></div>
+            <div class="form-group"><label>Photo d'identité</label><input type="file" name="id_photo" class="form-control"></div>
+            <div class="form-group"><label>Quittance de paiement</label><input type="file" name="remittance_receipt" class="form-control"></div>
+        </div>
+
+        <button type="submit" id="btn_soumettre" class="btn btn-primary btn-block" style="background-color: #2885a7; padding: 12px; font-weight: 600;">Soumettre ma candidature</button>
+        <p class="text-center mt-3"><a href="/">&larr; Retour à l'accueil</a></p>
+    </form>
+</div>
+{% endblock %}

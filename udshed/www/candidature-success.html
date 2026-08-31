@@ -65,6 +65,19 @@
         font-weight: 700;
     }
 
+    .dossier-number {
+        background: var(--bg-light);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 16px;
+        margin: 24px 0;
+        font-family: monospace;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--heading-color);
+        letter-spacing: 1px;
+    }
+
     .btn-home {
         display: inline-block;
         padding: 12px 36px;
@@ -89,6 +102,7 @@
     @media (max-width: 600px) {
         .success-card { padding: 36px 24px; }
         .success-title { font-size: 22px; }
+        .dossier-number { font-size: 16px; padding: 12px; }
     }
 </style>
 
@@ -101,8 +115,20 @@
             Vous serez contacté(e) pour la suite du processus d'inscription.<br>
             Un accusé de réception vous a été envoyé par email.
         </p>
+        <div class="dossier-number" id="dossier-number">Chargement…</div>
         <a href="/app/welcome" class="btn btn-primary btn-home">Retour à l'accueil</a>
         <p class="success-note">Vous pouvez suivre l'avancement de votre dossier à tout moment.</p>
     </div>
 </div>
+
+<script>
+    // Récupère le numéro de dossier depuis l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const dossier = urlParams.get('dossier');
+    if (dossier) {
+        document.getElementById('dossier-number').textContent = 'Votre numéro de dossier : ' + dossier;
+    } else {
+        document.getElementById('dossier-number').textContent = 'Conservez votre numéro de dossier.';
+    }
+</script>
 {% endblock %}

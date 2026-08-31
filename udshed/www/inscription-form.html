@@ -1,0 +1,65 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Inscription académique{% endblock %}
+
+{% block page_content %}
+<div class="container" style="max-width: 760px; margin: 48px auto;">
+    <div class="text-center mb-4">
+        <img src="/assets/udshed/images/logo1.png" alt="UDSHED" style="max-width: 160px; margin-bottom: 24px;">
+        <h3 class="mb-2">Formulaire d'inscription académique</h3>
+        <p id="candidat-authentifie" class="text-muted">Vérification du candidat...</p>
+    </div>
+
+    <div id="form-error" class="alert alert-danger" style="display: none;"></div>
+    <form id="form-inscription-academique" style="display: none;">
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3">Informations académiques</h5>
+            <div class="row">
+                <div class="col-md-6 form-group"><label>Année académique</label><input name="annee_academique" class="form-control" value="2025-2026" required></div>
+                <div class="col-md-6 form-group"><label>Filière</label><input id="filiere" class="form-control" readonly></div>
+                <div class="col-md-6 form-group"><label>Niveau</label><input id="classe" class="form-control" readonly></div>
+                <div class="col-md-6 form-group"><label>Sexe</label><select name="sexe" class="form-control"><option value="">Sélectionner</option><option>Masculin</option><option>Féminin</option></select></div>
+                <div class="col-md-6 form-group"><label>Nationalité</label><input name="nationalite" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Région d'origine</label><input name="region_origine" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Langue</label><input name="langue" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Religion</label><input name="religion" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Situation matrimoniale</label><select name="situation_matrimoniale" class="form-control"><option value="">Sélectionner</option><option>CELIBATAIRE</option><option>MARIE(E)</option><option>DIVORCE(E)</option></select></div>
+                <div class="col-md-6 form-group"><label>Situation d'emploi</label><select name="situatio_emploi" class="form-control"><option value="">Sélectionner</option><option>SANS EMPLOI</option><option>EMPLOYE</option></select></div>
+                <div class="col-md-6 form-group"><label>Handicap</label><select name="handicape" class="form-control"><option value="">Sélectionner</option><option>Oui</option><option>Non</option></select></div>
+                <div class="col-md-6 form-group"><label>Dernier établissement</label><input name="dernier_etablissement" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Diplôme d'entrée</label><select name="diplome_entree" class="form-control"><option value="">Sélectionner</option><option>Baccalauréat</option><option>BTS</option><option>License</option></select></div>
+                <div class="col-md-6 form-group"><label>Matricule du diplôme</label><input name="matricule_diplome" class="form-control"></div>
+            </div>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3">Informations familiales</h5>
+            <div class="row">
+                <div class="col-md-6 form-group"><label>Nom et prénom du père</label><input name="nom_prenom_pere" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Téléphone du père</label><input name="pere_telephone" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Profession du père</label><input name="pere_profession" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Ville du père</label><input name="pere_ville" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Nom et prénom de la mère</label><input name="nom_prenom_mere" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Téléphone de la mère</label><input name="telephone_mere" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Profession de la mère</label><input name="profession_mere" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Ville de la mère</label><input name="mere_ville" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Nom et prénom du sponsor</label><input name="nom_prenom_sponsor" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Téléphone du sponsor</label><input name="telephone_sponsor" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Profession du sponsor</label><input name="profession_sponsor" class="form-control"></div>
+                <div class="col-md-6 form-group"><label>Ville du sponsor</label><input name="sponsor_ville" class="form-control"></div>
+            </div>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3">Informations complémentaires</h5>
+            <div class="form-group"><label>Activités sportives</label><textarea name="activites_sportives" class="form-control"></textarea></div>
+            <div class="form-group"><label>Activités associatives</label><textarea name="activites_associatives" class="form-control"></textarea></div>
+            <div class="form-group"><label>Activités culturelles</label><textarea name="activites_culturelles" class="form-control"></textarea></div>
+            <div class="form-group"><label>Connaissances informatiques</label><textarea name="connaissances_informatiques" class="form-control"></textarea></div>
+        </div>
+
+        <button type="submit" id="btn_enregistrer" class="btn btn-primary btn-block">Terminer mon inscription</button>
+        <p class="text-center mt-3"><a href="/inscription/inscription">Retour à l'authentification</a></p>
+    </form>
+</div>
+{% endblock %}

@@ -57,6 +57,14 @@ def identifier_rattrapages(session_examen):
     Returns:
         dict: détails des UE non validées + récapitulatif par étudiant
     """
+    try:
+        return _identifier_rattrapages_impl(session_examen)
+    except Exception:
+        frappe.log_error(" retake identifier_rattrapages")
+        frappe.throw(_("Erreur lors de l'identification des rattrapages."))
+
+
+def _identifier_rattrapages_impl(session_examen):
     session = frappe.get_doc("Session Examen", session_examen)
 
     notes = frappe.get_all(
@@ -158,6 +166,14 @@ def etudiants_eligibles_rattrapage(academic_year, semestre, filiere, niveau):
     Returns:
         dict: liste des étudiants éligibles avec leurs UE concernées
     """
+    try:
+        return _etudiants_eligibles_rattrapage_impl(academic_year, semestre, filiere, niveau)
+    except Exception:
+        frappe.log_error(" retake etudiants_eligibles_rattrapage")
+        frappe.throw(_("Erreur lors de la recherche des étudiants éligibles au rattrapage."))
+
+
+def _etudiants_eligibles_rattrapage_impl(academic_year, semestre, filiere, niveau):
     sessions = frappe.get_all(
         "Session Examen",
         filters={
@@ -270,6 +286,14 @@ def creer_session_rattrapage(session_normale, date_debut, date_fin):
     Returns:
         dict: Session de rattrapage créée
     """
+    try:
+        return _creer_session_rattrapage_impl(session_normale, date_debut, date_fin)
+    except Exception:
+        frappe.log_error(" retake creer_session_rattrapage")
+        frappe.throw(_("Erreur lors de la création de la session de rattrapage."))
+
+
+def _creer_session_rattrapage_impl(session_normale, date_debut, date_fin):
     session_normale_doc = frappe.get_doc("Session Examen", session_normale)
 
     rattrapage = frappe.new_doc("Session Examen")
