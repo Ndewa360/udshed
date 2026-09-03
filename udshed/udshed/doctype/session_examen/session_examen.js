@@ -2,6 +2,13 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Session Examen", {
+	validate(frm) {
+		if (frm.doc.date_debut && frm.doc.date_de_fin) {
+			if (frm.doc.date_debut > frm.doc.date_de_fin) {
+				frappe.throw(__("La date initiale de la session doit être antérieure ou égale à la date finale."));
+			}
+		}
+	},
 	refresh(frm) {
 		if (frm.is_new() || frm.doc.statut !== "Brouillon") {
 			return;

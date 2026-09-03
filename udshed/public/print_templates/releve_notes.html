@@ -9,7 +9,7 @@
         color: #111;
         margin: 0;
         padding: 0;
-        font-size: 10pt;
+        font-size: 7pt;
     }
 
     .wm-logo {
@@ -61,13 +61,13 @@
         max-height: 48px;
     }
     .logo-symbol .logo-letter {
-        font-size: 28pt;
+        font-size: 15.1pt;
         font-weight: bold;
         color: #356b50;
     }
 
     .university-name {
-        font-size: 13pt;
+        font-size: 8.1pt;
         line-height: 1.1;
     }
 
@@ -75,7 +75,7 @@
         text-align: center;
         display: flex;
         flex-direction: column;
-        font-size: 12pt;
+        font-size: 7.5pt;
         line-height: 1.4;
     }
 
@@ -86,12 +86,12 @@
 
     /* ---------- Titre ---------- */
     .document-title {
-        height: 30px;
+        height: 34px;
         background: #75b58c;
         display: flex;
         justify-content: center;
         align-items: center;
-        font-size: 15pt;
+        font-size: 9.2pt;
         margin-bottom: 16px;
     }
     .document-title span {
@@ -108,7 +108,7 @@
         display: flex;
         justify-content: space-between;
         gap: 30px;
-        font-size: 10pt;
+        font-size: 7.0pt;
         margin-bottom: 14px;
     }
 
@@ -129,7 +129,7 @@
     }
     .info-row .en {
         font-style: italic;
-        font-size: 9pt;
+        font-size: 5.9pt;
     }
     .info-row strong {
         font-weight: bold;
@@ -138,14 +138,14 @@
     /* ---------- Récapitulatif général ---------- */
     .global-summary h3 {
         text-align: center;
-        font-size: 11pt;
+        font-size: 7.5pt;
         margin: 8px 0;
     }
 
     .summary-line {
         display: flex;
         justify-content: space-between;
-        font-size: 10pt;
+        font-size: 7.0pt;
         margin-bottom: 12px;
     }
     .summary-line strong {
@@ -159,7 +159,7 @@
 
     .semester-title {
         text-align: center;
-        font-size: 11.5pt;
+        font-size: 7.8pt;
         padding: 3px;
         border: 1px solid #bbb;
         border-bottom: none;
@@ -168,7 +168,7 @@
     .grades-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 9.5pt;
+        font-size: 6.5pt;
     }
     .grades-table th,
     .grades-table td {
@@ -181,7 +181,7 @@
         background: #fafafa;
     }
     .grades-table th i {
-        font-size: 8.5pt;
+        font-size: 5.7pt;
     }
     .grades-table td:first-child {
         width: 12%;
@@ -206,23 +206,40 @@
     }
     .semester-summary h4 {
         text-align: center;
-        font-size: 10.5pt;
+        font-size: 7.3pt;
         margin: 4px 0 6px;
     }
     .summary-grid {
         display: flex;
         justify-content: space-between;
-        font-size: 9.5pt;
+        font-size: 6.5pt;
     }
     .summary-grid p {
         margin: 2px 0;
+    }
+
+    /* ---------- Récapitulatif annuel ---------- */
+    .annual-summary {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 6.7pt;
+        margin-top: 14px;
+    }
+    .annual-summary th,
+    .annual-summary td {
+        border: 1px solid #b8b8b8;
+        padding: 5px 8px;
+    }
+    .annual-summary th {
+        background: #fafafa;
+        text-align: left;
     }
 
     /* ---------- Décision ---------- */
     .decision {
         width: 70%;
         margin: 14px auto 16px;
-        font-size: 11pt;
+        font-size: 7.5pt;
     }
     .decision div {
         display: flex;
@@ -236,7 +253,7 @@
     /* ---------- Échelle des notes ---------- */
     .grading-scale {
         width: 34%;
-        font-size: 7.5pt;
+        font-size: 5.1pt;
         margin-top: 8px;
     }
     .grading-scale h4 {
@@ -245,7 +262,7 @@
         background: #111;
         color: #fff;
         padding: 2px;
-        font-size: 8pt;
+        font-size: 5.4pt;
     }
     .grading-scale table {
         width: 100%;
@@ -264,7 +281,7 @@
         display: flex;
         justify-content: flex-end;
         gap: 40px;
-        font-size: 10.5pt;
+        font-size: 7.0pt;
     }
     .date {
         display: flex;
@@ -289,14 +306,14 @@
         margin-top: 20px;
         padding-top: 6px;
         text-align: center;
-        font-size: 8pt;
+        font-size: 5.7pt;
     }
 
     .empty-state {
         text-align: center;
         padding: 25px;
         color: #95a5a6;
-        font-size: 10pt;
+        font-size: 5.4pt;
     }
 </style>
 
@@ -542,6 +559,41 @@
         </div>
     </section>
     {% endfor %}
+
+    {# ─────────────── RÉCAPITULATIF ANNUEL ─────────────── #}
+    <section class="semester-summary">
+        <h4>
+            {{ _("RÉCAPITULATIF DE L'ANNÉE ACADÉMIQUE") }} /
+            <i>ACADEMIC YEAR SUMMARY</i>
+        </h4>
+        <table class="annual-summary">
+            <tbody>
+                <tr>
+                    <th>{{ _("Crédits validés sur l'année") }}</th>
+                    <td>
+                        <strong>
+                            {{ data.annee_credits_valides }} / {{ data.annee_credits_inscrits }}
+                        </strong>
+                        ({{ _("sur 60") }})
+                    </td>
+                </tr>
+                <tr>
+                    <th>{{ _("Pourcentage de validation") }}</th>
+                    <td>
+                        <strong>{{ "%.2f" | format(data.annee_pct_validation) }}%</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <th>{{ _("Profil académique") }}</th>
+                    <td><strong>{{ data.profil or "—" }}</strong></td>
+                </tr>
+                <tr>
+                    <th>{{ _("Total crédits cumulés validés") }}</th>
+                    <td><strong>{{ data.total_credits_obtenus }} / {{ data.total_credits }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
 
     {# ─────────────── DÉCISION ─────────────── #}
     <section class="decision">

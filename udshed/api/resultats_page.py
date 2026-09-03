@@ -773,3 +773,88 @@ def download_resultats_pdf(
     frappe.response["filecontent"] = pdf
     frappe.response["type"] = "download"
     frappe.response["content_type"] = "application/pdf"
+
+
+# ---------------------------------------------------------------------- #
+#  Calcul en masse des résultats
+# ---------------------------------------------------------------------- #
+@frappe.whitelist()
+def calculer_resultats_classe(
+    academic_year=None,
+    filiere=None,
+    niveau=None,
+    semestre=None,
+):
+    """Calcule (crée ou met à jour) les Resultat Academique / Resultat Semestre
+    de tous les étudiants d'une classe, à partir des notes déjà publiées.
+
+    Idempotent : un second passage met à jour les résultats existants sans les
+    dupliquer. Les étudiants sans note publiée sur le semestre sont ignorés
+    (leurs résultats éventuels ne sont pas supprimés).
+
+    Args:
+        academic_year: Academic Year
+        filiere: Field of study
+        niveau: Label du niveau (ex : « Licence 1 »)
+        semestre: « Semestre 1 » / « Semestre 2 » (optionnel : tous sinon)
+
+    Returns:
+        dict résumé : {"calcules", "ignores", "erreurs", "semestres", "nb_etudiants"}
+    """
+    if not (academic_year and filiere and niveau):
+        frappe.throw(_("Critères requis : année académique, filière et niveau."))
+
+    _verifier_acces_resultats(filiere)
+    if not frappe.db.exists("Field of study", filiere):
+        frappe.throw(_("La filière <b>{0}</b> est introuvable.").format(filiere))
+
+    from udshed.api.resultat_academique import calculer_resultat_semestre
+
+    semestres = (
+        [semestre]
+        if semestre in ("Semestre 1", "Semestre 2")
+        else ["Semestre 1", "Semestre 2"]
+    )
+
+    # Étudiants de la classe (inscrits aux UE de la classe sur l'année).
+    ues = _ues_classe(academic_year, filiere, niveau)
+    etudiants = [
+        e["student"]
+        for e in _etudiants_classe(academic_year, filiere, niveau, [u.name for u in ues])
+    ]
+    # Repli : étudiants ayant au moins une note publiée sur la classe.
+    if not etudiants:
+        sessions = _sessions_classe(academic_year, filiere, niveau, None, [TYPE_NORMALE])
+        if sessions:
+            etudiants = frappe.db.sql_list(
+                """
+                SELECT DISTINCT student
+                FROM `tabSession Examen Note`
+                WHERE session_examen IN %s AND statut = %s
+                """,
+                [list(sessions), STATUT_PUBLIE],
+            )
+    etudiants = [e for e in etudiants if e]
+    etudiants.sort(key=str.lower)
+
+    calcules = 0
+    ignores = 0
+    erreurs = []
+    for student in etudiants:
+        for sem in semestres:
+            try:
+                data = calculer_resultat_semestre(student, sem, academic_year)
+                if data.get("resultats"):
+                    calcules += 1
+                else:
+                    ignores += 1
+            except Exception as e:
+                erreurs.append("{0} / {1} : {2}".format(student, sem, e))
+
+    return {
+        "calcules": calcules,
+        "ignores": ignores,
+        "erreurs": erreurs,
+        "semestres": semestres,
+        "nb_etudiants": len(etudiants),
+    }

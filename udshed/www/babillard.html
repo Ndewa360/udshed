@@ -70,6 +70,22 @@
   outline-offset: -1px;
   border-color: #2563eb;
 }
+.bab-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+.bab-studlist {
+  margin: 10px 0 2px;
+  font-size: 0.8rem;
+}
+.bab-studlist a {
+  color: #2563eb;
+  text-decoration: none;
+  margin-right: 10px;
+  white-space: nowrap;
+}
 .bab-btn {
   margin-top: 16px;
   padding: 10px 28px;
@@ -114,6 +130,16 @@
 .bab-student { display: flex; flex-wrap: wrap; gap: 8px 28px; }
 .bab-student .bab-k { color: #6b7280; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .bab-student .bab-v { font-size: 1.02rem; font-weight: 600; color: #111827; margin-top: 2px; }
+.bab-decision {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+}
+.bab-decision.ok { background: #ecfdf5; border: 1px solid #6ee7b7; color: #047857; }
+.bab-decision.ko { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
 
 .bab-nav {
   display: flex;
@@ -263,6 +289,13 @@ table.bab-table th .bab-th-sub {
           </select>
         </div>
         <div class="bab-field">
+          <label for="babStudentSelect">Étudiant</label>
+          <select id="babStudentSelect">
+            <option value="">— Choisir un étudiant (liste des matricules) —</option>
+          </select>
+          <small class="bab-hint">Sélectionnez un étudiant : son matricule est pré-rempli ci-dessous.</small>
+        </div>
+        <div class="bab-field">
           <label for="babMatricule">Matricule *</label>
           <input id="babMatricule" type="text" value="{{ matricule }}" placeholder="Ex : STU-0001" required>
         </div>
@@ -376,6 +409,12 @@ table.bab-table th .bab-th-sub {
       <span id="babCurrentInfo" style="font-size:0.85rem;color:#6b7280;"></span>
     </div>
 
+    <div class="bab-card" id="babAnnual" hidden>
+      <h2>Récapitulatif de l'année</h2>
+      <div class="bab-student" id="babAnnualInfo"></div>
+      <div class="bab-decision" id="babAnnualDecision"></div>
+    </div>
+
     <div id="babSemesters"></div>
 
     <div class="bab-card bab-legend">
@@ -467,6 +506,77 @@ table.bab-table th .bab-th-sub {
       .finally(function () { showLoading(false); });
   }
 
+  function loadStudents() {
+    var niveau = $("babNiveau").value.trim();
+    var year = $("babYear").value.trim();
+    var sel = $("babStudentSelect");
+    var current = sel.value;
+    if (!niveau) {
+      sel.innerHTML = "";
+      var empty0 = document.createElement("option");
+      empty0.value = "";
+      empty0.textContent = "— Choisir d'abord le niveau —";
+      sel.appendChild(empty0);
+      return;
+    }
+    sel.innerHTML = "";
+    var loading = document.createElement("option");
+    loading.value = "";
+    loading.textContent = "Chargement des étudiants…";
+    sel.appendChild(loading);
+    sel.disabled = true;
+
+    var params = new URLSearchParams();
+    params.set("niveau", niveau);
+    if (year) params.set("academic_year", year);
+
+    fetch("/api/method/udshed.api.babillard.list_students?" + params.toString(), {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { "Accept": "application/json" }
+    })
+      .then(function (resp) { return resp.json(); })
+      .then(function (json) {
+        var data = json && json.message ? json.message : json;
+        sel.innerHTML = "";
+        var empty = document.createElement("option");
+        empty.value = "";
+        if (data && data.success) {
+          var students = data.students || [];
+          empty.textContent = students.length
+            ? "— Choisir un étudiant —"
+            : "Aucun étudiant pour ce niveau";
+        } else {
+          empty.textContent = "— Erreur de chargement —";
+        }
+        sel.appendChild(empty);
+        (data && data.students || []).forEach(function (s) {
+          var opt = document.createElement("option");
+          opt.value = s.matricule;
+          opt.textContent = (s.nom || "") + " " + (s.prenom || "") + "  [" + s.matricule + "]";
+          opt.setAttribute("data-name", s.name);
+          if (s.matricule === current || s.matricule === $("babMatricule").value.trim()) {
+            opt.selected = true;
+          }
+          sel.appendChild(opt);
+        });
+      })
+      .catch(function () {
+        sel.innerHTML = "";
+        var empty = document.createElement("option");
+        empty.value = "";
+        empty.textContent = "— Erreur de chargement —";
+        sel.appendChild(empty);
+      })
+      .finally(function () { sel.disabled = false; });
+  }
+
+  function onStudentSelected() {
+    var val = $("babStudentSelect").value;
+    $("babMatricule").value = val;
+    if (val) consult();
+  }
+
   function filterSemestersByCours(semesters, cours) {
     if (!cours) return semesters;
     return semesters.map(function (sem) {
@@ -484,9 +594,37 @@ table.bab-table th .bab-th-sub {
     var student = data.student || {};
     renderStudent(student);
     renderYearNav(data);
+    renderAnnual(data);
     renderSemesters(filterSemestersByCours(data.semesters || [], $("babCours").value));
     renderLegend(data.grade_scale || []);
     $("babResult").hidden = false;
+  }
+
+  function renderAnnual(data) {
+    var wrap = $("babAnnual");
+    var hasAnnual = typeof data.annee_credits_valides === "number";
+    wrap.hidden = !hasAnnual;
+    if (!hasAnnual) return;
+
+    var info = $("babAnnualInfo");
+    info.innerHTML = "";
+    [
+      ["Crédits validés", data.annee_credits_valides + " / " + (data.annee_credits_inscrits || 0)],
+      ["Pourcentage de validation", fmt(data.annee_pct_validation) + " %"]
+    ].forEach(function (it) {
+      var d = document.createElement("div");
+      var k = document.createElement("div"); k.className = "bab-k"; k.textContent = it[0];
+      var v = document.createElement("div"); v.className = "bab-v"; v.textContent = it[1];
+      d.appendChild(k); d.appendChild(v);
+      info.appendChild(d);
+    });
+
+    var dec = $("babAnnualDecision");
+    dec.innerHTML = "";
+    if (!data.decision_annuelle) return;
+    var label = data.decision_annuelle === "Admis" ? "ADMIS(E)" : "AJOURNÉ(E)";
+    dec.textContent = "Décision : " + label;
+    dec.className = "bab-decision " + (data.decision_annuelle === "Admis" ? "ok" : "ko");
   }
 
   function renderStudent(s) {
@@ -879,6 +1017,11 @@ table.bab-table th .bab-th-sub {
       consult();
     });
 
+    // Liste des étudiants / matricules selon niveau + année
+    $("babNiveau").addEventListener("change", loadStudents);
+    $("babYear").addEventListener("change", loadStudents);
+    $("babStudentSelect").addEventListener("change", onStudentSelected);
+
     $("babFiliere").addEventListener("change", function () {
       var niveaux = filiereNiveaux(this.value);
       var sel = $("babFiliereNiveau");
@@ -911,6 +1054,7 @@ table.bab-table th .bab-th-sub {
     // Consultation automatique si la page est ouverte avec un lien pré-rempli
     var niveau = $("babNiveau").value.trim();
     var matricule = $("babMatricule").value.trim();
+    if (niveau) loadStudents();
     if (niveau && matricule) {
       consult();
     }

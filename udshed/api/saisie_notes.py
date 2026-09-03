@@ -1,6 +1,8 @@
 # Copyright (c) 2026, Cédric Nguendap Bedjama and contributors
 # For license information, please see license.txt
 
+import re
+
 import frappe
 from frappe import _
 from frappe.utils import flt, today
@@ -9,6 +11,7 @@ from udshed.grade_calculation import (
     combinaison_detectee,
     combinaison_type_ue,
     get_formula,
+    get_seuil_validation,
 )
 
 TYPE_CC = "Controlle Continue (CC)"
@@ -1492,177 +1495,439 @@ def _fmt_pct(v):
     return "{0} %".format(flt(v))
 
 
-def _html_fiche_pdf(titre, annee="", faculte="", filiere="", niveau="", semestre="", cours="", code="", ue="", session="", enseignants="", entetes=None, lignes=None):
-    """Construit le HTML d'une fiche de notes PDF avec les données réelles de la saisie."""
+def _code_classe(fos_code, niveau_label):
+    """Code de classe compact pour le bandeau du PV (ex : IRT + Licence 3 -> IRT3)."""
+    match = re.search(r"(\d+)", niveau_label or "")
+    if match and fos_code:
+        return "{0}{1}".format(fos_code, match.group(1))
+    return niveau_label or ""
+
+
+def _code_semestre(semestre_label):
+    """Code semestre compact pour le bandeau du PV (ex : Semestre 6 -> SEM6)."""
+    match = re.search(r"(\d+)", semestre_label or "")
+    if match:
+        return "SEM{0}".format(match.group(1))
+    return semestre_label or ""
+
+
+def _html_pv_matiere_pdf(
+    ecole,
+    institut,
+    departement,
+    logo_html,
+    classe,
+    annee,
+    semestre_label,
+    matiere,
+    code_matiere,
+    inscrits,
+    admis,
+    echecs,
+    taux,
+    evaluations,
+    lignes,
+):
+    """Construit le HTML du procès-verbal de la matière (modèle UDM, A4 paysage).
+
+    Toutes les valeurs affichées proviennent du moteur central
+    (Session Examen Note) : composantes CC/CCTP/EXAMTP/EXAM, moyenne %,
+    grade et points. Aucune donnée n'est recalculée ici.
+    """
 
     def esc(v):
-        return frappe.utils.escape_html(v or "")
+        return frappe.utils.escape_html(str(v) if v is not None else "")
 
-    def cell(label, valeur, extra_cls=""):
-        if not valeur:
-            return ""
-        return (
-            '<div class="meta-cell {0}">'
-            '<span class="meta-label">{1}</span>'
-            '<span class="meta-value">{2}</span>'
-            "</div>"
-        ).format(extra_cls, esc(label), esc(valeur))
+    def note(v):
+        return esc(_fmt(v))
 
-    entetes_html = "".join("<th>{0}</th>".format(frappe.utils.escape_html(h)) for h in entetes or [])
-    lignes_html = ""
-    for ligne in lignes or []:
-        cellules = "".join("<td>{0}</td>".format(frappe.utils.escape_html(c or "")) for c in ligne)
-        lignes_html += "<tr>{0}</tr>".format(cellules)
-    if not lignes_html:
-        lignes_html = "<tr><td colspan='{0}' style='text-align:center;color:#888;'>Aucun étudiant</td></tr>".format(
-            len(entetes or [])
+    eval_rows = ""
+    for ev in evaluations or []:
+        eval_rows += (
+            "<tr>"
+            "<td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td>"
+            "</tr>"
+        ).format(esc(ev.get("type")), esc(ev.get("code")), esc(ev.get("matiere")), esc(ev.get("date")))
+
+    notes_rows = ""
+    for i, ligne in enumerate(lignes or [], start=1):
+        nom_complet = "{0} {1}".format(ligne.get("nom") or "", ligne.get("prenom") or "").strip()
+        pct = ligne.get("note_pct")
+        notes_rows += (
+            "<tr>"
+            "<td>{0}</td>"
+            "<td>{1}</td>"
+            "<td class='nom-cell'>{2}</td>"
+            "<td>{3}</td>"
+            "<td>{4}</td>"
+            "<td>{5}</td>"
+            "<td>{6}</td>"
+            "<td>{7}</td>"
+            "<td>{8}</td>"
+            "<td>{9}</td>"
+            "</tr>"
+        ).format(
+            i,
+            esc(ligne.get("matricule")),
+            esc(nom_complet),
+            note(ligne.get("cc")),
+            note(ligne.get("cctp")),
+            note(ligne.get("examtp")),
+            note(ligne.get("examen")),
+            esc("{0:.2f}%".format(flt(pct))) if pct is not None else "",
+            esc(ligne.get("grade")),
+            note(ligne.get("point")),
         )
 
-    setting = frappe.get_single("Udshed Setting")
-    school_name = setting.school_name or ""
-    school_logo = setting.school_logo or ""
+    if not notes_rows:
+        notes_rows = "<tr><td colspan='10' style='padding:12px;color:#666;'>Aucun étudiant inscrit</td></tr>"
 
-    logo_html = ""
-    if school_logo:
-        logo_url = school_logo
-        if school_logo.startswith("/"):
-            logo_url = frappe.utils.get_url(school_logo)
-        logo_html = '<img class="logo-img" src="{0}" alt="logo">'.format(esc(logo_url))
-
-    school_html = '<span class="school-name">{0}</span>'.format(esc(school_name)) if school_name else ""
-
-    cours_valeur = cours + ((" (" + code + ")") if code else "")
-    titre_esc = esc(titre)
-
-    # Blocs principaux en 2 colonnes (Année, Faculté, Filière, Niveau, Semestre, Cours).
-    primaire = (
-        cell("Année académique", annee)
-        + cell("Faculté", faculte)
-        + cell("Filière", filiere)
-        + cell("Niveau", niveau)
-        + cell("Semestre", semestre)
-        + cell("Cours", cours_valeur, "meta-wide")
-    )
-    # Blocs secondaires compacts (UE, Session, Enseignant(s)).
-    secondaire = (
-        cell("UE", ue)
-        + cell("Session", session)
-        + cell("Enseignant(s)", enseignants, "meta-wide")
-    )
+    titre_matiere = esc(matiere or "")
+    if code_matiere:
+        titre_matiere += "({0})".format(esc(code_matiere))
 
     return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            @page {{ size: A4 landscape; margin: 14mm 14mm; }}
-            body {{ font-family: Helvetica, Arial, sans-serif; color: #1d273b; margin: 0; }}
-            *, *:before, *:after {{ box-sizing: border-box; }}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    * {{ box-sizing: border-box; }}
 
-            /* ---------- bandeau institutionnel ---------- */
-            .doc-head {{ border: 1px solid #d6dbe6; border-radius: 8px; overflow: hidden; }}
-            .head-top {{
-                display: flex; align-items: center; gap: 18px;
-                padding: 14px 20px;
-                background: linear-gradient(90deg, #f7f9ff 0%, #ffffff 60%);
-                border-bottom: 3px solid #4858b4;
-            }}
-            .school-brand {{ display: flex; align-items: center; gap: 12px; }}
+    body {{
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+        font-family: "Times New Roman", Times, serif;
+        color: #000;
+    }}
 
-            /* ---------- filigrane logo UDSHED ---------- */
-            .doc-watermark {{
-                position: fixed; top: 50%; left: 50%;
-                transform: translate(-50%, -50%);
-                z-index: -1; opacity: 0.10;
-                display: flex; align-items: center; justify-content: center;
-            }}
-            .doc-watermark .logo-img {{
-                width: 340px; height: auto; max-width: 70%;
-                opacity: 1;
-            }}
+    @page {{ size: A4 landscape; margin: 10mm 12mm; }}
 
-            .school-name {{ font-size: 17px; font-weight: 800; color: #4858b4; letter-spacing: 1px; text-transform: uppercase; }}
-            .head-title {{ flex: 1; text-align: center; }}
-            .doc-title {{
-                font-size: 19px; font-weight: 700; color: #1d273b;
-                letter-spacing: .4px; margin: 0;
-            }}
-            .doc-subtitle {{ font-size: 10px; color: #6b7280; letter-spacing: 2px; text-transform: uppercase; margin-top: 3px; }}
-            .head-subtitle {{
-                font-size: 12px; color: #4858b4; font-weight: 600;
-                text-align: center; padding: 6px 12px; background: #eef1f8;
-                border-bottom: 1px solid #d6dbe6;
-            }}
+    .page {{ position: relative; }}
 
-            /* ---------- contexte académique ---------- */
-            .head-meta {{ padding: 10px 14px 12px; }}
-            .meta-group {{ display: flex; flex-wrap: wrap; }}
-            .meta-group + .meta-group {{ margin-top: 6px; border-top: 1px dashed #dde2ee; padding-top: 8px; }}
-            .meta-cell {{
-                width: 50%; padding: 3px 10px 3px 0;
-                display: flex; flex-direction: column;
-            }}
-            .meta-cell.meta-wide {{ width: 100%; }}
-            .meta-label {{
-                font-size: 9px; color: #8a93a3; text-transform: uppercase;
-                letter-spacing: .7px; font-weight: 700; margin-bottom: 1px;
-            }}
-            .meta-value {{ font-size: 13px; color: #1d273b; font-weight: 600; line-height: 1.3; }}
+    /* ================= HEADER ================= */
+    .header {{
+        border-bottom: 2px solid #999;
+        position: relative;
+        margin-bottom: 30px;
+        padding-bottom: 8px;
+        min-height: 85px;
+    }}
 
-            /* ---------- séparation élégante avant le tableau ---------- */
-            .head-sep {{ border: none; height: 3px; margin: 12px 0 10px; background: linear-gradient(90deg, #4858b4, #9aa6e8, #4858b4); }}
+    .universite {{
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: #071c9d;
+        line-height: 1.1;
+    }}
 
-            /* ---------- tableau étudiants (inchangé) ---------- */
-            table {{ width: 100%; border-collapse: collapse; font-size: 11px; }}
-            th, td {{ border: 1px solid #c4c9d1; padding: 5px 7px; text-align: left; }}
-            th {{ background: #f4f6f9; font-weight: 600; }}
-            td.r, th.r {{ text-align: right; }}
-        </style>
-    </head>
-    <body>
-        <div class="doc-watermark">{0}</div>
-        <div class="doc-head">
-            <div class="head-top">
-                <div class="school-brand">{1}</div>
-                <div class="head-title">
-                    <div class="doc-title">RELEVÉ DE SAISIE DES NOTES</div>
-                    <div class="doc-subtitle">Document de saisie</div>
-                </div>
-            </div>
-            <div class="head-subtitle">{2}</div>
-            <div class="head-meta">
-                <div class="meta-group">{3}</div>
-                <div class="meta-group">{4}</div>
-            </div>
+    .universite .nom {{
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 21px;
+        font-weight: bold;
+    }}
+
+    .universite .institut {{
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        margin-top: 4px;
+    }}
+
+    .universite .departement {{
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 13px;
+        margin-top: 3px;
+    }}
+
+    .logo {{
+        position: absolute;
+        right: 0;
+        top: -5px;
+        width: 110px;
+        height: 95px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }}
+    .logo img {{ max-width: 105px; max-height: 90px; }}
+
+    /* ================= INFORMATIONS ================= */
+    .info-header {{
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        margin-bottom: 0;
+    }}
+
+    .info-header td {{
+        border: 2px solid #222;
+        background: #dce2e8;
+        text-align: center;
+        vertical-align: middle;
+        height: 52px;
+        font-size: 19px;
+        font-weight: bold;
+    }}
+
+    .info-header .annee {{ line-height: 1; }}
+    .info-header .annee span {{ display: block; font-size: 19px; margin-top: 3px; }}
+
+    /* ================= TITRE ================= */
+    .titre {{
+        border-left: 2px solid #222;
+        border-right: 2px solid #222;
+        border-bottom: 2px solid #222;
+        text-align: center;
+        height: 32px;
+        font-size: 14px;
+        font-weight: bold;
+        padding-top: 6px;
+    }}
+    .titre span {{ font-weight: normal; }}
+
+    /* ================= STATISTIQUES ================= */
+    .stats-zone {{ display: flex; width: 100%; margin-top: 0; }}
+
+    .credits {{ width: 58%; padding-top: 12px; }}
+    .evaluations {{ width: 42%; padding-top: 0; }}
+
+    .credits-title {{
+        width: 145px;
+        height: 20px;
+        border: 1px solid #333;
+        background: #eef1f3;
+        text-align: center;
+        color: #d00000;
+        font-size: 12px;
+        font-weight: bold;
+        padding-top: 2px;
+    }}
+
+    .credits-table {{ border-collapse: collapse; width: 100%; table-layout: fixed; }}
+    .credits-table th,
+    .credits-table td {{
+        border: 1px solid #555;
+        text-align: center;
+        height: 20px;
+        font-size: 11px;
+    }}
+    .credits-table th {{ background: #eef1f3; color: #174a8b; font-weight: bold; }}
+    .credits-table td {{ color: #174a8b; font-weight: bold; }}
+
+    .evaluations-table {{ width: 100%; border-collapse: collapse; table-layout: fixed; }}
+    .evaluations-table th,
+    .evaluations-table td {{
+        border: 1px solid #444;
+        text-align: center;
+        height: 19px;
+        font-size: 10px;
+    }}
+    .evaluations-table .title {{
+        color: #174a8b;
+        background: #eef1f3;
+        font-weight: bold;
+        height: 18px;
+    }}
+    .evaluations-table th {{ background: #eef1f3; color: #174a8b; font-weight: bold; }}
+    .evaluations-table td {{ color: #174a8b; }}
+
+    /* ================= TABLEAU PRINCIPAL ================= */
+    .notes-table {{
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        margin-top: 2px;
+    }}
+
+    .notes-table th,
+    .notes-table td {{
+        border: 1px solid #222;
+        text-align: center;
+        vertical-align: middle;
+    }}
+
+    .notes-table th {{
+        height: 26px;
+        color: #15519b;
+        font-size: 12px;
+        font-weight: bold;
+        background: #fff;
+    }}
+
+    .notes-table td {{ height: 26px; font-size: 12px; }}
+
+    .notes-table .numero {{ width: 42px; }}
+    .notes-table .matricule {{ width: 85px; }}
+    .notes-table .nom {{ width: 340px; }}
+    .notes-table .note {{ width: 52px; }}
+    .notes-table .moy {{ width: 58px; }}
+    .notes-table .grd {{ width: 48px; }}
+    .notes-table .pts {{ width: 50px; }}
+
+    .nom-cell {{ text-align: left !important; padding-left: 8px; white-space: nowrap; }}
+
+    /* ================= SIGNATURES ================= */
+    .signatures {{
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        margin-top: 26px;
+    }}
+
+    .signature {{
+        width: 23%;
+        height: 30px;
+        border: 2px solid #222;
+        text-align: center;
+        font-size: 13px;
+        font-weight: bold;
+        padding-top: 6px;
+    }}
+
+    /* ================= FILIGRANE ================= */
+    .watermark {{
+        position: fixed;
+        left: 50%;
+        top: 55%;
+        transform: translate(-50%, -50%) rotate(-28deg);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 52px;
+        font-weight: bold;
+        color: rgba(130, 130, 130, 0.13);
+        white-space: nowrap;
+        pointer-events: none;
+        z-index: 10;
+    }}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+    <div class="watermark">{0}</div>
+
+    <div class="header">
+        <div class="universite">
+            <div class="nom">{0}</div>
+            <div class="institut">{1}</div>
+            <div class="departement">{2}</div>
         </div>
-        <hr class="head-sep">
-        <table>
-            <thead><tr>{5}</tr></thead>
-            <tbody>{6}</tbody>
-        </table>
-    </body>
-    </html>
+        <div class="logo">{3}</div>
+    </div>
+
+    <table class="info-header">
+        <tr>
+            <td>{4}</td>
+            <td class="annee">
+                Année Académique
+                <span>{5}</span>
+            </td>
+            <td>{6}</td>
+        </tr>
+    </table>
+
+    <div class="titre">
+        <b>PROCES VERBAL DE LA MATIERE:</b>
+        <span>{7}</span>
+    </div>
+
+    <div class="stats-zone">
+        <div class="credits">
+            <div class="credits-title">Credits:</div>
+            <table class="credits-table">
+                <tr>
+                    <th>Inscrits</th>
+                    <th>Admis</th>
+                    <th>Echecs</th>
+                    <th>Taux de réussite</th>
+                </tr>
+                <tr>
+                    <td>{8}</td>
+                    <td>{9}</td>
+                    <td>{10}</td>
+                    <td>{11}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="evaluations">
+            <table class="evaluations-table">
+                <tr>
+                    <td colspan="4" class="title">Evaluations effectuées:</td>
+                </tr>
+                <tr>
+                    <th>Type</th>
+                    <th>Code</th>
+                    <th>Matière</th>
+                    <th>Date</th>
+                </tr>
+                {12}
+            </table>
+        </div>
+    </div>
+
+    <table class="notes-table">
+        <thead>
+            <tr>
+                <th class="numero">N°</th>
+                <th class="matricule">Matricule</th>
+                <th class="nom">Nom et Prénoms</th>
+                <th class="note">CC</th>
+                <th class="note">CCTP</th>
+                <th class="note">EXAMTP</th>
+                <th class="note">EXAM</th>
+                <th class="moy">MOY</th>
+                <th class="grd">GRD</th>
+                <th class="pts">PTS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {13}
+        </tbody>
+    </table>
+
+    <div class="signatures">
+        <div class="signature">VICE DOYEN</div>
+        <div class="signature">COORDONATEUR</div>
+        <div class="signature">RESP ACADEMIQUE</div>
+        <div class="signature">CHEF UNITE</div>
+    </div>
+
+</div>
+
+</body>
+</html>
     """.format(
+        esc(ecole),
+        esc(institut),
+        esc(departement),
         logo_html,
-        school_html,
-        titre_esc,
-        primaire,
-        secondaire,
-        entetes_html,
-        lignes_html,
+        esc(classe),
+        esc(annee),
+        esc(semestre_label),
+        titre_matiere,
+        inscrits,
+        admis,
+        echecs,
+        taux,
+        eval_rows,
+        notes_rows,
     )
 
 
 @frappe.whitelist()
 def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
-    """Génère le relevé de notes au format PDF à partir des données réellement enregistrées.
+    """Génère le procès-verbal de la matière au format PDF à partir des données enregistrées.
 
-    Le tableau présente, pour chaque étudiant : Session examen, Session
-    rattrapage, Note retenue (= MAX(examen, rattrapage)), Note finale, %,
-    Grade et Points. Notes, grades, points et la note retenue proviennent du
+    Le PV présente, pour chaque étudiant inscrit : les composantes saisies
+    (CC, CCTP, EXAMTP, EXAM), la moyenne (%), le grade et les points, ainsi
+    que les statistiques de l'UE (inscrits, admis, échecs, taux de réussite)
+    et les évaluations de la session. Toutes les valeurs proviennent du
     moteur central (Session Examen Note) — aucune donnée fictive, aucun
-    recalcul local.
+    recalcul local. Si un rattrapage est saisi, la note retenue (= MAX
+    examen/rattrapage) et le résultat correspondant sont utilisés.
     """
     _verifier_acces_enseignant(teaching_unit)
     args = {
@@ -1684,50 +1949,79 @@ def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
     }
     notes = _charger_notes(students, teaching_unit, sessions)
 
+    # Lignes unifiées (CC, CCTP, EXAMTP, EXAM + résultat) — même source que la page.
+    lignes = _lignes_unifiees(students, notes)
+
+    # Le rattrapage saisi prime : note retenue et résultat de la session de rattrapage.
+    notes_rt = notes.get("Rattrapage", {})
+    for ligne in lignes:
+        rt = notes_rt.get(ligne.get("student")) or {}
+        if rt.get("note_pct") is not None:
+            ligne["examen"] = rt.get("note_examen_active")
+            ligne["note_finale"] = rt.get("note_finale")
+            ligne["note_pct"] = rt.get("note_pct")
+            ligne["grade"] = rt.get("grade")
+            ligne["point"] = rt.get("point")
+
+    # Statistiques de l'UE : admis/échecs selon le seuil de validation du cycle.
+    cycle = _cycle_pour_niveau(niveau)
+    seuil = get_seuil_validation(cycle)
+    evalues = [l for l in lignes if l.get("note_pct") is not None]
+    admis = sum(1 for l in evalues if flt(l["note_pct"]) >= seuil)
+    echecs = len(evalues) - admis
+    taux = "{0:.2f}%".format(admis * 100.0 / len(evalues)) if evalues else ""
+
+    # Évaluations de la session (type + matière + date de début).
+    code_matiere = ue_info.get("code") or ""
+    evaluations = []
+    for type_label, cle in (("CC", "cc"), ("EXAM", "normale"), ("RAT", "rattrapage")):
+        date_debut = frappe.db.get_value("Session Examen", sessions[cle], "date_debut")
+        evaluations.append(
+            {
+                "type": type_label,
+                "code": "",
+                "matiere": code_matiere,
+                "date": frappe.utils.formatdate(date_debut, "dd-MM-yyyy") if date_debut else "",
+            }
+        )
+
+    setting = frappe.get_single("Udshed Setting")
+    ecole = setting.school_name or ""
+
+    logo_html = ""
+    if setting.school_logo:
+        logo_url = setting.school_logo
+        if logo_url.startswith("/"):
+            logo_url = frappe.utils.get_url(logo_url)
+        logo_html = '<img src="{0}" alt="logo">'.format(frappe.utils.escape_html(logo_url))
+
     fos_doc = frappe.get_doc("Field of study", filiere)
     faculte = ""
     if fos_doc.faculte:
         faculte = frappe.db.get_value("Faculty", fos_doc.faculte, "faculty_name") or ""
 
-    entetes = ["N°", "Matricule", "Nom et Prénoms", "Session examen", "Session rattrapage", "Note retenue", "Note finale", "%", "Grade", "Points"]
-
-    notes_rt = notes.get("Rattrapage", {})
-    lignes = []
-    for i, s in enumerate(students, start=1):
-        rt = notes_rt.get(s["student"]) or {}
-        lignes.append(
-            [
-                i,
-                s.get("matricule") or "",
-                "{} {}".format(s.get("nom") or "", s.get("prenom") or "").strip(),
-                _fmt(rt.get("note_examen")),
-                _fmt(rt.get("note_examen_rattrapage")),
-                _fmt(rt.get("note_examen_active")),
-                _fmt(rt.get("note_finale")),
-                _fmt_pct(rt.get("note_pct")),
-                rt.get("grade") or "",
-                _fmt(rt.get("point")),
-            ]
-        )
-
-    titre = "{0} — {1} — {2}".format(ue_info.get("intitule") or teaching_unit, niveau, semestre_effectif)
-    html = _html_fiche_pdf(
-        titre,
+    html = _html_pv_matiere_pdf(
+        ecole=ecole,
+        institut=faculte,
+        departement=fos_doc.name_of_field or "",
+        logo_html=logo_html,
+        classe=_code_classe(fos_doc.field_of_study_code or "", niveau),
         annee=academic_year,
-        faculte=faculte,
-        filiere=fos_doc.name_of_field,
-        niveau=niveau,
-        semestre=semestre_effectif,
-        cours=ue_info.get("intitule") or "",
-        code=ue_info.get("code") or "",
-        ue=teaching_unit,
-        session="Examen normal + Rattrapage",
-        enseignants=", ".join(e.get("full_name") or e.get("name") for e in ue_info.get("enseignants", [])),
-        entetes=entetes,
+        semestre_label=_code_semestre(semestre_effectif),
+        matiere=ue_info.get("intitule") or teaching_unit,
+        code_matiere=code_matiere,
+        inscrits=len(lignes),
+        admis=admis,
+        echecs=echecs,
+        taux=taux,
+        evaluations=evaluations,
         lignes=lignes,
     )
 
-    frappe.response["filename"] = "notes_{0}.pdf".format(teaching_unit.replace("/", "-"))
+    frappe.response["filename"] = "PV_{0}_{1}.pdf".format(
+        (code_matiere or teaching_unit).replace("/", "-"),
+        (niveau or "").replace(" ", "-"),
+    )
     frappe.response["filecontent"] = _html_en_pdf(html)
     frappe.response["type"] = "download"
     frappe.response["content_type"] = "application/pdf"

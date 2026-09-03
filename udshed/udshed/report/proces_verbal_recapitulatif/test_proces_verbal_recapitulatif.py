@@ -111,6 +111,8 @@ class TestProcesVerbalRecapitulatif(IntegrationTestCase):
         self.assertIn("mps", noms)
         self.assertIn("mpc", noms)
         self.assertIn("statut", noms)
+        self.assertIn("sem_ant_mpc", noms)
+        self.assertIn("sem_ant_tcc", noms)
 
         # Quatre colonnes par UE du semestre (dont Mention)
         for ue in (self.tu1, self.tu2):
@@ -138,13 +140,17 @@ class TestProcesVerbalRecapitulatif(IntegrationTestCase):
         self.assertEqual(row[f"ue_{self.tu2.name}_non_valide"], 1)
 
         # Synthèse : TCI = 6 crédits, TCC = 3 (une seule UE validée),
-        # MPS (%) = (3×69 + 3×24) / 6 = 46.5 ; pas de Resultat Semestre -> MPC None
+        # MPS (sur 4) = (3×3 + 3×0) / 6 = 1.5 ; pas de Resultat Semestre -> MPC None
         self.assertEqual(row["tci"], 6)
         self.assertEqual(row["tcc"], 3)
         self.assertEqual(row["pct_validation"], 50.0)
-        self.assertEqual(row["mps"], 46.5)
+        self.assertEqual(row["mps"], 1.5)
         self.assertIsNone(row["mpc"])
         self.assertEqual(row["statut"], "Ajourné")
+
+        # SEM N-1 : pas de Resultat Semestre -> MPC None, TCC None
+        self.assertIsNone(row["sem_ant_mpc"])
+        self.assertIsNone(row["sem_ant_tcc"])
 
     def test_rapport_sans_resultats(self):
         # Le PV liste tous les étudiants de la classe, même sans notes publiées
@@ -157,6 +163,10 @@ class TestProcesVerbalRecapitulatif(IntegrationTestCase):
         self.assertEqual(row["pct_validation"], 0.0)
         self.assertEqual(row["mps"], 0)
         self.assertEqual(row["statut"], "En attente")
+
+        # SEM N-1 : pas de Resultat Semestre -> valeurs vides
+        self.assertIsNone(row["sem_ant_mpc"])
+        self.assertIsNone(row["sem_ant_tcc"])
 
         # Les colonnes UE restent présentes, avec des valeurs vides
         noms = [c["fieldname"] for c in columns]

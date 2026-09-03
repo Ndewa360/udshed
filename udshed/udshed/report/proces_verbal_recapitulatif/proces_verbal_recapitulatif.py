@@ -90,6 +90,11 @@ def _build_columns(ues):
         {"fieldname": "student_name", "label": _("Nom complet"), "fieldtype": "Data", "width": 220},
     ]
 
+    columns += [
+        {"fieldname": "sem_ant_mpc", "label": _("SEM N-1 MPC"), "fieldtype": "Float", "width": 70, "precision": 2},
+        {"fieldname": "sem_ant_tcc", "label": _("SEM N-1 TCC"), "fieldtype": "Int", "width": 60},
+    ]
+
     # Quatre colonnes par UE : Note %, Grade, Point et Mention
     for ue in ues:
         key = _ue_key(ue["name"])
@@ -140,6 +145,8 @@ def _build_rows(ues, etudiants):
                 1 if (note is not None and not r.get("valide")) else 0
             )
 
+        row["sem_ant_mpc"] = et.get("sem_ant_mpc")
+        row["sem_ant_tcc"] = et.get("sem_ant_tcc")
         row["tci"] = et["total_credits"]
         row["tcc"] = et["credits_obtenus"]
         row["pct_validation"] = et["pct_validation"]

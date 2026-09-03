@@ -86,6 +86,9 @@ frappe.pages["resultats-academiques"].on_page_load = function (wrapper) {
 					<p class="ra-subtitle">${__("Consultez et analysez les résultats des étudiants")}</p>
 				</div>
 				<div class="ra-header-actions">
+					<button type="button" class="btn btn-default btn-sm ra-btn-calculer">
+						${frappe.utils.icon("refresh", "sm")} ${__("Calculer les résultats")}
+					</button>
 					<button type="button" class="btn btn-default btn-sm ra-btn-filter">
 						${frappe.utils.icon("filter", "sm")} ${__("Filtrer")}
 					</button>
@@ -592,6 +595,79 @@ frappe.pages["resultats-academiques"].on_page_load = function (wrapper) {
 	}
 
 	// ------------------------------------------------------------------ //
+	//  Calcul en masse des résultats
+	// ------------------------------------------------------------------ //
+	function calculer_resultats() {
+		const criteres = filtres_backend();
+		if (!criteres.academic_year || !criteres.filiere || !criteres.niveau) {
+			frappe.msgprint(__("Sélectionnez une année académique et une classe avant de lancer le calcul."));
+			return;
+		}
+		if (state.loading) {
+			return;
+		}
+		const libelle_classe = criteres.filiere + " — " + criteres.niveau;
+		const libelle_semestre = criteres.semestre
+			? criteres.semestre
+			: __("tous les semestres (1 et 2)");
+		frappe.confirm(
+			__("Calculer les résultats du semestre pour la classe <b>") + libelle_classe +
+				__("</b> (") + libelle_semestre + __(") ?"),
+			function () {
+				state.loading = true;
+				$(".ra-btn-calculer").prop("disabled", true);
+				frappe.show_alert({ message: __("Calcul des résultats en cours..."), indicator: "blue" });
+				frappe.call({
+					method: API + "calculer_resultats_classe",
+					args: {
+						academic_year: criteres.academic_year,
+						filiere: criteres.filiere,
+						niveau: criteres.niveau,
+						semestre: criteres.semestre,
+					},
+					callback(r) {
+						state.loading = false;
+						$(".ra-btn-calculer").prop("disabled", false);
+						if (!r || !r.message) {
+							frappe.msgprint({
+								title: __("Échec du calcul"),
+								indicator: "red",
+								message: __("Le calcul n'a pas abouti. Réessayez."),
+							});
+							return;
+						}
+						const m = r.message;
+						let html = `${__("Étudiants traités")} : <b>${m.nb_etudiants}</b><br>
+							${__("Résultats calculés / mis à jour")} : <b>${m.calcules}</b><br>
+							${__("Aucune note publiée (ignorés)")} : <b>${m.ignores}</b>`;
+						if (m.erreurs && m.erreurs.length) {
+							html += `<br>${__("Erreurs")} : ` + m.erreurs
+								.map((e) => esc(e))
+								.join("<br>");
+						}
+						frappe.msgprint({
+							title: __("Calcul terminé"),
+							indicator: m.erreurs && m.erreurs.length ? "orange" : "green",
+							message: html,
+						});
+						load_data();
+					},
+					error(r) {
+						state.loading = false;
+						$(".ra-btn-calculer").prop("disabled", false);
+						frappe.msgprint({
+							title: __("Erreur lors du calcul"),
+							indicator: "red",
+							message: r && r.message ? r.message : __("Vérifiez vos permissions et réessayez."),
+						});
+					},
+				});
+			},
+			function () {},
+		);
+	}
+
+	// ------------------------------------------------------------------ //
 	//  PDF de la liste
 	// ------------------------------------------------------------------ //
 	function download_pdf() {
@@ -608,6 +684,7 @@ frappe.pages["resultats-academiques"].on_page_load = function (wrapper) {
 	// ------------------------------------------------------------------ //
 	let search_timer = null;
 	function bind_events() {
+		page.main.find(".ra-btn-calculer").on("click", calculer_resultats);
 		page.main.find(".ra-btn-pdf").on("click", download_pdf);
 		page.main.find(".ra-btn-filter").on("click", function () {
 			$filters_card.toggleClass("ra-filters-hidden");

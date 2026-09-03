@@ -198,35 +198,75 @@ def _resultat_semestre(student, academic_year, semestre, seuil):
 				"est_rattrapage": est_rattrapage,
 			}
 
+	# Agrégation par UE (via unite_de_valeur) : les UV internes ne sont
+	# jamais affichées, seules les UE le sont (règle d'affichage du relevé).
+	ues_par_uv = {}
+	for tu_name, m in meilleures.items():
+		tu = frappe.get_cached_value(
+			"Teaching Unit", tu_name,
+			["course", "intitule_cours", "unite_de_valeur"], as_dict=True,
+		) or {}
+
+		uv_code = tu.get("course") or tu_name
+		uv_intitule = tu.get("intitule_cours") or tu_name
+		uv_name = tu.get("unite_de_valeur") or ""
+
+		# Code / intitulé de l'UE depuis la Teaching Unit Value
+		if uv_name:
+			uv = frappe.get_cached_value(
+				"Teaching Unit Value", uv_name, ["code", "intitule"], as_dict=True,
+			) or {}
+			if uv.get("code"):
+				uv_code = uv["code"]
+			if uv.get("intitule"):
+				uv_intitule = uv["intitule"]
+
+		credits = _get_credits(student.name, tu_name)
+		note_pct = m["note_pct"] or 0
+
+		if uv_code not in ues_par_uv:
+			ues_par_uv[uv_code] = {
+				"code": uv_code,
+				"intitule": uv_intitule,
+				"total_credits": 0,
+				"somme_cp": 0.0,
+				"has_rattrapage": m["est_rattrapage"],
+			}
+		ues_par_uv[uv_code]["total_credits"] += credits
+		ues_par_uv[uv_code]["somme_cp"] += credits * note_pct
+		if m["est_rattrapage"]:
+			ues_par_uv[uv_code]["has_rattrapage"] = True
+
 	somme_cp = 0.0
 	somme_c = 0
 	credits_obtenus = 0
 	ues = []
 
-	for tu_name, m in meilleures.items():
-		credits = _get_credits(student.name, tu_name)
-		note_pct = m["note_pct"] or 0
-		somme_cp += credits * note_pct
+	for uv_code, g in ues_par_uv.items():
+		credits = g["total_credits"]
+		note_pct = round(g["somme_cp"] / credits, 2) if credits > 0 else 0
+		info = get_grade_info(note_pct, echelle=100) or {}
+
+		somme_cp += g["somme_cp"]
 		somme_c += credits
 		if note_pct >= seuil:
 			credits_obtenus += credits
 
-		label = _get_ue_label(tu_name)
 		ues.append({
-			"teaching_unit": tu_name,
-			"course": label["course"],
-			"code": label["code"],
-			"intitule": label["intitule"],
-			"ue_intitule": label["ue_intitule"],
-			"course_intitule": label["course_intitule"],
+			"teaching_unit": uv_code or "",
+			"course": "",
+			"code": uv_code,
+			"intitule": g["intitule"],
+			"ue_intitule": g["intitule"],
+			"course_intitule": "",
 			"credits": credits,
-			"note_finale": m["note_finale"],
+			"note_finale": round(note_pct * 20 / 100, 2),
 			"note_pct": note_pct,
-			"grade": m["grade"] or "",
-			"point": m["point"] or 0,
-			"mention": m["mention"] or "",
+			"grade": info.get("grade", ""),
+			"point": info.get("point", 0),
+			"mention": info.get("mention", ""),
 			"statut": "Validé" if note_pct >= seuil else "Non Validé",
-			"session": _("Rattrapage") if m["est_rattrapage"] else _("Normale"),
+			"session": _("Rattrapage") if g["has_rattrapage"] else _("Normale"),
 		})
 
 	ues.sort(key=lambda x: (x["intitule"] or "").lower())
@@ -281,6 +321,56 @@ def _lier_niveau(filiere, niveau):
 	"""Vérifie que le niveau appartient à la filière (Field of study Level)."""
 	doc = frappe.get_cached_doc("Field of study", filiere)
 	return any(row.level == niveau for row in (doc.get("field_of_study_level") or []))
+
+
+@frappe.whitelist(allow_guest=True)
+def list_students(niveau=None, filiere=None, academic_year=None):
+	"""Liste des étudiants d'un niveau (± filière, ± année) avec leur matricule.
+
+	Permet d'afficher dans le babillard la liste des matricules afin de
+	consulter ensuite les notes d'un étudiant. Seuls les étudiants ayant
+	une réinscription valide **et** au moins une note publiée sont proposés.
+
+	Returns:
+		dict: ``{"success": True, "academic_year", "students": [...]}``
+	"""
+	niveau = (niveau or "").strip()
+	if not niveau:
+		return _erreur(_("Veuillez sélectionner un niveau."))
+
+	year = (academic_year or "").strip() or _get_current_academic_year()
+	if not frappe.db.exists("Academic Year", year):
+		return _erreur(_("L'année académique « {0} » est introuvable.").format(year))
+
+	filters = {"academic_year": year, "niveau": niveau, "statut": "Validée"}
+	if filiere:
+		filiere = filiere.strip()
+		if not frappe.db.exists("Field of study", filiere):
+			return _erreur(_("La filière « {0} » est introuvable.").format(filiere))
+		filters["filiere"] = filiere
+
+	regs = frappe.get_all(
+		"Academic Reregistration", filters=filters, fields=["student", "filiere"]
+	)
+	seen = set()
+	rows = []
+	for r in regs:
+		if r.student in seen or not frappe.db.exists("Student", r.student):
+			continue
+		seen.add(r.student)
+		if not _semestres_publies(r.student):
+			continue
+		doc = frappe.get_cached_doc("Student", r.student)
+		rows.append({
+			"name": r.student,
+			"matricule": doc.get("matricule") or r.student,
+			"nom": doc.get("nom") or "",
+			"prenom": doc.get("prenom") or "",
+			"filiere": r.filiere,
+		})
+
+	rows.sort(key=lambda s: ((s["nom"] or "").lower(), (s["prenom"] or "").lower()))
+	return {"success": True, "academic_year": year, "students": rows}
 
 
 @frappe.whitelist(allow_guest=True)
@@ -339,7 +429,9 @@ def consulter_notes_filiere(filiere=None, niveau=None, academic_year=None, semes
 						selection.append(_r)
 		# MPC simple sur les semestres sélectionnés
 		mpc = round(sum(r["mps"] for r in selection) / len(selection), 2) if selection else 0
-		decision = "Admis" if (selection and max(r["mps"] for r in selection) >= seuil) else "Ajourné"
+		# Décision annuelle LMD : S1+S2 crédits validés >= 30 -> ADMIS
+		annee_valides = sum(r["credits_obtenus"] or 0 for r in selection)
+		decision = "Admis" if annee_valides >= 30 else "Ajourné"
 		mention = max((r["mention"] for r in selection), key=lambda m: _poids_mention(m)) if selection else ""
 
 		resultats = {}
@@ -505,6 +597,18 @@ def _consulter_notes_impl(niveau, matricule, academic_year, semestre):
 
 	semesters = [calculs[ys] for ys in selection]
 
+	# Décision annuelle LMD : une année = 60 crédits (S1 30 + S2 30).
+	# ADMIS si total de crédits validés de l'année >= 30, sinon AJOURNÉ.
+	annee_credits_valides = sum(r["credits_obtenus"] or 0 for r in semesters)
+	annee_credits_inscrits = sum(r["total_credits"] or 0 for r in semesters)
+	annee_pct_validation = (
+		round(annee_credits_valides / annee_credits_inscrits * 100, 2)
+		if annee_credits_inscrits > 0 else 0
+	)
+	decision_annuelle = (
+		"Admis" if annee_credits_valides >= 30 else "Ajourné"
+	) if annee_credits_inscrits > 0 else ""
+
 	# --- Années disponibles pour cet étudiant + année précédente ---
 	years_available = sorted({y for (y, s) in annees_semestres}, key=_start_year, reverse=True)
 	prev_year = None
@@ -532,5 +636,9 @@ def _consulter_notes_impl(niveau, matricule, academic_year, semestre):
 		"cycle": cycle,
 		"seuil": seuil,
 		"grade_scale": _get_grade_scale(),
+		"annee_credits_valides": annee_credits_valides,
+		"annee_credits_inscrits": annee_credits_inscrits,
+		"annee_pct_validation": annee_pct_validation,
+		"decision_annuelle": decision_annuelle,
 		"school_name": frappe.db.get_single_value("Udshed Setting", "school_name") or "",
 	}

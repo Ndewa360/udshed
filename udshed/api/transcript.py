@@ -1,7 +1,8 @@
 import frappe
 from frappe import _
 
-from udshed.grade_calculation import get_grade_scale
+from udshed.api.proces_verbal import _credits_ue
+from udshed.grade_calculation import get_grade_info, get_grade_scale
 
 
 def pdf_body_html(template, args, **kwargs):
@@ -106,44 +107,27 @@ def get_transcript_data(doc):
             ],
         )
 
-        ue_list = []
+        # Résolution des crédits par Teaching Unit pour cet étudiant.
+        ues_credits = {}
         for ue in ue_results:
-            tu = frappe.get_cached_value(
-                "Teaching Unit", ue.teaching_unit,
-                ["course", "intitule_cours", "credits", "semestre"],
-                as_dict=True,
-            ) or {}
-
-            credits_val = frappe.db.get_value(
-                "Course Field of study level item",
-                {"parent": ue.teaching_unit, "niveau": doc.get("niveau_actuel")},
-                "course_poid",
+            ues_credits[ue.teaching_unit] = _credits_ue(
+                ue.teaching_unit, student_doc.filiere,
+                doc.get("niveau_actuel"),
             )
-            if not credits_val:
-                credits_val = tu.get("credits", 0)
 
-            ue_list.append({
-                "code": tu.get("course", "") or "",
-                "intitule": ue.ue_name or tu.get("intitule_cours", "") or ue.teaching_unit,
-                "credits": int(credits_val or 0),
-                "note_finale": ue.note_finale,
-                "note_pct": ue.note_pct,
-                "grade": ue.grade or "",
-                "point": ue.point or 0,
-                "mention": ue.mention or "",
-                "statut": ue.statut or "",
-                "est_rattrapage": ue.est_rattrapage or 0,
-                "session": _("Rattrapage") if ue.est_rattrapage else _("Normale"),
-            })
-
-        backlogs = [ue for ue in ue_list if ue["statut"] == "Non Validé"]
-
-        # MPS sur 4 : moyenne des points de la grille pondérée par crédits.
-        credits_points = sum(
-            ue["credits"] * (ue["point"] or 0) for ue in ue_list
+        # ── MPS / MPC au niveau UV (inchangé) ──────────────────────
+        # Moyenne des points de la grille (sur 4) pondérée par crédits.
+        credits_points_uv = sum(
+            ues_credits[ue.teaching_unit] * (ue.point or 0)
+            for ue in ue_results
         )
-        credits_sem = sum(ue["credits"] for ue in ue_list)
-        mps_sur_4 = round(credits_points / credits_sem, 2) if credits_sem > 0 else None
+        credits_sem_uv = sum(
+            ues_credits[ue.teaching_unit] for ue in ue_results
+        )
+        mps_sur_4 = (
+            round(credits_points_uv / credits_sem_uv, 2)
+            if credits_sem_uv > 0 else None
+        )
 
         # MPC sur 4 (cumulative) : MPC(i) = (MPC(i-1)*(i-1) + MPS(i)) / i.
         position += 1
@@ -158,6 +142,82 @@ def get_transcript_data(doc):
             highest_gpa = (
                 mps_sur_4 if highest_gpa is None else max(highest_gpa, mps_sur_4)
             )
+
+        # ── Agrégation par UE (via unite_de_valeur) ─────────────────
+        from udshed.grade_calculation import get_seuil_validation, get_student_cycle
+        seuil = get_seuil_validation(get_student_cycle(student))
+
+        ues_par_uv = {}
+        for ue in ue_results:
+            tu = frappe.get_cached_value(
+                "Teaching Unit", ue.teaching_unit,
+                ["course", "intitule_cours", "credits",
+                 "semestre", "unite_de_valeur"],
+                as_dict=True,
+            ) or {}
+
+            # Code / intitulé de l'UE depuis la UV (Teaching Unit Value)
+            uv_code = tu.get("course", "") or ""
+            uv_intitule = (
+                ue.ue_name or tu.get("intitule_cours", "") or ue.teaching_unit
+            )
+            if tu.get("unite_de_valeur"):
+                uv = frappe.get_cached_value(
+                    "Teaching Unit Value", tu.unite_de_valeur,
+                    ["code", "intitule"], as_dict=True,
+                ) or {}
+                uv_code = uv.get("code", uv_code)
+                uv_intitule = uv.get("intitule", uv_intitule)
+
+            credits_val = ues_credits.get(ue.teaching_unit, 0)
+
+            if uv_code not in ues_par_uv:
+                ues_par_uv[uv_code] = {
+                    "code": uv_code,
+                    "intitule": uv_intitule,
+                    "total_credits": 0,
+                    "items": [],
+                    "has_rattrapage": False,
+                }
+            ues_par_uv[uv_code]["total_credits"] += credits_val
+            ues_par_uv[uv_code]["items"].append({
+                "note_pct": ue.note_pct or 0,
+                "credits": credits_val,
+                "est_rattrapage": ue.est_rattrapage or 0,
+            })
+            if ue.est_rattrapage:
+                ues_par_uv[uv_code]["has_rattrapage"] = True
+
+        # Note UE = Σ(note_pct_i × credits_i) / Σ(credits_i)
+        ue_list = []
+        for uv_code, groupe in ues_par_uv.items():
+            tc = groupe["total_credits"]
+            somme = sum(
+                item["note_pct"] * item["credits"] for item in groupe["items"]
+            )
+            note_pct_ue = round(somme / tc, 2) if tc > 0 else 0
+            info = get_grade_info(note_pct_ue, echelle=100) or {}
+
+            ue_list.append({
+                "code": groupe["code"],
+                "intitule": groupe["intitule"],
+                "credits": int(tc),
+                "note_finale": round(note_pct_ue * 20 / 100, 2),
+                "note_pct": note_pct_ue,
+                "grade": info.get("grade", ""),
+                "point": info.get("point", 0),
+                "mention": info.get("mention", ""),
+                "statut": (
+                    "Validé" if note_pct_ue >= seuil else "Non Validé"
+                ),
+                "est_rattrapage": 1 if groupe["has_rattrapage"] else 0,
+                "session": (
+                    _("Rattrapage") if groupe["has_rattrapage"]
+                    else _("Normale")
+                ),
+            })
+
+        backlogs = [ue for ue in ue_list if ue["statut"] == "Non Validé"]
 
         total_credits_all += sem.total_credits or 0
         total_credits_obtenus += sem.credits_obtenus or 0
@@ -185,6 +245,30 @@ def get_transcript_data(doc):
     prev_mpc = semesters[-1].mpc if semesters else 0
     prev_credits = semesters[-1].credits_obtenus if semesters else 0
 
+    # ── Décision annuelle LMD ───────────────────────────────────────
+    # Règle : une année = 60 crédits (S1 30 + S2 30). L'étudiant est
+    # ADMIS si le total de crédits validés sur l'année >= 30, sinon AJOURNÉ.
+    if semester_data:
+        derniere_annee = semester_data[-1]["academic_year_name"]
+        sem_annee = [
+            s for s in semester_data
+            if s["academic_year_name"] == derniere_annee
+        ]
+        annee_credits_inscrits = sum(s["total_credits"] or 0 for s in sem_annee)
+        annee_credits_valides = sum(s["credits_obtenus"] or 0 for s in sem_annee)
+        annee_pct_validation = (
+            round(annee_credits_valides / annee_credits_inscrits * 100, 2)
+            if annee_credits_inscrits > 0 else 0
+        )
+        decision_annuelle = (
+            "Admis" if annee_credits_valides >= 30 else "Ajourné"
+        )
+    else:
+        annee_credits_inscrits = 0
+        annee_credits_valides = 0
+        annee_pct_validation = 0
+        decision_annuelle = ""
+
     grade_scale = [
         {
             "note_min": g["note_min_pct"],
@@ -202,7 +286,7 @@ def get_transcript_data(doc):
             "Field of study", student_doc.filiere, "name_of_field"
         ) or student_doc.filiere
 
-    overall_decision = semesters[-1].decision if semesters else ""
+    overall_decision = decision_annuelle
     profil = next(
         (s.mention for s in reversed(semesters) if s.mention), ""
     )
@@ -236,6 +320,9 @@ def get_transcript_data(doc):
         "highest_gpa": highest_gpa,
         "profil": profil,
         "overall_decision": overall_decision,
+        "annee_credits_inscrits": annee_credits_inscrits,
+        "annee_credits_valides": annee_credits_valides,
+        "annee_pct_validation": annee_pct_validation,
         "filiere_name": filiere_name,
         "niveau_label": student_doc.niveau_actuel or "",
         "cycle": cycle,
