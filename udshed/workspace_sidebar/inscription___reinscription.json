@@ -12,7 +12,7 @@
    "icon": "bar-chart",
    "indent": 1,
    "keep_closed": 0,
-   "label": "Rapport g\u00e9n\u00e9ral",
+   "label": "Rapport général",
    "link_to": "rapport-general",
    "link_type": "Page",
    "show_arrow": 0,
@@ -118,21 +118,9 @@
    "icon": "bar-chart",
    "indent": 1,
    "keep_closed": 0,
-   "label": "Rapports de r\u00e9inscription",
+   "label": "Rapports de réinscription",
    "link_to": "report-reinscription",
    "link_type": "Page",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
-   "icon": "setting-gear",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Configuration",
-   "link_to": "Udshed Setting",
-   "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
   }

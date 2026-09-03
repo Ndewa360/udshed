@@ -717,6 +717,32 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			const cls = statut === "Publiée" ? "blue" : statut === "Saisi" ? "orange" : statut === "Validé" ? "green" : "gray";
 			return '<span class="sn-dot ' + cls + '"></span>' + esc(statut || "Brouillon");
 		};
+		const initials = (name) =>
+			name
+				.trim()
+				.split(/\s+/)
+				.slice(0, 2)
+				.map((w) => w.charAt(0).toUpperCase())
+				.join("");
+		const teacher_label = enseignant_names.length > 1 ? __("Enseignants") : __("Enseignant");
+		const teacher_chips = enseignant_names
+			.map(
+				(n) =>
+					'<span class="sn-teacher-chip">' +
+					'<span class="sn-teacher-avatar">' +
+					esc(initials(n)) +
+					"</span>" +
+					'<span class="sn-teacher-info">' +
+					'<span class="sn-teacher-name">' +
+					esc(n) +
+					"</span>" +
+					'<span class="sn-teacher-role">' +
+					esc(teacher_label) +
+					"</span>" +
+					"</span>" +
+					"</span>"
+			)
+			.join("");
 		infoBar.html(
 			'<div class="sn-info-left">' +
 				'<div class="sn-ue-title">' +
@@ -729,10 +755,16 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				(combinaison_labels.length
 					? '<span class="sn-chip">' +
 						esc("Évaluations : " + combinaison_labels.join(" + ")) +
-						"</span> · "
+						"</span>"
 					: "") +
-				(enseignant_names.length ? "Enseignant(s) : " + esc(enseignant_names.join(", ")) : "") +
 				'</div>' +
+				(enseignant_names.length
+					? '<div class="sn-teachers"><span class="sn-teachers-label">' +
+						esc(teacher_label) +
+						"</span>" +
+						teacher_chips +
+						"</div>"
+					: "") +
 				'<div class="sn-ue-students">' +
 				(state.data.students.length === 1 ? __("1 étudiant inscrit") : __("{0} étudiants inscrits", [state.data.students.length])) +
 				"</div>" +
@@ -755,7 +787,6 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	function render_toolbar() {
 		const is_rt = is_rattrapage_view();
 		const session = active_session_info();
-		const is_published = session && session.statut === "Publiée";
 		const pdf_msg = is_rt ? null : formule_complete_msg();
 		const pdf_disabled = is_rt ? false : !!pdf_msg;
 		toolbar.html(
@@ -771,21 +802,19 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				(is_rt
 					? '<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-modele">' + __("Modèle Excel") + "</button>"
 					: '') +
-				(!is_rt
-					? '<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-pdf" ' + (pdf_disabled ? "disabled title=\"" + esc(pdf_msg) + "\"" : "") + ">" +
-						"&#128196; " + __("Télécharger PDF") +
-						"</button>"
-					: "") +
 				'<span class="sn-toolbar-hint">' +
 				(is_rt
-					? __("La note retenue = MAX(note initiale, note de rattrapage).")
+					? __("La note retenue = MAX(Session examen, Session rattrapage).")
 					: __("La combinaison (CC, CCTP, EXAMTP, EXAM) est détectée automatiquement ; les poids proviennent de la Grade Formula.")) +
 				"</span>" +
 				'<span class="sn-toolbar-sep"></span>' +
-				'<button type="button" class="btn btn-success btn-sm sn-btn sn-btn-valider" ' + (is_published ? "disabled" : "") + ">" +
+				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-pdf" ' + (pdf_disabled ? "disabled title=\"" + esc(pdf_msg) + "\"" : "") + ">" +
+					"&#128196; " + __("Télécharger PDF") +
+					"</button>" +
+				'<button type="button" class="btn btn-success btn-sm sn-btn sn-btn-valider">' +
 				__("Valider") +
 				"</button>" +
-				'<button type="button" class="btn btn-danger btn-sm sn-btn sn-btn-publier" ' + (is_published ? "disabled" : "") + ">" +
+				'<button type="button" class="btn btn-danger btn-sm sn-btn sn-btn-publier">' +
 				__("Publier") +
 				"</button>" +
 				'<span class="sn-session-label">' +
@@ -860,7 +889,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		const notes_cc = (state.data.notes && state.data.notes.CC) || {};
 		const notes_rt = (state.data.notes && state.data.notes.Rattrapage) || {};
 
-		const headers = [__("Matricule"), __("Étudiant"), __("Moy. CC"), __("Note initiale"), __("Note de rattrapage"), __("Note retenue"), __("Note finale"), __("%"), __("Grade"), __("Points"), __("Mention")];
+		const headers = [__("Matricule"), __("Étudiant"), __("Moy. CC"), __("Session examen"), __("Session rattrapage"), __("Note retenue"), __("Note finale"), __("%"), __("Grade"), __("Points")];
 		const headerHtml = headers.map((h) => "<th>" + esc(h) + "</th>").join("");
 
 		const body = (state.data.lignes || [])
@@ -901,11 +930,6 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 					esc(fmt_num(src.point)) +
 					'">' +
 					fmt_num(preview_val(ligne.student, "point", src.point)) +
-					"</td>" +
-					'<td data-pv-student="' + esc(ligne.student) + '" data-pv="mention" data-pv-saved="' +
-					esc(src.mention || "") +
-					'">' +
-					esc(preview_val(ligne.student, "mention", src.mention || "")) +
 					"</td>" +
 					"</tr>"
 				);
@@ -1152,7 +1176,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		if (non_enregistre) {
 			msg_error(
 				__(
-					"Des notes saisies ne sont pas encore enregistrées. Cliquez d'abord sur « Enregistrer les évaluations » avant de télécharger le PDF."
+					"Des notes saisies ne sont pas encore enregistrées. Cliquez d'abord sur « Enregistrer les évaluations » ou « Enregistrer le rattrapage » avant de télécharger le PDF."
 				)
 			);
 			return;
@@ -1187,7 +1211,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		const session = active_session_info();
 		if (!session || !session.name) return;
 		frappe.confirm(
-			__("Publier les résultats de cette session ? Toutes les notes doivent être validées. Cette action est irréversible."),
+			__("Publier les résultats de cette session ? Toutes les notes doivent être validées. Les notes resteront modifiables après publication en cas de requête ou de correction."),
 			() => {
 				frappe.call({
 					method: API + "publier_session",
@@ -1247,6 +1271,14 @@ const STYLES =
 	".sn-ue-formule{font-size:12px;color:#475069;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}" +
 	".sn-formule-label{font-weight:600;color:#1d273b;}" +
 	".sn-chip{display:inline-flex;align-items:center;gap:4px;background:#eef1f8;border:1px solid #dfe4f2;border-radius:10px;padding:1px 9px;color:#3a478e;}" +
+	".sn-teachers{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed #e2e6f0;}" +
+	".sn-teachers-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#8a93a3;white-space:nowrap;}" +
+	".sn-teacher-chip{display:inline-flex;align-items:center;gap:8px;background:#f7f9fc;border:1px solid #e2e6f0;border-radius:22px;padding:3px 14px 3px 4px;transition:border-color .15s ease,box-shadow .15s ease;}" +
+	".sn-teacher-chip:hover{border-color:#c3cbec;box-shadow:0 1px 4px rgba(72,88,180,.12);}" +
+	".sn-teacher-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#4858b4,#7386e8);color:#fff;font-size:10px;font-weight:700;letter-spacing:.5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;text-transform:uppercase;}" +
+	".sn-teacher-info{display:inline-flex;flex-direction:column;line-height:1.25;}" +
+	".sn-teacher-name{font-size:12px;font-weight:600;color:#1d273b;white-space:nowrap;}" +
+	".sn-teacher-role{font-size:10px;color:#8a93a3;}" +
 	".sn-formule-warn{color:#b42318;font-weight:600;}" +
 	".sn-pdf-msg{font-size:11px;color:#8a93a3;}" +
 	".sn-btn-pdf[disabled]{opacity:.55;cursor:not-allowed;}" +

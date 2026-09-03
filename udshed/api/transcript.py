@@ -68,6 +68,7 @@ def get_transcript_data(doc):
         return {}
 
     student_doc = frappe.get_doc("Student", student)
+    settings = frappe.get_single("Udshed Setting")
 
     semesters = frappe.get_all(
         "Resultat Semestre",
@@ -82,6 +83,9 @@ def get_transcript_data(doc):
     semester_data = []
     total_credits_all = 0
     total_credits_obtenus = 0
+    mpc_sur_4 = None
+    highest_gpa = None
+    position = 0
 
     for sem in semesters:
         year_label = frappe.get_cached_value(
@@ -134,6 +138,27 @@ def get_transcript_data(doc):
 
         backlogs = [ue for ue in ue_list if ue["statut"] == "Non Validé"]
 
+        # MPS sur 4 : moyenne des points de la grille pondérée par crédits.
+        credits_points = sum(
+            ue["credits"] * (ue["point"] or 0) for ue in ue_list
+        )
+        credits_sem = sum(ue["credits"] for ue in ue_list)
+        mps_sur_4 = round(credits_points / credits_sem, 2) if credits_sem > 0 else None
+
+        # MPC sur 4 (cumulative) : MPC(i) = (MPC(i-1)*(i-1) + MPS(i)) / i.
+        position += 1
+        if mps_sur_4 is not None:
+            if mpc_sur_4 is None:
+                mpc_sur_4 = mps_sur_4
+            else:
+                mpc_sur_4 = round(
+                    (mpc_sur_4 * (position - 1) + mps_sur_4) / position, 2
+                )
+        if mps_sur_4 is not None:
+            highest_gpa = (
+                mps_sur_4 if highest_gpa is None else max(highest_gpa, mps_sur_4)
+            )
+
         total_credits_all += sem.total_credits or 0
         total_credits_obtenus += sem.credits_obtenus or 0
 
@@ -144,6 +169,11 @@ def get_transcript_data(doc):
             "index": sem.semester_index,
             "mps": sem.mps,
             "mpc": sem.mpc,
+            "mps_sur_4": mps_sur_4,
+            "mpc_sur_4": mpc_sur_4,
+            "highest_gpa": highest_gpa,
+            "cum_credits_inscrits": total_credits_all,
+            "cum_credits_valides": total_credits_obtenus,
             "total_credits": sem.total_credits,
             "credits_obtenus": sem.credits_obtenus,
             "mention": sem.mention or "",
@@ -173,6 +203,9 @@ def get_transcript_data(doc):
         ) or student_doc.filiere
 
     overall_decision = semesters[-1].decision if semesters else ""
+    profil = next(
+        (s.mention for s in reversed(semesters) if s.mention), ""
+    )
     pct_validation = (
         round(total_credits_obtenus / total_credits_all * 100, 2)
         if total_credits_all > 0
@@ -195,8 +228,13 @@ def get_transcript_data(doc):
         "grade_scale": grade_scale,
         "school_name": settings.school_name or "",
         "school_logo": settings.school_logo or "",
+        "logo_file": "file://"
+        + frappe.get_app_path("udshed", "public", "images", "logo.png"),
         "prev_mpc": prev_mpc,
         "prev_credits": prev_credits,
+        "cumulative_gpa": mpc_sur_4,
+        "highest_gpa": highest_gpa,
+        "profil": profil,
         "overall_decision": overall_decision,
         "filiere_name": filiere_name,
         "niveau_label": student_doc.niveau_actuel or "",

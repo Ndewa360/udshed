@@ -140,12 +140,12 @@
    "options": "Reregistration Course Item"
   },
    {
-    "default": "Valid\u00e9e",
+    "default": "Validée",
     "fieldname": "statut",
     "fieldtype": "Select",
     "in_list_view": 1,
     "label": "Statut",
-    "options": "Valid\u00e9e",
+    "options": "Validée",
     "read_only": 1
    }
  ],

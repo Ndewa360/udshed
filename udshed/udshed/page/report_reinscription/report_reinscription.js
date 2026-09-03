@@ -8,9 +8,11 @@ frappe.pages["report-reinscription"].on_page_load = function (wrapper) {
 	let filters = { reinscription_session: null, filiere: null, statut: null };
 	let report_data = null;
 
-	const STATUTS = ["Validée"];
 	const STATUT_COLORS = {
-		"Validée": "green"
+		"Validée": "green",
+		"Brouillon": "orange",
+		"En attente": "yellow",
+		"Refusée": "red",
 	};
 
 	function esc(s) {
@@ -46,7 +48,7 @@ frappe.pages["report-reinscription"].on_page_load = function (wrapper) {
 			fieldtype: "Select",
 			label: "Statut",
 			fieldname: "statut",
-			options: ["", ...STATUTS].join("\n"),
+			options: ["", ...Object.keys(STATUT_COLORS)].join("\n"),
 			change() {
 				filters.statut = this.get_value() || null;
 				load_report();
@@ -64,6 +66,9 @@ frappe.pages["report-reinscription"].on_page_load = function (wrapper) {
 				if (!r.message) return;
 				report_data = r.message;
 				render();
+			},
+			error() {
+				frappe.msgprint(__("Erreur lors du chargement du rapport."));
 			}
 		});
 	}
@@ -77,8 +82,8 @@ frappe.pages["report-reinscription"].on_page_load = function (wrapper) {
 	}
 
 	function statut_badge(s) {
-		s = s || "Validée";
-		return `<span class="indicator green">${esc(s)}</span>`;
+		let color = STATUT_COLORS[s] || "gray";
+		return `<span class="indicator ${color}">${esc(s || "Validée")}</span>`;
 	}
 
 	function card(label, value, color) {
@@ -168,10 +173,12 @@ frappe.pages["report-reinscription"].on_page_load = function (wrapper) {
 		);
 		let csv = cols.map(c => c.toUpperCase()).join(",") + "\n" + lines.join("\n");
 		let blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+		let url = URL.createObjectURL(blob);
 		let link = document.createElement("a");
-		link.href = URL.createObjectURL(blob);
+		link.href = url;
 		link.download = `rapport_reinscriptions_${filters.reinscription_session || "toutes"}.csv`;
 		link.click();
+		URL.revokeObjectURL(url);
 	}
 
 	setup_filters();

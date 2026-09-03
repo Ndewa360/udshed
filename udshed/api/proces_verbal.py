@@ -10,6 +10,8 @@ l'application sont utilisées (réinscriptions validées, notes publiées,
 grille de grades, résultats calculés par le moteur).
 """
 
+import re
+
 import frappe
 from frappe import _
 
@@ -96,17 +98,126 @@ def _etudiants_classe(academic_year, filiere, niveau, ues):
     return resultats
 
 
-def _mpc_etudiant(student, academic_year, semestre):
-    """MPC d'un étudiant depuis Resultat Semestre (si calculé par le moteur)."""
-    return frappe.db.get_value(
+MENTION_COURTE = {
+    "Excellent / Très Honorable avec Félicitations du Jury": "E",
+    "Très Bien / Très Honorable": "TB",
+    "Très Bien": "TB",
+    "Assez Bien": "AB",
+    "Passable": "P",
+    "Insuffisant": "I",
+    "Échec": "E",
+}
+
+
+def _mention_courte(mention):
+    """Abrège une mention (ex : « Assez Bien » -> « AB »)."""
+    if not mention:
+        return ""
+    return MENTION_COURTE.get(mention) or mention
+
+
+def _numero_semestre_cycle(niveau_label, semestre):
+    """Numéro de semestre dans le cycle (ex : Licence 3 S1 -> 5, Master 2 S2 -> 10)."""
+    match = re.search(r"(\d+)", niveau_label or "")
+    rang = int(match.group(1)) if match else 1
+    base = 6 if "master" in (niveau_label or "").lower() else 0
+    part = 1 if str(semestre or "").strip().endswith("1") else 2
+    return base + (rang - 1) * 2 + part
+
+
+def _bilan_pv_etudiant(student, academic_year, semestre, mps_sur_4, total_credits, credits_obtenus, pct_validation):
+    """Bilan d'un étudiant pour le PV récapitulatif (échelle 0–4).
+
+    Le PV présente, sur l'échelle des points de la grille (A=4 … F=0) :
+      - ``mps`` : Moyenne Pondérée **Semestrielle** du semestre courant,
+        calculée exactement sur les points.
+      - ``mpc`` : Moyenne Pondérée **Cumulée** du cycle, moyenne récurrente
+        des MPS (semestre courant exact, antérieurs convertis depuis les
+        ``Resultat Semestre`` stockés en % → ÷25).
+      - ``sem_ant_*`` : MPC et TCC du semestre antérieur (index - 1).
+      - ``cycle_*`` : crédits TCI/TCC cumulés du cycle jusqu'au semestre
+        courant, et leur taux de validation (%).
+
+    En l'absence de ``Resultat Semestre`` (historique non calculé), on retombe
+    sur le semestre courant : semestre antérieur et MPC cumulée absents,
+    cycle = semestre courant.
+    """
+    rows = frappe.get_all(
         "Resultat Semestre",
-        {
-            "student": student,
-            "academic_year": academic_year,
-            "semestre": semestre,
-        },
-        "mpc",
+        filters={"student": student},
+        fields=[
+            "semester_index", "academic_year", "semestre", "mps", "mpc",
+            "total_credits", "credits_obtenus", "mention",
+        ],
+        order_by="semester_index asc",
     )
+
+    if not rows:
+        return {
+            "mpc": None,
+            "mention_short": "",
+            "sem_ant_mpc": None,
+            "sem_ant_tcc": None,
+            "cycle_tci": total_credits,
+            "cycle_tcc": credits_obtenus,
+            "cycle_pct": pct_validation,
+        }
+
+    current = next(
+        (r for r in rows if r.academic_year == academic_year and r.semestre == semestre),
+        None,
+    )
+    index = current.semester_index if current else max(r.semester_index for r in rows)
+    sem_ant = next((r for r in rows if r.semester_index == index - 1), None)
+
+    # MPC cumulative sur 4 : MPC(i) = (MPC(i-1)*(i-1) + MPS(i)) / i.
+    # Le MPS du semestre courant est exact (sur points) ; les antérieurs sont
+    # convertis depuis les % des Resultat Semestre (÷25).
+    mpc = 0
+    mpc_ant = None
+    for r in rows:
+        i = r.semester_index
+        if i > index:
+            continue
+        is_current = (
+            current is not None
+            and r.semester_index == current.semester_index
+        )
+        mps_i = mps_sur_4 if is_current else round((r.mps or 0) / 25.0, 2)
+        mpc_avant = mpc
+        if i == 1:
+            mpc = mps_i
+        else:
+            mpc = round((mpc * (i - 1) + mps_i) / i, 2)
+        if is_current:
+            mpc_ant = mpc_avant
+
+    cycle_rows = [r for r in rows if r.semester_index <= index]
+    cycle_tci = sum(r.total_credits or 0 for r in cycle_rows)
+    cycle_tcc = sum(r.credits_obtenus or 0 for r in cycle_rows)
+
+    # MPC du semestre antérieur ramenée sur 4. On préfère la MPC cumulée
+    # dérivée des MPS (fiable même si le champ mpc du RS n'est pas rempli) ;
+    # à défaut, conversion du champ mpc stocké (en %).
+    if sem_ant:
+        if mpc_ant is not None:
+            sem_ant_mpc = mpc_ant
+        elif sem_ant.mpc is not None:
+            sem_ant_mpc = round(sem_ant.mpc / 25.0, 2)
+        else:
+            sem_ant_mpc = None
+    else:
+        sem_ant_mpc = None
+
+    return {
+        "mpc": round(mpc, 2) if current else None,
+        "mention_short": _mention_courte(current.mention if current else ""),
+        "sem_ant_mpc": sem_ant_mpc,
+        "sem_ant_tcc": sem_ant.credits_obtenus if sem_ant else None,
+        "cycle_tci": cycle_tci or total_credits,
+        "cycle_tcc": cycle_tcc,
+        "cycle_pct": round(cycle_tcc / cycle_tci * 100, 2) if cycle_tci else pct_validation,
+    }
 
 
 # ---------------------------------------------------------------------- #
@@ -158,8 +269,9 @@ def get_proces_verbal_data(academic_year, filiere, niveau, semestre):
 
         resultats = {}
         credits_obtenus = 0
-        somme_cj_pj = 0
         somme_cj = 0
+        somme_cj_pct = 0
+        somme_cj_pts = 0
 
         for ue in ue_liste:
             note = notes.get((student, ue["name"]))
@@ -192,15 +304,22 @@ def get_proces_verbal_data(academic_year, filiere, niveau, semestre):
             if valide:
                 credits_obtenus += cj
             somme_cj += cj
-            somme_cj_pj += cj * (note_pct or 0)
+            somme_cj_pct += cj * (note_pct or 0)
+            somme_cj_pts += cj * (note.point or 0)
 
-        mps = round(somme_cj_pj / somme_cj, 2) if somme_cj > 0 else 0
+        mps_pct = round(somme_cj_pct / somme_cj, 2) if somme_cj > 0 else 0
+        mps = round(somme_cj_pts / somme_cj, 2) if somme_cj > 0 else 0
         pct_validation = round(credits_obtenus / total_credits * 100, 2) if total_credits else 0
 
         if somme_cj > 0:
-            statut = "Admis" if mps >= seuil else "Ajourné"
+            statut = "Admis" if mps_pct >= seuil else "Ajourné"
         else:
             statut = "En attente"
+
+        bilan = _bilan_pv_etudiant(
+            student, academic_year, semestre, mps,
+            total_credits, credits_obtenus, pct_validation,
+        )
 
         lignes.append(
             {
@@ -213,8 +332,9 @@ def get_proces_verbal_data(academic_year, filiere, niveau, semestre):
                 "credits_obtenus": credits_obtenus,
                 "pct_validation": pct_validation,
                 "mps": mps,
-                "mpc": _mpc_etudiant(student, academic_year, semestre),
+                "mps_pct": mps_pct,
                 "statut": statut,
+                **bilan,
             }
         )
 
@@ -238,10 +358,15 @@ def _contexte(academic_year, filiere, niveau, semestre):
         "filiere": filiere,
         "filiere_name": frappe.get_cached_value("Field of study", filiere, "name_of_field")
         or filiere,
+        "filiere_code": frappe.get_cached_value("Field of study", filiere, "field_of_study_code")
+        or filiere,
         "niveau": niveau,
         "semestre": semestre,
+        "semestre_numero": _numero_semestre_cycle(niveau, semestre),
         "school_name": settings.school_name or "",
         "school_logo": settings.school_logo or "",
+        "logo_file": "file://"
+        + frappe.get_app_path("udshed", "public", "images", "logo.png"),
         "date_emission": frappe.utils.today(),
         "reference_no": "PV-{0}-{1}-{2}".format(
             filiere.replace("/", "-"),

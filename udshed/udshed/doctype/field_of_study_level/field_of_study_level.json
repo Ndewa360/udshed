@@ -21,7 +21,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Niveau",
-   "options": "Licence 1\nLicence 2\nLicence 3\nBTS 1\nBTS 2\nMaster 1\nMaster 2",
+    "options": "Licence 1\nLicence 2\nLicence 3\nBTS 1\nBTS 2\nMaster 1\nMaster 2\nDoctorat 1\nDoctorat 2\nDoctorat 3\nDoctorat 4\nDoctorat 5\nDoctorat 6\nDoctorat 7",
     "reqd": 1
    },
    {

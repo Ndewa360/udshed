@@ -42,7 +42,6 @@ role_home_page = {
 }
 
 
-
 #Fixutres
 #------------
 fixtures = [
@@ -62,9 +61,9 @@ fixtures = [
         ]
     },
     {
-        "dt": "Workspace Sidebar",
+        "dt": "Page",
         "filters": [
-            ["name","in",["Inscription - Reinscription"]]
+            ["name", "in", ["gestion-des-niveaux"]]
         ]
     },
 ]
@@ -74,11 +73,14 @@ fixtures = [
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/udshed/css/udshed.css"
-app_include_js = "/assets/udshed/js/udshed.js"
+app_include_css = "/assets/udshed/css/gestion_des_niveaux.v2.css"
+app_include_js = [
+	"https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js",
+	"/assets/udshed/js/udshed.js"
+]
 
 # include js, css files in header of web template
-web_include_css = "/assets/udshed/css/inscription.css"
+# web_include_css = "/assets/udshed/css/udshed.css"
 # web_include_js = "/assets/udshed/js/udshed.js"
 
 # include custom scss in every website theme (without file extension ".scss")

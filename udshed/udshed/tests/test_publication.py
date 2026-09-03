@@ -7,9 +7,9 @@ Cas couverts (règles du cahier des charges) :
   - la saisie fait passer les notes de « Brouillon » à « Saisi » ;
   - la validation (valider_notes) passe les notes à « Validé » ;
   - une session n'est publiable que si toutes ses notes sont validées ;
-  - après validation, la publication passe les notes à « Publié » et
-    clôture la session (verrouillage de la saisie) ;
-  - le CC validé est immuable ;
+  - après validation, la publication passe les notes à « Publié » ;
+  - la publication est réversible : les notes restent modifiables après
+    publication (requêtes et corrections), y compris le CC ;
   - le babillard public n'expose que les notes publiées, en pourcentage.
 """
 
@@ -161,36 +161,19 @@ class TestValidationEtPublication(IntegrationTestCase):
 
     test_4_publier_apres_validation.ACADEMIC_YEAR = "2024"
 
-    def test_5_session_publiee_verrouille_la_saisie(self):
+        def test_5_session_publiee_restera_modifiable(self):
         session = self._saisir_cc_examen()
         valider_notes(session)
         publier_session(session)
-        with self.assertRaises(frappe.ValidationError):
+        with suppress_commits():
             _sauvegarder_examen(
                 self.args,
                 [{"student": self.student.name, "note_examen": 18}],
             )
-
-    test_5_session_publiee_verrouille_la_saisie.ACADEMIC_YEAR = "2025"
-
-    def test_6_cc_valide_immuable(self):
-        with suppress_commits():
-            _sauvegarder_cc(
-                self.args,
-                [{"student": self.student.name,
-                  "notes_cc": [{"cc_label": "CC 1", "cc_weight": 1, "note_cc": 14}]}],
-            )
-        session_cc = self._session_de_type(TYPE_CC)
-        valider_notes(session_cc)
-        with self.assertRaises(frappe.ValidationError):
-            _sauvegarder_cc(
-                self.args,
-                [{"student": self.student.name,
-                  "notes_cc": [{"cc_label": "CC 1", "cc_weight": 1, "note_cc": 18}]}],
-            )
-
-    # ------------------------------------------------------------------ #
-    #  Babillard
+        self.assertEqual(self._note(session).note_examen, 18)
+        self.assertEqual(self._note(session).statut, "é")
+    test_5_session_publiee_restera_modifiable.ACADEMIC_YEAR = "2025"
+#  Babillard
     # ------------------------------------------------------------------ #
     def test_7_babillard_affiche_la_note_publiee_en_pourcentage(self):
         session = self._saisir_cc_examen()
@@ -222,3 +205,4 @@ class TestValidationEtPublication(IntegrationTestCase):
             semestre="Semestre 1",
         )
         self.assertFalse(data["success"])
+

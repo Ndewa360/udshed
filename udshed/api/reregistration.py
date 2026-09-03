@@ -1,3 +1,4 @@
+import json
 import os
 
 import frappe
@@ -181,9 +182,13 @@ def get_reregistration_summary(student, academic_year):
 	}
 
 
+
+
+
 @frappe.whitelist()
 def get_all_levels(faculty=None, filiere=None):
-	"""Retourne tous les niveaux groupés par filière, triés par ordre."""
+	"""Retourne tous les niveaux groupés par filière, triés par ordre.
+	Inclut les facultés sans filière pour l'arborescence."""
 	filters = {}
 	if filiere:
 		filters["name"] = filiere
@@ -193,18 +198,38 @@ def get_all_levels(faculty=None, filiere=None):
 	fields_of_study = frappe.get_all("Field of study", filters=filters, fields=["name", "name_of_field", "faculte"])
 	result = []
 	for fos in fields_of_study:
-		levels_data = frappe.db.get_all(
-			"Field of study Level",
-			filters={"parent": fos.name},
-			fields=["name", "level", "cycle", "order", "coordonateur", "calendrier"],
-		)
-		levels_data.sort(key=lambda x: x.get("order") or 0)
+		doc = frappe.get_doc("Field of study", fos.name)
+		levels = sorted(doc.field_of_study_level, key=lambda x: x.order or 0)
 		result.append({
 			"filiere_name": fos.name,
 			"filiere_label": fos.name_of_field,
 			"faculte": fos.faculte,
-			"levels": levels_data,
+			"levels": [
+				{
+					"name": l.name,
+					"level": l.level,
+					"cycle": l.cycle,
+					"order": l.order,
+					"coordonateur": l.coordonateur,
+					"calendrier": l.calendrier,
+					"gestionnaire_de_planning": l.gestionnaire_de_planning,
+				}
+				for l in levels
+			]
 		})
+
+	if not filiere:
+		all_faculties = frappe.get_all("Faculty", fields=["name", "faculty_name"])
+		faculties_with_fos = set(r.get("faculte") for r in result)
+		for fac in all_faculties:
+			if fac.name not in faculties_with_fos:
+				result.append({
+					"filiere_name": None,
+					"filiere_label": None,
+					"faculte": fac.name,
+					"levels": [],
+				})
+
 	return result
 
 
@@ -239,19 +264,6 @@ def _cycle_from_level(level_label):
 	return None
 
 
-@frappe.whitelist()
-def delete_level(filiere, level_name):
-	"""Supprime un niveau d'une filière via SQL direct."""
-	level = frappe.db.get_value(
-		"Field of study Level",
-		{"parent": filiere, "level": level_name},
-		"name",
-	)
-	if not level:
-		frappe.throw("Niveau introuvable")
-	frappe.delete_doc("Field of study Level", level, ignore_permissions=True)
-	frappe.db.commit()
-	return {"status": True, "message": f"Niveau {level_name} supprimé de {filiere}"}
 
 
 @frappe.whitelist()
@@ -267,6 +279,47 @@ def reorder_levels(filiere, level_names):
 		)
 	frappe.db.commit()
 	return {"status": True, "message": "Ordre des niveaux mis à jour"}
+
+
+@frappe.whitelist()
+def update_level(filiere, level_row_name, cycle=None, coordonateur=None, calendrier=None, gestionnaire_de_planning=None):
+	"""Met à jour les champs d'un niveau existant dans une filière."""
+	doc = frappe.get_doc("Field of study", filiere)
+	row = None
+	for r in doc.field_of_study_level:
+		if r.name == level_row_name:
+			row = r
+			break
+
+	if not row:
+		frappe.throw("Niveau introuvable")
+
+	if cycle is not None:
+		row.cycle = cycle
+	if coordonateur is not None:
+		row.coordonateur = coordonateur
+	if calendrier is not None:
+		row.calendrier = calendrier
+	if gestionnaire_de_planning is not None:
+		row.gestionnaire_de_planning = gestionnaire_de_planning
+
+	doc.save(ignore_permissions=True)
+	return {"status": True, "message": f"Niveau {row.level} mis à jour dans {filiere}"}
+
+
+@frappe.whitelist()
+def delete_level(filiere, level_name):
+	"""Supprime un niveau d'une filière via SQL direct."""
+	level = frappe.db.get_value(
+		"Field of study Level",
+		{"parent": filiere, "level": level_name},
+		"name",
+	)
+	if not level:
+		frappe.throw("Niveau introuvable")
+	frappe.delete_doc("Field of study Level", level, ignore_permissions=True)
+	frappe.db.commit()
+	return {"status": True, "message": f"Niveau {level_name} supprimé de {filiere}"}
 
 
 @frappe.whitelist()
@@ -447,8 +500,8 @@ def telecharger_fiche_reinscription(reregistration_name):
 	try:
 		pdf = get_pdf(html)
 	except Exception:
-		frappe.log_error(" reregistration telecharger_fiche_reinscription get_pdf")
-		frappe.throw(_("Erreur lors de la génération du PDF. Veuillez réessayer."))
+		frappe.log_error("reregistration telecharger_fiche_reinscription get_pdf")
+		frappe.throw("Erreur lors de la génération du PDF. Veuillez réessayer.")
 
 	if is_student:
 		doc.db_set("fiche_telechargee", 1)

@@ -207,3 +207,5 @@ class AcademicReregistration(Document):
 				"est_obligatoire": 1,
 				"motif": motif
 			})
+
+

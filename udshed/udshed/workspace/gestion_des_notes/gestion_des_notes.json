@@ -63,6 +63,12 @@
   },
   {
    "doc_view": "",
+   "label": "Résultats académiques",
+   "link_to": "resultats-academiques",
+   "type": "Page"
+  },
+  {
+   "doc_view": "",
    "label": "Etudiants",
    "link_to": "Student",
    "type": "DocType"
