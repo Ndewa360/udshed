@@ -2,6 +2,46 @@ import frappe
 from frappe.model.document import Document
 
 
+@frappe.whitelist()
+def get_current_student_profile():
+	"""Retourne le profil de l'étudiant connecté (page espace étudiant)."""
+	user = frappe.session.user
+	if not user or user == "Guest":
+		frappe.throw("Vous devez être connecté pour accéder à votre espace étudiant.")
+
+	filters = frappe._dict()
+	if frappe.db.exists("Student", {"utilisateur": user}):
+		filters["utilisateur"] = user
+	elif frappe.db.exists("Student", {"email": user}):
+		filters["email"] = user
+	else:
+		frappe.throw("Aucun profil étudiant n'est lié à votre compte.")
+
+	student = frappe.get_doc("Student", filters)
+	filiere_label = ""
+	if student.filiere:
+		filiere_label = frappe.db.get_value("Field of study", student.filiere, "name_of_field") or student.filiere
+
+	return {
+		"matricule": student.matricule or student.name,
+		"nom": student.nom or "",
+		"prenom": student.prenom or "",
+		"nom_complet": f"{student.nom or ''} {student.prenom or ''}".strip(),
+		"cycle": student.cycle or "",
+		"niveau_actuel": student.niveau_actuel or "",
+		"email": student.email or "",
+		"sexe": student.sexe or "",
+		"phone": student.phone or "",
+		"parent_phone": student.parent_phone or "",
+		"email_parent": student.email_parent or "",
+		"birth_date": frappe.utils.format_date(student.birth_date) if student.birth_date else "",
+		"birth_place": student.birth_place or "",
+		"photo": student.photo or "",
+		"filiere": student.filiere or "",
+		"filiere_label": filiere_label,
+	}
+
+
 class Student(Document):
 
 	def validate(self):

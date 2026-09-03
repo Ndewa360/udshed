@@ -201,23 +201,11 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"udshed.tasks.all"
-# 	],
-# 	"daily": [
-# 		"udshed.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"udshed.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"udshed.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"udshed.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"udshed.tasks.daily"
+	],
+}
 
 # Testing
 # -------

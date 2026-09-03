@@ -100,6 +100,11 @@ frappe.pages["rapport-general"].on_page_load = function (wrapper) {
 	function render() {
 		page.main.empty();
 		if (!report_data) return;
+		$(document).off("click.bureauReport").on("click.bureauReport", function (e) {
+			if (!$(e.target).closest(".bureau-search-wrap").length) {
+				$(".bureau-search-results").empty().hide();
+			}
+		});
 		render_quick_links();
 		render_inscription_section();
 		render_reinscription_section();
@@ -136,111 +141,158 @@ frappe.pages["rapport-general"].on_page_load = function (wrapper) {
 		</div>`;
 	}
 
-	function breakdown_table(title, data) {
-		let entries = Object.entries(data || {}).sort((a, b) => b[1] - a[1]);
-		let rows = entries.map(([k, v]) =>
-			`<tr><td>${esc(k)}</td><td class="text-right">${v}</td></tr>`
-		).join("");
-		let body = entries.length
-			? rows
-			: `<tr><td colspan="2" class="text-muted">Aucune donnée</td></tr>`;
-		return `<div class="col-sm-12 col-md-6">
-			<table class="table table-sm table-bordered">
-				<thead><tr><th>${esc(title)}</th><th class="text-right">Nombre</th></tr></thead>
-				<tbody>${body}</tbody>
-			</table>
+	function matches_search(row, q, keys) {
+		if (!q) return true;
+		q = q.toLowerCase();
+		return keys.some(k => String(row[k] || "").toLowerCase().includes(q));
+	}
+
+	function search_box(placeholder) {
+		return `<div class="bureau-search-wrap">
+			<svg class="bureau-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<circle cx="11" cy="11" r="7"></circle>
+				<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+			</svg>
+			<input type="text" class="bureau-search-input form-control" placeholder="${esc(placeholder)}">
+			<div class="bureau-search-results"></div>
 		</div>`;
 	}
 
-	function status_badge(s) {
-		return `<span class="bureau-status-badge">${esc(s)}</span>`;
+	function build_stats(cards_html) {
+		return `<div class="bureau-stats-widget"><div class="bureau-stats-row">${cards_html}</div></div>`;
 	}
 
 	function render_inscription_section() {
 		let ins = report_data.inscriptions || {};
-		let total = ins.total || 0;
-		let cards = `<div class="bureau-stats-row">
-			${stat_card("Total inscriptions", total, "users")}
-			${(ins.par_statut ? Object.entries(ins.par_statut) : []).map(([k, v]) =>
-				stat_card(k, v)
-			).join("")}
-		</div>`;
-		let breakdowns = `<div class="row">
-			${breakdown_table("Répartition par filière", ins.par_filiere)}
-			${breakdown_table("Répartition par niveau", ins.par_niveau)}
-		</div>`;
-		let rows = (ins.rows || []).map(r => `<tr>
-			<td><button class="bureau-candidate-link" data-candidate="${esc(r.name)}">${esc(r.nom_complet)}</button></td>
-			<td>${esc(r.phone)}</td>
-			<td>${esc(r.email)}</td>
-			<td>${esc(r.filiere_label)}</td>
-			<td>${esc(r.niveau)}</td>
-			<td>${esc(r.examination_centre)}</td>
-			<td>${frappe.datetime.str_to_user(r.creation || "")}</td>
-			<td>${status_badge(r.candidature_status)}</td>
-		</tr>`).join("");
-		let body = rows
-			|| `<tr><td colspan="8" class="text-center text-muted">Aucune inscription</td></tr>`;
-		page.main.append(section_header("Inscriptions", total)
-			+ cards + breakdowns + `<div class="table-responsive mt-2">
-				<table class="table table-sm table-bordered table-hover">
-					<thead><tr>
-						<th>Candidat</th>
-						<th>Téléphone</th>
-						<th>Email</th>
-						<th>Filière</th>
-						<th>Niveau</th>
-						<th>Centre d'examen</th>
-						<th>Soumis le</th>
-						<th>Statut</th>
-					</tr></thead>
-					<tbody>${body}</tbody>
-				</table>
-			</div>`);
-		page.main.find(".bureau-candidate-link").on("click", function () {
+		let rows = ins.rows || [];
+		let container = $(`<div class="bureau-section" data-section="inscription"></div>`);
+		container.append(section_header("Inscriptions", rows.length));
+		page.main.append(container);
+		refresh_inscription_stats(container, rows);
+		container.append(search_box("Rechercher un candidat (nom, email, téléphone, filière, statut)…"));
+		let $input = container.find(".bureau-search-input");
+		$input.on("input", function () {
+			update_inscription(container, rows, this.value);
+		});
+		$input.on("focus", function () {
+			update_inscription(container, rows, this.value);
+		});
+	}
+
+	function refresh_inscription_stats($sec, filtered) {
+		let statut_counts = {};
+		filtered.forEach(r => {
+			let s = r.candidature_status || "En attente";
+			statut_counts[s] = (statut_counts[s] || 0) + 1;
+		});
+		let cards = `${stat_card("Total inscriptions", filtered.length, "users")}`
+			+ Object.entries(statut_counts).map(([k, v]) => stat_card(k, v)).join("");
+		$sec.find(".bureau-stats-widget").remove();
+		$sec.find(".bureau-search-wrap").before(build_stats(cards));
+	}
+
+	function update_inscription($sec, allRows, q) {
+		let filtered = allRows.filter(r => matches_search(r, q, [
+			"nom_complet", "email", "phone", "filiere_label",
+			"niveau", "examination_centre", "candidature_status"
+		]));
+		refresh_inscription_stats($sec, filtered);
+		let $results = $sec.find(".bureau-search-results");
+		$results.empty();
+		let items = filtered.slice(0, 50).map(r => `
+			<div class="bureau-search-result" data-candidate="${esc(r.name)}">
+				<span class="bureau-result-name">${esc(r.nom_complet)}</span>
+				<span class="bureau-result-meta">${esc(r.filiere_label)} · ${esc(r.niveau)} · ${esc(r.candidature_status)}</span>
+			</div>`).join("");
+		if (!q) {
+			$results.hide();
+		} else if (!filtered.length) {
+			$results.html(`<div class="bureau-search-empty">Aucun candidat trouvé</div>`).show();
+		} else {
+			$results.html(items).show();
+		}
+		$results.find(".bureau-search-result").on("click", function () {
 			show_candidate_detail($(this).attr("data-candidate"));
+			$results.empty().hide();
 		});
 	}
 
 	function render_reinscription_section() {
 		let re = report_data.reinscriptions || {};
-		let total = re.total || 0;
-		let cards = `<div class="bureau-stats-row">
-			${stat_card("Total réinscriptions", total, "file-check")}
-			${(re.par_statut ? Object.entries(re.par_statut) : []).map(([k, v]) =>
-				stat_card(k, v)
-			).join("")}
-		</div>`;
-		let breakdowns = `<div class="row">
-			${breakdown_table("Répartition par filière", re.par_filiere)}
-			${breakdown_table("Répartition par niveau", re.par_niveau)}
-		</div>`;
-		let rows = (re.rows || []).map(r => `<tr>
-			<td>${esc(r.matricule)}</td>
-			<td>${esc(r.nom_etudiant)}</td>
-			<td>${esc(r.filiere_label)}</td>
-			<td>${esc(r.niveau)}</td>
-			<td>${esc(r.semestre)}</td>
-			<td>${esc(r.academic_year)}</td>
-			<td>${status_badge(r.statut)}</td>
-		</tr>`).join("");
-		let body = rows
-			|| `<tr><td colspan="7" class="text-center text-muted">Aucune réinscription</td></tr>`;
-		page.main.append(section_header("Réinscriptions", total)
-			+ cards + breakdowns + `<div class="table-responsive mt-2">
-				<table class="table table-sm table-bordered table-hover">
-					<thead><tr>
-						<th>Matricule</th>
-						<th>Étudiant</th>
-						<th>Filière</th>
-						<th>Niveau</th>
-						<th>Semestre</th>
-						<th>Année</th>
-						<th>Statut</th>
-					</tr></thead>
-					<tbody>${body}</tbody>
-				</table>
+		let rows = re.rows || [];
+		let container = $(`<div class="bureau-section" data-section="reinscription"></div>`);
+		container.append(section_header("Réinscriptions", rows.length));
+		page.main.append(container);
+		refresh_reinscription_stats(container, rows);
+		container.append(search_box("Rechercher un étudiant (matricule, nom, filière, statut)…"));
+		let $input = container.find(".bureau-search-input");
+		$input.on("input", function () {
+			update_reinscription(container, rows, this.value);
+		});
+		$input.on("focus", function () {
+			update_reinscription(container, rows, this.value);
+		});
+	}
+
+	function refresh_reinscription_stats($sec, filtered) {
+		let statut_counts = {};
+		filtered.forEach(r => {
+			let s = r.statut || "Validée";
+			statut_counts[s] = (statut_counts[s] || 0) + 1;
+		});
+		let cards = `${stat_card("Total réinscriptions", filtered.length, "file-check")}`
+			+ Object.entries(statut_counts).map(([k, v]) => stat_card(k, v)).join("");
+		$sec.find(".bureau-stats-widget").remove();
+		$sec.find(".bureau-search-wrap").before(build_stats(cards));
+	}
+
+	function update_reinscription($sec, allRows, q) {
+		let filtered = allRows.filter(r => matches_search(r, q, [
+			"matricule", "nom_etudiant", "filiere_label", "niveau",
+			"semestre", "academic_year", "statut", "email"
+		]));
+		refresh_reinscription_stats($sec, filtered);
+		let $results = $sec.find(".bureau-search-results");
+		$results.empty();
+		let items = filtered.slice(0, 50).map((r, i) => `
+			<div class="bureau-search-result" data-reinscription="${esc(r.name)}" data-idx="${i}">
+				<span class="bureau-result-name">${esc(r.nom_etudiant) || esc(r.matricule)}</span>
+				<span class="bureau-result-meta">${esc(r.matricule)} · ${esc(r.filiere_label)} · ${esc(r.statut)}</span>
+			</div>`).join("");
+		if (!q) {
+			$results.hide();
+		} else if (!filtered.length) {
+			$results.html(`<div class="bureau-search-empty">Aucun étudiant trouvé</div>`).show();
+		} else {
+			$results.html(items).show();
+		}
+		$results.find(".bureau-search-result").on("click", function () {
+			show_reinscription_detail(filtered[parseInt($(this).attr("data-idx"), 10)]);
+			$results.empty().hide();
+		});
+	}
+
+	function show_reinscription_detail(r) {
+		if (!r) return;
+		let dialog = new frappe.ui.Dialog({
+			title: r.nom_etudiant || r.matricule,
+			size: "large",
+		});
+		dialog.$body.append(`
+			<div class="bureau-detail-section">
+				<h6>${__("Réinscription")}</h6>
+				<div class="bureau-detail-grid">
+					${detail_item(__("Matricule"), r.matricule)}
+					${detail_item(__("Étudiant"), r.nom_etudiant)}
+					${detail_item(__("Filière"), r.filiere_label)}
+					${detail_item(__("Niveau"), r.niveau)}
+					${detail_item(__("Semestre"), r.semestre)}
+					${detail_item(__("Année académique"), r.academic_year)}
+					${detail_item(__("Statut"), r.statut)}
+					${detail_item(__("Email"), r.email)}
+				</div>
 			</div>`);
+		dialog.show();
 	}
 
 	function detail_item(label, value) {

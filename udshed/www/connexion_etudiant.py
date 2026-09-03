@@ -26,7 +26,7 @@ def get_context(context):
 	user_email = _assurer_compte_utilisateur(student)
 	_login(user_email)
 
-	frappe.local.flags.redirect_location = "/reinscription-etudiant"
+	frappe.local.flags.redirect_location = "/espace-etudiant"
 	raise frappe.Redirect
 
 
