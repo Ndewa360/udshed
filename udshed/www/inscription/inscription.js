@@ -1,4 +1,15 @@
 $(document).ready(function() {
+    // Affiche une alerte d'erreur dans la carte d'authentification
+    function showAuthError(message) {
+        $(".auth-card .alert-danger").remove();
+        var alertHtml = '<div class="alert-danger alert-dismissible" role="alert">'
+            + '<p class="alert-text">' + message + '</p>'
+            + '<button type="button" class="close" data-dismiss="alert" aria-label="Close">'
+            + '<span aria-hidden="true">&times;</span></button>'
+            + '</div>';
+        $("#auth-form").before(alertHtml);
+    }
+
     // Intercepte le clic sur le bouton "Se connecter"
     $("#btn_soumettre").click(function() {
         // Récupération des valeurs saisies dans l'interface HTML
@@ -12,7 +23,8 @@ $(document).ready(function() {
         }
 
         // Changement visuel du bouton pour indiquer le chargement
-        $(this).prop('disabled', true).text(__("Vérification..."));
+        $(this).prop('disabled', true).html('<span class="btn-label">Vérification...</span>');
+        $(".auth-card .alert-danger").remove();
 
         // Appel de la fonction Python dans le module udshed
         frappe.call({
@@ -28,10 +40,25 @@ $(document).ready(function() {
                         + "&nom_candidat=" + encodeURIComponent(nom);
                     window.location.href = formUrl;
                 } else {
-                    $("#btn_soumettre").prop('disabled', false).text(__('Se connecter et Valider'));
+                    $("#btn_soumettre").prop('disabled', false)
+                        .html('<span class="btn-label">Continuer</span>');
+                    showAuthError(
+                        (r.message && r.message.message)
+                        || __("Numéro de dossier ou nom incorrect.")
+                    );
                 }
             }
         });
+    });
+
+    $("#religion-select").on("change", function() {
+        var val = $(this).val();
+        if (val === "AUTRE") {
+            $(this).hide();
+            $("#religion-autre").show().focus();
+        } else {
+            $("#religion-autre").val(val).hide();
+        }
     });
 
     $("#form-inscription-academique").submit(function(event) {
@@ -64,7 +91,7 @@ $(document).ready(function() {
                             <p style="color: #555; margin-bottom: 20px; font-size: 13px;">Votre document a été généré. Cliquez sur le bouton ci-dessous pour lancer le téléchargement.</p>
                             
                             <a href="${r.message.pdf_url}" class="btn btn-success" style="display: inline-block; padding: 12px 24px; background-color: #28a745; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                📥 Télécharger ma fiche d'inscription (PDF)
+                                📥 Télécharger ma fiche d'inscription
                             </a>
                         </div>
                     `);

@@ -1,8 +1,23 @@
 {
  "app": "udshed",
+ "creation": "2026-08-27 08:57:50.167001",
+ "docstatus": 0,
  "doctype": "Workspace Sidebar",
  "header_icon": "user-plus",
+ "idx": 0,
  "items": [
+  {
+   "child": 1,
+   "collapsible": 0,
+   "icon": "bar-chart",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Rapport g\u00e9n\u00e9ral",
+   "link_to": "rapport-general",
+   "link_type": "Page",
+   "show_arrow": 0,
+   "type": "Link"
+  },
   {
    "child": 0,
    "collapsible": 1,
@@ -11,7 +26,6 @@
    "keep_closed": 0,
    "label": "Inscription",
    "link_type": "DocType",
-   "open_in_new_tab": 1,
    "show_arrow": 1,
    "type": "Section Break"
   },
@@ -24,7 +38,6 @@
    "label": "Session Inscription",
    "link_to": "Session Inscription",
    "link_type": "DocType",
-   "open_in_new_tab": 1,
    "show_arrow": 0,
    "type": "Link"
   },
@@ -34,23 +47,21 @@
    "icon": "user-plus",
    "indent": 1,
    "keep_closed": 0,
-   "label": "Candidats",
+   "label": "Dossier candidats",
    "link_to": "Session Inscription Candidate",
    "link_type": "DocType",
-   "open_in_new_tab": 1,
    "show_arrow": 0,
    "type": "Link"
   },
   {
    "child": 1,
-   "collapsible": 0,
-   "icon": "eye",
+   "collapsible": 1,
+   "icon": "file-check",
    "indent": 1,
    "keep_closed": 0,
-   "label": "Consultation des candidatures",
-   "link_to": "consultation-candidatures",
+   "label": "Liste des inscriptions",
+   "link_to": "liste-des-inscriptions",
    "link_type": "Page",
-   "open_in_new_tab": 1,
    "show_arrow": 0,
    "type": "Link"
   },
@@ -62,7 +73,6 @@
    "keep_closed": 0,
    "label": "Reinscription",
    "link_type": "DocType",
-   "open_in_new_tab": 1,
    "show_arrow": 1,
    "type": "Section Break"
   },
@@ -75,7 +85,6 @@
    "label": "Sessions de Reinscription",
    "link_to": "Session Reinscription",
    "link_type": "DocType",
-   "open_in_new_tab": 1,
    "show_arrow": 0,
    "type": "Link"
   },
@@ -88,37 +97,34 @@
    "label": "Reinscriptions",
    "link_to": "Academic Reregistration",
    "link_type": "DocType",
-   "open_in_new_tab": 1,
    "show_arrow": 0,
    "type": "Link"
   },
-    {
-     "child": 1,
-     "collapsible": 1,
-     "icon": "sort-asc",
-     "indent": 1,
-     "keep_closed": 0,
-     "label": "Gestion des Niveaux",
-    "link_to": "gestion-des-niveaux",
-    "link_type": "Page",
-    "open_in_new_tab": 1,
-    "show_arrow": 0,
-    "type": "Link"
-   },
-   {
-    "child": 1,
-    "collapsible": 1,
-    "icon": "bar-chart",
-    "indent": 1,
-    "keep_closed": 0,
-    "label": "Rapports de réinscription",
-    "link_to": "report-reinscription",
-    "link_type": "Page",
-    "open_in_new_tab": 1,
-    "show_arrow": 0,
-    "type": "Link"
-   },
-   {
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "sort-asc",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Gestion des Niveaux",
+   "link_to": "gestion-des-niveaux",
+   "link_type": "Page",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "bar-chart",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Rapports de r\u00e9inscription",
+   "link_to": "report-reinscription",
+   "link_type": "Page",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "setting-gear",
@@ -127,13 +133,15 @@
    "label": "Configuration",
    "link_to": "Udshed Setting",
    "link_type": "DocType",
-   "open_in_new_tab": 1,
    "show_arrow": 0,
    "type": "Link"
   }
  ],
+ "modified": "2026-08-29 12:47:13.994824",
+ "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Inscription - Reinscription",
+ "owner": "Administrator",
  "standard": 1,
  "title": "Inscription - Reinscription"
 }

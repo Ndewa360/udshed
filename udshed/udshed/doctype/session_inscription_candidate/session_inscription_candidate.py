@@ -14,6 +14,21 @@ class SessionInscriptionCandidate(Document):
 		if self.first_name:
 			self.first_name = self.first_name.upper().strip()
 		self.status_updated_on = frappe.utils.now_datetime()
+		if not self.session_inscription:
+			self.session_inscription = self._session_inscription_courante()
+
+	def _session_inscription_courante(self):
+		"""Retourne la session d'inscription ouverte, sinon la plus récente."""
+		ouverte = frappe.db.exists("Session Inscription", {"status": "Open"})
+		if ouverte:
+			return ouverte
+		recente = frappe.db.get_value(
+			"Session Inscription",
+			{},
+			"name",
+			order_by="creation desc",
+		)
+		return recente
 
 	def after_insert(self):
 		self._send_candidate_email()
@@ -27,6 +42,25 @@ class SessionInscriptionCandidate(Document):
 				"status_updated_on",
 				frappe.utils.now_datetime(),
 				update_modified=False,
+			)
+
+	def validate(self):
+		self._proteger_statut_accepte()
+
+	def _proteger_statut_accepte(self):
+		"""Une fois une candidature acceptée, son statut ne peut plus être modifié,
+		excepté son passage à « Inscrit » lors de la finalisation de l'inscription."""
+		if not self.get("name"):
+			return
+		old_doc = self.get_doc_before_save()
+		if not old_doc:
+			return
+		old_status = old_doc.candidature_status
+		if old_status in ("Accepté", "Inscrit") and self.candidature_status != old_status:
+			frappe.throw(
+				_(
+					"Le statut d'une candidature déjà {0} est verrouillé et ne peut plus être modifié."
+				).format(old_status)
 			)
 
 	def _send_candidate_email(self):
@@ -263,8 +297,9 @@ def get_candidates_list(
 		fields=[
 			"name", "first_name", "last_name", "filiere", "niveau",
 			"examination_centre", "candidature_status", "creation",
+			"session_inscription",
 		],
-		order_by="creation desc",
+		order_by="session_inscription asc, creation desc",
 		start=start,
 		limit_page_length=limit,
 	)
@@ -275,6 +310,10 @@ def get_candidates_list(
 			if d.filiere else ""
 		)
 		d.submitted_on = frappe.utils.format_datetime(d.creation, "dd/MM/yyyy")
+		d.session_label = (
+			frappe.db.get_value("Session Inscription", d.session_inscription, "academic_year")
+			if d.session_inscription else ""
+		)
 
 	total = frappe.db.count("Session Inscription Candidate", filters)
 	return {"candidates": docs, "total": total}
@@ -388,34 +427,15 @@ def _send_confirmation_email(doc):
 	setting = frappe.get_single("Udshed Setting")
 	school_name = getattr(setting, "school_name", "UDSHED")
 	sender = _get_sender()
-	academic_year = frappe.db.get_value(
-		"Session Inscription", {}, "academic_year", order_by="creation desc"
-	)
-	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
 
-	try:
-		frappe.sendmail(
-			recipients=[doc.email],
-			sender=sender,
-			subject=_("Votre candidature a été acceptée - {0}").format(school_name),
-			template="candidature_confirmation",
-			args={
-				"first_name": doc.first_name,
-				"last_name": doc.last_name,
-				"doc_name": doc.name,
-				"filiere": filiere_label,
-				"niveau": doc.niveau or "",
-				"centre": doc.examination_centre or "",
-				"school_name": school_name,
-				"academic_year": academic_year or "",
-			},
-			now=True,
-		)
-		frappe.logger().info(f"Email confirmation envoyé à {doc.email} pour {doc.name}")
-	except Exception as e:
-		frappe.log_error(
-			message=str(e), title=f"Échec email confirmation {doc.name}"
-		)
+	frappe.sendmail(
+		recipients=[doc.email],
+		sender=sender,
+		subject=_("Félicitations"),
+		message=_("Félicitations, votre candidature a été acceptée."),
+		now=True,
+	)
+	frappe.logger().info(f"Email confirmation envoyé à {doc.email} pour {doc.name}")
 
 
 def _send_validation_email(doc):
@@ -496,22 +516,19 @@ def _send_rejection_email(doc, motif=None):
 	)
 	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
 
+	motif_message = motif or ""
+
+	subject = _("Résultat de votre candidature")
+	message = _("Désolée, votre candidature a été rejetée.")
+	if motif_message:
+		message += "\n\n" + _("Motif du rejet : {0}").format(motif_message)
+
 	try:
 		frappe.sendmail(
 			recipients=[doc.email],
 			sender=sender,
-			subject=_("Résultat de votre candidature - {0}").format(school_name),
-			template="candidature_rejection",
-			args={
-				"first_name": doc.first_name,
-				"last_name": doc.last_name,
-				"doc_name": doc.name,
-				"filiere": filiere_label,
-				"niveau": doc.niveau or "",
-				"school_name": school_name,
-				"academic_year": academic_year or "",
-				"motif": motif or "",
-			},
+			subject=subject,
+			message=message,
 			now=True,
 		)
 		frappe.logger().info(f"Email rejet envoyé à {doc.email} pour {doc.name}")

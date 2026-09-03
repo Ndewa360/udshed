@@ -1,0 +1,227 @@
+{% set logo = "/assets/udshed/images/logo.png" %}
+    {% set photo = doc.id_photo or "" %}
+    {% set utilisable = photo_data_uri or "" %}
+{% set today = frappe.utils.formatdate(frappe.utils.today(), "dd-mm-yyyy") %}
+{% set birth = frappe.utils.formatdate(doc.birthdate, "dd-mm-yyyy") if doc.birthdate else "" %}
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    * { box-sizing: border-box; }
+    body { font-family: "Times New Roman", Times, serif; color: #1e2025; margin: 0; padding: 0; font-size: 12px; line-height: 1.45; }
+    .page { width: 100%; }
+    .header { display: flex; align-items: center; border-bottom: 3px solid #1e2025; padding-bottom: 10px; margin-bottom: 16px; }
+    .header .logo { height: 58px; margin-right: 14px; }
+    .header .brand { flex: 1; }
+    .header .brand .univ { font-size: 16px; font-weight: 800; letter-spacing: 0.5px; color: #1e2025; }
+    .header .brand .sub { font-size: 10px; color: #525462; margin-top: 2px; }
+    .header .titre { text-align: right; }
+    .header .titre .doc { font-size: 17px; font-weight: 800; color: #1e2025; text-transform: uppercase; }
+    .header .titre .dossier { font-size: 12px; font-weight: 700; margin-top: 4px; color: #c0392b; }
+    .header .titre .date { font-size: 10px; color: #6b6d7a; margin-top: 2px; }
+
+    .fiche-top { display: flex; gap: 20px; margin-bottom: 18px; }
+    .fiche-top .photo-box { width: 130px; flex-shrink: 0; }
+    .fiche-top .photo-box .photo { width: 130px; height: 152px; border: 1.5px solid #1e2025; border-radius: 4px; background: #fafbfc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .fiche-top .photo-box .photo img { width: 100%; height: 100%; object-fit: cover; }
+    .fiche-top .photo-box .photo .empty { text-align: center; color: #a0a4ad; font-size: 9px; padding: 8px; }
+    .fiche-top .photo-box .photo-label { margin-top: 6px; text-align: center; font-size: 9px; color: #6b6d7a; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+
+    .fiche-top .identity { flex: 1; }
+    .bloc { border: 1px solid #d4d6dd; border-radius: 6px; margin-bottom: 14px; overflow: hidden; }
+    .bloc-title { background: #1e2025; color: #ffffff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 6px 12px; }
+    .bloc-body { padding: 10px 12px; }
+
+    table.fields { width: 100%; border-collapse: collapse; }
+    table.fields td { padding: 3px 4px; font-size: 11.5px; vertical-align: top; }
+    table.fields td.k { width: 34%; color: #525462; font-weight: 700; }
+    table.fields td.v { color: #1e2025; }
+
+    table.data { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    table.data th { background: #f0f1f4; border-bottom: 1px solid #1e2025; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding: 5px 8px; color: #1e2025; }
+    table.data td { border-bottom: 1px solid #e3e5ea; padding: 6px 8px; font-size: 11px; }
+    .vide { color: #9aa0a8; font-style: italic; }
+
+    .sign { display: flex; margin-top: 30px; }
+    .sign .col { flex: 1; }
+    .sign .line { border-bottom: 1px solid #1e2025; width: 55%; margin-top: 34px; margin-bottom: 4px; }
+    .sign .cap { font-size: 9.5px; color: #525462; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .footer { margin-top: 20px; padding-top: 8px; border-top: 1px solid #d4d6dd; font-size: 9px; color: #6b6d7a; text-align: center; }
+
+    .watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        opacity: 0.10;
+        z-index: -1;
+        pointer-events: none;
+    }
+</style>
+</head>
+<body>
+<div class="watermark"><img src="{{ frappe.utils.get_url('/assets/udshed/images/logo.png') }}" style="width:320px;opacity:1;"></div>
+<div class="page">
+
+    <div class="header">
+        <img class="logo" src="{{ logo }}">
+        <div class="brand">
+            <div class="univ">UNIVERSITÉ DIGITALE UDSHED</div>
+            <div class="sub">Admissions &amp; Scolarité &middot; Session {{ "2025-2026" }}</div>
+        </div>
+        <div class="titre">
+            <div class="doc">Fiche de candidature</div>
+            <div class="dossier">N° : {{ doc.name }}</div>
+            <div class="date">Édité le {{ today }}</div>
+        </div>
+    </div>
+
+    <div class="fiche-top">
+        <div class="photo-box">
+            <div class="photo">
+                {% if utilisable %}
+                    <img src="{{ utilisable }}">
+                {% else %}
+                    <div class="empty">Photo<br>non fournie</div>
+                {% endif %}
+            </div>
+            <div class="photo-label">Photo d'identité</div>
+        </div>
+
+        <div class="identity">
+            <div class="bloc">
+                <div class="bloc-title">Identité du candidat</div>
+                <div class="bloc-body">
+                    <table class="fields">
+                        <tr>
+                            <td class="k">Nom complet</td>
+                            <td class="v"><b>{{ doc.full_name or (doc.first_name ~ " " ~ doc.last_name) }}</b></td>
+                            <td class="k">Sexe</td>
+                            <td class="v">{{ doc.sexe or "&ndash;" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="k">Date de naissance</td>
+                            <td class="v">{{ birth or "&ndash;" }}</td>
+                            <td class="k">Né(e) à</td>
+                            <td class="v">{{ doc.birth_place or "&ndash;" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="k">Nationalité</td>
+                            <td class="v">{{ doc.nationality or "&ndash;" }}</td>
+                            <td class="k">Ville de résidence</td>
+                            <td class="v">{{ doc.home_city or "&ndash;" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="k">Téléphone (WhatsApp)</td>
+                            <td class="v">{{ doc.phone or "&ndash;" }}</td>
+                            <td class="k">Email</td>
+                            <td class="v">{{ doc.email or "&ndash;" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="k">Centre d'examen</td>
+                            <td class="v">{{ doc.examination_centre or "&ndash;" }}</td>
+                            <td class="k">Statut de la candidature</td>
+                            <td class="v">{{ doc.candidature_status or "En attente" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bloc">
+        <div class="bloc-title">Choix de formation</div>
+        <div class="bloc-body">
+            {% if doc.choix_de_formation %}
+            <table class="data">
+                <tr><th style="width:30%">Choix</th><th style="width:40%">Filière</th><th>Niveau</th></tr>
+                {% for r in doc.choix_de_formation %}
+                <tr>
+                    <td>{{ r.choix or "&ndash;" }}</td>
+                    <td>{{ r.filiere or "&ndash;" }}</td>
+                    <td>{{ r.niveau or "&ndash;" }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <span class="vide">Aucun choix de formation renseigné.</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="bloc">
+        <div class="bloc-title">Diplômes</div>
+        <div class="bloc-body">
+            {% if doc.diplome_formation %}
+            <table class="data">
+                <tr>
+                    <th style="width:34%">Diplôme</th>
+                    <th style="width:12%">Année</th>
+                    <th style="width:20%">Lieu d'obtention</th>
+                    <th style="width:18%">Série / Filière</th>
+                    <th>Mention</th>
+                </tr>
+                {% for d in doc.diplome_formation %}
+                <tr>
+                    <td>{{ d.diplome or "&ndash;" }}</td>
+                    <td>{{ d.year or "&ndash;" }}</td>
+                    <td>{{ d.place_of_acquisition or "&ndash;" }}</td>
+                    <td>{{ d.serie__field_of_study or "&ndash;" }}</td>
+                    <td>{{ d.mention or "&ndash;" }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <span class="vide">Aucun diplôme renseigné.</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if doc.father_name or doc.mother_name or doc.sponsor_name or doc.parent_phone %}
+    <div class="bloc">
+        <div class="bloc-title">Parents / Tuteur</div>
+        <div class="bloc-body">
+            <table class="fields">
+                <tr>
+                    <td class="k">Père</td>
+                    <td class="v">{{ doc.father_name or "&ndash;" }}{% if doc.father_phone %} &middot; {{ doc.father_phone }}{% endif %}</td>
+                    <td class="k">Mère</td>
+                    <td class="v">{{ doc.mother_name or "&ndash;" }}{% if doc.mother_phone %} &middot; {{ doc.mother_phone }}{% endif %}</td>
+                </tr>
+                <tr>
+                    <td class="k">Contact parent</td>
+                    <td class="v">{{ doc.parent_phone or "&ndash;" }}</td>
+                    <td class="k">Email parent</td>
+                    <td class="v">{{ doc.email_parent or "&ndash;" }}</td>
+                </tr>
+                {% if doc.sponsor_name %}
+                <tr>
+                    <td class="k">Sponsor</td>
+                    <td class="v">{{ doc.sponsor_name }}{% if doc.sponsor_phone %} &middot; {{ doc.sponsor_phone }}{% endif %}</td>
+                    <td class="k"></td>
+                    <td class="v"></td>
+                </tr>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="sign">
+        <div class="col">
+            <div class="cap">Établi à ........., le ............................</div>
+        </div>
+        <div class="col" style="text-align: right;">
+            <div class="cap" style="text-align:right; margin-left:auto;">Signature du candidat</div>
+            <div class="line" style="margin-left:auto;"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        UDSHED &middot; Toutes les pièces justificatives ont été fournies. Ce document récapitule la candidature soumise en ligne.
+    </div>
+
+</div>
+</body>
+</html>

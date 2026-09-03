@@ -87,7 +87,36 @@ frappe.pages['welcome'].on_page_load = function(wrapper) {
 
 		// Bouton S'inscrire
 		document.getElementById("btn-inscription").addEventListener("click", () => {
-			window.location.href = "/inscription/inscription";
+			if (!navigator.onLine) {
+				frappe.msgprint({
+					title: __("Offline"),
+					message: __("Vous êtes hors ligne. Vérifiez votre connexion internet."),
+					indicator: "red"
+				});
+				return;
+			}
+
+			frappe.call({
+				method: "udshed.udshed.doctype.session_inscription.session_inscription.get_open_session",
+				callback: (r) => {
+					if (r && r.message) {
+						window.location.href = "/inscription/inscription";
+					} else {
+						frappe.msgprint({
+							title: __("Unavailable"),
+							message: __("Aucune session d'inscription en cours."),
+							indicator: "red"
+						});
+					}
+				},
+				error: () => {
+					frappe.msgprint({
+						title: __("Error"),
+						message: __("Unable to verify session availability. Please try again later."),
+						indicator: "red"
+					});
+				}
+			});
 		});
 
 		// Bouton Se réinscrire → page de connexion (matricule + date de naissance) puis réinscription

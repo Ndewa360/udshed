@@ -8,6 +8,7 @@
    "field_order": [
    "choix_du_de_la_candidate_candidate_selection_section",
    "column_break_etdp",
+   "session_inscription",
    "filiere",
    "niveau",
    "examination_centre",
@@ -87,6 +88,13 @@
    "label": "Choix du (de la) Candidate (candidate selection)"
   },
   {
+   "fieldname": "session_inscription",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Session d'inscription",
+   "options": "Session Inscription"
+  },
+  {
    "fieldname": "column_break_nmqp",
    "fieldtype": "Column Break"
   },
@@ -104,7 +112,7 @@
    "fieldname": "niveau",
    "fieldtype": "Select",
    "label": "Niveau",
-   "options": "BTS\nLICENCE 1\nLICENCE 2\nLICENCE 3\nMASTER 1\nMASTER 2"
+   "options": "BTS 1\nBTS 2\nLicence 1\nLicence 2\nLicence 3\nMaster 1\nMaster 2"
   },
   {
    "fieldname": "choix_de_formation",
@@ -170,6 +178,11 @@
    "fieldname": "email_parent",
    "fieldtype": "Data",
    "label": "Email Parent"
+  },
+  {
+   "fieldname": "parent_phone",
+   "fieldtype": "Phone",
+   "label": "Contact Parent"
   },
   {
    "fieldname": "birthdate",

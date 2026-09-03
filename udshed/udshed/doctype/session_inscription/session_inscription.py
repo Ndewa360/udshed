@@ -34,14 +34,11 @@ class SessionInscription(Document):
 	def validate_unique_open_session(self):
 		if self.status == "Open":
 			existing = frappe.db.exists("Session Inscription", {
-				"academic_year": self.academic_year,
 				"status": "Open",
 				"name": ("!=", self.name)
 			})
 			if existing:
-				frappe.throw(_(
-					"An open registration session already exists for Academic Year {0}."
-				).format(self.academic_year))
+				frappe.throw(_("An open registration session already exists. Close it first."))
 
 	@frappe.whitelist()
 	def open_session(self):
