@@ -1,0 +1,82 @@
+<aside class="sidebar">
+  <div class="sidebar-logo">Udshed</div>
+  <ul class="sidebar-menu">
+    <div class="sidebar-label">Espace Étudiant</div>
+    <li>
+      <a href="/dashboard-etudiant" class="{{ 'active' if active == 'dashboard' else '' }}">
+        <span class="icon">📊</span> Tableau de bord
+      </a>
+    </li>
+
+    {% if not has_reregistered %}
+    <!-- Avant réinscription : dashboard, babillard public, se réinscrire -->
+    <li>
+      <a href="/babillard" class="{{ 'active' if active == 'babillard' else '' }}">
+        <span class="icon">📌</span> Babillard
+      </a>
+    </li>
+    <li>
+      <a href="/fiche-reinscription" class="{{ 'active' if active == 'reinscription' else '' }}">
+        <span class="icon">📝</span> Se réinscrire
+      </a>
+    </li>
+    <div class="sidebar-label">Après ré-inscription</div>
+    <li>
+      <a href="#" class="locked" title="Disponible après ré-inscription" onclick="return false;">
+        <span class="icon">🔒</span> Mon Parcours
+      </a>
+    </li>
+    <li>
+      <a href="#" class="locked" title="Disponible après ré-inscription" onclick="return false;">
+        <span class="icon">🔒</span> Mes Notes
+      </a>
+    </li>
+    <li>
+      <a href="#" class="locked" title="Disponible après ré-inscription" onclick="return false;">
+        <span class="icon">🔒</span> Emploi du temps
+      </a>
+    </li>
+    <li>
+      <a href="#" class="locked" title="Disponible après ré-inscription" onclick="return false;">
+        <span class="icon">🔒</span> Relevé de notes
+      </a>
+    </li>
+    {% else %}
+    <!-- Après réinscription : menu complet sans "Se réinscrire" -->
+    <div class="sidebar-label">Mon Espace</div>
+    <li>
+      <a href="/verification-parcours" class="{{ 'active' if active == 'parcours' else '' }}">
+        <span class="icon">📚</span> Mon Parcours
+      </a>
+    </li>
+    <li>
+      <a href="/mes-notes" class="{{ 'active' if active == 'notes' else '' }}">
+        <span class="icon">📈</span> Mes Notes
+      </a>
+    </li>
+    <li>
+      <a href="/planning-academique" class="{{ 'active' if active == 'planning' else '' }}">
+        <span class="icon">📅</span> Emploi du temps
+      </a>
+    </li>
+    <li>
+      <a href="/releve-notes" class="{{ 'active' if active == 'releve' else '' }}">
+        <span class="icon">📄</span> Relevé de notes
+      </a>
+    </li>
+    <div class="sidebar-label">Informations</div>
+    <li>
+      <a href="/babillard" class="{{ 'active' if active == 'babillard' else '' }}">
+        <span class="icon">📌</span> Babillard
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+  <div class="sidebar-footer">
+    <div class="sidebar-footer-avatar">{{ initials }}</div>
+    <div class="sf-info">
+      <div class="name">{{ student_name }}</div>
+      <div class="level">{{ niveau }} - {{ filiere_name }}</div>
+    </div>
+  </div>
+</aside>

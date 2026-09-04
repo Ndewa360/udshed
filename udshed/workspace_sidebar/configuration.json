@@ -26,6 +26,8 @@
    "indent": 0,
    "keep_closed": 0,
    "label": "Fili\u00e8res & Niveaux",
+   "link_type": "DocType",
+   "open_in_new_tab": 1,
    "show_arrow": 1,
    "type": "Section Break"
   },
@@ -49,7 +51,7 @@
    "indent": 1,
    "keep_closed": 0,
    "label": "Fili\u00e8res",
-   "link_to": "Field of Study",
+   "link_to": "Field of study",
    "link_type": "DocType",
    "open_in_new_tab": 1,
    "show_arrow": 0,
@@ -75,6 +77,8 @@
    "indent": 0,
    "keep_closed": 0,
    "label": "Enseignement",
+   "link_type": "DocType",
+   "open_in_new_tab": 1,
    "show_arrow": 1,
    "type": "Section Break"
   },
@@ -124,6 +128,8 @@
    "indent": 0,
    "keep_closed": 0,
    "label": "Infrastructure",
+   "link_type": "DocType",
+   "open_in_new_tab": 1,
    "show_arrow": 1,
    "type": "Section Break"
   },
@@ -160,21 +166,10 @@
    "indent": 0,
    "keep_closed": 0,
    "label": "Notes & Formules",
-   "show_arrow": 1,
-   "type": "Section Break"
-  },
-  {
-   "child": 1,
-   "collapsible": 0,
-   "icon": "grid-3x3",
-   "indent": 1,
-   "keep_closed": 0,
-   "label": "Bar\u00e8me des notes",
-   "link_to": "Grade Config",
    "link_type": "DocType",
    "open_in_new_tab": 1,
-   "show_arrow": 0,
-   "type": "Link"
+   "show_arrow": 1,
+   "type": "Section Break"
   },
   {
    "child": 1,
@@ -188,46 +183,12 @@
    "open_in_new_tab": 1,
    "show_arrow": 0,
    "type": "Link"
-  },
-  {
-   "child": 1,
-   "collapsible": 0,
-   "icon": "settings-2",
-   "indent": 1,
-   "keep_closed": 0,
-   "label": "Config formules par UE",
-   "link_to": "Note Formule Config",
-   "link_type": "DocType",
-   "open_in_new_tab": 1,
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
-   "icon": "wallet",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Finance",
-   "show_arrow": 1,
-   "type": "Section Break"
-  },
-  {
-   "child": 1,
-   "collapsible": 0,
-   "icon": "banknote",
-   "indent": 1,
-   "keep_closed": 0,
-   "label": "Grille de r\u00e9mun\u00e9ration",
-   "link_to": "Financial Payment Grade Config",
-   "link_type": "DocType",
-   "open_in_new_tab": 1,
-   "show_arrow": 0,
-   "type": "Link"
   }
  ],
+ "modified": "2026-09-02 14:14:36.921326",
+ "modified_by": "Administrator",
  "module": "Udshed",
  "name": "configuration",
- "standard": 0,
+ "standard": 1,
  "title": "Configuration"
 }

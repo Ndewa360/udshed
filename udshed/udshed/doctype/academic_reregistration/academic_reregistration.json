@@ -16,10 +16,12 @@
   "informations_acad\u00e9miques_section",
   "filiere",
   "niveau",
-  "column_break_t8ni",
-  "semestre",
-  "niveau_precedent",
-  "mati\u00e8res_inscrites_section",
+"column_break_t8ni",
+   "semestre",
+   "niveau_precedent",
+   "decision_notes",
+   "admission_master_accordee",
+   "mati\u00e8res_inscrites_section",
   "cours_inscrits",
   "r\u00e9sultats_ann\u00e9e_pr\u00e9c\u00e9dente_section",
   "resultats_precedents",
@@ -90,6 +92,19 @@
    "fieldtype": "Data",
    "label": "Niveau pr\u00e9c\u00e9dent",
    "read_only": 1
+  },
+  {
+   "description": "D\u00e9cision du module de gestion de notes (Admis / Ajourn\u00e9 / En attente)",
+   "fieldname": "decision_notes",
+   "fieldtype": "Data",
+   "label": "D\u00e9cision des r\u00e9sultats",
+   "read_only": 1
+  },
+  {
+   "description": "L'entr\u00e9e en Master n\u00e9cessite la validation de la Licence ET l'accord du coordinateur",
+   "fieldname": "admission_master_accordee",
+   "fieldtype": "Check",
+   "label": "Admission en Master accord\u00e9e"
   },
   {
    "fieldname": "mati\u00e8res_inscrites_section",

@@ -56,9 +56,14 @@ frappe.ui.form.on("Academic Reregistration", {
 	niveau(frm) {
 		if (!frm.doc.niveau || !frm.doc.filiere) return;
 
-		// Calculer le niveau précédent côté JS avant de charger
-		calculer_niveau_precedent_js(frm, () => {
-			charger_matieres_precedentes(frm);
+		// Niveau précédent calculé côté serveur (même règle que le backend)
+		frappe.call({
+			method: "udshed.api.reregistration.get_niveau_precedent",
+			args: { filiere: frm.doc.filiere, niveau: frm.doc.niveau },
+			callback(r) {
+				frm.set_value("niveau_precedent", r.message || "");
+				charger_matieres_precedentes(frm);
+			}
 		});
 	},
 
@@ -98,121 +103,37 @@ function charger_niveaux(frm) {
 
 
 // =============================================
-// Calculer le niveau précédent côté JS
-// =============================================
-function calculer_niveau_precedent_js(frm, callback) {
-	if (!frm.doc.filiere || !frm.doc.niveau) {
-		if (callback) callback();
-		return;
-	}
-
-	frappe.call({
-		method: "udshed.api.reregistration.get_ordered_levels",
-		args: { filiere: frm.doc.filiere },
-		callback(r) {
-			if (!r.message) {
-				if (callback) callback();
-				return;
-			}
-
-			let levels = r.message;
-			let niveau_actuel_order = null;
-
-			for (let i = 0; i < levels.length; i++) {
-				if (levels[i].level === frm.doc.niveau) {
-					niveau_actuel_order = levels[i].order;
-					break;
-				}
-			}
-
-			if (niveau_actuel_order === null || niveau_actuel_order <= 1) {
-				frm.set_value("niveau_precedent", "");
-			} else {
-				for (let i = 0; i < levels.length; i++) {
-					if (levels[i].order === niveau_actuel_order - 1) {
-						frm.set_value("niveau_precedent", levels[i].level);
-						break;
-					}
-				}
-			}
-
-			if (callback) callback();
-		}
-	});
-}
-
-
-// =============================================
-// Charger les matières du niveau précédent
+// Charger les matières précédentes depuis le module de notes
 // =============================================
 function charger_matieres_precedentes(frm) {
-	if (!frm.doc.filiere || !frm.doc.niveau || !frm.doc.academic_year || !frm.doc.reinscription_session) return;
+	if (!frm.doc.filiere || !frm.doc.niveau_precedent || !frm.doc.student) return;
 
-	// Récupérer la note minimale depuis la session
-	let note_minimale = 10;
-	frappe.db.get_value("Session Reinscription", frm.doc.reinscription_session, "note_minimale").then(r => {
-		if (r.message && r.message.note_minimale) {
-			note_minimale = r.message.note_minimale;
+	frappe.call({
+		method: "udshed.api.reregistration.get_student_notes",
+		args: {
+			student: frm.doc.student,
+			filiere: frm.doc.filiere,
+			niveau_precedent_label: frm.doc.niveau_precedent
+		},
+		callback(r) {
+			frm.clear_table("resultats_precedents");
+
+			(r.message || []).forEach(n => {
+				let valide = n.statut === "Validé" ? 1 : 0;
+				let row = frm.add_child("resultats_precedents");
+				row.teaching_unit = n.teaching_unit;
+				row.intitule = n.ue_name || n.teaching_unit;
+				row.semestre = n.semestre || "";
+				row.note = n.note_finale || 0;
+				row.valide = valide;
+				row.est_dette = valide ? 0 : 1;
+			});
+
+			frm.refresh_field("resultats_precedents");
+			frappe.show_alert({
+				message: `${(r.message || []).length} résultat(s) chargé(s) depuis le module de notes`,
+				indicator: "blue"
+			}, 3);
 		}
-
-		// Etape 1 : charger les matières du niveau précédent
-		frappe.call({
-			method: "udshed.api.reregistration.get_previous_level_courses",
-			args: {
-				filiere: frm.doc.filiere,
-				niveau_label: frm.doc.niveau,
-				academic_year: frm.doc.academic_year
-			},
-			callback(r) {
-				if (!r.message || r.message.length === 0) {
-					frappe.show_alert({
-						message: "Aucune matière trouvée pour le niveau précédent",
-						indicator: "orange"
-					}, 4);
-					return;
-				}
-
-				// Etape 2 : charger les notes de l'étudiant
-				frappe.call({
-					method: "udshed.api.reregistration.get_student_notes",
-					args: {
-						student: frm.doc.student,
-						filiere: frm.doc.filiere,
-						niveau_precedent_label: frm.doc.niveau_precedent
-					},
-					callback(notes_r) {
-						// Dictionnaire notes par teaching_unit
-						let notes_dict = {};
-						if (notes_r.message) {
-							notes_r.message.forEach(n => {
-								notes_dict[n.teaching_unit] = n.note_finale || 0;
-							});
-						}
-
-						frm.clear_table("resultats_precedents");
-
-						r.message.forEach(matiere => {
-							let note = notes_dict[matiere.name] || 0;
-							let valide = note >= note_minimale ? 1 : 0;
-							let est_dette = note < note_minimale ? 1 : 0;
-
-							let row = frm.add_child("resultats_precedents");
-							row.teaching_unit = matiere.name;
-							row.intitule = matiere.intitule_cours;
-							row.semestre = matiere.semestre;
-							row.note = note;
-							row.valide = valide;
-							row.est_dette = est_dette;
-						});
-
-						frm.refresh_field("resultats_precedents");
-						frappe.show_alert({
-							message: `${r.message.length} matière(s) chargée(s)`,
-							indicator: "blue"
-						}, 3);
-					}
-				});
-			}
-		});
 	});
 }

@@ -1,0 +1,28 @@
+{
+  "app": "udshed",
+  "creation": "2026-09-02 12:00:00.000000",
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": "settings",
+  "icon_type": "Link",
+  "idx": 10,
+  "label": "Configuration",
+  "link_to": "configuration",
+  "link_type": "Workspace Sidebar",
+  "modified": "2026-09-02 12:00:00.000000",
+  "modified_by": "Administrator",
+  "name": "Configuration",
+  "owner": "Administrator",
+  "restrict_removal": 0,
+  "roles": [
+    {
+      "role": "System Manager"
+    },
+    {
+      "role": "Coordonateur"
+    }
+  ],
+  "sidebar": "configuration",
+  "standard": 1
+}
