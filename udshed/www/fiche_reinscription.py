@@ -63,23 +63,65 @@ def _get_initials(student):
 
 
 def _build_fiche_details(doc):
-    """Construit un dict lisible de la fiche pour affichage en lecture seule."""
+    """Construit un dict lisible de la fiche pour affichage en lecture seule.
+
+    La grille de matières et les UE à reprendre proviennent UNIQUEMENT du
+    module de gestion de notes (get_transcript_data). Les informations
+    d'identification de la fiche (référence, année, filière, niveau, semestre,
+    statut) viennent du doctype Academic Reregistration.
+    """
     filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") or doc.filiere
+
+    # Données réelles du module note (même source que le relevé officiel).
+    from udshed.api.transcript import get_transcript_data
+
+    student_doc = frappe.get_doc("Student", doc.student)
+    transcript = get_transcript_data(student_doc)
+    semesters = transcript.get("semesters", [])
+
+    grille = []
+    ue_a_reprendre = []
+    vus = set()
+    for sem in semesters:
+        for ue in sem.get("ues", []):
+            if ue.get("code") in vus:
+                continue
+            vus.add(ue.get("code"))
+            grille.append({
+                "code": ue.get("code") or "",
+                "intitule": ue.get("intitule") or ue.get("code") or "",
+                "semestre": sem.get("label") or "",
+                "academic_year": sem.get("academic_year") or "",
+                "credits": ue.get("credits") or 0,
+                "note_finale": ue.get("note_finale"),
+                "grade": ue.get("grade") or "",
+                "mention": ue.get("mention") or "",
+                "statut": ue.get("statut") or "",
+                "session": ue.get("session") or "",
+                "est_rattrapage": bool(ue.get("est_rattrapage")),
+            })
+            if ue.get("statut") != "Validé":
+                ue_a_reprendre.append(grille[-1])
+
     return {
         "name": doc.name,
         "academic_year": doc.academic_year,
+        "year_label": transcript.get("niveau_label") or "",
         "filiere_label": filiere_label,
         "niveau": doc.niveau,
+        "niveau_precedent": doc.niveau_precedent or "",
+        "decision_notes": doc.decision_notes or "",
         "semestre": doc.semestre,
         "statut": doc.statut,
         "fiche_telechargee": bool(doc.fiche_telechargee),
         "date": doc.creation.strftime("%d/%m/%Y") if hasattr(doc.creation, "strftime") else doc.creation,
-        "cours_inscrits": [
-            {
-                "intitule": m.intitule or m.teaching_unit,
-                "semestre": m.semestre or "",
-                "statut": m.statut or "",
-            }
-            for m in doc.cours_inscrits
-        ],
+        "grille": grille,
+        "ue_a_reprendre": ue_a_reprendre,
+        "nb_ue": len(grille),
+        "nb_a_reprendre": len(ue_a_reprendre),
+        "nb_validees": sum(1 for g in grille if g["statut"] == "Validé"),
+        "cum_credits_obtenus": transcript.get("total_credits_obtenus") or 0,
+        "cum_credits": transcript.get("total_credits") or 0,
+        "pct_validation": transcript.get("pct_validation") or 0,
+        "decision_globale": transcript.get("overall_decision") or "",
     }

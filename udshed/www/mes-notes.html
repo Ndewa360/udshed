@@ -39,7 +39,9 @@
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
             <h2 class="card-title">{{ sem.label }} — {{ sem.academic_year }}</h2>
             <div style="text-align: right;">
-              <div style="font-size: 12px; color: var(--text-secondary);">Moyenne : <b>{{ sem.mps or '—' }}</b></div>
+              <div style="font-size: 12px; color: var(--text-secondary);">
+                Moyenne : <b>{{ sem.mps_sur_4 if sem.mps_sur_4 is not none else '—' }}/4</b>
+              </div>
               <div style="font-size: 12px; color: var(--text-secondary);">Mention : <b>{{ sem.mention or '—' }}</b></div>
             </div>
           </div>
@@ -49,18 +51,34 @@
             <table>
               <thead>
                 <tr>
+                  <th>Code</th>
                   <th>UE</th>
+                  <th>Cr.</th>
                   <th>Note</th>
                   <th>Grade</th>
+                  <th>Mention</th>
+                  <th>Session</th>
                   <th>Statut</th>
                 </tr>
               </thead>
               <tbody>
                 {% for ue in sem.ues %}
                 <tr>
-                  <td>{{ ue.intitule }}</td>
-                  <td>{{ ue.note_finale or '—' }}/20</td>
+                  <td>{{ ue.code or '—' }}</td>
+                  <td>{{ ue.intitule or '—' }}</td>
+                  <td>{{ ue.credits or 0 }}</td>
+                  <td>
+                    {% if ue.note_finale is not none %}{{ ue.note_finale }}/20{% else %}—{% endif %}
+                  </td>
                   <td>{{ ue.grade or '—' }}</td>
+                  <td>{{ ue.mention or '—' }}</td>
+                  <td>
+                    {% if ue.est_rattrapage %}
+                    <span class="badge badge-soft">Rattrapage</span>
+                    {% else %}
+                    <span class="badge badge-soft">Normale</span>
+                    {% endif %}
+                  </td>
                   <td>
                     {% if ue.statut == 'Validé' %}
                     <span class="badge">Validé</span>
@@ -76,8 +94,38 @@
           {% else %}
           <p style="color: var(--text-secondary);">Aucune note enregistrée pour ce semestre.</p>
           {% endif %}
+
+          {% if sem.backlogs %}
+          <div class="alert" style="margin-top: 8px;">
+            <span>⚠️</span>
+            <span><b>{{ sem.backlogs|length }} UE non validée(s)</b> — {{ sem.backlogs | map(attribute='intitule') | join(', ') }}</span>
+          </div>
+          {% endif %}
         </div>
         {% endfor %}
+
+        {% if transcript %}
+        <div class="card" style="margin-top: 8px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+            <div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Crédits validés</div>
+              <div class="stat-value">{{ transcript.total_credits_obtenus or 0 }}/{{ transcript.total_credits or 0 }}</div>
+            </div>
+            <div>
+              <div style="font-size: 12px; color: var(--text-secondary);">MPC cumulé</div>
+              <div class="stat-value">{{ transcript.cumulative_gpa if transcript.cumulative_gpa is not none else '—' }}/4</div>
+            </div>
+            <div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Taux de validation</div>
+              <div class="stat-value">{{ transcript.pct_validation or 0 }}%</div>
+            </div>
+            <div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Décision</div>
+              <div class="stat-value">{{ transcript.overall_decision or '—' }}</div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
       {% else %}
         <div class="card">
           <p style="color: var(--text-secondary); text-align: center; padding: 20px 0;">Aucune note disponible.</p>

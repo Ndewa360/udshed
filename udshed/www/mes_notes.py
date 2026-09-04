@@ -31,7 +31,9 @@ def get_context(context):
         return context
 
     context.blocked = False
-    context.semesters = _get_semesters(student.name)
+    _transcript = _get_transcript(student.name)
+    context.semesters = _transcript.get("semesters", [])
+    context.transcript = _transcript
 
 
 def _get_student(user_email):
@@ -47,47 +49,13 @@ def _get_initials(student):
     return f"{prenom}{nom}".upper()
 
 
-def _get_semesters(student_name):
-    """Récupère les semestres et leurs UE avec notes pour l'affichage."""
-    semesters = frappe.get_all(
-        "Resultat Semestre",
-        filters={"student": student_name},
-        fields=[
-            "name", "semestre", "academic_year", "semester_index",
-            "mps", "mpc", "total_credits", "credits_obtenus", "mention", "decision",
-        ],
-        order_by="semester_index asc",
-    )
+def _get_transcript(student_name):
+    """Récupère les vraies données du module note via get_transcript_data.
 
-    data = []
-    for sem in semesters:
-        year_label = frappe.db.get_value("Academic Year", sem.academic_year, "year_name") or sem.academic_year
-        ues = frappe.get_all(
-            "Resultat Academique",
-            filters={
-                "student": student_name,
-                "semestre": sem.semestre,
-                "academic_year": sem.academic_year,
-            },
-            fields=["ue_name", "teaching_unit", "note_finale", "grade", "mention", "statut"],
-            order_by="ue_name asc",
-        )
-        ue_list = [{
-            "intitule": ue.ue_name or ue.teaching_unit,
-            "note_finale": ue.note_finale,
-            "grade": ue.grade or "",
-            "mention": ue.mention or "",
-            "statut": ue.statut or "",
-        } for ue in ues]
+    Mêmes données que celles utilisées par le relevé de notes officiel (PDF) :
+    regroupement par UV, moyennes MPS/MPC sur 4, cumulatif, backlogs, décision.
+    """
+    from udshed.api.transcript import get_transcript_data
 
-        data.append({
-            "label": sem.semestre,
-            "academic_year": year_label,
-            "mps": sem.mps,
-            "mpc": sem.mpc,
-            "mention": sem.mention or "",
-            "decision": sem.decision or "",
-            "ues": ue_list,
-        })
-
-    return data
+    student_doc = frappe.get_doc("Student", student_name)
+    return get_transcript_data(student_doc)

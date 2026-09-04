@@ -39,23 +39,100 @@
             <p style="margin-bottom: 0;"><b>Date :</b> {{ fiche_details.date }}</p>
           </div>
 
-          {% if fiche_details.cours_inscrits %}
-          <h3 class="card-title" style="margin-bottom: 12px; font-size: 14px;">Matières inscrites</h3>
+          <!-- ====== RÉCAP ====== -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px;">
+            <div class="stat-card">
+              <div class="stat-label">UE au programme</div>
+              <div class="stat-value">{{ fiche_details.nb_ue or 0 }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">UE validées</div>
+              <div class="stat-value">{{ fiche_details.nb_validees or 0 }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">UE à reprendre</div>
+              <div class="stat-value">{{ fiche_details.nb_a_reprendre or 0 }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Décision</div>
+              <div class="stat-value">{{ fiche_details.decision_globale or '—' }}</div>
+            </div>
+          </div>
+
+          <!-- ====== UE À REPRENDRE ====== -->
+          {% if fiche_details.ue_a_reprendre %}
+          <h3 class="card-title" style="margin-bottom: 12px; font-size: 14px;">UE à reprendre (année précédente)</h3>
           <div class="table-container" style="margin-bottom: 16px;">
             <table>
               <thead>
                 <tr>
+                  <th>Code</th>
                   <th>Intitulé</th>
                   <th>Semestre</th>
+                  <th>Crédits</th>
+                  <th>Note</th>
+                  <th>Grade</th>
+                  <th>Mention</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in fiche_details.ue_a_reprendre %}
+                <tr>
+                  <td>{{ c.code }}</td>
+                  <td>{{ c.intitule }}</td>
+                  <td>{{ c.semestre }}</td>
+                  <td>{{ c.credits }}</td>
+                  <td>{% if c.note_finale is not none %}{{ c.note_finale }}/20{% else %}—{% endif %}</td>
+                  <td>{{ c.grade or '—' }}</td>
+                  <td>{{ c.mention or '—' }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="alert" style="margin-bottom: 16px;">
+            <span>✅</span>
+            <span>Aucune UE à reprendre : toutes les unités de valeur sont validées.</span>
+          </div>
+          {% endif %}
+
+          <!-- ====== GRILLE COMPLÈTE ====== -->
+          {% if fiche_details.grille %}
+          <h3 class="card-title" style="margin-bottom: 12px; font-size: 14px;">Grille de matières</h3>
+          <div class="table-container" style="margin-bottom: 16px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>UE / Matière</th>
+                  <th>Semestre</th>
+                  <th>Cr.</th>
+                  <th>Note</th>
+                  <th>Grade</th>
+                  <th>Mention</th>
+                  <th>Session</th>
                   <th>Statut</th>
                 </tr>
               </thead>
               <tbody>
-                {% for c in fiche_details.cours_inscrits %}
+                {% for c in fiche_details.grille %}
                 <tr>
+                  <td>{{ c.code }}</td>
                   <td>{{ c.intitule }}</td>
                   <td>{{ c.semestre }}</td>
-                  <td>{{ c.statut }}</td>
+                  <td>{{ c.credits }}</td>
+                  <td>{% if c.note_finale is not none %}{{ c.note_finale }}/20{% else %}—{% endif %}</td>
+                  <td>{{ c.grade or '—' }}</td>
+                  <td>{{ c.mention or '—' }}</td>
+                  <td>{{ c.session or '—' }}</td>
+                  <td>
+                    {% if c.statut == 'Validé' %}
+                    <span class="badge">Validé</span>
+                    {% else %}
+                    <span class="badge" style="background: var(--bg-table-header);">À reprendre</span>
+                    {% endif %}
+                  </td>
                 </tr>
                 {% endfor %}
               </tbody>
