@@ -1,4 +1,6 @@
-.levels-management-container .level-row-highlight td {
-	background-color: #d1f5d3 !important;
-	transition: background-color 1s ease;
-}
+/* ============================================================
+   GESTION DES NIVEAUX — page stylesheet
+   The full styling is served via public/css/gestion_des_niveaux.v2.css
+   (loaded globally through app_include_css). This file is intentionally
+   kept empty to avoid double-loading / conflicting rules.
+   ============================================================ */

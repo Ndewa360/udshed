@@ -57,7 +57,7 @@ fixtures = [
     {
         "dt": "Desktop Icon",
         "filters": [
-            ["name","in",["Inscription - Reinscription","Gestion Des Notes","Insight","Planning Académique"]]
+            ["name","in",["Inscription - Reinscription","Gestion Des Notes","Insight","Planning Académique","Configuration"]]
         ]
     },
     {
@@ -73,15 +73,15 @@ fixtures = [
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/udshed/css/gestion_des_niveaux.v2.css"
+app_include_css = "/assets/udshed/css/gestion_des_niveaux.v3.css"
 app_include_js = [
 	"https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js",
 	"/assets/udshed/js/udshed.js"
 ]
 
 # include js, css files in header of web template
-# web_include_css = "/assets/udshed/css/udshed.css"
-# web_include_js = "/assets/udshed/js/udshed.js"
+web_include_css = "/assets/udshed/css/reinscription.css"
+web_include_js = "/assets/udshed/js/udshed.js"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "udshed/public/scss/website"
@@ -154,30 +154,20 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Integration Setup
 # ------------------
-# To set up dependencies/integrations with other apps
-# Name of the app being installed is passed as an argument
-
 # before_app_install = "udshed.utils.before_app_install"
 # after_app_install = "udshed.utils.after_app_install"
 
 # Integration Cleanup
 # -------------------
-# To clean up dependencies/integrations with other apps
-# Name of the app being uninstalled is passed as an argument
-
 # before_app_uninstall = "udshed.utils.before_app_uninstall"
 # after_app_uninstall = "udshed.utils.after_app_uninstall"
 
 # Desk Notifications
 # ------------------
-# See frappe.core.notifications.get_notification_config
-
 # notification_config = "udshed.notifications.get_notification_config"
 
 # Permissions
 # -----------
-# Permissions evaluated in scripted ways
-
 # permission_query_conditions = {
 # 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
 # }
@@ -188,8 +178,6 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Document Events
 # ---------------
-# Hook on document methods and events
-
 # doc_events = {
 # 	"*": {
 # 		"on_update": "method",
@@ -214,32 +202,20 @@ scheduler_events = {
 
 # Extend DocType Class
 # ------------------------------
-#
-# Specify custom mixins to extend the standard doctype controller.
 # extend_doctype_class = {
 # 	"Task": "udshed.custom.task.CustomTaskMixin"
 # }
 
 # Overriding Methods
 # ------------------------------
-#
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "udshed.event.get_events"
 # }
-#
-# each overriding function accepts a `data` argument;
-# generated from the base implementation of the doctype dashboard,
-# along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
 # 	"Task": "udshed.task.get_dashboard_data"
 # }
 
-# exempt linked doctypes from being automatically cancelled
-#
 # auto_cancel_exempted_doctypes = ["Auto Repeat"]
-
-# Ignore links to specified DocTypes when deleting documents
-# -----------------------------------------------------------
 
 # ignore_links_on_delete = ["Communication", "ToDo"]
 
@@ -284,7 +260,6 @@ scheduler_events = {
 # 	"udshed.auth.validate"
 # ]
 
-# Automatically update python controller files with type annotations for this app.
 # export_python_type_annotations = True
 
 # Website redirects

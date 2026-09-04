@@ -1,14 +1,7 @@
 # Copyright (c) 2026, Udshed and contributors
 # For license information, please see license.txt
 
-"""API de la page « Procès-Verbal récapitulatif ».
-
-Génère le procès-verbal d'une classe (filière + niveau) pour un semestre :
-résultats de session normale par UE, bilan semestriel (crédits, MPS, MPC,
-statut) et statistiques de réussite. Seules les données réelles de
-l'application sont utilisées (réinscriptions validées, notes publiées,
-grille de grades, résultats calculés par le moteur).
-"""
+"""API de la page « Procès-Verbal récapitulatif »."""
 
 import re
 
@@ -22,11 +15,7 @@ TYPE_NORMALE = "Examen de session normal"
 STATUT_NOTE_PUBLIE = "Publié"
 
 
-# ---------------------------------------------------------------------- #
-#  Accès aux données
-# ---------------------------------------------------------------------- #
 def _sessions_normales(academic_year, filiere, niveau, semestre):
-    """Sessions « Examen de session normal » couvrant la classe (filière, niveau)."""
     niveau_name = _get_niveau_name(filiere, niveau)
     sessions = frappe.get_all(
         "Session Examen",
@@ -48,11 +37,9 @@ def _sessions_normales(academic_year, filiere, niveau, semestre):
 
 
 def _notes_normales(academic_year, filiere, niveau, semestre):
-    """Notes publiées de session normale, indexées par (student, teaching_unit)."""
     sessions = _sessions_normales(academic_year, filiere, niveau, semestre)
     if not sessions:
         return {}
-
     notes = frappe.get_all(
         "Session Examen Note",
         filters={
@@ -68,7 +55,6 @@ def _notes_normales(academic_year, filiere, niveau, semestre):
 
 
 def _credits_ue(teaching_unit, filiere, niveau):
-    """Crédits d'une UE pour le niveau de la classe (course_levels, sinon champ credits)."""
     niveau_name = _get_niveau_name(filiere, niveau)
     poid = frappe.db.get_value(
         "Course Field of study level item",
@@ -81,11 +67,6 @@ def _credits_ue(teaching_unit, filiere, niveau):
 
 
 def _etudiants_classe(academic_year, filiere, niveau, ues):
-    """Union (triée par matricule) des étudiants inscrits aux UE du semestre.
-
-    Reprend la logique de la Saisie des notes : réinscription « Validée »
-    pour l'année/filière/niveau et statut « Inscrit » à l'UE.
-    """
     resultats = []
     vus = set()
     for ue in ues:
@@ -110,14 +91,12 @@ MENTION_COURTE = {
 
 
 def _mention_courte(mention):
-    """Abrège une mention (ex : « Assez Bien » -> « AB »)."""
     if not mention:
         return ""
     return MENTION_COURTE.get(mention) or mention
 
 
 def _numero_semestre_cycle(niveau_label, semestre):
-    """Numéro de semestre dans le cycle (ex : Licence 3 S1 -> 5, Master 2 S2 -> 10)."""
     match = re.search(r"(\d+)", niveau_label or "")
     rang = int(match.group(1)) if match else 1
     base = 6 if "master" in (niveau_label or "").lower() else 0
@@ -128,11 +107,8 @@ def _numero_semestre_cycle(niveau_label, semestre):
 def _mps_rs_sur_4(rs_mps):
     """Convertit la MPS d'un Resultat Semestre en échelle 0–4.
 
-    La MPS stockée dans Resultat Semestre est toujours en pourcentage (0–100)
-    car c'est ``calculer_et_sauvegarder_mps_mpc`` qui l'écrit via ``calculer_mps``
-    (qui retourne une valeur sur 100). La conversion est donc toujours ÷ 25.
-    On garde néanmoins une garde-fou : si la valeur est déjà <= 4 elle est
-    considérée comme étant sur 4 (données migrées manuellement).
+    La MPS stockée dans Resultat Semestre est en pourcentage (0–100).
+    Garde-fou : si la valeur est déjà <= 4, elle est considérée sur 4.
     """
     v = float(rs_mps or 0)
     if v <= 4.0:
@@ -141,22 +117,6 @@ def _mps_rs_sur_4(rs_mps):
 
 
 def _bilan_pv_etudiant(student, academic_year, semestre, mps_sur_4, total_credits, credits_obtenus, pct_validation):
-    """Bilan d'un étudiant pour le PV récapitulatif (échelle 0–4).
-
-    Le PV présente, sur l'échelle des points de la grille (A=4 … F=0) :
-      - ``mps`` : Moyenne Pondérée **Semestrielle** du semestre courant,
-        calculée exactement sur les points.
-      - ``mpc`` : Moyenne Pondérée **Cumulée** du cycle, moyenne récurrente
-        des MPS (semestre courant exact, antérieurs convertis depuis les
-        ``Resultat Semestre`` stockés en % → ÷25).
-      - ``sem_ant_*`` : MPC et TCC du semestre antérieur (index - 1).
-      - ``cycle_*`` : crédits TCI/TCC cumulés du cycle jusqu'au semestre
-        courant, et leur taux de validation (%).
-
-    En l'absence de ``Resultat Semestre`` (historique non calculé), on retombe
-    sur le semestre courant : semestre antérieur et MPC cumulée absents,
-    cycle = semestre courant.
-    """
     rows = frappe.get_all(
         "Resultat Semestre",
         filters={"student": student},
@@ -185,9 +145,6 @@ def _bilan_pv_etudiant(student, academic_year, semestre, mps_sur_4, total_credit
     index = current.semester_index if current else max(r.semester_index for r in rows)
     sem_ant = next((r for r in rows if r.semester_index == index - 1), None)
 
-    # MPC cumulative sur 4 : MPC(i) = (MPC(i-1)*(i-1) + MPS(i)) / i.
-    # Le MPS du semestre courant est exact (sur points) ; les antérieurs sont
-    # convertis depuis les % des Resultat Semestre (÷25).
     mpc = 0
     mpc_ant = None
     for r in rows:
@@ -211,9 +168,6 @@ def _bilan_pv_etudiant(student, academic_year, semestre, mps_sur_4, total_credit
     cycle_tci = sum(r.total_credits or 0 for r in cycle_rows)
     cycle_tcc = sum(r.credits_obtenus or 0 for r in cycle_rows)
 
-    # MPC du semestre antérieur ramenée sur 4. On préfère la MPC cumulée
-    # dérivée des MPS (fiable même si le champ mpc du RS n'est pas rempli) ;
-    # à défaut, conversion du champ mpc stocké (en %).
     if sem_ant:
         if mpc_ant is not None:
             sem_ant_mpc = mpc_ant
@@ -235,22 +189,8 @@ def _bilan_pv_etudiant(student, academic_year, semestre, mps_sur_4, total_credit
     }
 
 
-# ---------------------------------------------------------------------- #
-#  Données du procès-verbal
-# ---------------------------------------------------------------------- #
 @frappe.whitelist()
 def get_proces_verbal_data(academic_year, filiere, niveau, semestre):
-    """Construit les données du procès-verbal d'une classe pour un semestre.
-
-    Args:
-        academic_year: Nom de l'Academic Year
-        filiere: Nom de la Field of study
-        niveau: Label du niveau (ex : "Licence 1")
-        semestre: "Semestre 1" ou "Semestre 2"
-
-    Returns:
-        dict: contexte, ues, etudiants (avec résultats et bilan), statistiques
-    """
     ues = get_ues(academic_year, filiere, niveau, semestre)
     ue_liste = []
     for ue in ues:
@@ -364,7 +304,6 @@ def get_proces_verbal_data(academic_year, filiere, niveau, semestre):
 
 
 def _contexte(academic_year, filiere, niveau, semestre):
-    """Contexte d'en-tête du PV (école, classe, référence)."""
     settings = frappe.get_single("Udshed Setting")
     return {
         "academic_year": academic_year,
@@ -392,7 +331,6 @@ def _contexte(academic_year, filiere, niveau, semestre):
 
 
 def _statistiques(ue_liste, lignes):
-    """Statistiques de réussite : taux global et taux par UE."""
     admis = sum(1 for l in lignes if l["statut"] == "Admis")
     taux_global = round(admis / len(lignes) * 100, 2) if lignes else 0
 
@@ -419,12 +357,8 @@ def _statistiques(ue_liste, lignes):
     }
 
 
-# ---------------------------------------------------------------------- #
-#  Export PDF
-# ---------------------------------------------------------------------- #
 @frappe.whitelist()
 def download_proces_verbal_pdf(academic_year, filiere, niveau, semestre):
-    """Génère et télécharge le procès-verbal (PDF, format paysage) d'une classe."""
     data = get_proces_verbal_data(academic_year, filiere, niveau, semestre)
     if not data["ues"]:
         frappe.throw(_("Aucune UE trouvée pour ces critères."))

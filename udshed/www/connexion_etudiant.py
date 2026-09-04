@@ -26,7 +26,10 @@ def get_context(context):
 	user_email = _assurer_compte_utilisateur(student)
 	_login(user_email)
 
-	frappe.local.flags.redirect_location = "/espace-etudiant"
+	frappe.local.cookie_manager.set_cookie(
+		"_rfr_student", student.name, max_age=300
+	)
+	frappe.local.flags.redirect_location = "/dashboard-etudiant"
 	raise frappe.Redirect
 
 

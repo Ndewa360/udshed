@@ -1,0 +1,93 @@
+{
+  "app": "udshed",
+  "charts": [],
+  "content": "[{\"id\":\"config-header\",\"type\":\"header\",\"data\":{\"text\":\"Configuration\",\"col\":12}},{\"id\":\"config-desc\",\"type\":\"paragraph\",\"data\":{\"text\":\"Configuration des paramètres académiques, infrastructure, enseignement et formules.\",\"col\":12}},{\"id\":\"config-annee\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Ann\u00e9e acad\u00e9mique\",\"col\":3}},{\"id\":\"config-facultes\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Facult\u00e9s\",\"col\":3}},{\"id\":\"config-filieres\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Fili\u00e8res\",\"col\":3}},{\"id\":\"config-niveaux\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Gestion des Niveaux\",\"col\":3}},{\"id\":\"config-cours\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Cours\",\"col\":3}},{\"id\":\"config-ue\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Unit\u00e9s d\\u0027enseignement (UE)\",\"col\":3}},{\"id\":\"config-valeurs\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Valeurs UE\",\"col\":3}},{\"id\":\"config-batiments\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"B\u00e2timents & Salles\",\"col\":3}},{\"id\":\"config-calendrier\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Calendrier de planning\",\"col\":3}},{\"id\":\"config-formules\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Formules de calcul\",\"col\":3}}]",
+  "custom_blocks": [],
+  "doctype": "Workspace",
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "settings",
+  "indicator_color": "blue",
+  "is_hidden": 0,
+  "label": "Configuration",
+  "links": [],
+  "module": "Udshed",
+  "name": "Configuration",
+  "number_cards": [],
+  "parent_page": "",
+  "public": 1,
+  "quick_lists": [],
+  "roles": [
+    {
+      "role": "System Manager"
+    },
+    {
+      "role": "Coordonateur"
+    }
+  ],
+  "sequence_id": 10.0,
+  "shortcuts": [
+    {
+      "doc_view": "",
+      "label": "Ann\u00e9e acad\u00e9mique",
+      "link_to": "Academic Year",
+      "type": "DocType"
+    },
+    {
+      "doc_view": "",
+      "label": "Facult\u00e9s",
+      "link_to": "Faculty",
+      "type": "DocType"
+    },
+    {
+      "doc_view": "",
+      "label": "Fili\u00e8res",
+      "link_to": "Field of Study",
+      "type": "DocType"
+    },
+    {
+      "doc_view": "",
+      "label": "Gestion des Niveaux",
+      "link_to": "gestion-des-niveaux",
+      "type": "Page"
+    },
+    {
+      "doc_view": "",
+      "label": "Cours",
+      "link_to": "Course",
+      "type": "DocType"
+    },
+    {
+      "doc_view": "",
+      "label": "Unit\u00e9s d'enseignement (UE)",
+      "link_to": "Teaching Unit",
+      "type": "DocType"
+    },
+    {
+      "doc_view": "",
+      "label": "Valeurs UE",
+      "link_to": "Teaching Unit Value",
+      "type": "DocType"
+    },
+    {
+      "doc_view": "",
+      "label": "B\u00e2timents & Salles",
+      "link_to": "Building",
+      "type": "DocType"
+    },
+    {
+      "doc_view": "",
+      "label": "Calendrier de planning",
+      "link_to": "Calendar Planing",
+      "type": "DocType"
+    },
+    {
+      "doc_view": "",
+      "label": "Formules de calcul",
+      "link_to": "Grade Formula",
+      "type": "DocType"
+    }
+  ],
+  "title": "Configuration",
+  "type": "Workspace"
+}

@@ -20,6 +20,42 @@ import frappe
 CYCLES = ("Doctorat", "Licence", "Master", "BTS")
 CYCLE_ORDER = {"BTS": 1, "Licence": 2, "Master": 3, "Doctorat": 4}
 
+# Correspondance cycle -> tous les niveaux du cycle (libelles complets).
+# C'est la reference unique utilisee par la page de gestion des niveaux pour
+# afficher, sous chaque cycle, l'ensemble des niveaux possibles (ajoutes ou non).
+NIVEAUX_PAR_CYCLE = {
+	"BTS": ["BTS 1", "BTS 2"],
+	"Licence": ["Licence 1", "Licence 2", "Licence 3"],
+	"Master": ["Master 1", "Master 2"],
+	"Doctorat": [
+		"Doctorat 1", "Doctorat 2", "Doctorat 3", "Doctorat 4",
+		"Doctorat 5", "Doctorat 6", "Doctorat 7",
+	],
+}
+
+
+def niveaux_par_cycle():
+	"""Retourne la carte cycle -> liste des libelles de niveaux du cycle.
+
+	La liste retournee respecte l'ordre croissant (1, 2, 3, ...), source de
+	l'ordre d'affichage et du tri apres un drag & drop.
+	"""
+	return {c: list(levels) for c, levels in NIVEAUX_PAR_CYCLE.items()}
+
+
+def rang_niveau(level_label):
+	"""Ordre croissant d'un libelle pour le tri (`order`) d'un niveau.
+
+	- niveaux d'un meme cycle : BTS 1 < BTS 2, Licence 1 < Licence 2 < Licence 3
+	- dela, chaque cycle est ordonne selon CYCLE_ORDER puis selon le rang.
+	"""
+	if not level_label:
+		return 0
+	rank = _level_rank(level_label)
+	cycle = cycle_niveau(level_label) or "Autre"
+	cycle_idx = CYCLE_ORDER.get(cycle, 99)
+	return cycle_idx * 100 + rank
+
 
 def cycle_niveau(level_label):
 	"""Retourne le cycle d'un libelle de niveau (ex: 'Licence 3' -> 'Licence')."""

@@ -17,40 +17,36 @@ class Fieldofstudy(Document):
 	def normaliser_ordres_niveaux(self):
 		"""L'ordre de chaque niveau = sa position dans le tableau.
 
-		La table de niveaux est reordonnable par drag & drop ; cette methode
-		garantit que le champ `order` refleche toujours la position des lignes
-		(1, 2, 3, ...), source du calcul du niveau precedent/suivant.
-		Ne reassigne que si des doublons ou des zeros sont detectes.
+		La table de niveaux est reordonnable (drag & drop, y compris la page de
+		gestion des niveaux). Cette methode garantit que le champ `order` refleche
+		la position effective des lignes (1, 2, 3, ...) a chaque sauvegarde, source
+		du calcul du niveau precedent/suivant. On renumérote des qu'un ordre ne
+		correspond pas deja a sa position (doublon, zero ou apres une permutation).
 		"""
 		rows = self.get("field_of_study_level")
 		if not rows:
 			return
 
-		orders = {}
-		has_duplicate_or_zero = False
-		for row in rows:
-			o = row.get("order") or 0
-			if o == 0:
-				has_duplicate_or_zero = True
-				break
-			if o in orders:
-				has_duplicate_or_zero = True
-				break
-			orders[o] = row
-
-		if has_duplicate_or_zero:
+		need_renumber = any((row.get("order") or 0) != i + 1 for i, row in enumerate(rows))
+		if need_renumber:
 			for i, row in enumerate(rows):
 				row.order = i + 1
 
 	def normaliser_cycles(self):
-		"""Le cycle est TOUJOURS déduit du libellé du niveau.
+		"""Le cycle d'un niveau doit rester cohérent avec son libellé.
 
 		Frappe applique la première option d'un champ Select comme défaut à
-		l'insertion d'une ligne (cycle='Licence'), avant before_save. On force
-		donc le calcul pour éviter qu'un niveau BTS/Master reçoive 'Licence'.
+		l'insertion d'une ligne (cycle='Licence'), avant before_save. On corrige
+		donc le cycle quand il est vide ou incohérent avec le libellé (ex: un
+		'BTS 1' avec le défaut 'Licence'), tout en laissant un cycle choisi
+		manuellement et cohérent être conservé (édition dans la page de gestion
+		des niveaux).
 		"""
 		for row in self.get("field_of_study_level") or []:
-			row.cycle = cycle_niveau(row.get("level")) or row.cycle or "Autre"
+			deduced = cycle_niveau(row.get("level"))
+			current = row.get("cycle")
+			if not current or (deduced and deduced != "Autre" and current != deduced):
+				row.cycle = deduced or current or "Autre"
 
 	def gerer_coordonateurs(self):
 		old_doc = self.get_doc_before_save()

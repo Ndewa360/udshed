@@ -161,7 +161,7 @@ class TestValidationEtPublication(IntegrationTestCase):
 
     test_4_publier_apres_validation.ACADEMIC_YEAR = "2024"
 
-        def test_5_session_publiee_restera_modifiable(self):
+    def test_5_session_publiee_restera_modifiable(self):
         session = self._saisir_cc_examen()
         valider_notes(session)
         publier_session(session)
@@ -171,7 +171,8 @@ class TestValidationEtPublication(IntegrationTestCase):
                 [{"student": self.student.name, "note_examen": 18}],
             )
         self.assertEqual(self._note(session).note_examen, 18)
-        self.assertEqual(self._note(session).statut, "é")
+        self.assertEqual(self._note(session).statut, "Publié")
+
     test_5_session_publiee_restera_modifiable.ACADEMIC_YEAR = "2025"
 #  Babillard
     # ------------------------------------------------------------------ #

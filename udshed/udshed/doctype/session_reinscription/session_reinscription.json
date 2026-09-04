@@ -15,10 +15,7 @@
   "date_ouverture",
   "column_break_bmef",
   "date_cloture",
-  "r\u00e8gles_section",
-  "note_minimale",
-  "column_break_yhpf",
-  "note_maximale"
+  "column_break_yhpf"
  ],
  "fields": [
   {
@@ -69,34 +66,14 @@
    "reqd": 1
   },
   {
-   "fieldname": "r\u00e8gles_section",
-   "fieldtype": "Section Break",
-   "label": "R\u00e8gles"
-  },
-  {
-   "default": "10",
-   "description": "Note \u00e0 partir de laquelle une mati\u00e8re est consid\u00e9r\u00e9e comme valid\u00e9e",
-   "fieldname": "note_minimale",
-   "fieldtype": "Float",
-   "label": "Note minimale de validation",
-   "reqd": 1
-  },
-  {
    "fieldname": "column_break_yhpf",
    "fieldtype": "Column Break"
-  },
-  {
-   "default": "20",
-   "fieldname": "note_maximale",
-   "fieldtype": "Float",
-   "label": "Note maximale",
-   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-03 12:39:25.455769",
+ "modified": "2026-09-03 08:55:24.017415",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Reinscription",
@@ -132,7 +109,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Agent de scolarité",
+   "role": "Agent de scolarit\u00e9",
    "share": 1
   },
   {

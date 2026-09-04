@@ -1,7 +1,9 @@
 import frappe
 from frappe.model.document import Document
 
-from udshed.utils.niveaux import niveau_precedent
+from udshed.utils.niveaux import niveau_precedent, prochain_niveau, cycle_niveau
+
+from udshed.api.reregistration import _decision_annee_etudiant
 
 
 class AcademicReregistration(Document):
@@ -11,6 +13,8 @@ class AcademicReregistration(Document):
 		self.verifier_session_ouverte()
 		self.verifier_doublon()
 		self.calculer_niveau_precedent()
+		self.decision_notes = _decision_annee_etudiant(self.student, self._annee_resultats()) or ""
+		self.verifier_progression()
 		self.charger_resultats_precedents()
 		self.calculer_cours_inscrits()
 
@@ -34,6 +38,57 @@ class AcademicReregistration(Document):
 		if existant:
 			frappe.throw("Cet étudiant est déjà réinscrit pour cette année et ce niveau.")
 
+	def _annee_resultats(self):
+		"""Année académique dont les résultats conditionnent la réinscription."""
+		return _annee_resultats_etudiant(self.student, self.niveau_precedent)
+
+	def verifier_progression(self):
+		"""Vérifie le droit de suivre le niveau demandé selon la décision du module de notes.
+
+		- Redoublement (même niveau) : toujours autorisé.
+		- Progression (niveau supérieur) : exige la décision "Admis" sur l'année
+		  du niveau précédent et le niveau suivant exact (prochain_niveau).
+		- Entrée en Master : exige la validation de la Licence ("Admis") ET
+		  l'accord du coordinateur (admission_master_accordee).
+		"""
+		if not self.filiere or not self.niveau:
+			return
+
+		if cycle_niveau(self.niveau) == "Master":
+			if self.decision_notes != "Admis":
+				frappe.throw(
+					"L'accès au Master exige la validation de la Licence. Décision du module de notes : « {0} ».".format(
+						self.decision_notes or "En attente"
+					)
+				)
+			if not self.admission_master_accordee:
+				frappe.throw(
+					"L'accès au Master doit être accordé par le coordinateur : cochez « Admission en Master accordée »."
+				)
+			return
+
+		if not self.niveau_precedent:
+			return
+
+		if self.niveau == self.niveau_precedent:
+			return
+
+		suivant = prochain_niveau(self.filiere, self.niveau_precedent)
+		if suivant and self.niveau != suivant:
+			frappe.throw(
+				"Progression non valide : depuis « {0} », le niveau suivant est « {1} ».".format(
+					self.niveau_precedent, suivant
+				)
+			)
+
+		if self.decision_notes != "Admis":
+			frappe.throw(
+				"La réinscription en « {0} » est refusée : décision du module de notes « {1} ». "
+				"Seul le redoublement de « {2} » est possible.".format(
+					self.niveau, self.decision_notes or "En attente", self.niveau_precedent
+				)
+			)
+
 	def calculer_niveau_precedent(self):
 		"""Trouve automatiquement le niveau précédent selon les règles de progression."""
 		if not self.niveau or not self.filiere:
@@ -42,85 +97,50 @@ class AcademicReregistration(Document):
 
 	def charger_resultats_precedents(self):
 		"""
-		Charge TOUS les cours du niveau précédent avec leurs notes.
-		- Cours avec note >= note_minimale : Validé
-		- Cours avec note < note_minimale  : Dette
-		- Cours sans note                   : Non évalué (dette par défaut)
+		Charge les résultats de l'année du niveau précédent depuis le module de
+		gestion de notes (Resultat Academique) :
+		- UE au statut "Validé"  -> valide (dette = 0)
+		- UE au statut "Non Validé" ou absente -> dette (valide = 0)
 		Filtre par semestre si spécifié.
 		"""
 		if not self.niveau_precedent or not self.student:
 			return
 
-		niveau_precedent_name = self.get_niveau_name(self.niveau_precedent)
-		if not niveau_precedent_name:
+		annee_resultats = self._annee_resultats()
+		if not annee_resultats:
 			return
 
-		from frappe.query_builder import DocType
-		TeachingUnit = DocType("Teaching Unit")
-		CourseLevel = DocType("Course Field of study level item")
-
-		query = (
-			frappe.qb.from_(TeachingUnit)
-			.join(CourseLevel).on(CourseLevel.parent == TeachingUnit.name)
-			.select(
-				TeachingUnit.name,
-				TeachingUnit.intitule_cours,
-				TeachingUnit.semestre
-			)
-			.where(
-				(TeachingUnit.academic_year == self.academic_year) &
-				(CourseLevel.filiere == self.filiere) &
-				(CourseLevel.niveau == niveau_precedent_name)
-			)
-		)
-
-		if self.semestre and self.semestre != "Les deux":
-			query = query.where(TeachingUnit.semestre == self.semestre)
-
-		tous_les_cours = query.run(as_dict=True)
-
-		if not tous_les_cours:
-			return
-
-		tu_names = [c.name for c in tous_les_cours]
-
-		notes = frappe.get_all(
-			"Session Examen Note",
+		rows = frappe.get_all(
+			"Resultat Academique",
 			filters={
 				"student": self.student,
-				"filiere": self.filiere,
-				"niveau": niveau_precedent_name,
-				"teaching_unit": ["in", tu_names]
+				"academic_year": annee_resultats,
 			},
-			fields=["teaching_unit", "note_finale"]
+			fields=["teaching_unit", "ue_name", "semestre", "note_finale", "statut", "decision_annee"],
+			order_by="semestre asc, ue_name asc",
 		)
 
-		notes_dict = {n.teaching_unit: n.note_finale or 0 for n in notes}
+		if not rows:
+			return
 
-		note_minimale = frappe.db.get_value(
-			"Session Reinscription", self.reinscription_session, "note_minimale"
-		) or 10
+		if self.semestre and self.semestre != "Les deux":
+			rows = [r for r in rows if r.semestre == self.semestre]
 
 		self.set("resultats_precedents", [])
 
-		for cours in tous_les_cours:
-			note_finale = notes_dict.get(cours.name, 0)
-			a_note = cours.name in notes_dict
-
-			if a_note:
-				valide = 1 if note_finale >= note_minimale else 0
-				est_dette = 1 if note_finale < note_minimale else 0
-			else:
-				valide = 0
-				est_dette = 1
+		for resultat in rows:
+			valide = 1 if resultat.statut == "Validé" else 0
+			intitule = resultat.ue_name or frappe.db.get_value(
+				"Teaching Unit", resultat.teaching_unit, "intitule_cours"
+			) or resultat.teaching_unit
 
 			self.append("resultats_precedents", {
-				"teaching_unit": cours.name,
-				"intitule": cours.intitule_cours or "",
-				"semestre": cours.semestre or "",
-				"note": note_finale,
+				"teaching_unit": resultat.teaching_unit,
+				"intitule": intitule,
+				"semestre": resultat.semestre or "",
+				"note": resultat.note_finale or 0,
 				"valide": valide,
-				"est_dette": est_dette
+				"est_dette": 1 if not valide else 0,
 			})
 
 	def get_niveau_name(self, niveau_label):
@@ -207,5 +227,33 @@ class AcademicReregistration(Document):
 				"est_obligatoire": 1,
 				"motif": motif
 			})
+
+
+def _annee_resultats_etudiant(student, niveau_label=None):
+	"""Année académique dont les résultats conditionnent la réinscription.
+
+	- dernière année où l'étudiant a été inscrit au niveau passé (Academic
+	  Reregistration) ;
+	- à défaut, dernière année ayant des résultats publiés (Resultat Academique).
+	"""
+	if student and niveau_label:
+		row = frappe.get_all(
+			"Academic Reregistration",
+			filters={"student": student, "niveau": niveau_label},
+			fields=["academic_year"],
+			order_by="creation desc",
+			limit_page_length=1,
+		)
+		if row and row[0].academic_year:
+			return row[0].academic_year
+
+	rows = frappe.get_all(
+		"Resultat Academique",
+		filters={"student": student},
+		fields=["academic_year"],
+		order_by="creation desc",
+		limit_page_length=1,
+	)
+	return rows[0].academic_year if rows else None
 
 
