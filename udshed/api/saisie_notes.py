@@ -460,7 +460,8 @@ def _charger_notes(students, teaching_unit, sessions):
         return resultats
 
     student_names = [s["student"] for s in students]
-    session_names = list(sessions.values())
+    # Exclure les sessions inexistantes (None) pour éviter des requêtes invalides.
+    session_names = [s for s in sessions.values() if s]
     notes = frappe.get_all(
         "Session Examen Note",
         filters={
@@ -788,7 +789,13 @@ def _sauvegarder_rattrapage(args, rows):
 
 @frappe.whitelist()
 def charger_data(academic_year, filiere, niveau, semestre, teaching_unit):
-    """Charge la configuration, l'UE, les étudiants et toutes les notes pour la page de saisie."""
+    """Charge la configuration, l'UE, les étudiants et toutes les notes pour la page de saisie.
+
+    Les sessions existantes sont recherchées (sans création) afin d'éviter
+    toute pollution de données lors d'un simple chargement de la page.
+    La création de session n'a lieu qu'au moment de l'enregistrement effectif
+    des notes (enregistrer_cc, enregistrer_examen, etc.).
+    """
     _verifier_acces_enseignant(teaching_unit)
     config = _get_config()
 
@@ -803,29 +810,35 @@ def charger_data(academic_year, filiere, niveau, semestre, teaching_unit):
     ue_info = _get_ue_info(teaching_unit, filiere, niveau)
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
 
+    semestre_effectif = _semestre_effectif({
+        "academic_year": academic_year,
+        "semestre": semestre,
+        "teaching_unit": teaching_unit,
+    })
     args = {
         "academic_year": academic_year,
-        "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}),
+        "semestre": semestre_effectif,
         "filiere": filiere,
         "niveau": niveau,
         "teaching_unit": teaching_unit,
     }
-    semestre_effectif = args["semestre"]
 
-    sessions = {
-        "cc": _get_or_create_session(args, TYPE_CC),
-        "normale": _get_or_create_session(args, TYPE_NORMALE),
-        "rattrapage": _get_or_create_session(args, TYPE_RATTRAPAGE),
+    # Lecture seule : on cherche les sessions existantes sans les créer.
+    sessions_raw = {
+        "cc": _chercher_session(args, TYPE_CC),
+        "normale": _chercher_session(args, TYPE_NORMALE),
+        "rattrapage": _chercher_session(args, TYPE_RATTRAPAGE),
     }
 
     sessions_meta = {}
-    for cle, session in sessions.items():
+    for cle, session in sessions_raw.items():
         sessions_meta[cle] = {
             "name": session,
-            "statut": frappe.db.get_value("Session Examen", session, "statut"),
+            "statut": frappe.db.get_value("Session Examen", session, "statut") if session else None,
         }
 
-    notes = _charger_notes(students, teaching_unit, sessions)
+    # _charger_notes accepte des valeurs None dans le dict sessions.
+    notes = _charger_notes(students, teaching_unit, sessions_raw)
 
     return {
         "config": config,

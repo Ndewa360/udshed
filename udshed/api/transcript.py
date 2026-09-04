@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 
 from udshed.api.proces_verbal import _credits_ue
-from udshed.grade_calculation import get_grade_info, get_grade_scale
+from udshed.grade_calculation import get_grade_info, get_grade_scale, get_seuil_validation, get_student_cycle
 
 
 def pdf_body_html(template, args, **kwargs):
@@ -144,7 +144,6 @@ def get_transcript_data(doc):
             )
 
         # ── Agrégation par UE (via unite_de_valeur) ─────────────────
-        from udshed.grade_calculation import get_seuil_validation, get_student_cycle
         seuil = get_seuil_validation(get_student_cycle(student))
 
         ues_par_uv = {}
@@ -246,8 +245,9 @@ def get_transcript_data(doc):
     prev_credits = semesters[-1].credits_obtenus if semesters else 0
 
     # ── Décision annuelle LMD ───────────────────────────────────────
-    # Règle : une année = 60 crédits (S1 30 + S2 30). L'étudiant est
-    # ADMIS si le total de crédits validés sur l'année >= 30, sinon AJOURNÉ.
+    # L'étudiant est ADMIS si le taux de crédits validés sur l'année
+    # atteint le seuil de validation de son cycle (Udshed Setting /
+    # Grade Formula). Ex : seuil 50 % sur 60 crédits -> 30 crédits min.
     if semester_data:
         derniere_annee = semester_data[-1]["academic_year_name"]
         sem_annee = [
@@ -260,9 +260,10 @@ def get_transcript_data(doc):
             round(annee_credits_valides / annee_credits_inscrits * 100, 2)
             if annee_credits_inscrits > 0 else 0
         )
-        decision_annuelle = (
-            "Admis" if annee_credits_valides >= 30 else "Ajourné"
-        )
+        _cycle = get_student_cycle(student)
+        _seuil = get_seuil_validation(_cycle)  # en %
+        credits_min = annee_credits_inscrits * _seuil / 100.0
+        decision_annuelle = "Admis" if annee_credits_valides >= credits_min else "Ajourné"
     else:
         annee_credits_inscrits = 0
         annee_credits_valides = 0

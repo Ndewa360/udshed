@@ -125,6 +125,21 @@ def _numero_semestre_cycle(niveau_label, semestre):
     return base + (rang - 1) * 2 + part
 
 
+def _mps_rs_sur_4(rs_mps):
+    """Convertit la MPS d'un Resultat Semestre en échelle 0–4.
+
+    La MPS stockée dans Resultat Semestre est toujours en pourcentage (0–100)
+    car c'est ``calculer_et_sauvegarder_mps_mpc`` qui l'écrit via ``calculer_mps``
+    (qui retourne une valeur sur 100). La conversion est donc toujours ÷ 25.
+    On garde néanmoins une garde-fou : si la valeur est déjà <= 4 elle est
+    considérée comme étant sur 4 (données migrées manuellement).
+    """
+    v = float(rs_mps or 0)
+    if v <= 4.0:
+        return round(v, 2)
+    return round(v / 25.0, 2)
+
+
 def _bilan_pv_etudiant(student, academic_year, semestre, mps_sur_4, total_credits, credits_obtenus, pct_validation):
     """Bilan d'un étudiant pour le PV récapitulatif (échelle 0–4).
 
@@ -183,7 +198,7 @@ def _bilan_pv_etudiant(student, academic_year, semestre, mps_sur_4, total_credit
             current is not None
             and r.semester_index == current.semester_index
         )
-        mps_i = mps_sur_4 if is_current else round((r.mps or 0) / 25.0, 2)
+        mps_i = mps_sur_4 if is_current else _mps_rs_sur_4(r.mps)
         mpc_avant = mpc
         if i == 1:
             mpc = mps_i
@@ -203,7 +218,7 @@ def _bilan_pv_etudiant(student, academic_year, semestre, mps_sur_4, total_credit
         if mpc_ant is not None:
             sem_ant_mpc = mpc_ant
         elif sem_ant.mpc is not None:
-            sem_ant_mpc = round(sem_ant.mpc / 25.0, 2)
+            sem_ant_mpc = _mps_rs_sur_4(sem_ant.mpc)
         else:
             sem_ant_mpc = None
     else:

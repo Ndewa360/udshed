@@ -223,6 +223,7 @@ def import_grid(file_url,academic_year,faculty,filiere,niveau,semestre):
         else:
             worked_ue = None
         for data in data_grid:
+            print("Data teaching unit ",data[0],data[4])
             if data[0] and data[4]=="UE":
                 proceed_ue.append(data[0])
                 if frappe.db.exists({ 'doctype': 'Teaching Unit Value', 'code': data[0],"academic_year":academic_year}):

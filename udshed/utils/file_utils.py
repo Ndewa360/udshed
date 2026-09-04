@@ -25,7 +25,7 @@ def read_frappe_excel(file_url):
         file_path = get_site_path('private', 'files', file_url.replace('/private/files/', ''))
     elif file_url.startswith('/files/'):
         file_path = get_site_path('public', 'files', file_url.replace('/files/', ''))
-    else:
+    else: 
         # Essayer de récupérer depuis File doctype
         file_doc = frappe.get_doc("File", {"file_url": file_url})
         if file_doc:
