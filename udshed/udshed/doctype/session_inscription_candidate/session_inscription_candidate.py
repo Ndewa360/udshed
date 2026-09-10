@@ -674,6 +674,11 @@ def submit_inscription(doc_name: str, data: str) -> dict:
 
 	student = frappe.get_doc({
 		"doctype": "Student",
+		"matricule": frappe.db.get_value(
+			"Inscription Academique",
+			{"dossier_origine": candidate.name},
+			"matricule",
+		) or "",
 		"nom": candidate.first_name,
 		"prenom": candidate.last_name,
 		"email": candidate.email,

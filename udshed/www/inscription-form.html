@@ -5,7 +5,7 @@
 {% block page_content %}
 <div class="container" style="max-width: 760px; margin: 48px auto;">
     <div class="text-center mb-4">
-        <img src="/assets/udshed/images/logo1.png" alt="UDSHED" style="max-width: 160px; margin-bottom: 24px;">
+        <img src="/assets/udshed/images/logo.png" alt="UDSHED" style="max-width: 160px; margin-bottom: 24px;">
         <h3 class="mb-2">Formulaire d'inscription académique</h3>
         <p id="candidat-authentifie" class="text-muted">Vérification du candidat...</p>
     </div>
@@ -27,12 +27,12 @@
             <div class="stepper-line"></div>
             <div class="stepper-step" data-step="3">
                 <div class="stepper-circle">3</div>
-                <div class="stepper-label">Informations<br>complémentaires</div>
+                <div class="stepper-label">Etudes<br>antérieures</div>
             </div>
             <div class="stepper-line"></div>
             <div class="stepper-step" data-step="4">
                 <div class="stepper-circle">4</div>
-                <div class="stepper-label">Études<br>antérieures</div>
+                <div class="stepper-label">Informations<br>Complémentaires</div>
             </div>
         </div>
 
@@ -100,20 +100,8 @@
                     </div>
                 </div>
             </div>
-
-            <!-- ÉTAPE 3 : Informations complémentaires -->
+<!-- ÉTAPE 3 : Études antérieures -->
             <div class="stepper-section" data-section="3" style="display: none;">
-                <div class="card p-4 mb-4">
-                    <h5 class="mb-3">Informations complémentaires</h5>
-                    <div class="form-group"><label>Activités sportives</label><textarea name="activites_sportives" class="form-control" rows="3"></textarea></div>
-                    <div class="form-group"><label>Activités associatives</label><textarea name="activites_associatives" class="form-control" rows="3"></textarea></div>
-                    <div class="form-group"><label>Activités culturelles</label><textarea name="activites_culturelles" class="form-control" rows="3"></textarea></div>
-                    <div class="form-group"><label>Connaissances informatiques</label><textarea name="connaissances_informatiques" class="form-control" rows="3"></textarea></div>
-                </div>
-            </div>
-
-            <!-- ÉTAPE 4 : Études antérieures -->
-            <div class="stepper-section" data-section="4" style="display: none;">
                 <div class="card p-4 mb-4">
                     <h5 class="mb-3">Études antérieures</h5>
                     <p class="text-muted small">Diplômes et établissements précédemment suivis</p>
@@ -132,6 +120,17 @@
                             </tbody>
                         </table>
                     </div>
+            <!-- ÉTAPE 4 : Informations complémentaires -->
+            <div class="stepper-section" data-section="4">
+                <div class="card p-4 mb-4">
+                    <h5 class="mb-3">Informations complémentaires</h5>
+                    <div class="form-group"><label>Activités sportives</label><textarea name="activites_sportives" class="form-control" rows="3"></textarea></div>
+                    <div class="form-group"><label>Activités associatives</label><textarea name="activites_associatives" class="form-control" rows="3"></textarea></div>
+                    <div class="form-group"><label>Activités culturelles</label><textarea name="activites_culturelles" class="form-control" rows="3"></textarea></div>
+                    <div class="form-group"><label>Connaissances informatiques</label><textarea name="connaissances_informatiques" class="form-control" rows="3"></textarea></div>
+                </div>
+            </div>
+
                     <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="addEtudeManuel()" style="width: 100%;">
                         <i class="bi bi-plus"></i> Ajouter une étude
                     </button>

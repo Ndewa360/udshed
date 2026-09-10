@@ -6,7 +6,7 @@
  "doctype": "Desktop Icon",
  "hidden": 0,
  "icon": "graduation-cap",
- "icon_image": "/assets/udshed/images/logo1.png",
+ "icon_image": "/assets/udshed/images/logo.png",
  "icon_type": "Link",
  "idx": 0,
  "label": "Gestion Des Notes",

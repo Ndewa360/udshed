@@ -3,7 +3,7 @@ $(document).ready(function() {
     var numero = (params.get("numero_dossier") || "").trim();
     var nom = (params.get("nom_candidat") || "").trim();
     var candidate;
-    var currentStep = 1;
+    var currentStep = 3;
     var totalSteps = 4;
 
     function show_error(message) {
@@ -29,6 +29,14 @@ $(document).ready(function() {
             $("#filiere").val(candidate.filiere || "");
             $("#classe").val(candidate.classe || "");
             $("#stepper-wrapper").show();
+        },
+        error: function(r) {
+            var message = (r && r.message) || "Une erreur est survenue. Veuillez réessayer.";
+            if (r && r._server_messages) {
+                message = r._server_messages;
+            }
+            show_error(String(message));
+            $("#btn_enregistrer").prop("disabled", false);
         }
     });
 
@@ -142,7 +150,7 @@ $(document).ready(function() {
                         '<h3 style="color: #28a745;">Inscription académique validée</h3>' +
                         '<p>Votre matricule officiel :</p>' +
                         '<p class="font-weight-bold h4" style="color: #003B6F;">' + r.message.matricule + '</p>' +
-                        '<a href="' + r.message.pdf_url + '" class="btn btn-success mt-3">Télécharger ma fiche d'inscription</a>' +
+                        '<a href="' + r.message.pdf_url + '" class="btn btn-success mt-3">Télécharger ma fiche d\u0027inscription</a>' +
                         '</div>'
                     );
                 } else {
