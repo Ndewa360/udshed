@@ -78,6 +78,7 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 				<thead>
 					<tr>
 						<th>N° Dossier</th>
+						<th>Session</th>
 						<th>Nom complet</th>
 						<th>Filière</th>
 						<th>Niveau</th>
@@ -242,9 +243,19 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 			$empty.show();
 		} else {
 			$empty.hide();
-			var html = state.candidates.map(function (c) {
-				return '<tr>'
+			var html = '';
+			var current_session = null;
+			state.candidates.forEach(function (c) {
+				if (c.session_inscription !== current_session) {
+					current_session = c.session_inscription;
+					html += '<tr style="background:#eef1f5;">'
+						+ '<td colspan="9" style="padding:8px 16px;font-weight:700;color:#1e2025;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">'
+						+ '📁 ' + frappe.utils.escape_html(c.session_label || c.session_inscription || 'Sans session')
+						+ '</td></tr>';
+				}
+				html += '<tr>'
 					+ '<td><strong>' + frappe.utils.escape_html(c.name) + '</strong></td>'
+					+ '<td style="color:#6b6d7a;">' + frappe.utils.escape_html(c.session_label || '') + '</td>'
 					+ '<td>' + frappe.utils.escape_html(c.last_name + ' ' + c.first_name) + '</td>'
 					+ '<td>' + frappe.utils.escape_html(c.filiere_label || '') + '</td>'
 					+ '<td>' + frappe.utils.escape_html(c.niveau || '') + '</td>'
@@ -254,7 +265,7 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 					+ frappe.utils.escape_html(c.candidature_status || '') + '</span></td>'
 					+ '<td><button class="cc-btn-view" data-name="' + frappe.utils.escape_html(c.name) + '">Voir</button></td>'
 					+ '</tr>';
-			}).join('');
+			});
 			$tbody.html(html);
 		}
 

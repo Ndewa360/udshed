@@ -5,61 +5,185 @@
 {% block page_content %}
 <div class="container" style="max-width: 760px; margin: 48px auto;">
     <div class="text-center mb-4">
-        <img src="/assets/udshed/images/logo1.png" alt="UDSHED" style="max-width: 160px; margin-bottom: 24px;">
+        <img src="/assets/udshed/images/logo.png" alt="UDSHED" style="max-width: 160px; margin-bottom: 24px;">
         <h3 class="mb-2">Formulaire d'inscription académique</h3>
         <p id="candidat-authentifie" class="text-muted">Vérification du candidat...</p>
     </div>
 
     <div id="form-error" class="alert alert-danger" style="display: none;"></div>
-    <form id="form-inscription-academique" style="display: none;">
-        <div class="card p-4 mb-4">
-            <h5 class="mb-3">Informations académiques</h5>
-            <div class="row">
-                <div class="col-md-6 form-group"><label>Année académique</label><input name="annee_academique" class="form-control" value="2025-2026" required></div>
-                <div class="col-md-6 form-group"><label>Filière</label><input id="filiere" class="form-control" readonly></div>
-                <div class="col-md-6 form-group"><label>Niveau</label><input id="classe" class="form-control" readonly></div>
-                <div class="col-md-6 form-group"><label>Sexe</label><select name="sexe" class="form-control"><option value="">Sélectionner</option><option>Masculin</option><option>Féminin</option></select></div>
-                <div class="col-md-6 form-group"><label>Nationalité</label><input name="nationalite" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Région d'origine</label><input name="region_origine" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Langue</label><input name="langue" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Religion</label><input name="religion" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Situation matrimoniale</label><select name="situation_matrimoniale" class="form-control"><option value="">Sélectionner</option><option>CELIBATAIRE</option><option>MARIE(E)</option><option>DIVORCE(E)</option></select></div>
-                <div class="col-md-6 form-group"><label>Situation d'emploi</label><select name="situatio_emploi" class="form-control"><option value="">Sélectionner</option><option>SANS EMPLOI</option><option>EMPLOYE</option></select></div>
-                <div class="col-md-6 form-group"><label>Handicap</label><select name="handicape" class="form-control"><option value="">Sélectionner</option><option>Oui</option><option>Non</option></select></div>
-                <div class="col-md-6 form-group"><label>Dernier établissement</label><input name="dernier_etablissement" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Diplôme d'entrée</label><select name="diplome_entree" class="form-control"><option value="">Sélectionner</option><option>Baccalauréat</option><option>BTS</option><option>License</option></select></div>
-                <div class="col-md-6 form-group"><label>Matricule du diplôme</label><input name="matricule_diplome" class="form-control"></div>
+
+    <div id="stepper-wrapper" style="display: none;">
+        <!-- Stepper header with 4 steps -->
+        <div class="stepper-progress">
+            <div class="stepper-step" data-step="1">
+                <div class="stepper-circle active">1</div>
+                <div class="stepper-label">Informations<br>académiques</div>
+            </div>
+            <div class="stepper-line"></div>
+            <div class="stepper-step" data-step="2">
+                <div class="stepper-circle">2</div>
+                <div class="stepper-label">Informations<br>familiales</div>
+            </div>
+            <div class="stepper-line"></div>
+            <div class="stepper-step" data-step="3">
+                <div class="stepper-circle">3</div>
+                <div class="stepper-label">Etudes<br>antérieures</div>
+            </div>
+            <div class="stepper-line"></div>
+            <div class="stepper-step" data-step="4">
+                <div class="stepper-circle">4</div>
+                <div class="stepper-label">Informations<br>Complémentaires</div>
             </div>
         </div>
 
-        <div class="card p-4 mb-4">
-            <h5 class="mb-3">Informations familiales</h5>
-            <div class="row">
-                <div class="col-md-6 form-group"><label>Nom et prénom du père</label><input name="nom_prenom_pere" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Téléphone du père</label><input name="pere_telephone" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Profession du père</label><input name="pere_profession" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Ville du père</label><input name="pere_ville" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Nom et prénom de la mère</label><input name="nom_prenom_mere" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Téléphone de la mère</label><input name="telephone_mere" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Profession de la mère</label><input name="profession_mere" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Ville de la mère</label><input name="mere_ville" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Nom et prénom du sponsor</label><input name="nom_prenom_sponsor" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Téléphone du sponsor</label><input name="telephone_sponsor" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Profession du sponsor</label><input name="profession_sponsor" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Ville du sponsor</label><input name="sponsor_ville" class="form-control"></div>
+        <form id="form-inscription-academique">
+            <!-- ÉTAPE 1 : Informations académiques -->
+            <div class="stepper-section" data-section="1">
+                <div class="card p-4 mb-4">
+                    <h5 class="mb-3">Informations académiques</h5>
+                    <div class="row">
+                        <div class="col-md-6 form-group"><label>Année académique</label><input name="annee_academique" class="form-control" value="2025-2026" required></div>
+                        <div class="col-md-6 form-group"><label>Filière</label><input id="filiere" class="form-control" readonly></div>
+                        <div class="col-md-6 form-group"><label>Niveau</label><input id="classe" class="form-control" readonly></div>
+                        <div class="col-md-6 form-group"><label>Sexe</label><select name="sexe" class="form-control"><option value="">Sélectionner</option><option>Masculin</option><option>Féminin</option></select></div>
+                        <div class="col-md-6 form-group"><label>Nationalité</label><input name="nationalite" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Région d'origine</label><input name="region_origine" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Langue</label><input name="langue" class="form-control"></div>
+                        <div class="col-md-6 form-group">
+                            <label for="religion-select">Religion</label>
+                            <select id="religion-select" class="form-control">
+                                <option value="">Sélectionner</option>
+                                <option>PROTESTANT</option>
+                                <option>CATHOLIQUE</option>
+                                <option>MUSULMAN</option>
+                                <option value="AUTRE">AUTRE</option>
+                            </select>
+                            <input type="text" name="religion" id="religion-autre" class="form-control mt-2" style="display: none;">
+                        </div>
+                        <div class="col-md-6 form-group"><label>Situation matrimoniale</label><select name="situation_matrimoniale" class="form-control"><option value="">Sélectionner</option><option>CELIBATAIRE</option><option>MARIE(E)</option><option>DIVORCE(E)</option></select></div>
+                        <div class="col-md-6 form-group"><label>Situation d'emploi</label><select name="situatio_emploi" class="form-control"><option value="">Sélectionner</option><option>SANS EMPLOI</option><option>EMPLOYÉ</option><option>FONCTIONNAIRE</option><option>ÉTUDIANT</option></select></div>
+                        <div class="col-md-6 form-group"><label>Handicap</label><select name="handicape" class="form-control"><option value="">Sélectionner</option><option>Oui</option><option>Non</option></select></div>
+                        <div class="col-md-6 form-group"><label>Dernier établissement</label><input name="dernier_etablissement" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Diplôme d'entrée</label><select name="diplome_entree" class="form-control"><option value="">Sélectionner</option><option>Baccalauréat</option><option>BTS</option><option>License</option></select></div>
+                        <div class="col-md-6 form-group"><label>Matricule du diplôme</label><input name="matricule_diplome" class="form-control"></div>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="card p-4 mb-4">
-            <h5 class="mb-3">Informations complémentaires</h5>
-            <div class="form-group"><label>Activités sportives</label><textarea name="activites_sportives" class="form-control"></textarea></div>
-            <div class="form-group"><label>Activités associatives</label><textarea name="activites_associatives" class="form-control"></textarea></div>
-            <div class="form-group"><label>Activités culturelles</label><textarea name="activites_culturelles" class="form-control"></textarea></div>
-            <div class="form-group"><label>Connaissances informatiques</label><textarea name="connaissances_informatiques" class="form-control"></textarea></div>
-        </div>
+            <!-- ÉTAPE 2 : Informations familiales -->
+            <div class="stepper-section" data-section="2" style="display: none;">
+                <div class="card p-4 mb-4">
+                    <h5 class="mb-3">Identification du Père</h5>
+                    <div class="row">
+                        <div class="col-md-6 form-group"><label>Nom et prénom</label><input name="nom_prenom_pere" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Téléphone</label><input name="pere_telephone" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Profession</label><input name="pere_profession" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Ville</label><input name="pere_ville" class="form-control"></div>
+                    </div>
+                </div>
+                <div class="card p-4 mb-4">
+                    <h5 class="mb-3">Identification de la Mère</h5>
+                    <div class="row">
+                        <div class="col-md-6 form-group"><label>Nom et prénom</label><input name="nom_prenom_mere" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Téléphone</label><input name="telephone_mere" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Profession</label><input name="profession_mere" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Ville</label><input name="mere_ville" class="form-control"></div>
+                    </div>
+                </div>
+                <div class="card p-4 mb-4">
+                    <h5 class="mb-3">Identification du Sponsor</h5>
+                    <div class="row">
+                        <div class="col-md-6 form-group"><label>Nom et prénom</label><input name="nom_prenom_sponsor" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Téléphone</label><input name="telephone_sponsor" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Profession</label><input name="profession_sponsor" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Ville</label><input name="sponsor_ville" class="form-control"></div>
+                    </div>
+                </div>
+            </div>
+<!-- ÉTAPE 3 : Études antérieures -->
+            <div class="stepper-section" data-section="3" style="display: none;">
+                <div class="card p-4 mb-4">
+                    <h5 class="mb-3">Études antérieures</h5>
+                    <p class="text-muted small">Diplômes et établissements précédemment suivis</p>
+                    <div class="table-responsive">
+                        <table class="table table-striped small">
+                            <thead>
+                                <tr>
+                                    <th>Diplôme</th>
+                                    <th>Établissement</th>
+                                    <th>Année</th>
+                                    <th>Pays</th>
+                                </tr>
+                            </thead>
+                            <tbody id="etudes-antérieures-table">
+                                <!-- Lignes insérées dynamiquement -->
+                            </tbody>
+                        </table>
+                    </div>
+            <!-- ÉTAPE 4 : Informations complémentaires -->
+            <div class="stepper-section" data-section="4">
+                <div class="card p-4 mb-4">
+                    <h5 class="mb-3">Informations complémentaires</h5>
+                    <div class="form-group"><label>Activités sportives</label><textarea name="activites_sportives" class="form-control" rows="3"></textarea></div>
+                    <div class="form-group"><label>Activités associatives</label><textarea name="activites_associatives" class="form-control" rows="3"></textarea></div>
+                    <div class="form-group"><label>Activités culturelles</label><textarea name="activites_culturelles" class="form-control" rows="3"></textarea></div>
+                    <div class="form-group"><label>Connaissances informatiques</label><textarea name="connaissances_informatiques" class="form-control" rows="3"></textarea></div>
+                </div>
+            </div>
 
-        <button type="submit" id="btn_enregistrer" class="btn btn-primary btn-block">Terminer mon inscription</button>
-        <p class="text-center mt-3"><a href="/inscription/inscription">Retour à l'authentification</a></p>
-    </form>
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="addEtudeManuel()" style="width: 100%;">
+                        <i class="bi bi-plus"></i> Ajouter une étude
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="d-flex justify-content-between mb-4">
+                <button type="button" id="btn_prev" class="btn btn-outline-secondary" style="display: none;">Précédent</button>
+                <div></div>
+                <button type="button" id="btn_next" class="btn btn-primary">Suivant</button>
+                <button type="submit" id="btn_enregistrer" class="btn btn-primary" style="display: none;">Terminer mon inscription</button>
+            </div>
+        </form>
+        <p class="text-center mb-5"><a href="/inscription/inscription">Retour à l'authentification</a></p>
+    </div>
 </div>
+
+<style>
+.stepper-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 32px;
+    padding: 0 16px;
+}
+.stepper-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+.stepper-circle {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; color: #fff;
+    background: #ccc; transition: background 0.3s;
+}
+.stepper-circle.active { background: #003B6F; }
+.stepper-circle.done { background: #28a745; }
+.stepper-label {
+    margin-top: 6px; font-size: 12px; text-align: center;
+    color: #888; line-height: 1.3; transition: color 0.3s;
+}
+.stepper-step.active .stepper-label,
+.stepper-step.done .stepper-label { color: #003B6F; font-weight: 600; }
+.stepper-line {
+    flex: 1; height: 3px; background: #ccc; margin: 0 8px;
+    margin-bottom: 22px; min-width: 40px; transition: background 0.3s;
+}
+.stepper-line.done { background: #28a745; }
+
+/* Espacement entre steps */
+.stepper-progress { gap: 24px; }
+</style>
 {% endblock %}
