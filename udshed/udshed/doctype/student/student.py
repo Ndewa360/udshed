@@ -40,11 +40,13 @@ class Student(Document):
 			user = frappe.get_doc({
 				"doctype": "User",
 				"email": self.email,
+				"username": self.name,
 				"first_name": self.nom,
 				"last_name": self.prenom,
 				"send_welcome_email": 0,
+				"default_workspace": "Inscription - Reinscription",
 				"roles": [
-					{"role": "Student"}
+					{"role": "student"}
 				]
 			})
 			user.insert(ignore_permissions=True)

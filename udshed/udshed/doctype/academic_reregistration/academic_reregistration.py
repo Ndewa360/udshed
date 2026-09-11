@@ -3,7 +3,11 @@ from frappe.model.document import Document
 
 from udshed.utils.niveaux import niveau_precedent, prochain_niveau, cycle_niveau
 
-from udshed.api.reregistration import _decision_annee_etudiant
+from udshed.api.reregistration import (
+	_decision_annee_etudiant,
+	get_student_derniere_annee_academique,
+	get_next_academic_year,
+)
 
 
 class AcademicReregistration(Document):
@@ -11,6 +15,7 @@ class AcademicReregistration(Document):
 	def validate(self):
 		self.statut = "Validée"
 		self.verifier_session_ouverte()
+		self.verifier_annee_suivante()
 		self.verifier_doublon()
 		self.calculer_niveau_precedent()
 		self.decision_notes = _decision_annee_etudiant(self.student, self._annee_resultats()) or ""
@@ -37,6 +42,29 @@ class AcademicReregistration(Document):
 		})
 		if existant:
 			frappe.throw("Cet étudiant est déjà réinscrit pour cette année et ce niveau.")
+
+	def verifier_annee_suivante(self):
+		"""RÈGLE : l'étudiant ne peut se réinscrire que pour l'année académique
+		SUIVANTE sa dernière inscription (jamais pour l'année en cours ni antérieure).
+
+		Appliquée uniquement à la création d'une nouvelle réinscription pour ne pas
+		bloquer la correction d'enregistrements historiques par le personnel."""
+		if not self.is_new():
+			return
+		if not self.academic_year or not self.student:
+			return
+
+		annee_base = get_student_derniere_annee_academique(self.student)
+		if not annee_base:
+			frappe.throw("Aucune inscription initiale trouvée pour cet étudiant.")
+
+		annee_attendue = get_next_academic_year(annee_base)
+		if annee_attendue and self.academic_year != annee_attendue:
+			frappe.throw(
+				"Réinscription refusée : vous ne pouvez vous réinscrire que pour l'année académique {0} "
+				"(suivante votre dernière inscription en {1})."
+				.format(annee_attendue, annee_base)
+			)
 
 	def _annee_resultats(self):
 		"""Année académique dont les résultats conditionnent la réinscription."""

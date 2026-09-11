@@ -21,6 +21,15 @@ frappe.ui.form.on("Academic Reregistration", {
 		if (!frm.doc.student) return;
 
 		frappe.db.get_doc("Student", frm.doc.student).then(student => {
+			// Identité
+			let nom_complet = ((student.nom || "") + " " + (student.prenom || "")).trim();
+			frm.set_value("nom_prenom", nom_complet);
+			frm.set_value("email", student.email || "");
+			frm.set_value("date_naissance", student.birth_date || "");
+			frm.set_value("lieu_naissance", student.birth_place || "");
+			frm.set_value("telephone", student.phone || "");
+
+			// Inscription
 			if (student.filiere) {
 				frm.set_value("filiere", student.filiere);
 			}

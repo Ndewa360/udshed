@@ -91,20 +91,7 @@
     "open_in_new_tab": 1,
     "show_arrow": 0,
     "type": "Link"
-   },
-{
-     "child": 1,
-     "collapsible": 1,
-     "icon": "bar-chart",
-     "indent": 1,
-     "keep_closed": 0,
-     "label": "Rapports de réinscription",
-     "link_to": "report-reinscription",
-     "link_type": "Page",
-     "open_in_new_tab": 1,
-     "show_arrow": 0,
-     "type": "Link"
-    }
+   }
   ],
  "module": "Udshed",
  "name": "Inscription - Reinscription",

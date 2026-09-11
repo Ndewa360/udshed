@@ -39,6 +39,7 @@ role_home_page = {
 	"Udshed Financial Admin": "/desk",
 	"Comptable": "/desk",
 	"Agent de scolarité": "/desk",
+	"student": "/desk",
 }
 
 
@@ -264,6 +265,11 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # ----------
 # before_job = ["udshed.utils.before_job"]
 # after_job = ["udshed.utils.after_job"]
+
+# Boot Session
+# ------------
+
+boot_session = ["udshed.boot_student.configure_student_desk"]
 
 # User Data Protection
 # --------------------

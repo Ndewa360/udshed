@@ -2,18 +2,24 @@
  "app": "udshed",
  "charts": [],
  "content": "[{\"id\":\"Bk7p2XvR9m\",\"type\":\"header\",\"data\":{\"text\":\"Gestion Inscription \\u0026 Reinscription\",\"col\":12}},{\"id\":\"Lw4q8YzT1n\",\"type\":\"paragraph\",\"data\":{\"text\":\"Module central de gestion des inscriptions et reinscriptions acad\\u00e9miques.\",\"col\":12}},{\"id\":\"Hx3k9MvP7j\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Session Inscription\",\"col\":3}},{\"id\":\"Fg6r2WsN5b\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Candidats\",\"col\":3}},{\"id\":\"Vd9c1XtK3m\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sessions Reinscription\",\"col\":3}},{\"id\":\"Jp4n8LkR2h\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Reinscriptions\",\"col\":3}},{\"id\":\"Xt2k9MvN4p\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Gestion des Niveaux\",\"col\":3}},{\"id\":\"Zo3v6CxP8s\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
+ "creation": "2026-09-07 17:14:11.426624",
  "custom_blocks": [],
+ "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
  "icon": "user-plus",
+ "idx": 0,
  "indicator_color": "green",
  "is_hidden": 0,
  "label": "Inscription - Reinscription",
  "links": [],
+ "modified": "2026-09-07 17:44:16.376887",
+ "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Inscription - Reinscription",
  "number_cards": [],
+ "owner": "Administrator",
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
@@ -25,7 +31,7 @@
    "role": "Coordonateur"
   },
   {
-   "role": "Student"
+   "role": "student"
   }
  ],
  "sequence_id": 5.0,
@@ -34,12 +40,6 @@
    "doc_view": "",
    "label": "Session Inscription",
    "link_to": "Session Inscription",
-   "type": "DocType"
-  },
-  {
-   "doc_view": "",
-   "label": "Candidats",
-   "link_to": "Session Inscription Candidate",
    "type": "DocType"
   },
   {
@@ -54,10 +54,17 @@
    "link_to": "Academic Reregistration",
    "type": "DocType"
   },
-   {
-    "doc_view": "",
-    "label": "Gestion des Niveaux",
+  {
+   "doc_view": "",
+   "label": "Gestion des Niveaux",
    "link_to": "gestion-des-niveaux",
+   "type": "Page"
+  },
+  {
+   "doc_view": "",
+   "icon": "user-plus",
+   "label": "Se r\u00e9inscrire",
+   "link_to": "reinscription_etudiant",
    "type": "Page"
   }
  ],
