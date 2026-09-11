@@ -138,11 +138,17 @@ def _finaliser_student_et_enrollement(dossier, donnees=None):
         if not dossier.get("email"):
             return
         student = frappe.db.get_value("Student", {"email": dossier.get("email")}, "name")
+        insc_matricule = frappe.db.get_value(
+            "Inscription Academique",
+            {"dossier_origine": dossier.get("name")},
+            "matricule",
+        ) or ""
         if not student:
             cycle = "Master" if "MASTER" in (dossier.get("niveau") or "").upper() else (
                 "BTS" if "BTS" in (dossier.get("niveau") or "").upper() else "Licence"
             )
             valeurs = {
+                "matricule": insc_matricule,
                 "nom": dossier.get("first_name") or "",
                 "prenom": dossier.get("last_name") or "",
                 "email": dossier.get("email") or "",
@@ -162,6 +168,12 @@ def _finaliser_student_et_enrollement(dossier, donnees=None):
             student = student_doc.name
 
         student_doc = frappe.get_doc("Student", student)
+        if insc_matricule and (not student_doc.matricule or student_doc.matricule == student_doc.name):
+            student_doc.db_set("matricule", insc_matricule)
+            student_doc.db_set(
+                "nom_complet",
+                f"{insc_matricule} - {student_doc.nom or ''} {student_doc.prenom or ''}".strip(),
+            )
         candidate = frappe.get_doc("Session Inscription Candidate", dossier.get("name"))
         _cree_compte_utilisateur(student_doc, candidate)
         _auto_enroll_student(student_doc, dossier.get("filiere"), dossier.get("niveau"))

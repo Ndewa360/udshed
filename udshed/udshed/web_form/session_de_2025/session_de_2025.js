@@ -2,17 +2,17 @@ frappe.ready(function() {
 	// ---- Style personnalisé — reproduit la structure de la page « Choix du candidat » ----
 	const STYLE = `
 		:root {
-			--udshed-primary: #2c2d30;
-			--udshed-primary-dark: #1e2025;
-			--udshed-accent: #c0392b;
+			--udshed-primary: #003B6F;
+			--udshed-primary-dark: #003B6F;
+			--udshed-accent: #F08000;
 			--udshed-bg-soft: #ffffff;
-			--udshed-border: #e2e4e9;
+			--udshed-border: #cbd9e8;
 			--udshed-radius: 16px;
 		}
 
 		/* Fond de page — inspiré de la page « Choix du candidat » */
 		.web-page-content, body {
-			background-color: #f0f1f3 !important;
+			background: linear-gradient(180deg, #EAF1F8 0%, #d8e6f5 100%) !important;
 			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 		}
 
@@ -42,18 +42,19 @@ frappe.ready(function() {
 			align-items: center;
 			gap: 8px;
 			font-size: 14px;
-			color: #b8bac6;
+			color: #a6b7cc;
 			font-weight: 500;
 		}
 		.step-header .step-item.active {
-			color: #1e2025;
+			color: #F08000;
+			font-weight: 700;
 		}
 		.step-header .step-number {
 			width: 28px;
 			height: 28px;
 			border-radius: 50%;
-			background-color: #e2e4e9;
-			color: #757575;
+			background-color: #cbd9e8;
+			color: #6b7a90;
 			display: flex;
 			align-items: center;
 			justify-content: center;
@@ -61,12 +62,14 @@ frappe.ready(function() {
 			font-weight: 600;
 		}
 		.step-header .step-item.active .step-number {
-			background-color: #2c2d30;
+			background: linear-gradient(135deg, #F08000, #ff9f3d);
 			color: #ffffff;
+			box-shadow: 0 4px 10px rgba(240,128,0,0.35);
 		}
 		.step-header .step-line {
-			height: 1px;
-			background-color: #d4d6de;
+			height: 3px;
+			border-radius: 2px;
+			background: linear-gradient(90deg, #cbd9e8, #F08000);
 			width: 80px;
 		}
 
@@ -74,18 +77,22 @@ frappe.ready(function() {
 		.web-form .web-form-body {
 			background: #ffffff;
 			border-radius: var(--udshed-radius);
-			border: 1px solid #e2e4e9;
+			border: 1px solid #cbd9e8;
+			border-top: 5px solid #F08000;
 			padding: 3rem;
-			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+			box-shadow: 0 6px 18px rgba(0, 59, 111, 0.08);
 		}
 
 		/* Titre de la carte */
 		.form-card-title {
-			font-weight: 700;
-			color: #1e2025;
+			display: inline-block;
+			font-weight: 800;
+			color: #003B6F;
 			font-size: 22px;
-			margin: 0 0 4px 0;
+			margin: 0 0 10px 0;
 			text-align: left;
+			padding-bottom: 8px;
+			border-bottom: 3px solid #F08000;
 		}
 		.form-card-subtitle {
 			color: #6b7280;
@@ -124,20 +131,20 @@ frappe.ready(function() {
 		/* Libellés des contrôles */
 		.web-form .frappe-control .control-label {
 			font-size: 14px;
-			font-weight: 600;
-			color: #525462;
+			font-weight: 700;
+			color: #003B6F;
 			margin-bottom: 6px;
 		}
 
 		/* Champs (inputs / selects) */
 		.web-form .form-control,
 		.web-form .input-group .form-control {
-			background-color: #f5f6f8 !important;
-			border: 1px solid #d4d7df !important;
+			background-color: #EAF1F8 !important;
+			border: 1px solid #cbd9e8 !important;
 			border-radius: 10px !important;
 			padding: 14px 16px !important;
 			font-size: 15px !important;
-			color: #1e2025 !important;
+			color: #003B6F !important;
 			color-scheme: light !important;
 			transition: all 0.2s ease;
 		}
@@ -145,34 +152,34 @@ frappe.ready(function() {
 			color: #94a3b8;
 		}
 		.web-form .form-control:focus {
-			border-color: #2c2d30 !important;
-			box-shadow: none !important;
+			border-color: #1f6feb !important;
+			box-shadow: 0 0 0 3px rgba(31,111,235,0.15) !important;
 			background-color: #ffffff !important;
-			color: #1e2025 !important;
+			color: #003B6F !important;
 		}
 		.web-form select,
 		.web-form select.form-control,
 		.web-form .form-group select,
 		.web-form .control-input select,
 		.web-form input[type="file"] {
-			background-color: #f5f6f8 !important;
-			color: #1e2025 !important;
-			-webkit-text-fill-color: #1e2025 !important;
+			background-color: #EAF1F8 !important;
+			color: #003B6F !important;
+			-webkit-text-fill-color: #003B6F !important;
 			opacity: 1 !important;
 		}
 		.web-form select option,
 		.web-form select.form-control option,
 		.web-form .form-group select option {
-			color: #1e2025 !important;
-			-webkit-text-fill-color: #1e2025 !important;
+			color: #003B6F !important;
+			-webkit-text-fill-color: #003B6F !important;
 			background-color: #ffffff !important;
 			opacity: 1 !important;
 		}
 		.web-form select.form-control:focus,
 		.web-form .form-group select:focus {
 			background-color: #ffffff !important;
-			color: #1e2025 !important;
-			-webkit-text-fill-color: #1e2025 !important;
+			color: #003B6F !important;
+			-webkit-text-fill-color: #003B6F !important;
 		}
 		/* Le select native de Frappe reste actif : on s'assure qu'il ne soit pas masqué
 		   et que sa sélection soit bien visible (le menu s'ouvre et les options s'affichent) */
@@ -194,10 +201,11 @@ frappe.ready(function() {
 			overflow: hidden;
 		}
 		.web-form .frappe-control[data-fieldtype="Table"] .grid-heading-row {
-			background: #f1f4f8;
+			background: #EAF1F8;
+			border-bottom: 1px solid #cbd9e8;
 		}
 		.web-form .frappe-control[data-fieldtype="Table"] .grid-heading-row .grid-static-col {
-			color: var(--udshed-primary);
+			color: #3d5877;
 			font-weight: 700;
 			font-size: 12px;
 			text-transform: uppercase;
@@ -209,6 +217,40 @@ frappe.ready(function() {
 		.web-form .frappe-control[data-fieldtype="Table"] .grid-add-row,
 		.web-form .frappe-control[data-fieldtype="Table"] .grid-remove-rows {
 			margin-top: 8px;
+		}
+
+		/* Rubriques tableau — Choix de formation & Diplômes : bannière bien visible */
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .control-label,
+		.web-form .frappe-control[data-fieldname="diplome_formation"] .control-label {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			width: 100%;
+			background: linear-gradient(90deg, #003B6F 0%, #1f6feb 100%);
+			color: #ffffff !important;
+			font-size: 15px !important;
+			font-weight: 800 !important;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			padding: 13px 16px;
+			border-radius: 10px 10px 0 0;
+			margin: 0;
+			box-shadow: 0 4px 10px rgba(0, 59, 111, 0.15);
+		}
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .control-label::before,
+		.web-form .frappe-control[data-fieldname="diplome_formation"] .control-label::before {
+			content: "▸";
+			color: #F08000;
+			font-size: 16px;
+			line-height: 1;
+		}
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .grid,
+		.web-form .frappe-control[data-fieldname="diplome_formation"] .grid {
+			border-top-left-radius: 0;
+			border-top-right-radius: 0;
+			border: 2px solid #cbd9e8;
+			border-top: none;
+			box-shadow: 0 4px 12px rgba(0, 59, 111, 0.08);
 		}
 
 		/* Boutons — fond noir, alignés à droite (style page « Choix du candidat ») */
@@ -226,14 +268,14 @@ frappe.ready(function() {
 			border: none;
 			cursor: pointer;
 			color: #fff;
-			background: #2c2d30;
-			box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+			background: linear-gradient(135deg, #003B6F 0%, #1f6feb 100%);
+			box-shadow: 0 4px 12px rgba(0, 59, 111, 0.25);
 			transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
 		}
 		.web-form .btn-primary:hover,
 		.web-form .btn-next:hover,
 		.web-form .btn-sm-primary:hover {
-			background: #1e2025;
+			background: #1f6feb;
 			transform: translateY(-2px);
 			box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.18);
 			color: #fff;
@@ -255,16 +297,18 @@ frappe.ready(function() {
 			border-radius: 10px;
 			font-size: 15px;
 			font-weight: 600;
-			color: #525462;
+			color: #003B6F;
 			background: #ffffff;
-			border: 1px solid #d4d6de;
+			border: 1px solid #003B6F;
 			transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
 		}
 		.web-form .btn-secondary:hover,
 		.web-form .btn-previous:hover {
-			background: #ffffff;
+			background: #EAF1F8;
+			color: #F08000;
+			border-color: #F08000;
 			transform: translateY(-2px);
-			box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.18);
+			box-shadow: 0 6px 16px -6px rgba(0, 59, 111, 0.2);
 		}
 
 		/* Documents (pièces jointes) */
@@ -295,7 +339,7 @@ frappe.ready(function() {
 
 		/* Titre d'étape secondaire en bas */
 		.web-form .web-form-step-title {
-			color: var(--udshed-primary) !important;
+			color: #F08000 !important;
 			font-weight: 700;
 			letter-spacing: 0.5px;
 		}
@@ -356,13 +400,12 @@ frappe.ready(function() {
 
 	// Petit délai pour être certain que le squelette de la web-form est rendu
 	let compteurStructure = 0;
+	function revelerFormulaire() {
+		if (document.body.classList.contains('udshed-formed')) return;
+		document.body.classList.add('udshed-formed');
+	}
 	const intervalStructure = setInterval(function () {
 		// Le step-header doit être construit et le titre copié une seule fois
-		document.querySelectorAll('.web-form .web-form-body .web-form-section').forEach(function (s) {
-			var titre = s.querySelector('.section-head, h6');
-			if (titre && !s.querySelector('.form-card-title')) {
-			}
-		});
 		if (!document.querySelector('.form-card-title')) {
 			const corps = document.querySelector('.web-form .web-form-body');
 			const titreNat = document.querySelector('.web-form .web-form-title h1');
@@ -381,24 +424,34 @@ frappe.ready(function() {
 			}
 		}
 		construireStepHeader();
+		if (document.querySelector('.step-header') && document.querySelector('.form-card-title')) {
+			revelerFormulaire();
+			clearInterval(intervalStructure);
+			return;
+		}
 		compteurStructure++;
-		if (compteurStructure > 40) clearInterval(intervalStructure);
+		if (compteurStructure > 40) {
+			clearInterval(intervalStructure);
+			revelerFormulaire();
+		}
 	}, 200);
+	// Sécurité : ne jamais laisser le formulaire masqué
+	window.addEventListener('load', revelerFormulaire);
 
 	// ---- Menus déroulants (niveau / sexe / centre d'examen) : forcer le texte visible ----
 	// Correctif inspiré de la page « Choix du candidat » : dans Frappe v16 le texte
 	// sélectionné des <select> peut s'afficher en transparent/blanc.
 	function forcerCouleurSelects() {
 		document.querySelectorAll('.web-form select.form-control, .web-form .form-group select').forEach(function (select) {
-			select.style.setProperty('color', '#1e2025', 'important');
-			select.style.setProperty('-webkit-text-fill-color', '#1e2025', 'important');
-			select.style.setProperty('background-color', '#f5f6f8', 'important');
+			select.style.setProperty('color', '#003B6F', 'important');
+			select.style.setProperty('-webkit-text-fill-color', '#003B6F', 'important');
+			select.style.setProperty('background-color', '#EAF1F8', 'important');
 			if (select.value !== '') {
 				select.style.setProperty('opacity', '1', 'important');
 			}
 			select.addEventListener('change', function () {
-				this.style.setProperty('color', '#1e2025', 'important');
-				this.style.setProperty('-webkit-text-fill-color', '#1e2025', 'important');
+				this.style.setProperty('color', '#003B6F', 'important');
+				this.style.setProperty('-webkit-text-fill-color', '#003B6F', 'important');
 				this.style.setProperty('opacity', '1', 'important');
 			});
 		});

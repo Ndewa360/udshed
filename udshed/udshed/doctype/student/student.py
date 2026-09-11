@@ -66,14 +66,18 @@ class Student(Document):
 			self.cycle = "Licence"
 
 	def before_save(self):
-		# Le matricule = le nom auto-généré STU-0001
-		# Disponible seulement après la première sauvegarde
-		if self.name and not self.name.startswith("new-"):
+		# En dernier recours uniquement : si aucun matricule n'a été fourni
+		# (ex. création manuelle), on prend le nom auto-généré STU-0001.
+		# Un matricule explicite (ex. celui de l'Inscription Academique
+		# envoyé par email) est toujours conservé.
+		if not self.matricule and self.name and not self.name.startswith("new-"):
 			self.matricule = self.name
 
 	def after_insert(self):
-		# Après insertion le name est disponible → on met à jour le matricule
-		self.db_set("matricule", self.name)
+		# Après insertion le name est disponible → matricule de secours
+		# si aucun matricule explicite n'a été fourni à la création.
+		if not self.matricule:
+			self.db_set("matricule", self.name)
 
 		# Crée automatiquement un compte utilisateur Frappe lié à l'étudiant
 		if not frappe.db.exists("User", self.email):

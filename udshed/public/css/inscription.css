@@ -422,3 +422,18 @@
   .auth-card { padding: 28px 22px 22px; }
   .auth-title { font-size: 20px; }
 }
+
+/* ---- Web form « Session de 2025 » : anti-flash ----
+   Masque la version par défaut du formulaire jusqu'à ce que
+   session_de_2025.js ait appliqué le style personnalisé et la
+   structure (step-header, carte blanche), puis révèle via la classe
+   « udshed-formed » ajoutée sur <body>. */
+body[data-path^="session-de-2025"] .web-form-container {
+  visibility: hidden;
+  opacity: 0;
+}
+body[data-path^="session-de-2025"].udshed-formed .web-form-container {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
