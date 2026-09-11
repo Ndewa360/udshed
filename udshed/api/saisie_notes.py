@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Cédric Nguendap Bedjama and contributors
 # For license information, please see license.txt
 
+import hashlib
 import re
 
 import frappe
@@ -433,6 +434,67 @@ def _get_etudiants(academic_year, filiere, niveau_label, teaching_unit):
     return resultats
 
 
+_CANONIQUE_TYPE_EXAMEN = {
+    "Examen": "EXAMEN",
+    TYPE_NORMALE: "EXAMEN",
+    "Rattrapage": "RATTRAPAGE",
+    TYPE_RATTRAPAGE: "RATTRAPAGE",
+}
+
+
+def _contexte_anonyme(teaching_unit, type_dexamen=""):
+    """Contexte (UE, type d'examen) qui détermine un jeu de codes anonymes.
+
+    Deux libellés désignant la même session (ex. « Examen » côté interface et
+    « Examen de session normal » côté moteur) sont ramenés à la même clé,
+    pour que la page, la feuille PDF et les exports utilisent les mêmes codes.
+    """
+    t = _CANONIQUE_TYPE_EXAMEN.get(type_dexamen, type_dexamen or "")
+    return "{0}|{1}".format((teaching_unit or "").strip(), t.strip())
+
+
+def _generer_codes_anonymes(students, contexte=""):
+    """Codes anonymes stables **propres à chaque matière et à chaque session**.
+
+    Il n'existe pas un code anonyme unique pour tous les cours : chaque UE
+    (et chaque type d'examen : examen normal ≠ rattrapage) génère son propre
+    jeu de codes via une empreinte (matricule + contexte). Le même étudiant
+    porte donc des codes différents d'une matière à l'autre, ce qui empêche
+    de corréler les copies entre matières.
+
+    La fonction est déterministe : pour un contexte donné (UE + type), la
+    liste est triée par empreinte puis renumérotée AN001, AN002, … Les codes
+    restent reproductibles entre la page de saisie, la feuille de saisie PDF
+    et les exports Excel d'un même (UE, type d'examen).
+
+    Sans contexte (comportement historique), les codes suivent l'ordre de la
+    liste fournie.
+    """
+    if not contexte:
+        return {
+            s["student"]: "AN{0:03d}".format(i)
+            for i, s in enumerate(students or [], start=1)
+        }
+    graines = [
+        (
+            hashlib.sha256(
+                "{0}|{1}".format(s.get("matricule") or s.get("student") or "", contexte).encode("utf-8")
+            ).hexdigest(),
+            s["student"],
+        )
+        for s in students or []
+    ]
+    graines.sort(key=lambda g: g[0])
+    return {nom: "AN{0:03d}".format(i) for i, (_, nom) in enumerate(graines, start=1)}
+
+
+def _identite_export(s, anonymes, codes):
+    """Cellules (Matricule, Nom, Prénom) d'un export, anonymisées si demandé."""
+    if anonymes:
+        return [codes.get(s["student"], ""), "", ""]
+    return [s["matricule"], s["nom"], s["prenom"]]
+
+
 def _get_or_create_note(session, student, args):
     teaching_unit = args["teaching_unit"]
     existing = frappe.db.get_value(
@@ -847,11 +909,11 @@ def charger_data(academic_year, filiere, niveau, semestre, teaching_unit):
         "students": students,
         "sessions": sessions_meta,
         "notes": notes,
-        "lignes": _lignes_unifiees(students, notes),
+        "lignes": _lignes_unifiees(students, notes, teaching_unit),
     }
 
 
-def _lignes_unifiees(students, notes):
+def _lignes_unifiees(students, notes, teaching_unit=None):
     """Lignes de la saisie unifiée : une ligne par étudiant inscrit.
 
     La source unique est la note de la session normale (CC, CCTP, EXAMTP,
@@ -859,7 +921,13 @@ def _lignes_unifiees(students, notes):
     retombe sur la note de la session CC (données historiques). Les valeurs
     ne sont présentées que si le drapeau *saisi est posé : le stockage
     Currency ramène les champs non saisis à 0.0.
+
+    Chaque ligne expose les codes anonymes **propres à la matière** :
+    ``code_anonyme`` pour l'examen normal et ``code_anonyme_rattrapage``
+    pour la session de rattrapage (deux jeux distincts).
     """
+    codes = _generer_codes_anonymes(students, _contexte_anonyme(teaching_unit, TYPE_NORMALE))
+    codes_rt = _generer_codes_anonymes(students, _contexte_anonyme(teaching_unit, TYPE_RATTRAPAGE))
     notes_cc = (notes or {}).get("CC", {})
     lignes = []
     for s in students or []:
@@ -874,6 +942,8 @@ def _lignes_unifiees(students, notes):
                 "matricule": s.get("matricule") or "",
                 "nom": s.get("nom") or "",
                 "prenom": s.get("prenom") or "",
+                "code_anonyme": codes.get(nom, ""),
+                "code_anonyme_rattrapage": codes_rt.get(nom, ""),
                 "student": nom,
                 "cc": ex.get("note_cc_moyenne") if ex.get("cc_saisi") else None,
                 "cctp": ex.get("note_cctp") if ex.get("cctp_saisi") else None,
@@ -2049,8 +2119,15 @@ def export_modele_pdf(
     niveau=None,
     semestre=None,
     teaching_unit=None,
+    anonyme=None,
 ):
-    """Télécharge un modèle PDF imprimable, étudiants pré-remplis si un contexte est fourni."""
+    """Télécharge un modèle PDF imprimable, étudiants pré-remplis si un contexte est fourni.
+
+    ``anonyme`` (0/1) : les étudiants sont identifiés par un code propre à la
+    matière et au type d'examen (AN001…) et les colonnes Nom / Prénom restent
+    vides. La feuille reste utilisable comme support papier, les codes
+    correspondant à ceux de la page de saisie.
+    """
     cc_columns = _colonnes_cc(cc_columns)
     entetes = _en_tetes(type_dexamen, cc_columns)
     if teaching_unit:
@@ -2062,16 +2139,18 @@ def export_modele_pdf(
         students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
         credit = _credits_ue(teaching_unit, filiere, niveau)
 
+    anonymes = bool(anonyme)
+    codes = _generer_codes_anonymes(students, _contexte_anonyme(teaching_unit, type_dexamen))
     lignes = []
     for s in students:
         cellule = []
         for h in entetes:
             if h == "Matricule":
-                cellule.append(s.get("matricule") or s.get("student") or "")
+                cellule.append(codes.get(s["student"]) if anonymes else (s.get("matricule") or s.get("student") or ""))
             elif h == "Nom":
-                cellule.append(s.get("nom") or "")
+                cellule.append("" if anonymes else (s.get("nom") or ""))
             elif h == "Prénom":
-                cellule.append(s.get("prenom") or "")
+                cellule.append("" if anonymes else (s.get("prenom") or ""))
             elif h == "Crédit":
                 cellule.append(credit)
             else:
@@ -2088,11 +2167,18 @@ def export_modele_pdf(
 
 
 @frappe.whitelist()
-def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_dexamen, cc_columns=None):
-    """Exporte les notes déjà saisies au format Excel."""
+def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_dexamen, cc_columns=None, anonyme=None):
+    """Exporte les notes déjà saisies au format Excel.
+
+    ``anonyme`` (0/1) : les identités sont remplacées par les codes anonymes
+    propres à la matière et au type d'examen (AN001…) ; l'import relit
+    ensuite indifféremment matricules ou codes anonymes.
+    """
     cc_columns = _colonnes_cc(cc_columns)
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
+    anonymes = bool(anonyme)
+    codes = _generer_codes_anonymes(students, _contexte_anonyme(teaching_unit, type_dexamen))
 
     sessions = {
         "cc": _get_or_create_session(args, TYPE_CC),
@@ -2107,30 +2193,31 @@ def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_d
     lignes = [entetes]
     for s in students:
         nom = s["student"]
+        identite = _identite_export(s, anonymes, codes)
         if type_dexamen == "CC":
             cc = notes["CC"].get(nom, {})
             valeurs = {}
             for item in cc.get("notes_cc", []):
                 valeurs[item.get("cc_label")] = item.get("note_cc")
             lignes.append(
-                [s["matricule"], s["nom"], s["prenom"], credit]
+                identite + [credit]
                 + [valeurs.get(c.get("label")) for c in cc_columns]
                 + [cc.get("note_cc_moyenne")]
             )
         elif type_dexamen == "Examen":
             ex = notes["Examen"].get(nom, {})
-            ligne = [s["matricule"], s["nom"], s["prenom"], credit]
+            ligne = identite + [credit]
             if _("Note de TP") in entetes:
                 ligne.append(ex.get("note_tp"))
             ligne.append(ex.get("note_examen"))
             lignes.append(ligne)
         elif type_dexamen == "TP":
             tp = notes["TP"].get(nom, {})
-            lignes.append([s["matricule"], s["nom"], s["prenom"], credit, tp.get("note_tp")])
+            lignes.append(identite + [credit, tp.get("note_tp")])
         elif type_dexamen == "Rattrapage":
             rt = notes["Rattrapage"].get(nom, {})
             lignes.append(
-                [s["matricule"], s["nom"], s["prenom"], rt.get("note_examen"), rt.get("note_examen_rattrapage"), rt.get("note_examen_active")]
+                identite + [rt.get("note_examen"), rt.get("note_examen_rattrapage"), rt.get("note_examen_active")]
             )
 
     _repondre_xlsx(lignes, "notes_{0}_{1}.xlsx".format(teaching_unit.replace("/", "-"), type_dexamen.lower()))
@@ -2143,6 +2230,12 @@ def importer_notes(file_url, type_dexamen, academic_year, filiere, niveau, semes
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
     par_matricule = {s["matricule"]: s["student"] for s in students}
+    par_code = {
+        code: s["student"]
+        for s, code in _generer_codes_anonymes(
+            students, _contexte_anonyme(teaching_unit, type_dexamen)
+        ).items()
+    }
 
     lignes = _lire_xlsx(file_url)
     if not lignes or not lignes[0]:
@@ -2158,7 +2251,7 @@ def importer_notes(file_url, type_dexamen, academic_year, filiere, niveau, semes
         if not ligne or not any(l not in (None, "") for l in ligne):
             continue
         matricule = str(ligne[idx_matricule]).strip() if idx_matricule < len(ligne) and ligne[idx_matricule] is not None else ""
-        student = par_matricule.get(matricule)
+        student = par_matricule.get(matricule) or par_code.get(matricule)
         if not student:
             erreurs.append(_("Matricule inconnu : {0}").format(matricule))
             continue
@@ -2204,8 +2297,13 @@ def importer_notes(file_url, type_dexamen, academic_year, filiere, niveau, semes
 
 
 @frappe.whitelist()
-def export_evaluations(academic_year, filiere, niveau, semestre, teaching_unit):
-    """Exporte la saisie unifiée (CC, CCTP, EXAMTP, EXAM) au format Excel."""
+def export_evaluations(academic_year, filiere, niveau, semestre, teaching_unit, anonyme=None):
+    """Exporte la saisie unifiée (CC, CCTP, EXAMTP, EXAM) au format Excel.
+
+    ``anonyme`` (0/1) : les identités sont remplacées par les codes anonymes
+    propres à la matière (AN001…) ; les cellules Nom / Prénom sont vidées.
+    L'import relit indifféremment matricules ou codes anonymes.
+    """
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
     sessions = {
@@ -2217,12 +2315,13 @@ def export_evaluations(academic_year, filiere, niveau, semestre, teaching_unit):
     credit = _credits_ue(teaching_unit, filiere, niveau)
 
     lignes = [["Matricule", "Nom", "Prénoms", "Crédits", "CC", "CCTP", "EXAMTP", "EXAM", "MOY", "GRD", "PTS"]]
-    for ligne in _lignes_unifiees(students, notes):
+    anonymes = bool(anonyme)
+    for ligne in _lignes_unifiees(students, notes, teaching_unit):
         lignes.append(
             [
-                ligne["matricule"],
-                ligne["nom"],
-                ligne["prenom"],
+                ligne["code_anonyme"] if anonymes else ligne["matricule"],
+                "" if anonymes else ligne["nom"],
+                "" if anonymes else ligne["prenom"],
                 credit,
                 ligne.get("cc"),
                 ligne.get("cctp"),
@@ -2243,6 +2342,12 @@ def importer_evaluations(file_url, academic_year, filiere, niveau, semestre, tea
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
     par_matricule = {s["matricule"]: s["student"] for s in students}
+    par_code = {
+        code: s["student"]
+        for s, code in _generer_codes_anonymes(
+            students, _contexte_anonyme(teaching_unit, TYPE_NORMALE)
+        ).items()
+    }
 
     lignes = _lire_xlsx(file_url)
     if not lignes or not lignes[0]:
@@ -2260,7 +2365,7 @@ def importer_evaluations(file_url, academic_year, filiere, niveau, semestre, tea
         if not ligne or not any(l not in (None, "") for l in ligne):
             continue
         matricule = str(ligne[idx_matricule]).strip() if idx_matricule < len(ligne) and ligne[idx_matricule] is not None else ""
-        student = par_matricule.get(matricule)
+        student = par_matricule.get(matricule) or par_code.get(matricule)
         if not student:
             erreurs.append(_("Matricule inconnu : {0}").format(matricule))
             continue

@@ -41,6 +41,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		busy: false,
 		preview: {},
 		ues_seq: 0,
+		anonyme: false,
 	};
 
 	// ------------------------------------------------------------------
@@ -799,6 +800,12 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-export">' +
 				"&#8679; " + __("Exporter") +
 				"</button>" +
+				'<button type="button" class="btn ' + (state.anonyme ? "btn-warning" : "btn-default") + ' btn-sm sn-btn sn-btn-anonyme">' +
+				(state.anonyme ? "&#128065; " + __("Anonyme actif") : "&#128065; " + __("Mode anonyme")) +
+				"</button>" +
+				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-feuille">' +
+				"&#128196; " + __("Feuille de saisie") +
+				"</button>" +
 				(is_rt
 					? '<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-modele">' + __("Modèle Excel") + "</button>"
 					: '') +
@@ -828,8 +835,9 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	// tableau unifié (Examen normal)
 	// ------------------------------------------------------------------
 	function render_unifie() {
+		const anon = state.anonyme;
 		const headers =
-			"<th>" + __("N°") + "</th><th>" + __("Matricule") + "</th><th>" + __("Nom et Prénoms") + "</th>" +
+			"<th>" + __("N°") + "</th><th>" + __(anon ? "Code" : "Matricule") + "</th><th>" + __(anon ? "Étudiant (anonyme)" : "Nom et Prénoms") + "</th>" +
 			EVALUATIONS.map((e) => '<th class="sn-ev-head">' + esc(e.label) + "</th>").join("") +
 			"<th>" + __("MOY (%)") + "</th><th>" + __("GRD") + "</th><th>" + __("PTS") + "</th>";
 
@@ -849,8 +857,8 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				return (
 					"<tr>" +
 					'<td class="sn-num">' + (idx + 1) + "</td>" +
-					'<td class="sn-mono">' + esc(ligne.matricule) + "</td>" +
-					"<td>" + esc(ligne.nom) + " " + esc(ligne.prenom) + "</td>" +
+					'<td class="sn-mono">' + esc(anon ? ligne.code_anonyme : ligne.matricule) + "</td>" +
+					"<td" + (anon ? ' class="sn-anon"' : "") + ">" + esc(anon ? "Anonyme" : lbl_nom(ligne)) + "</td>" +
 					inputs +
 					'<td class="sn-num sn-strong" data-pv-student="' + esc(ligne.student) + '" data-pv="note_pct" data-pv-saved="' +
 					esc(fmt_pct(ligne.note_pct)) +
@@ -888,8 +896,9 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	function render_rattrapage() {
 		const notes_cc = (state.data.notes && state.data.notes.CC) || {};
 		const notes_rt = (state.data.notes && state.data.notes.Rattrapage) || {};
+		const anon = state.anonyme;
 
-		const headers = [__("Matricule"), __("Étudiant"), __("Moy. CC"), __("Session examen"), __("Session rattrapage"), __("Note retenue"), __("Note finale"), __("%"), __("Grade"), __("Points")];
+		const headers = [__(anon ? "Code" : "Matricule"), __(anon ? "Étudiant (anonyme)" : "Étudiant"), __("Moy. CC"), __("Session examen"), __("Session rattrapage"), __("Note retenue"), __("Note finale"), __("%"), __("Grade"), __("Points")];
 		const headerHtml = headers.map((h) => "<th>" + esc(h) + "</th>").join("");
 
 		const body = (state.data.lignes || [])
@@ -900,8 +909,8 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				const src = rt;
 				return (
 					"<tr>" +
-					'<td class="sn-mono">' + esc(ligne.matricule) + "</td>" +
-					"<td>" + esc(ligne.nom) + " " + esc(ligne.prenom) + "</td>" +
+					'<td class="sn-mono">' + esc(anon ? ligne.code_anonyme_rattrapage : ligne.matricule) + "</td>" +
+					"<td" + (anon ? ' class="sn-anon"' : "") + ">" + esc(anon ? "Anonyme" : lbl_nom(ligne)) + "</td>" +
 					'<td class="sn-num">' + fmt_num(cc.note_cc_moyenne) + "</td>" +
 					'<td class="sn-num">' + fmt_num(rt.note_examen) + "</td>" +
 					'<td class="sn-num"><input type="number" class="sn-note sn-rt-note" data-student="' + esc(ligne.student) +
@@ -954,6 +963,10 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	function fmt_pct(v) {
 		if (v === null || v === undefined || v === "") return "—";
 		return String(Number(v)) + " %";
+	}
+
+	function lbl_nom(ligne) {
+		return (ligne && ligne.nom && ligne.nom.trim() ? ligne.nom + " " : "") + (ligne ? ligne.prenom || "" : "");
 	}
 
 	function bind_table_events() {
@@ -1144,6 +1157,20 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			semestre: state.filters.semestre,
 			teaching_unit: state.filters.cours,
 			type_dexamen: is_rt ? TYPE_RATTRAPAGE : undefined,
+			anonyme: state.anonyme ? 1 : 0,
+		});
+	}
+
+	function export_feuille() {
+		if (!state.filters.cours) return;
+		api_download(API + "export_modele_pdf", {
+			type_dexamen: is_rattrapage_view() ? TYPE_RATTRAPAGE : TYPE_EXAMEN,
+			academic_year: state.filters.academic_year,
+			filiere: state.filters.filiere,
+			niveau: state.filters.niveau,
+			semestre: state.filters.semestre,
+			teaching_unit: state.filters.cours,
+			anonyme: state.anonyme ? 1 : 0,
 		});
 	}
 
@@ -1160,6 +1187,17 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	});
 	toolbar.on("click", ".sn-btn-import", start_import);
 	toolbar.on("click", ".sn-btn-export", export_current);
+	toolbar.on("click", ".sn-btn-anonyme", () => {
+		state.anonyme = !state.anonyme;
+		render();
+		toast(
+			state.anonyme
+				? __("Mode anonyme activé : les identités des étudiants sont masquées (uniquement pour la saisie et l'export).")
+				: __("Mode nominatif réactivé."),
+			state.anonyme ? "orange" : "green"
+		);
+	});
+	toolbar.on("click", ".sn-btn-feuille", export_feuille);
 	toolbar.on("click", ".sn-btn-modele", export_modele);
 	toolbar.on("click", ".sn-btn-pdf", () => {
 		if (!state.filters.cours) return;
@@ -1261,6 +1299,8 @@ const STYLES =
 	".sn-table tr:nth-child(even) td{background:#fafbfd;}" +
 	".sn-table tr:hover td{background:#f2f6ff;}" +
 	".sn-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:#687178;white-space:nowrap;}" +
+	".sn-anon{color:#8a93a3;font-style:italic;}" +
+	".sn-toolbar .sn-btn-anonyme{white-space:nowrap;}" +
 	".sn-num{text-align:right;}" +
 	".sn-num input{text-align:right;}" +
 	".sn-credits{color:#4858b4;font-weight:600;}" +

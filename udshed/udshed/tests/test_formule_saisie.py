@@ -239,19 +239,23 @@ class TestFormuleDansSaisie(IntegrationTestCase):
 
         html = mock_pdf.call_args[0][0]
         for fragment in [
-            "Année académique",
+            "Année Académique",
             self.academic_year.name,
             "Faculté",
             self.fos.name_of_field,
-            "BTS 1",
-            "Semestre 1",
             self.student.matricule,
-            "Session examen",
-            "Session rattrapage",
-            "Note retenue",
-            "Note finale",
-            "Grade",
-            "Points",
+            self.student.nom,
+            self.student.prenom,
+            "PROCES VERBAL DE LA MATIERE",
+            "Matricule",
+            "Nom et Prénoms",
+            "CC",
+            "CCTP",
+            "EXAMTP",
+            "EXAM",
+            "MOY",
+            "GRD",
+            "PTS",
             "14.0",
         ]:
             self.assertIn(fragment, html, "fragment manquant dans le PDF : " + fragment)
