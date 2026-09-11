@@ -6,7 +6,7 @@ app_email = "c.nguendap@ndewa-360.com"
 app_license = "mit"
 
 # App logo for login page and navbar
-app_logo_url = ["/assets/udshed/images/logo1.png"]
+app_logo_url = ["/assets/udshed/images/logo.png"]
 
 # Apps
 # ------------------
@@ -17,7 +17,7 @@ app_logo_url = ["/assets/udshed/images/logo1.png"]
 add_to_apps_screen = [
 	{
 		"name": "udshed",
-		"logo": "/assets/udshed/images/logo1.png",
+		"logo": "/assets/udshed/images/logo.png",
 		"title": "Udshed",
 		"route": "/app/gestion-des-notes",
 		"has_permission": "udshed.api.permission.has_app_permission",
