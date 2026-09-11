@@ -1,5 +1,4 @@
- HEAD
-app_name = "udshed"
+ app_name = "udshed"
 app_title = "Udshed"
 app_publisher = "Cédric Nguendap Bedjama"
 app_description = "Outils de planification des cours"
