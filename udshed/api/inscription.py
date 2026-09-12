@@ -73,6 +73,9 @@ def enregistrer_inscription(numero_dossier, nom_candidat, donnees=None):
             "connaissances_informatiques",
         }
         valeurs = {champ: donnees.get(champ) for champ in champs_autorises if donnees.get(champ) is not None}
+        for champ in ("pere_telephone", "telephone_mere", "telephone_sponsor"):
+            if champ in valeurs:
+                valeurs[champ] = _telephone_237(valeurs[champ])
         doc_inscription = frappe.get_doc({
             "doctype": "Inscription Academique",
             "matricule": matricule,
@@ -369,6 +372,20 @@ def _normaliser_texte(valeur):
         for caractere in unicodedata.normalize("NFKD", texte)
         if not unicodedata.combining(caractere)
     )
+
+
+def _telephone_237(valeur):
+    """Préfixe l'indicatif pays +237 (Cameroun) aux numéros de téléphone.
+
+    Les champs de type Phone de Frappe refusent un numéro sans code pays
+    (InvalidPhoneNumberError). Si le numéro saisi n'est pas précédé de « + »,
+    on y ajoute l'indicatif camerounais.
+    """
+    texte = " ".join(str(valeur or "").split())
+    if not texte or texte.startswith("+"):
+        return texte
+    chiffres = "".join(caractere for caractere in texte if caractere.isdigit())
+    return "+237" + chiffres if chiffres else texte
 
 
 def _pdf_url(matricule):

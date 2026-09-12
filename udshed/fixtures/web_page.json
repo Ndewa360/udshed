@@ -1,5 +1,6 @@
 [
  {
+  "doctype": "Web Page",
   "name": "suivi-candidature",
   "creation": "2026-09-03 14:59:43.394072",
   "modified": "2026-09-04 09:50:41.846868",
@@ -41,6 +42,7 @@
   "_liked_by": null
  },
  {
+  "doctype": "Web Page",
   "name": "diplôme-daccès-et-documents-associés",
   "creation": "2026-09-03 14:59:43.340392",
   "modified": "2026-07-29 15:57:50.557841",
@@ -82,6 +84,7 @@
   "_liked_by": null
  },
  {
+  "doctype": "Web Page",
   "name": "informations-personnelles-du-candidat",
   "creation": "2026-09-03 14:59:43.277148",
   "modified": "2026-07-28 16:06:03.276867",
@@ -123,6 +126,7 @@
   "_liked_by": null
  },
  {
+  "doctype": "Web Page",
   "name": "choix-du-candidat",
   "creation": "2026-09-03 14:59:43.255343",
   "modified": "2026-07-29 14:44:17.895877",
@@ -164,6 +168,7 @@
   "_liked_by": null
  },
  {
+  "doctype": "Web Page",
   "name": "succès-candidature",
   "creation": "2026-09-03 14:59:43.227241",
   "modified": "2026-07-28 10:05:11.142287",
@@ -205,6 +210,7 @@
   "_liked_by": null
  },
  {
+  "doctype": "Web Page",
   "name": "home",
   "creation": "2026-09-03 14:59:43.134698",
   "modified": "2026-09-05 10:38:26.885193",

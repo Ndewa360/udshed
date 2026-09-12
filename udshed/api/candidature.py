@@ -123,7 +123,7 @@ def telecharger_fiche_pdf(dossier=None):
     from frappe.utils import cint
     from frappe.utils.pdf import get_pdf
 
-    if not dossier:
+    if not dossier or dossier.lower() in ("undefined", "null"):
         frappe.throw("Numéro de dossier manquant.")
 
     doc = frappe.get_doc("Session Inscription Candidate", dossier)

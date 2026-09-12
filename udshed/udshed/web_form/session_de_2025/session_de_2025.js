@@ -618,9 +618,27 @@ frappe.ready(function() {
 
 	// ---- Redirection après soumission ----
 	frappe.web_form.after_save = function() {
-		const docName = frappe.web_form.doc.name;
+		const docName = frappe.web_form.doc_name_after_save || frappe.web_form.doc.name;
+		if (!docName) {
+			return;
+		}
 		window.location.href = '/candidature-success?dossier=' + encodeURIComponent(docName);
 	};
+
+	// Frappe ne met pas à jour `frappe.web_form.doc.name` après la création d'un
+	// nouveau dossier. On capture le nom retourné par le serveur (response.message.name)
+	// pour construire correctement l'URL de redirection vers la page de confirmation.
+	(function () {
+		const __save_orig = frappe.web_form.handle_success
+			? frappe.web_form.handle_success.bind(frappe.web_form)
+			: null;
+		frappe.web_form.handle_success = function (data) {
+			if (data && data.name) {
+				frappe.web_form.doc_name_after_save = data.name;
+			}
+			return __save_orig ? __save_orig(data) : undefined;
+		};
+	})();
 
 	// ---- Choix du candidat : les options s'affichent selon la filière sélectionnée ----
 	if (frappe.web_form.is_new || frappe.web_form.in_edit_mode) {
