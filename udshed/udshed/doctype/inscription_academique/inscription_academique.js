@@ -9,7 +9,7 @@ frappe.ui.form.on("Inscription Academique", {
 					"/api/method/frappe.utils.print_format.download_pdf" +
 					"?doctype=Inscription%20Academique" +
 					"&name=" + encodeURIComponent(frm.doc.name) +
-					"&format=Fiche%20Officielle%20UDM" +
+					"&format=Fiche%20d%27Inscription" +
 					"&no_letterhead=1";
 				window.open(url, "_blank");
 			}, __("Actions"));

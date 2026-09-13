@@ -34,6 +34,11 @@
                 <div class="stepper-circle">4</div>
                 <div class="stepper-label">Informations<br>Complémentaires</div>
             </div>
+            <div class="stepper-line"></div>
+            <div class="stepper-step" data-step="5">
+                <div class="stepper-circle">5</div>
+                <div class="stepper-label">Grille<br>d'enseignement</div>
+            </div>
         </div>
 
         <form id="form-inscription-academique">
@@ -120,8 +125,14 @@
                             </tbody>
                         </table>
                     </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="addEtudeManuel()" style="width: 100%;">
+                        <i class="bi bi-plus"></i> Ajouter une étude
+                    </button>
+                </div>
+            </div>
+
             <!-- ÉTAPE 4 : Informations complémentaires -->
-            <div class="stepper-section" data-section="4">
+            <div class="stepper-section" data-section="4" style="display: none;">
                 <div class="card p-4 mb-4">
                     <h5 class="mb-3">Informations complémentaires</h5>
                     <div class="form-group"><label>Activités sportives</label><textarea name="activites_sportives" class="form-control" rows="3"></textarea></div>
@@ -131,9 +142,16 @@
                 </div>
             </div>
 
-                    <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="addEtudeManuel()" style="width: 100%;">
-                        <i class="bi bi-plus"></i> Ajouter une étude
-                    </button>
+            <!-- ÉTAPE 5 : Grille d'enseignement -->
+            <div class="stepper-section" data-section="5" style="display: none;">
+                <div class="card p-4 mb-4">
+                    <h5 class="mb-3">Grille d'enseignement de votre filière</h5>
+                    <p class="text-muted small" id="grille-intitule">Chargement de la grille d'enseignement...</p>
+                    <div id="grille-loader" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted mt-2">Chargement de la grille...</p>
+                    </div>
+                    <div id="grille-enseignement"></div>
                 </div>
             </div>
 

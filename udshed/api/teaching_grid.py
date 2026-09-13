@@ -1,8 +1,5 @@
 import frappe
-import pandas as pd
-import os
 from frappe.query_builder import DocType
-from frappe.utils import get_site_path
 import udshed.utils.file_utils as file_utils
 import udshed.api.course as cours_api
 
@@ -66,7 +63,6 @@ def _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semest
         )	
     )
     result = {}
-    filiere = frappe.get_doc("Field of study",filiere)
 
     stat_result = {
         'ue_count': 0,
@@ -370,7 +366,11 @@ def import_grid(file_url,academic_year,faculty,filiere,niveau,semestre):
 @frappe.whitelist()
 def export_grid(academic_year,faculty,filiere,niveau,semestre):
     """exporter au format excel la grille d'un semestre"""
-    try:        
+    try:     
+        import pandas as pd
+        import os
+        from frappe.utils import get_site_path
+
         grid_to_export = get_academic_teaching_unit(academic_year,faculty,filiere,niveau,semestre)
         exel_grid = []
         headers = [
@@ -437,6 +437,10 @@ def export_grid(academic_year,faculty,filiere,niveau,semestre):
 def download_template():
     """Générer et télécharger un template Excel pour l'import"""
     try:        
+        import pandas as pd
+        import os
+        from frappe.utils import get_site_path
+
         # Créer un template vide avec la structure attendue
         template_data = []
                 

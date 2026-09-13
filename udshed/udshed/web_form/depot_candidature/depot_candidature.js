@@ -344,6 +344,36 @@ frappe.ready(function() {
 			letter-spacing: 0.5px;
 		}
 
+		/* Téléphone : badge +237 fixe à gauche, le numéro s'affiche à sa suite.
+		   Les champs sont en Data (le contrôle Phone natif peut ne pas s'afficher
+		   dans un web form), on ajoute le badge par JS. */
+		.web-form .control-input.ud-tel-host {
+			position: relative;
+		}
+		.web-form .control-input.ud-tel-host input {
+			padding-left: 66px !important;
+			padding-right: 16px !important;
+		}
+		.web-form .ud-tel-badge {
+			position: absolute;
+			top: 1px;
+			left: 1px;
+			bottom: 1px;
+			z-index: 2;
+			display: flex;
+			align-items: center;
+			min-width: 60px;
+			padding: 0 10px;
+			background-color: #EAF1F8;
+			border-radius: 10px 0 0 10px;
+			border-right: 1px solid #cbd9e8;
+			font-size: 14px;
+			font-weight: 700;
+			color: #003B6F;
+			pointer-events: none;
+			user-select: none;
+		}
+
 		/* Responsive */
 		@media (max-width: 768px) {
 			.web-form .web-form-section { grid-template-columns: 1fr; }
@@ -413,7 +443,7 @@ frappe.ready(function() {
 			if (corps && titreNat) {
 				const titre = document.createElement('h3');
 				titre.className = 'form-card-title';
-				titre.textContent = (titreNat.textContent || '').trim() || 'Session de 2025';
+				titre.textContent = (titreNat.textContent || '').trim() || 'Dépôt de candidature';
 				corps.insertBefore(titre, corps.firstChild);
 				if (introNat && (introNat.textContent || '').trim()) {
 					const sous = document.createElement('p');
@@ -462,6 +492,87 @@ frappe.ready(function() {
 		forcerCouleurSelects();
 	}, 500);
 	setTimeout(function () { clearInterval(intervalSelects); }, 8000);
+
+	// ---- Options toujours affichées au clic : niveau / sexe / centre d'examen ----
+	// Frappe v16 peut rendre le texte des <option> transparent ; on force un
+	// <select> natif avec des options visibles pour ces trois champs.
+	const OPTIONS_DE_REPLI = {
+		'niveau': [
+			'Sélectionner le niveau',
+			'BTS 1', 'BTS 2',
+			'Licence 1', 'Licence 2', 'Licence 3',
+			'Master 1', 'Master 2'
+		],
+		'sexe': ['Sélectionner', 'Homme', 'Femme'],
+		'examination_centre': ['Sélectionner', 'Bangangté', 'Bafoussam', 'Yaoundé', 'Douala']
+	};
+
+	function garantirOptionsSelects() {
+		Object.keys(OPTIONS_DE_REPLI).forEach(function (fieldname) {
+			var champ = frappe.web_form.fields_dict[fieldname];
+			if (!champ || !champ.df) return;
+			// niveau : le champ dynamique (filière) gère les options
+			if (fieldname === 'niveau' && frappe.web_form.get_value('filiere')) return;
+			champ.df.options = OPTIONS_DE_REPLI[fieldname].join('\n');
+			if (champ.refresh) champ.refresh();
+		});
+	}
+	document.addEventListener('DOMContentLoaded', garantirOptionsSelects);
+	window.addEventListener('load', garantirOptionsSelects);
+	const intervalOptions = setInterval(garantirOptionsSelects, 500);
+	setTimeout(function () { clearInterval(intervalOptions); }, 8000);
+
+	// ---- Téléphones : badge +237 fixe à gauche, le numéro s'affiche à sa suite ----
+	function installerChampsTelephone() {
+		['phone', 'parent_phone'].forEach(function (fieldname) {
+			var $ctrl = document.querySelector(
+				'.web-form .frappe-control[data-fieldname="' + fieldname + '"]'
+			);
+			if (!$ctrl || $ctrl.querySelector('.ud-tel-badge')) return;
+			var $col = $ctrl.querySelector('.control-input');
+			if (!$col) return;
+			var $input = $col.querySelector('input');
+			if (!$input) return;
+
+			// Badge "+237" inséré à gauche du champ de saisie
+			var $badge = document.createElement('span');
+			$badge.className = 'ud-tel-badge';
+			$badge.setAttribute('aria-hidden', 'true');
+			$badge.textContent = '+237';
+			$col.insertBefore($badge, $input);
+			$col.classList.add('ud-tel-host');
+
+			// On n'affiche que les chiffres (le code pays reste dans la valeur)
+			var brut = $input.value || '';
+			$input.value = brut.replace(/^(\+?237|00237)[\s-]*/, '').replace(/\D/g, '');
+
+			$input.addEventListener('input', function () {
+				var v = ($input.value || '').replace(/\D/g, '');
+				if ($input.value !== v) $input.value = v;
+			});
+		});
+	}
+	document.addEventListener('DOMContentLoaded', installerChampsTelephone);
+	window.addEventListener('load', installerChampsTelephone);
+	const intervalTel = setInterval(installerChampsTelephone, 500);
+	setTimeout(function () { clearInterval(intervalTel); }, 8000);
+
+	// Ajoute "+237-" devant chaque numéro juste avant la validation/soumission.
+	// Le web form soumet la valeur des inputs : on met donc l'input à jour de façon
+	// synchrone pendant la validation (get_values est lu juste après validate()).
+	function prefixerPhones() {
+		['phone', 'parent_phone'].forEach(function (fieldname) {
+			var champ = frappe.web_form.fields_dict[fieldname];
+			if (!champ) return;
+			var brut = champ.get_input_value ? champ.get_input_value() : '';
+			var numeros = String(brut || '')
+				.replace(/^(\+?237|00237)[\s-]*/, '')
+				.replace(/\D/g, '');
+			var valeur = numeros ? '+237-' + numeros : null;
+			if (champ.set_input) champ.set_input(valeur || '');
+			if (champ.set_value) champ.set_value(valeur);
+		});
+	}
 
 	// ---- Configuration ----
 	const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -529,6 +640,9 @@ frappe.ready(function() {
 
 	// ---- Form validation before submit ----
 	frappe.web_form.validate = function() {
+		// Numéros stockés avec le code pays +237
+		prefixerPhones();
+
 		const requiredFields = [
 			'filiere', 'niveau', 'examination_centre',
 			'first_name', 'last_name', 'birthdate', 'birth_place', 'sexe',
@@ -651,7 +765,7 @@ frappe.ready(function() {
 			chargerNiveaux(filiere, function (niveaux) {
 				var champ = frappe.web_form.fields_dict["niveau"];
 				if (!champ) return;
-				var options = [""];
+				var options = niveaux.length ? ['', 'Sélectionner le niveau'] : ['Sélectionner le niveau'];
 				niveaux.forEach(function (niveau) {
 					options.push(niveau);
 				});

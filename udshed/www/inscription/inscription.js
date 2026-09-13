@@ -82,7 +82,7 @@ $(document).ready(function() {
                     $("#inscription-form-container").html(`
                         <div style="text-align: center; padding: 10px;">
                             <h3 style="color: #2885a7; margin-bottom: 15px;">✓ Inscription Académique Validée !</h3>
-                            <p style="margin-bottom: 5px; font-size: 14px;">Votre numéro de matricule officiel :</p>
+                            <p style="margin-bottom: 5px; font-size: 14px;">Votre matricule :</p>
                             
                             <div style="font-size: 22px; font-weight: bold; color: #007bff; background: #e9f5ff; padding: 8px 15px; border-radius: 4px; display: inline-block; margin-bottom: 20px; border: 1px dashed #007bff;">
                                 ${r.message.matricule}

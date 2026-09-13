@@ -3,8 +3,9 @@ $(document).ready(function() {
     var numero = (params.get("numero_dossier") || "").trim();
     var nom = (params.get("nom_candidat") || "").trim();
     var candidate;
-    var currentStep = 3;
-    var totalSteps = 4;
+    var currentStep = 1;
+    var totalSteps = 5;
+    var grilleChargee = false;
 
     function show_error(message) {
         $("#form-error").text(message).show();
@@ -87,6 +88,97 @@ $(document).ready(function() {
         $("#btn_prev").toggle(currentStep > 1);
         $("#btn_next").toggle(currentStep < totalSteps);
         $("#btn_enregistrer").toggle(currentStep === totalSteps);
+
+        /* grille d'enseignement à l'étape finale */
+        if (currentStep === totalSteps) {
+            chargerGrille();
+        }
+    }
+
+    function chargerGrille() {
+        if (grilleChargee) return;
+        grilleChargee = true;
+        $("#grille-loader").show();
+        frappe.call({
+            method: "udshed.api.inscription.get_grille_enseignement",
+            args: {
+                numero_dossier: candidate.numero_dossier,
+                nom_candidat: candidate.nom_prenom
+            },
+            callback: function(r) {
+                $("#grille-loader").hide();
+                if (r.message && r.message.status === "success") {
+                    afficherGrille(r.message);
+                } else {
+                    $("#grille-enseignement").html(
+                        '<div class="alert alert-warning">Impossible de charger la grille d\u0027enseignement.</div>'
+                    );
+                }
+            },
+            error: function() {
+                grilleChargee = false;
+                $("#grille-loader").hide();
+                $("#grille-enseignement").html(
+                    '<div class="alert alert-warning">Impossible de charger la grille d\u0027enseignement.</div>'
+                );
+            }
+        });
+    }
+
+    function esc(valeur) {
+        return String(valeur == null ? "" : valeur)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function afficherGrille(data) {
+        $("#grille-intitule").text(
+            "Filière : " + (data.filiere_label || data.filiere || "—") +
+            " | Niveau : " + (data.niveau || "—") +
+            " | Année académique : " + (data.academic_year || "—")
+        );
+
+        var html = "";
+        (data.semestres || []).forEach(function(sem) {
+            if (!sem.grid || !sem.grid.length) return;
+            html += '<h6 class="mt-4 mb-2 text-primary">' + esc(sem.semestre) + "</h6>";
+            html += '<div class="table-responsive mb-2">';
+            html += '<table class="table table-bordered table-sm small">';
+            html += '<thead><tr>' +
+                '<th>Code</th><th>Intitulé</th><th>Crédits</th>' +
+                '<th>CM</th><th>TD</th><th>TP</th><th>TPE</th><th>Total heures</th>' +
+                "</tr></thead><tbody>";
+            sem.grid.forEach(function(ue) {
+                html += '<tr class="table-active">' +
+                    "<td><strong>" + esc(ue.ue_code) + "</strong></td>" +
+                    "<td><strong>" + esc(ue.ue_title) + "</strong></td>" +
+                    "<td><strong>" + esc(ue.ue_credits) + "</strong></td>" +
+                    "<td colspan=\"5\"></td></tr>";
+                (ue.courses || []).forEach(function(c) {
+                    html += "<tr>" +
+                        "<td>" + esc(c.code) + "</td>" +
+                        "<td>" + esc(c.title) + "</td>" +
+                        "<td>" + esc(c.credits) + "</td>" +
+                        "<td>" + esc(c.nombre_dheure_cm) + "</td>" +
+                        "<td>" + esc(c.nombre_dheure_td) + "</td>" +
+                        "<td>" + esc(c.nombre_dheure_tp) + "</td>" +
+                        "<td>" + esc(c.nombre_dheure_tpe) + "</td>" +
+                        "<td>" + esc(c.total_hours) + "</td></tr>";
+                });
+            });
+            html += "</tbody></table></div>";
+            html += '<p class="text-muted small">UE : <strong>' + esc(sem.stats.ue_count) + "</strong>" +
+                " — Cours : <strong>" + esc(sem.stats.course_count) + "</strong>" +
+                " — Crédits : <strong>" + esc(sem.stats.total_credits) + "</strong>" +
+                " — Heures : <strong>" + esc(sem.stats.total_hours) + "</strong></p>";
+        });
+
+        if (!html) {
+            html = '<div class="alert alert-info">Aucune grille d\u0027enseignement disponible pour votre filière pour le moment.</div>';
+        }
+        $("#grille-enseignement").html(html);
     }
 
     function validateStep(step) {
@@ -148,7 +240,7 @@ $(document).ready(function() {
                     $("#stepper-wrapper").html(
                         '<div class="text-center py-4">' +
                         '<h3 style="color: #28a745;">Inscription académique validée</h3>' +
-                        '<p>Votre matricule officiel :</p>' +
+                        '<p>Votre matricule :</p>' +
                         '<p class="font-weight-bold h4" style="color: #003B6F;">' + r.message.matricule + '</p>' +
                         '<a href="' + r.message.pdf_url + '" class="btn btn-success mt-3">Télécharger ma fiche d\u0027inscription</a>' +
                         '</div>'

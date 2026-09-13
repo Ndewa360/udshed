@@ -1,7 +1,6 @@
 import os
 
 import frappe
-from frappe.utils.pdf import get_pdf
 from frappe.query_builder import DocType
 
 CYCLE_ORDER = {"BTS": 1, "Licence": 2, "Master": 3, "Doctorat": 4}
@@ -444,10 +443,34 @@ def telecharger_fiche_reinscription(reregistration_name):
 			]
 		})
 
+	# Injection du filigrane (watermark) en bas à droite
+	watermark_css = """
+		@page { size: A4; margin: 20mm 15mm 15mm 15mm; }
+		body::after {
+			content: url("/assets/frappe/images/logo.png");
+			position: fixed;
+			bottom: 10mm; right: 10mm;
+			width: 25mm;
+			height: auto;
+			opacity: 0.3;
+			z-index: 1000;
+		}
+	"""
+	# Insert the watermark CSS just before the closing </style> tag
+	if "</style>" in html:
+		html = html.replace("</style>", watermark_css + "</style>")
+	else:
+		# If no <style> tag, inject at beginning of <body>
+		body_open = html.find("<body>")
+		if body_open != -1:
+			html = html[:body_open + 6] + watermark_css + html[body_open + 6:]
+
+	from weasyprint import HTML
+
 	try:
-		pdf = get_pdf(html)
+		pdf = HTML(string=html, base_url=frappe.local.site).write_pdf()
 	except Exception:
-		frappe.log_error(" reregistration telecharger_fiche_reinscription get_pdf")
+		frappe.log_error("reregistration telecharger_fiche_reinscription weasyprint")
 		frappe.throw(_("Erreur lors de la génération du PDF. Veuillez réessayer."))
 
 	if is_student:

@@ -1,5 +1,3 @@
-import pandas as pd
-
 from frappe.utils import get_url
 
 import frappe
@@ -12,12 +10,14 @@ def read_frappe_excel(file_url):
     Reads an Excel file exported from Frappe into a pandas DataFrame.
     
     Args:
-        file_path (str): The path to the Excel file (e.g., 'path/to/your/export.xlsx').
+        file_url (str): The path to the Excel file (e.g., 'path/to/your/export.xlsx').
         
     Returns:
         pd.DataFrame: The data from the Excel file.
     """
     
+    import pandas as pd
+
     frappe.logger().info(f"Début import - fichier: {file_url}")
     
     # Étape 1: Récupérer le chemin complet du fichier

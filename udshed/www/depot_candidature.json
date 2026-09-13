@@ -245,11 +245,5 @@
 	"is_submittable": 1,
 	"submit_button_label": "Soumettre ma candidature",
 	"setup_screen_fields": [],
-	"submit_parms": [
-		{
-			"parm": "redirect",
-			"label": "Redirection après soumission",
-			"value": "/session-2025"
-		}
-	]
+	"submit_parms": []
 }

@@ -2,6 +2,7 @@
 import frappe
 import unicodedata
 from frappe import _
+from urllib.parse import urlencode
 from udshed.udshed.doctype.session_inscription_candidate.session_inscription_candidate import (
     _auto_enroll_student,
     _cree_compte_utilisateur,
@@ -108,7 +109,7 @@ def enregistrer_inscription(numero_dossier, nom_candidat, donnees=None):
                     "matricule": matricule,
                     "nom_prenom": dossier.full_name,
                     "numero_dossier": dossier.name,
-                    "pdf_url": pdf_url,
+                    "pdf_url": frappe.utils.get_url(pdf_url),
                 },
                 now=True,
             )
@@ -123,6 +124,68 @@ def enregistrer_inscription(numero_dossier, nom_candidat, donnees=None):
         "status": "success",
         "matricule": matricule,
         "pdf_url": _pdf_url(nom_doc or matricule),
+    }
+
+
+@frappe.whitelist(allow_guest=True)
+def get_grille_enseignement(numero_dossier, nom_candidat):
+    """Grille d'enseignement (UE et cours) de la filière du candidat.
+
+    Regroupe les deux semestres de l'année académique courante pour le niveau
+    de la candidature, pour affichage avant la validation finale du formulaire.
+    """
+    _verifier_session_ouverte()
+
+    dossier = _get_dossier(numero_dossier, nom_candidat)
+    if not dossier:
+        frappe.throw(_("Session d'authentification invalide."))
+
+    _verifier_candidature_validee(dossier)
+
+    session = _session_inscription_active()
+    academic_year = session.get("academic_year") if session else _annee_academique_courante()
+
+    filiere = dossier.get("filiere") or ""
+    niveau = dossier.get("niveau") or ""
+
+    filiere_doc = None
+    faculte = ""
+    try:
+        filiere_doc = frappe.get_cached_doc("Field of study", filiere)
+        faculte = filiere_doc.faculte or ""
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "get_grille_enseignement - Field of study")
+
+    semestres = []
+    from udshed.api.teaching_grid import _get_academic_teaching_unit_impl
+
+    for semestre in ("Semestre 1", "Semestre 2"):
+        try:
+            data = _get_academic_teaching_unit_impl(academic_year, faculte, filiere, niveau, semestre)
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"get_grille_enseignement - {semestre} ({filiere} {niveau} {academic_year})",
+            )
+            data = {
+                "stats": {"ue_count": 0, "course_count": 0, "total_credits": 0, "total_hours": 0},
+                "grid": [],
+            }
+        if data and data.get("grid"):
+            semestres.append({
+                "semestre": semestre,
+                "stats": data.get("stats"),
+                "grid": data.get("grid"),
+            })
+
+    return {
+        "status": "success",
+        "academic_year": academic_year,
+        "faculte": faculte,
+        "filiere": filiere,
+        "filiere_label": (filiere_doc.name_of_field if filiere_doc else "") or filiere,
+        "niveau": niveau,
+        "semestres": semestres,
     }
 
 
@@ -372,11 +435,13 @@ def _normaliser_texte(valeur):
 
 
 def _pdf_url(matricule):
-    return (
-        "/api/method/frappe.utils.print_format.download_pdf"
-        f"?doctype=Inscription Academique&name={matricule}"
-        "&format=Fiche Officielle UDM&no_letterhead=1"
-    )
+    params = urlencode({
+        "doctype": "Inscription Academique",
+        "name": matricule,
+        "format": "Fiche d'Inscription",
+        "no_letterhead": 1,
+    })
+    return f"/api/method/frappe.utils.print_format.download_pdf?{params}"
 
 
 def _generer_matricule():

@@ -119,9 +119,12 @@ def telecharger_fiche_pdf(dossier=None):
     stockée dans `/private/files/`, inaccessible par wkhtmltopdf sans session
     (échec ContentAccessDenied). Les fichiers non-images (ex. .MP4) sont
     simplement ignorés.
+
+    La génération PDF utilise maintenant WeasyPrint (library Python incluse),
+    ce qui dispense d'installer wkhtmltopdf sur la machine.
     """
     from frappe.utils import cint
-    from frappe.utils.pdf import get_pdf
+    from weasyprint import HTML
 
     if not dossier:
         frappe.throw("Numéro de dossier manquant.")
@@ -147,7 +150,7 @@ def telecharger_fiche_pdf(dossier=None):
         "templates/print/fiche_candidature.html",
         {"doc": doc, "photo_data_uri": photo_data_uri},
     )
-    pdf = get_pdf(html)
+    pdf = HTML(string=html, base_url=frappe.local.site).write_pdf()
 
     frappe.response["filename"] = f"Fiche-Candidature-{doc.name}.pdf"
     frappe.response["filecontent"] = pdf
