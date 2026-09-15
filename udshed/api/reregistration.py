@@ -447,7 +447,7 @@ def telecharger_fiche_reinscription(reregistration_name):
 	watermark_css = """
 		@page { size: A4; margin: 20mm 15mm 15mm 15mm; }
 		body::after {
-			content: url("/assets/frappe/images/logo.png");
+			content: url("/assets/udshed/images/logo.png");
 			position: fixed;
 			bottom: 10mm; right: 10mm;
 			width: 25mm;

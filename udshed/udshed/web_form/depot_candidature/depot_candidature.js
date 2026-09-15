@@ -731,8 +731,20 @@ frappe.ready(function() {
 	};
 
 	// ---- Redirection après soumission ----
+	// Le vrai nom du document n'est exposé qu'à travers la réponse de la sauvegarde
+	// (response.message.name), pas via frappe.web_form.doc.name (indéfini pour une
+	// nouvelle soumission). On le capture via handle_success avant la redirection.
+	frappe.web_form._saved_name = null;
+	const _udshed_handle_success = frappe.web_form.handle_success.bind(frappe.web_form);
+	frappe.web_form.handle_success = function(data) {
+		if (data && data.name) {
+			frappe.web_form._saved_name = data.name;
+		}
+		return _udshed_handle_success(data);
+	};
+
 	frappe.web_form.after_save = function() {
-		const docName = frappe.web_form.doc.name;
+		const docName = frappe.web_form._saved_name || frappe.web_form.doc.name;
 		window.location.href = '/candidature-success?dossier=' + encodeURIComponent(docName);
 	};
 
