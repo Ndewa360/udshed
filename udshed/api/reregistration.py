@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import json
 import os
 
@@ -856,3 +857,487 @@ def get_next_academic_year(current_year):
 		return f"{next_start}-{next_end}"
 	except Exception:
 		return None
+=======
+import os
+
+import frappe
+from frappe.query_builder import DocType
+
+CYCLE_ORDER = {"BTS": 1, "Licence": 2, "Master": 3, "Doctorat": 4}
+
+
+@frappe.whitelist()
+def get_open_sessions():
+	"""Retourne toutes les sessions de réinscription ouvertes"""
+	return frappe.get_all(
+		"Session Reinscription",
+		filters={"statut": "Ouverte"},
+		fields=["name", "academic_year", "date_ouverture", "date_cloture", "note_minimale"]
+	)
+
+
+@frappe.whitelist()
+def get_student_by_matricule(matricule):
+	"""Retrouver un étudiant par son matricule"""
+	if not frappe.db.exists("Student", matricule):
+		frappe.throw(f"Aucun étudiant trouvé avec le matricule {matricule}")
+	return frappe.get_doc("Student", matricule)
+
+
+@frappe.whitelist()
+def get_ordered_levels(filiere):
+	"""Retourne les niveaux d'une filière triés par ordre croissant"""
+	doc = frappe.get_doc("Field of study", filiere)
+	levels = sorted(doc.field_of_study_level, key=lambda x: x.order or 0)
+	return [
+		{
+			"name": l.name,
+			"level": l.level,
+			"order": l.order
+		}
+		for l in levels
+	]
+
+
+@frappe.whitelist()
+def get_previous_level_courses(filiere, niveau_label, academic_year):
+	"""
+	Retourne les matières du niveau précédent
+	pour pré-remplir la table des résultats précédents.
+
+	Args:
+		filiere: name/ID de la filière (Field of study)
+		niveau_label: label du niveau actuel (ex: "Licence 1"), valeur du Select
+		academic_year: name/ID de l'année académique
+	"""
+	filiere_doc = frappe.get_doc("Field of study", filiere)
+
+	# Trouver l'order du niveau actuel par son label (valeur Select)
+	niveau_actuel_order = None
+	niveau_precedent_name = None
+
+	for row in filiere_doc.field_of_study_level:
+		if row.level == niveau_label:
+			niveau_actuel_order = row.order
+			break
+
+	if not niveau_actuel_order:
+		return []
+
+	# Trouver le niveau précédent (order - 1)
+	for row in filiere_doc.field_of_study_level:
+		if row.order == (niveau_actuel_order - 1):
+			niveau_precedent_name = row.name
+			break
+
+	if not niveau_precedent_name:
+		return []
+
+	# Récupérer les matières du niveau précédent
+	TeachingUnit = DocType("Teaching Unit")
+	CourseLevel = DocType("Course Field of study level item")
+
+	matieres = (
+		frappe.qb.from_(TeachingUnit)
+		.join(CourseLevel).on(CourseLevel.parent == TeachingUnit.name)
+		.select(
+			TeachingUnit.name,
+			TeachingUnit.intitule_cours,
+			TeachingUnit.semestre
+		)
+		.where(
+			(TeachingUnit.academic_year == academic_year) &
+			(CourseLevel.filiere == filiere) &
+			(CourseLevel.niveau == niveau_precedent_name)
+		)
+	).run(as_dict=True)
+
+	return matieres
+
+
+@frappe.whitelist()
+def get_student_notes(student, filiere, niveau_precedent_label):
+	"""
+	Récupère les notes d'un étudiant pour un niveau précédent donné.
+	Utilise directement les champs filiere/niveau de Session Examen Note.
+
+	Args:
+		student: name/ID de l'étudiant
+		filiere: name/ID de la filière
+		niveau_precedent_label: label du niveau précédent (ex: "Licence 1")
+	"""
+	# Convertir le label en name (ID) du child table Field of study Level
+	filiere_doc = frappe.get_doc("Field of study", filiere)
+	niveau_precedent_name = None
+	for row in filiere_doc.field_of_study_level:
+		if row.level == niveau_precedent_label:
+			niveau_precedent_name = row.name
+			break
+
+	if not niveau_precedent_name:
+		return []
+
+	SessionExamenNote = DocType("Session Examen Note")
+	TeachingUnit = DocType("Teaching Unit")
+
+	notes = (
+		frappe.qb.from_(SessionExamenNote)
+		.join(TeachingUnit)
+		.on(TeachingUnit.name == SessionExamenNote.teaching_unit)
+		.select(
+			SessionExamenNote.teaching_unit,
+			SessionExamenNote.note_finale,
+			SessionExamenNote.session_examen,
+			TeachingUnit.intitule_cours,
+			TeachingUnit.semestre
+		)
+		.where(
+			(SessionExamenNote.student == student) &
+			(SessionExamenNote.filiere == filiere) &
+			(SessionExamenNote.niveau == niveau_precedent_name)
+		)
+	).run(as_dict=True)
+
+	return notes
+
+
+@frappe.whitelist()
+def get_reregistration_summary(student, academic_year):
+	"""
+	Retourne un résumé de la réinscription d'un étudiant
+	pour une année académique donnée
+	"""
+	reregistration = frappe.get_all(
+		"Academic Reregistration",
+		filters={
+			"student": student,
+			"academic_year": academic_year
+		},
+		fields=["name", "statut", "niveau", "filiere", "semestre"]
+	)
+
+	if not reregistration:
+		return None
+
+	doc = frappe.get_doc("Academic Reregistration", reregistration[0].name)
+
+	# Compter les matières par statut
+	inscrits = len([c for c in doc.cours_inscrits if c.statut == "Inscrit"])
+	dispenses = len([c for c in doc.cours_inscrits if c.statut == "Dispensé"])
+	reportes = len([c for c in doc.cours_inscrits if c.statut == "Reporté"])
+
+	return {
+		"name": doc.name,
+		"statut": doc.statut,
+		"niveau": doc.niveau,
+		"filiere": doc.filiere,
+		"semestre": doc.semestre,
+		"total_matieres": len(doc.cours_inscrits),
+		"inscrits": inscrits,
+		"dispenses": dispenses,
+		"reportes": reportes,
+		"dettes": reportes
+	}
+
+
+@frappe.whitelist()
+def get_all_levels(faculty=None, filiere=None):
+	"""Retourne tous les niveaux groupés par filière, triés par ordre."""
+	filters = {}
+	if filiere:
+		filters["name"] = filiere
+	elif faculty:
+		filters["faculte"] = faculty
+
+	fields_of_study = frappe.get_all("Field of study", filters=filters, fields=["name", "name_of_field", "faculte"])
+	result = []
+	for fos in fields_of_study:
+		levels_data = frappe.db.get_all(
+			"Field of study Level",
+			filters={"parent": fos.name},
+			fields=["name", "level", "cycle", "order", "coordonateur", "calendrier"],
+		)
+		levels_data.sort(key=lambda x: x.get("order") or 0)
+		result.append({
+			"filiere_name": fos.name,
+			"filiere_label": fos.name_of_field,
+			"faculte": fos.faculte,
+			"levels": levels_data,
+		})
+	return result
+
+
+@frappe.whitelist()
+def add_level(filiere, level, cycle=None, coordonateur=None, calendrier="Defaut", gestionnaire_de_planning=None):
+	"""Ajoute un niveau à une filière en l'insérant au bon endroit par cycle."""
+	doc = frappe.get_doc("Field of study", filiere)
+	if any(r.level == level for r in doc.field_of_study_level):
+		frappe.throw(f"Le niveau {level} existe déjà dans {filiere}")
+
+	new_cycle = cycle or _cycle_from_level(level)
+
+	doc.append("field_of_study_level", {
+		"level": level,
+		"cycle": new_cycle,
+		"order": 0,
+		"coordonateur": coordonateur,
+		"calendrier": calendrier or "Defaut",
+		"gestionnaire_de_planning": gestionnaire_de_planning,
+	})
+	doc.save(ignore_permissions=True)
+	return {"status": True, "message": f"Niveau {level} ajouté à {filiere}"}
+
+
+def _cycle_from_level(level_label):
+	"""Déduit le cycle depuis le libellé du niveau."""
+	if not level_label:
+		return None
+	for cycle in ("BTS", "Licence", "Master", "Doctorat"):
+		if level_label.startswith(cycle):
+			return cycle
+	return None
+
+
+@frappe.whitelist()
+def delete_level(filiere, level_name):
+	"""Supprime un niveau d'une filière via SQL direct."""
+	level = frappe.db.get_value(
+		"Field of study Level",
+		{"parent": filiere, "level": level_name},
+		"name",
+	)
+	if not level:
+		frappe.throw("Niveau introuvable")
+	frappe.delete_doc("Field of study Level", level, ignore_permissions=True)
+	frappe.db.commit()
+	return {"status": True, "message": f"Niveau {level_name} supprimé de {filiere}"}
+
+
+@frappe.whitelist()
+def reorder_levels(filiere, level_names):
+	"""Réordonne les niveaux selon l'ordre reçu du drag & drop.
+
+	Met à jour directement en SQL pour éviter le cache Frappe.
+	"""
+	for i, row_name in enumerate(level_names):
+		frappe.db.sql(
+			"UPDATE `tabField of study Level` SET `order` = %s WHERE name = %s",
+			(i + 1, row_name),
+		)
+	frappe.db.commit()
+	return {"status": True, "message": "Ordre des niveaux mis à jour"}
+
+
+@frappe.whitelist()
+def get_reregistrations_by_session(reinscription_session):
+	"""
+	Retourne toutes les réinscriptions d'une session
+	avec leurs statuts — pour le tableau de bord du coordonateur
+	"""
+	reregistrations = frappe.get_all(
+		"Academic Reregistration",
+		filters={"reinscription_session": reinscription_session},
+		fields=[
+			"name", "student", "academic_year",
+			"filiere", "niveau", "semestre", "statut"
+		],
+		order_by="creation desc"
+	)
+
+	result = []
+	student_names = list(set(r.get("student") for r in reregistrations))
+	student_map = {}
+	for s_name in student_names:
+		s = frappe.get_doc("Student", s_name)
+		student_map[s_name] = {
+			"nom_etudiant": f"{s.nom} {s.prenom}",
+			"matricule": s.name,
+			"email": s.email
+		}
+
+	for r in reregistrations:
+		result.append({
+			**r,
+			**student_map.get(r.get("student"), {})
+		})
+
+	return result
+
+
+@frappe.whitelist()
+def get_reregistration_report(reinscription_session=None, filiere=None, statut=None):
+	"""
+	Rapport des réinscriptions : liste détaillée + statistiques
+	par statut, filière et niveau.
+
+	Args:
+		reinscription_session: name/ID de la Session Reinscription (optionnel)
+		filiere: name/ID de la Field of study (optionnel)
+		statut: Brouillon | En attente | Validée | Refusée (optionnel)
+
+	Returns:
+		dict: {rows, total, par_statut, par_filiere, par_niveau}
+	"""
+	filters = {}
+	if reinscription_session:
+		filters["reinscription_session"] = reinscription_session
+	if filiere:
+		filters["filiere"] = filiere
+	if statut:
+		filters["statut"] = statut
+
+	reregistrations = frappe.get_all(
+		"Academic Reregistration",
+		filters=filters,
+		fields=[
+			"name", "student", "academic_year", "reinscription_session",
+			"filiere", "niveau", "semestre", "statut", "creation"
+		],
+		order_by="creation desc"
+	)
+
+	student_names = list(set(r.get("student") for r in reregistrations))
+	student_map = {}
+	for s_name in student_names:
+		s = frappe.get_doc("Student", s_name)
+		student_map[s_name] = {
+			"matricule": s.name,
+			"nom_etudiant": f"{s.nom} {s.prenom}",
+			"email": s.email
+		}
+
+	filiere_names = list(set(r.get("filiere") for r in reregistrations))
+	filiere_map = {}
+	for f_name in filiere_names:
+		filiere_map[f_name] = (
+			frappe.db.get_value("Field of study", f_name, "name_of_field") or f_name
+		)
+
+	rows = []
+	for r in reregistrations:
+		rows.append({
+			**r,
+			"matricule": student_map.get(r.get("student"), {}).get("matricule", ""),
+			"nom_etudiant": student_map.get(r.get("student"), {}).get("nom_etudiant", ""),
+			"email": student_map.get(r.get("student"), {}).get("email", ""),
+			"filiere_label": filiere_map.get(r.get("filiere"), r.get("filiere"))
+		})
+
+	par_statut = {}
+	par_filiere = {}
+	par_niveau = {}
+	for r in rows:
+		statut = r.get("statut") or "Validée"
+		par_statut[statut] = par_statut.get(statut, 0) + 1
+		label = r.get("filiere_label") or "Non défini"
+		par_filiere[label] = par_filiere.get(label, 0) + 1
+		niveau = r.get("niveau") or "Non défini"
+		par_niveau[niveau] = par_niveau.get(niveau, 0) + 1
+
+	return {
+		"rows": rows,
+		"total": len(rows),
+		"par_statut": par_statut,
+		"par_filiere": par_filiere,
+		"par_niveau": par_niveau
+	}
+
+
+@frappe.whitelist()
+def telecharger_fiche_reinscription(reregistration_name):
+	"""Génère la fiche de réinscription en PDF.
+
+	L'étudiant lié ne peut la télécharger qu'une seule fois (fiche_telechargee).
+	Le personnel (Coordonateur / Agent de scolarité / Comptable / System Manager)
+	peut la re-télécharger sans consommer le téléchargement unique.
+	"""
+	doc = frappe.get_doc("Academic Reregistration", reregistration_name)
+	student = frappe.get_doc("Student", doc.student)
+
+	roles = frappe.get_roles()
+	is_student = student.utilisateur == frappe.session.user
+	is_staff = bool(set(roles) & {"System Manager", "Coordonateur", "Agent de scolarité", "Comptable"})
+	if not (is_student or is_staff):
+		frappe.throw("Vous n'avez pas accès à cette fiche de réinscription.")
+
+	if doc.statut != "Validée":
+		frappe.throw("La fiche de réinscription n'est disponible qu'après validation.")
+
+	if is_student and doc.fiche_telechargee:
+		frappe.throw("La fiche de réinscription a déjà été téléchargée.")
+
+	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") or doc.filiere
+	school_name = frappe.get_single("Udshed Setting").school_name or ""
+	coordonnateur = frappe.db.get_value("Field of study Level", doc.niveau, "coordonateur") or ""
+
+	template_path = os.path.join(frappe.get_app_path("udshed"), "templates", "reinscription_fiche.html")
+	with open(template_path, encoding="utf-8") as f:
+		html = frappe.render_template(f.read(), {
+			"school_name": school_name,
+			"student": {
+				"matricule": student.name,
+				"nom": student.nom or "",
+				"prenom": student.prenom or "",
+				"email": student.email
+			},
+			"doc": {
+				"name": doc.name,
+				"reinscription_session": doc.reinscription_session,
+				"academic_year": doc.academic_year,
+				"filiere_label": filiere_label,
+				"niveau": doc.niveau,
+				"semestre": doc.semestre,
+				"statut": doc.statut
+			},
+			"coordonnateur": coordonnateur,
+			"cours_inscrits": [
+				{"intitule": m.intitule, "teaching_unit": m.teaching_unit, "semestre": m.semestre, "statut": m.statut}
+				for m in doc.cours_inscrits
+			],
+			"resultats_precedents": [
+				{
+					"intitule": r.intitule, "teaching_unit": r.teaching_unit, "semestre": r.semestre,
+					"note": r.note, "valide": r.valide, "est_dette": r.est_dette
+				}
+				for r in doc.resultats_precedents
+			]
+		})
+
+	# Injection du filigrane (watermark) en bas à droite
+	watermark_css = """
+		@page { size: A4; margin: 20mm 15mm 15mm 15mm; }
+		body::after {
+			content: url("/assets/udshed/images/logo.png");
+			position: fixed;
+			bottom: 10mm; right: 10mm;
+			width: 25mm;
+			height: auto;
+			opacity: 0.3;
+			z-index: 1000;
+		}
+	"""
+	# Insert the watermark CSS just before the closing </style> tag
+	if "</style>" in html:
+		html = html.replace("</style>", watermark_css + "</style>")
+	else:
+		# If no <style> tag, inject at beginning of <body>
+		body_open = html.find("<body>")
+		if body_open != -1:
+			html = html[:body_open + 6] + watermark_css + html[body_open + 6:]
+
+	from weasyprint import HTML
+
+	try:
+		pdf = HTML(string=html, base_url=frappe.local.site).write_pdf()
+	except Exception:
+		frappe.log_error("reregistration telecharger_fiche_reinscription weasyprint")
+		frappe.throw(_("Erreur lors de la génération du PDF. Veuillez réessayer."))
+
+	if is_student:
+		doc.db_set("fiche_telechargee", 1)
+		frappe.db.commit()
+
+	frappe.local.response.filename = f"Fiche_Reinscription_{doc.name}.pdf"
+	frappe.local.response.filecontent = pdf
+	frappe.local.response.type = "pdf"
+>>>>>>> 38ff798 (feat: watermark + name UDSHED on candidature + inscription fiches - fix watermark logo, remove hardcoded school name, add config logo placeholder, misc watermark reliability fixes)
