@@ -3,6 +3,27 @@ import frappe
 
 
 @frappe.whitelist(allow_guest=True)
+def get_niveaux_filiere(filiere=None):
+    """Retourne les niveaux disponibles pour la filière sélectionnée.
+
+    Utilisé par le web form de candidature (section « Choix du candidat ») :
+    quand le candidat choisit une filière, les niveaux proposés sont ceux
+    configurés sur cette filière (Field of study Level du Field of study).
+    """
+    if not filiere:
+        return []
+
+    niveaux = frappe.get_all(
+        "Field of study Level",
+        filters={"parent": filiere},
+        fields=["level", "order"],
+        order_by="order asc, level asc",
+        ignore_permissions=True,
+    )
+    return [n.get("level") for n in niveaux if n.get("level")]
+
+
+@frappe.whitelist(allow_guest=True)
 def creer_candidature(donnees=None):
     """Crée une nouvelle candidature Session Inscription Candidate depuis le formulaire public.
 
@@ -85,3 +106,81 @@ def creer_candidature(donnees=None):
         "numero_dossier": doc.name,
         "nom_complet": doc.full_name,
     }
+
+
+@frappe.whitelist(allow_guest=True)
+def telecharger_fiche_pdf(dossier=None):
+    """Génère et télécharge la fiche de candidature PDF du candidat.
+
+    Appelé depuis la page de confirmation (`/candidature-success`) après la
+    soumission : bouton « Télécharger ma fiche PDF ».
+
+    La photo d'identité est convertie en data-URI (base64) car elle peut être
+    stockée dans `/private/files/`, inaccessible par wkhtmltopdf sans session
+    (échec ContentAccessDenied). Les fichiers non-images (ex. .MP4) sont
+    simplement ignorés.
+    """
+    from frappe.utils import cint
+    from frappe.utils.pdf import get_pdf
+
+    if not dossier or dossier.lower() in ("undefined", "null"):
+        frappe.throw("Numéro de dossier manquant.")
+
+    doc = frappe.get_doc("Session Inscription Candidate", dossier)
+
+    photo_data_uri = ""
+    fichier_id_photo = doc.get("id_photo")
+    if fichier_id_photo and fichier_id_photo.startswith("/private/files/"):
+        ext = fichier_id_photo.rsplit(".", 1)[-1].lower() if "." in fichier_id_photo else ""
+        if ext in ("jpg", "jpeg", "png"):
+            chemin = _chemin_fichier(fichier_id_photo)
+            import base64 as _base64
+            mime = "image/jpeg" if ext in ("jpg", "jpeg") else "image/png"
+            try:
+                with open(chemin, "rb") as f:
+                    contenu = f.read()
+                photo_data_uri = f"data:{mime};base64,{_base64.b64encode(contenu).decode('utf-8')}"
+            except OSError:
+                photo_data_uri = ""
+
+    from udshed.api.school_setting import get_school_data
+
+    school_name, school_logo = get_school_data()
+    logo_url = school_logo or "/assets/udshed/images/logo.png"
+    if logo_url.startswith("/"):
+        logo_url = frappe.utils.get_url(logo_url)
+
+    html = frappe.render_template(
+        "templates/print/fiche_candidature.html",
+        {
+            "doc": doc,
+            "photo_data_uri": photo_data_uri,
+            "school_name": school_name or "UNIVERSITÉ DIGITALE UDSHED",
+            "logo_url": logo_url,
+        },
+    )
+    pdf = get_pdf(html)
+
+    frappe.response["filename"] = f"Fiche-Candidature-{doc.name}.pdf"
+    frappe.response["filecontent"] = pdf
+    frappe.response["type"] = "download"
+    frappe.response["content_type"] = "application/pdf; charset=utf-8"
+
+
+def _chemin_fichier(file_url):
+    """Convertit une URL de fichier (/private/files/...) en chemin complet sur disque."""
+    import os
+    from frappe.utils import get_site_path
+    parts = file_url.split("/", 3)
+    if len(parts) == 4 and parts[1] == "private":
+        base = os.path.join(frappe.local.site_path, "private", "files")
+        nom = parts[3]
+    elif len(parts) == 4:
+        base = os.path.join(frappe.local.site_path, "public", "files")
+        nom = parts[3]
+    else:
+        base = None
+        nom = None
+    if base and nom:
+        return os.path.join(base, nom)
+    return None

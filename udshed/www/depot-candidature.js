@@ -93,8 +93,11 @@ $(document).ready(function () {
             fd.append("doctype", "Session Inscription Candidate");
             fd.append("folder", "Home/Attachments");
 
-            fetch("/api/method/frappe.utils.file_manager.upload_file", {
+            fetch("/api/method/upload_file", {
                 method: "POST",
+                headers: {
+                    "X-Frappe-CSRF-Token": frappe.csrf_token || "",
+                },
                 body: fd,
             })
                 .then(function (res) { return res.json(); })

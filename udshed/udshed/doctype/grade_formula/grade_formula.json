@@ -1,7 +1,8 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2026-08-08 00:00:00.000000",
+ "autoname": "UD-.####",
+ "creation": "2026-08-08 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -60,25 +61,25 @@
    "default": "Au plus proche",
    "fieldname": "methode_arrondi",
    "fieldtype": "Select",
-   "label": "Méthode d'arrondi",
-   "options": "Au plus proche\nAu supérieur\nÀ l'inférieur\nSans arrondi"
+   "label": "M\u00e9thode d'arrondi",
+   "options": "Au plus proche\nAu sup\u00e9rieur\n\u00c0 l'inf\u00e9rieur\nSans arrondi"
   },
   {
    "fieldname": "methode_cc_section",
    "fieldtype": "Section Break",
-   "label": "Calcul du Contrôle Continu"
+   "label": "Calcul du Contr\u00f4le Continu"
   },
   {
-   "default": "Moyenne arithmétique",
+   "default": "Moyenne arithm\u00e9tique",
    "fieldname": "methode_calcul_cc",
    "fieldtype": "Select",
-   "label": "Méthode de calcul de la moyenne CC",
-   "options": "Moyenne arithmétique\nMoyenne des N meilleures notes\nMoyenne pondérée"
+   "label": "M\u00e9thode de calcul de la moyenne CC",
+   "options": "Moyenne arithm\u00e9tique\nMoyenne des N meilleures notes\nMoyenne pond\u00e9r\u00e9e"
   },
   {
    "default": "2",
    "depends_on": "eval:doc.methode_calcul_cc=='Moyenne des N meilleures notes'",
-   "description": "Utilisé pour la méthode « Moyenne des N meilleures notes ».",
+   "description": "Utilis\u00e9 pour la m\u00e9thode \u00ab Moyenne des N meilleures notes \u00bb.",
    "fieldname": "nb_meilleures_notes_cc",
    "fieldtype": "Int",
    "label": "Nombre de meilleures notes CC (N)",
@@ -87,30 +88,30 @@
   {
    "fieldname": "formule_section",
    "fieldtype": "Section Break",
-   "label": "Formule du cours / matière"
+   "label": "Formule du cours / mati\u00e8re"
   },
-   {
-    "description": "Composantes de la note du cours. La somme des pourcentages doit être exactement 100 %.",
-    "fieldname": "components",
-    "fieldtype": "Table",
-    "label": "Composantes de la formule",
-    "options": "Grade Formula Component"
-   },
-   {
-    "description": "Déduite automatiquement des composantes (pourcentage > 0). Une formule active par cycle et par combinaison. Détermine la sélection automatique de la formule lors de la saisie des notes.",
-    "fieldname": "combinaison",
-    "fieldtype": "Data",
-    "in_list_view": 1,
-    "label": "Combinaison d'évaluations",
-    "read_only": 1
-   },
+  {
+   "description": "Composantes de la note du cours. La somme des pourcentages doit \u00eatre exactement 100 %.",
+   "fieldname": "components",
+   "fieldtype": "Table",
+   "label": "Composantes de la formule",
+   "options": "Grade Formula Component"
+  },
+  {
+   "description": "D\u00e9duite automatiquement des composantes (pourcentage > 0). Une formule active par cycle et par combinaison. D\u00e9termine la s\u00e9lection automatique de la formule lors de la saisie des notes.",
+   "fieldname": "combinaison",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Combinaison d'\u00e9valuations",
+   "read_only": 1
+  },
   {
    "fieldname": "composition_section",
    "fieldtype": "Section Break",
-   "label": "Composition interne (TP → CC, TP → Examen, …)"
+   "label": "Composition interne (TP \u2192 CC, TP \u2192 Examen, \u2026)"
   },
   {
-   "description": "Définit comment une composante principale est elle-même calculée. Chaque composition interne doit totaliser 100 %.",
+   "description": "D\u00e9finit comment une composante principale est elle-m\u00eame calcul\u00e9e. Chaque composition interne doit totaliser 100 %.",
    "fieldname": "composition",
    "fieldtype": "Table",
    "label": "Compositions internes",
@@ -119,22 +120,23 @@
   {
    "fieldname": "apercu_section",
    "fieldtype": "Section Break",
-   "label": "Aperçu de la formule"
+   "label": "Aper\u00e7u de la formule"
   },
   {
    "fieldname": "apercu",
    "fieldtype": "Text",
-   "label": "Aperçu",
+   "label": "Aper\u00e7u",
    "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-08 00:00:00.000000",
+ "modified": "2026-09-12 09:04:20.800494",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Grade Formula",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

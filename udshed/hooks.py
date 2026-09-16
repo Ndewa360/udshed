@@ -39,7 +39,6 @@ role_home_page = {
 	"Udshed Financial Admin": "/desk",
 	"Comptable": "/desk",
 	"Agent de scolarité": "/desk",
-	"student": "/desk",
 }
 
 
@@ -155,30 +154,20 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Integration Setup
 # ------------------
-# To set up dependencies/integrations with other apps
-# Name of the app being installed is passed as an argument
-
 # before_app_install = "udshed.utils.before_app_install"
 # after_app_install = "udshed.utils.after_app_install"
 
 # Integration Cleanup
 # -------------------
-# To clean up dependencies/integrations with other apps
-# Name of the app being uninstalled is passed as an argument
-
 # before_app_uninstall = "udshed.utils.before_app_uninstall"
 # after_app_uninstall = "udshed.utils.after_app_uninstall"
 
 # Desk Notifications
 # ------------------
-# See frappe.core.notifications.get_notification_config
-
 # notification_config = "udshed.notifications.get_notification_config"
 
 # Permissions
 # -----------
-# Permissions evaluated in scripted ways
-
 # permission_query_conditions = {
 # 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
 # }
@@ -189,8 +178,6 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Document Events
 # ---------------
-# Hook on document methods and events
-
 # doc_events = {
 # 	"*": {
 # 		"on_update": "method",
@@ -202,23 +189,11 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"udshed.tasks.all"
-# 	],
-# 	"daily": [
-# 		"udshed.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"udshed.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"udshed.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"udshed.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"udshed.udshed.tasks.daily"
+	],
+}
 
 # Testing
 # -------
@@ -227,32 +202,20 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Extend DocType Class
 # ------------------------------
-#
-# Specify custom mixins to extend the standard doctype controller.
 # extend_doctype_class = {
 # 	"Task": "udshed.custom.task.CustomTaskMixin"
 # }
 
 # Overriding Methods
 # ------------------------------
-#
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "udshed.event.get_events"
 # }
-#
-# each overriding function accepts a `data` argument;
-# generated from the base implementation of the doctype dashboard,
-# along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
 # 	"Task": "udshed.task.get_dashboard_data"
 # }
 
-# exempt linked doctypes from being automatically cancelled
-#
 # auto_cancel_exempted_doctypes = ["Auto Repeat"]
-
-# Ignore links to specified DocTypes when deleting documents
-# -----------------------------------------------------------
 
 # ignore_links_on_delete = ["Communication", "ToDo"]
 
@@ -265,11 +228,6 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # ----------
 # before_job = ["udshed.utils.before_job"]
 # after_job = ["udshed.utils.after_job"]
-
-# Boot Session
-# ------------
-
-boot_session = ["udshed.boot_student.configure_student_desk"]
 
 # User Data Protection
 # --------------------
@@ -302,7 +260,6 @@ boot_session = ["udshed.boot_student.configure_student_desk"]
 # 	"udshed.auth.validate"
 # ]
 
-# Automatically update python controller files with type annotations for this app.
 # export_python_type_annotations = True
 
 # Website redirects

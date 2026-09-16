@@ -116,7 +116,12 @@
             Un accusé de réception vous a été envoyé par email.
         </p>
         <div class="dossier-number" id="dossier-number">Chargement…</div>
-        <a href="/app/welcome" class="btn btn-primary btn-home">Retour à l'accueil</a>
+        <div class="d-flex flex-column align-items-center" style="gap: 12px;">
+            <a id="btn-pdf" class="btn btn-primary btn-home" href="#" style="background:#c0392b;border-color:#c0392b;">
+                &#128196; Télécharger ma fiche de candidature
+            </a>
+            <a href="/" class="btn btn-primary btn-home">Retour à l'accueil</a>
+        </div>
         <p class="success-note">Vous pouvez suivre l'avancement de votre dossier à tout moment.</p>
     </div>
 </div>
@@ -125,10 +130,16 @@
     // Récupère le numéro de dossier depuis l'URL
     const urlParams = new URLSearchParams(window.location.search);
     const dossier = urlParams.get('dossier');
+    const pdfLink = document.getElementById('btn-pdf');
     if (dossier) {
         document.getElementById('dossier-number').textContent = 'Votre numéro de dossier : ' + dossier;
+        pdfLink.href =
+            '/api/method/udshed.api.candidature.telecharger_fiche_pdf?dossier=' + encodeURIComponent(dossier);
+        // Pas de téléchargement automatique : on laisse la page de succès affichée
+        // et l'utilisateur clique lui-même sur « Télécharger ma fiche de candidature ».
     } else {
         document.getElementById('dossier-number').textContent = 'Conservez votre numéro de dossier.';
+        document.getElementById('btn-pdf').style.display = 'none';
     }
 </script>
 {% endblock %}
