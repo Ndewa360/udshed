@@ -13,7 +13,8 @@
   "semestre",
   "note",
   "valide",
-  "est_dette"
+  "est_dette",
+  "credits"
  ],
  "fields": [
   {
@@ -58,15 +59,22 @@
    "read_only": 1
   },
   {
-   "default": "0",
-   "description": "Coch\u00e9 si la mati\u00e8re n'est pas valid\u00e9e et doit \u00eatre repass\u00e9e",
-   "fieldname": "est_dette",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "Dette acad\u00e9mique",
-   "read_only": 1
-  }
- ],
+"default": "0",
+    "description": "Coch\u00e9 si la mati\u00e8re n'est pas valid\u00e9e et doit \u00eatre repass\u00e9e",
+    "fieldname": "est_dette",
+    "fieldtype": "Check",
+    "in_list_view": 1,
+    "label": "Dette acad\u00e9mique",
+    "read_only": 1
+   },
+   {
+    "fieldname": "credits",
+    "fieldtype": "Int",
+    "in_list_view": 1,
+    "label": "Cr\u00e9dits",
+    "read_only": 1
+   }
+  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,

@@ -10,9 +10,6 @@ frappe.pages["report-reinscription"].on_page_load = function (wrapper) {
 
 	const STATUT_COLORS = {
 		"Validée": "green",
-		"Brouillon": "orange",
-		"En attente": "yellow",
-		"Refusée": "red",
 	};
 
 	function esc(s) {

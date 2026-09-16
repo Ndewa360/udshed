@@ -430,10 +430,16 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Comptable",
-   "share": 1
+"role": "Comptable",
+    "share": 1
+   },
+{
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "role": "student"
   }
- ],
+  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
