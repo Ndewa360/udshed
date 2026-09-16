@@ -4,6 +4,10 @@
 import frappe
 from frappe.model.document import Document
 from frappe import _
+from udshed.api.inscription import (
+    _cree_compte_utilisateur,
+    _auto_enroll_student_bulk as _auto_enroll_student,
+)
 
 
 class SessionInscriptionCandidate(Document):
@@ -644,13 +648,12 @@ def login_inscription(doc_name: str, password: str) -> dict:
 
 @frappe.whitelist(allow_guest=True)
 def submit_inscription(doc_name: str, data: str) -> dict:
-	"""Finalise l'inscription d'un candidat accepté.
+	"""Finalise l'inscription d'un candidat accepté (flux page /inscription).
 
-	1. Crée le record Student (STU-####)
-	2. Auto-inscrit aux Teaching Units de sa filière/niveau
-	3. Crée le compte utilisateur
-	4. Met le statut à Inscrit + envoie email validation
+	Délègue à la fonction unifiée dans inscription.py pour éviter la duplication.
 	"""
+	from udshed.udshed.api.inscription import _finaliser_inscription_complete
+
 	if not doc_name:
 		frappe.throw(_("Numéro de dossier manquant."))
 
@@ -664,140 +667,66 @@ def submit_inscription(doc_name: str, data: str) -> dict:
 	if candidate.candidature_status != "Accepté":
 		frappe.throw(_("Seules les candidatures acceptées peuvent finaliser l'inscription."))
 
-	_niveau = (candidate.niveau or "").upper()
-	if "BTS" in _niveau:
-		cycle = "BTS"
-	elif "MASTER" in _niveau:
-		cycle = "Master"
+	# Préparer les données pour la finalisation unifiée
+	donnees = {
+		"annee_academique": data.get("annee_academique"),
+		"sexe": data.get("sexe"),
+		"nationalite": data.get("nationalite"),
+		"region_origine": data.get("region_origine"),
+		"langue": data.get("langue"),
+		"religion": data.get("religion"),
+		"situation_matrimoniale": data.get("situation_matrimoniale"),
+		"situatio_emploi": data.get("situatio_emploi"),
+		"handicape": data.get("handicape"),
+		"nom_prenom_pere": data.get("nom_prenom_pere"),
+		"pere_telephone": data.get("pere_telephone"),
+		"pere_profession": data.get("pere_profession"),
+		"pere_ville": data.get("pere_ville"),
+		"nom_prenom_mere": data.get("nom_prenom_mere"),
+		"telephone_mere": data.get("telephone_mere"),
+		"profession_mere": data.get("profession_mere"),
+		"mere_ville": data.get("mere_ville"),
+		"nom_prenom_sponsor": data.get("nom_prenom_sponsor"),
+		"telephone_sponsor": data.get("telephone_sponsor"),
+		"profession_sponsor": data.get("profession_sponsor"),
+		"sponsor_ville": data.get("sponsor_ville"),
+		"dernier_etablissement": data.get("dernier_etablissement"),
+		"diplome_entree": data.get("diplome_entree"),
+		"matricule_diplome": data.get("matricule_diplome"),
+		"activites_sportives": data.get("activites_sportives"),
+		"activites_associatives": data.get("activites_associatives"),
+		"activites_culturelles": data.get("activites_culturelles"),
+		"connaissances_informatiques": data.get("connaissances_informatiques"),
+	}
+
+	result = _finaliser_inscription_complete(candidate, donnees)
+
+	# Format de retour compatible avec l'ancien code
+	if result.get("already_registered"):
+		# Déjà inscrit, récupérer infos pour le retour
+		student_name = frappe.db.get_value("Student", {"email": candidate.email}, "name")
+		enrolled = frappe.get_all(
+			"Academic Reregistration",
+			filters={"student": student_name, "academic_year": frappe.db.get_single_value("Udshed Setting", "current_year")},
+			fields=["cours_inscrits"],
+			pluck="cours_inscrits",
+		)
+		enrolled_tus = [item.teaching_unit for sublist in enrolled for item in sublist] if enrolled else []
 	else:
-		cycle = "Licence"
-
-	student = frappe.get_doc({
-		"doctype": "Student",
-		"matricule": frappe.db.get_value(
-			"Inscription Academique",
-			{"dossier_origine": candidate.name},
-			"matricule",
-		) or "",
-		"nom": candidate.first_name,
-		"prenom": candidate.last_name,
-		"email": candidate.email,
-		"sexe": candidate.sexe,
-		"phone": candidate.phone,
-		"cycle": cycle,
-		"niveau_actuel": candidate.niveau or "",
-		"birth_date": candidate.birthdate,
-		"birth_place": candidate.birth_place,
-		"filiere": candidate.filiere,
-		"parent_phone": data.get("parent_phone", candidate.father_phone or ""),
-		"email_parent": data.get("email_parent", candidate.email_parent or ""),
-		"photo": candidate.id_photo or "",
-	})
-	student.insert()
-
-	_cree_compte_utilisateur(student, candidate)
-
-	enrolled = _auto_enroll_student(student, candidate.filiere, candidate.niveau)
-
-	candidate.candidature_status = "Inscrit"
-	candidate.status_updated_on = frappe.utils.now_datetime()
-	candidate.status_comment = "Inscription finalisée. Matricule: {0}".format(student.matricule)
-	candidate.save()
-
-	_send_validation_email(candidate)
+		enrolled_tus = []
+		student_name = result.get("student_name")
 
 	filiere_label = frappe.db.get_value("Field of study", candidate.filiere, "name_of_field") if candidate.filiere else ""
 
-	semestre_courses = _organiser_cours_par_semestre(enrolled)
-
 	return {
 		"ok": True,
-		"student_name": student.name,
-		"matricule": student.matricule,
+		"student_name": student_name,
+		"matricule": result.get("matricule"),
 		"first_name": candidate.first_name or "",
 		"last_name": candidate.last_name or "",
 		"filiere_label": filiere_label,
 		"niveau": candidate.niveau or "",
 		"centre": candidate.examination_centre or "",
-		"semestre_courses": semestre_courses,
-		"enrolled_uv": len(enrolled),
+		"semestre_courses": {},
+		"enrolled_uv": result.get("enrolled_count", len(enrolled_tus)),
 	}
-
-
-def _cree_compte_utilisateur(student, candidate):
-	"""Crée le compte utilisateur pour l'étudiant inscrit."""
-	email = candidate.email or f"{student.name}@udshed.local"
-	if not frappe.db.exists("User", email):
-		user = frappe.get_doc({
-			"doctype": "User",
-			"email": email,
-			"first_name": candidate.first_name or "",
-			"last_name": candidate.last_name or "",
-			"send_welcome_email": 0,
-			"roles": [{"role": "Student"}],
-		})
-		user.insert(ignore_permissions=True)
-	frappe.db.set_value("Student", student.name, "utilisateur", email)
-
-
-def _organiser_cours_par_semestre(enrolled):
-	"""Organise les UV inscrites par semestre."""
-	semestres = {}
-	for tu_name in enrolled:
-		tu = frappe.db.get_value("Teaching Unit", tu_name, ["name", "course", "semestre", "credits"], as_dict=True)
-		if not tu:
-			continue
-		semestre = tu.semestre or "Semestre 1"
-		if semestre not in semestres:
-			semestres[semestre] = []
-		semestres[semestre].append({
-			"code": tu.name,
-			"intitule": tu.course or tu.name,
-			"credits": tu.credits or 0,
-		})
-	return semestres
-
-
-def _auto_enroll_student(student, filiere, niveau):
-	"""Inscrit automatiquement l'étudiant aux UV de sa filière/niveau."""
-	setting = frappe.get_single("Udshed Setting")
-	academic_year = getattr(setting, "current_year", None)
-
-	if not academic_year:
-		frappe.logger().warning(
-			"Aucune année académique courante configurée dans Udshed Setting."
-		)
-		return []
-
-	all_tu = frappe.get_all(
-		"Teaching Unit",
-		filters={"academic_year": academic_year},
-		fields=["name"],
-	)
-
-	enrolled = []
-	for tu in all_tu:
-		matches = frappe.get_all(
-			"Course Field of study level item",
-			filters={"parent": tu.name, "filiere": filiere, "niveau": niveau},
-		)
-		if matches:
-			enrolled.append(tu.name)
-
-	if enrolled:
-		reregistration = frappe.get_doc({
-			"doctype": "Academic Reregistration",
-			"student": student.name,
-			"academic_year": academic_year,
-			"filiere": student.filiere,
-			"semestre": "Les deux",
-			"statut": "Validee",
-			"cours_inscrits": [
-				{"teaching_unit": tu_name, "inscrire": 1, "est_obligatoire": 1}
-				for tu_name in enrolled
-			],
-		})
-		reregistration.insert()
-		frappe.db.commit()
-
-	return enrolled

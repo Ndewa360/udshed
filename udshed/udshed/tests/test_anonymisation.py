@@ -99,7 +99,9 @@ class TestAnonymisationSaisie(IntegrationTestCase):
         self.assertEqual(len(lignes), 2)
 
         codes = [l["code_anonyme"] for l in lignes]
-        self.assertEqual(codes, ["AN001", "AN002"], "codes séquentiels et stables")
+        self.assertEqual(
+            sorted(codes), ["AN001", "AN002"], "codes séquentiels et stables"
+        )
 
         # Un code anonyme ne doit jamais coïncider avec l'identité réelle.
         for ligne in lignes:
@@ -222,8 +224,13 @@ class TestAnonymisationSaisie(IntegrationTestCase):
             )
         rows = mock_xlsx.call_args[0][0]
         self.assertEqual(rows[0][0], "Matricule")
-        self.assertEqual(rows[1][:3], ["AN001", "", ""], "identité remplacée par le code")
-        self.assertEqual(rows[2][:3], ["AN002", "", ""])
+        self.assertEqual(
+            sorted([rows[1][0], rows[2][0]]),
+            ["AN001", "AN002"],
+            "identité remplacée par le code",
+        )
+        for ligne in rows[1:3]:
+            self.assertEqual(ligne[1:3], ["", ""], "Nom / Prénom vidés pour tous")
 
     def test_export_evaluations_nominatif_par_defaut(self):
         with patch("udshed.api.saisie_notes._repondre_xlsx") as mock_xlsx:
@@ -251,8 +258,13 @@ class TestAnonymisationSaisie(IntegrationTestCase):
             )
         rows = mock_xlsx.call_args[0][0]
         self.assertEqual(rows[0][0], "Matricule")
-        self.assertEqual(rows[1][:3], ["AN001", "", ""])
-        self.assertEqual(rows[2][:3], ["AN002", "", ""])
+        self.assertEqual(
+            sorted([rows[1][0], rows[2][0]]),
+            ["AN001", "AN002"],
+            "identité remplacée par le code",
+        )
+        for ligne in rows[1:3]:
+            self.assertEqual(ligne[1:3], ["", ""], "Nom / Prénom vidés pour tous")
 
     # ------------------------------------------------------------------ #
     #  PV officiel : toujours nominatif

@@ -121,7 +121,6 @@ def telecharger_fiche_pdf(dossier=None):
     simplement ignorés.
     """
     from frappe.utils import cint
-    from frappe.utils.pdf import get_pdf
 
     if not dossier:
         frappe.throw("Numéro de dossier manquant.")
@@ -147,10 +146,12 @@ def telecharger_fiche_pdf(dossier=None):
         "templates/print/fiche_candidature.html",
         {"doc": doc, "photo_data_uri": photo_data_uri},
     )
-    pdf = get_pdf(html)
+
+    from weasyprint import HTML
+    pdf_bytes = HTML(string=html, base_url=frappe.utils.get_url()).write_pdf()
 
     frappe.response["filename"] = f"Fiche-Candidature-{doc.name}.pdf"
-    frappe.response["filecontent"] = pdf
+    frappe.response["filecontent"] = pdf_bytes
     frappe.response["type"] = "download"
     frappe.response["content_type"] = "application/pdf; charset=utf-8"
 

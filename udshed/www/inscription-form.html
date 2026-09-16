@@ -141,7 +141,7 @@
             <div class="d-flex justify-content-between mb-4">
                 <button type="button" id="btn_prev" class="btn btn-outline-secondary" style="display: none;">Précédent</button>
                 <div></div>
-                <button type="button" id="btn_next" class="btn btn-primary">Suivant</button>
+                <button type="button" id="btn_next" class="btn btn-primary">Continuer</button>
                 <button type="submit" id="btn_enregistrer" class="btn btn-primary" style="display: none;">Terminer mon inscription</button>
             </div>
         </form>
@@ -185,5 +185,15 @@
 
 /* Espacement entre steps */
 .stepper-progress { gap: 24px; }
+
+/* Boutons navigation : hauteur cohérente */
+#btn_prev, #btn_next, #btn_enregistrer {
+    min-height: 38px;
+    padding: 8px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    border-radius: 4px;
+}
 </style>
 {% endblock %}

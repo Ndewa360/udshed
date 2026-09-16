@@ -387,3 +387,29 @@ def seed_grille_grades():
         setting.append("grille_grades", dict(row))
     setting.save(ignore_permissions=True)
     return setting
+
+
+def make_role(role):
+    """Crée un rôle s'il n'existe pas, puis le retourne."""
+    if frappe.db.exists("Role", role):
+        return frappe.get_doc("Role", role)
+    doc = frappe.new_doc("Role")
+    doc.role_name = role
+    doc.desk_access = 1
+    doc.insert(ignore_permissions=True)
+    return doc
+
+
+def make_user_with_role(role, email=None):
+    """Crée un utilisateur portant un rôle donné (les deux si absents).
+
+    Returns:
+        Document: User fraîchement créé
+    """
+    make_role(role)
+    doc = frappe.new_doc("User")
+    doc.email = email or "utilisateur-{0}@udshed.test".format(_next("USR"))
+    doc.first_name = "Utilisateur {0}".format(role)
+    doc.insert(ignore_permissions=True)
+    doc.add_roles(role)
+    return doc

@@ -38,7 +38,8 @@
   "_user_tags": null,
   "_comments": null,
   "_assign": null,
-  "_liked_by": null
+  "_liked_by": null,
+  "doctype": "Web Page"
  },
  {
   "name": "diplôme-daccès-et-documents-associés",
@@ -79,7 +80,8 @@
   "_user_tags": null,
   "_comments": null,
   "_assign": null,
-  "_liked_by": null
+  "_liked_by": null,
+  "doctype": "Web Page"
  },
  {
   "name": "informations-personnelles-du-candidat",
@@ -120,7 +122,8 @@
   "_user_tags": null,
   "_comments": null,
   "_assign": null,
-  "_liked_by": null
+  "_liked_by": null,
+  "doctype": "Web Page"
  },
  {
   "name": "choix-du-candidat",
@@ -161,7 +164,8 @@
   "_user_tags": null,
   "_comments": null,
   "_assign": null,
-  "_liked_by": null
+  "_liked_by": null,
+  "doctype": "Web Page"
  },
  {
   "name": "succès-candidature",
@@ -202,7 +206,8 @@
   "_user_tags": null,
   "_comments": null,
   "_assign": null,
-  "_liked_by": null
+  "_liked_by": null,
+  "doctype": "Web Page"
  },
  {
   "name": "home",
@@ -243,6 +248,7 @@
   "_user_tags": null,
   "_comments": null,
   "_assign": null,
-  "_liked_by": null
+  "_liked_by": null,
+  "doctype": "Web Page"
  }
 ]

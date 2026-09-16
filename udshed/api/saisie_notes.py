@@ -1268,7 +1268,57 @@ def publier_session(session):
     )
     doc.db_set("statut", "Publiée")
     doc.db_set("date_publication", today())
+
+    _declencher_calcul_resultats_post_publication(doc)
+
     return {"name": doc.name, "statut": doc.statut, "date_publication": doc.date_publication}
+
+
+def _declencher_calcul_resultats_post_publication(session_doc):
+    """Déclenche le calcul des Resultat Académique / Resultat Semestre
+    pour les étudiants dont les notes viennent d'être publiées.
+
+    Chaque student × session_normale du semestre est traité séparément.
+    En cas d'erreur sur un étudiant, il est ignoré (les résultats
+    restent recalculables manuellement via « Calculer les résultats »).
+    """
+    from udshed.api.resultat_academique import calculer_resultat_session
+
+    students = frappe.db.sql_list(
+        """
+        SELECT DISTINCT student
+        FROM `tabSession Examen Note`
+        WHERE session_examen = %s AND statut = 'Publié'
+        """,
+        session_doc.name,
+    )
+    if not students:
+        return
+
+    sessions_normales = frappe.get_all(
+        "Session Examen",
+        filters={
+            "academic_year": session_doc.academic_year,
+            "semestre": session_doc.semestre,
+            "type_dexamen": TYPE_NORMALE,
+        },
+        pluck="name",
+    )
+
+    for student in students:
+        for sess in sessions_normales:
+            if not frappe.db.exists(
+                "Session Examen Note",
+                {"session_examen": sess, "student": student, "statut": "Publié"},
+            ):
+                continue
+            try:
+                calculer_resultat_session(student, sess)
+            except Exception:
+                frappe.log_error(
+                    frappe.get_traceback(),
+                    "udshed: calcul résultat post-publication",
+                )
 
 
 def _colonnes_cc(cc_columns):

@@ -1,0 +1,179 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "format: COPIE-{YYYY}-{####}",
+ "creation": "2026-09-13 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "session_examen",
+  "teaching_unit",
+  "code_anonymat",
+  "column_break_statut",
+  "statut_correction",
+  "examen_anonymat",
+  "section_break_correction",
+  "fichier_copie",
+  "note_examen",
+  "observation",
+  "section_break_tracabilite",
+  "absent",
+  "corrige_par",
+  "corrige_le"
+ ],
+ "fields": [
+  {
+   "fieldname": "session_examen",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Session Examen",
+   "options": "Session Examen",
+   "reqd": 1
+  },
+  {
+   "fieldname": "teaching_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Teaching Unit",
+   "options": "Teaching Unit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "code_anonymat",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code Anonymat",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_statut",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "En attente",
+   "fieldname": "statut_correction",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Statut de correction",
+   "options": "En attente\nDéposée\nEn correction\nCorrigée\nValidée\nCopie manquante"
+  },
+  {
+   "fieldname": "examen_anonymat",
+   "fieldtype": "Link",
+   "label": "Examen Anonymat",
+   "options": "Examen Anonymat",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_correction",
+   "fieldtype": "Section Break",
+   "label": "Correction"
+  },
+  {
+   "fieldname": "fichier_copie",
+   "fieldtype": "Attach",
+   "label": "Fichier copie"
+  },
+  {
+   "fieldname": "note_examen",
+   "fieldtype": "Currency",
+   "label": "Note Examen (/20)",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "observation",
+   "fieldtype": "Text",
+   "label": "Observation"
+  },
+  {
+   "fieldname": "section_break_tracabilite",
+   "fieldtype": "Section Break",
+   "label": "Traçabilité"
+  },
+  {
+   "default": "0",
+   "fieldname": "absent",
+   "fieldtype": "Check",
+   "label": "Absent"
+  },
+  {
+   "fieldname": "corrige_par",
+   "fieldtype": "Data",
+   "label": "Corrigé par",
+   "read_only": 1
+  },
+  {
+   "fieldname": "corrige_le",
+   "fieldtype": "Datetime",
+   "label": "Corrigé le",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-13 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Copie Examen",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Correcteur",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Teacher",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

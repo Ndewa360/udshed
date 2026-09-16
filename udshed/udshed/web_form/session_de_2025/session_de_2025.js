@@ -616,10 +616,24 @@ frappe.ready(function() {
 		return true;
 	};
 
+	// ---- Récupération du nom du document créé ----
+	// Dans cette version de Frappe, frappe.web_form.doc n'est pas rechargé avec
+	// le document créé après soumission : on capture donc le `name` renvoyé
+	// par le serveur afin que after_save redirige vers le vrai numéro de dossier.
+	const __save_success_handler = frappe.web_form.handle_success;
+	frappe.web_form.handle_success = function (data) {
+		if (data && typeof data === "object" && data.name) {
+			frappe.web_form.doc.name = data.name;
+		}
+		return __save_success_handler.call(frappe.web_form, data);
+	};
+
 	// ---- Redirection après soumission ----
 	frappe.web_form.after_save = function() {
-		const docName = frappe.web_form.doc.name;
-		window.location.href = '/candidature-success?dossier=' + encodeURIComponent(docName);
+		const docName = frappe.web_form.doc && frappe.web_form.doc.name;
+		window.location.href = docName
+			? '/candidature-success?dossier=' + encodeURIComponent(docName)
+			: '/candidature-success';
 	};
 
 	// ---- Choix du candidat : les options s'affichent selon la filière sélectionnée ----

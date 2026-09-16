@@ -39,6 +39,7 @@ role_home_page = {
 	"Udshed Financial Admin": "/desk",
 	"Comptable": "/desk",
 	"Agent de scolarité": "/desk",
+	"Correcteur": "/desk",
 }
 
 
@@ -48,7 +49,7 @@ fixtures = [
     {
         "dt" : "Role",
         "filters": [
-            ["name","in",["Teacher","Coordonateur","Udshed Financial Admin", "Planning Manager", "Registration Manager", "Agent de scolarité", "Comptable"]]
+            ["name","in",["Teacher","Coordonateur","Udshed Financial Admin", "Planning Manager", "Registration Manager", "Agent de scolarité", "Comptable", "Correcteur"]]
         ]
     },
     {
