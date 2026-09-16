@@ -134,22 +134,7 @@
     "type": "Link",
     "url": null
    },
-   {
-    "child": 1,
-    "collapsible": 1,
-    "filters": null,
-    "icon": "bar-chart",
-    "indent": 1,
-    "keep_closed": 0,
-    "label": "Rapports de réinscription",
-    "link_to": "report-reinscription",
-    "link_type": "Page",
-    "navigate_to_tab": null,
-    "route_options": null,
-    "show_arrow": 0,
-    "type": "Link",
-    "url": null
-   },
+
    {
     "child": 0,
     "collapsible": 1,

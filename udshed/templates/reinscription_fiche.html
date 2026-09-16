@@ -7,10 +7,13 @@
 	.header { text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 10px; }
 	h1 { font-size: 20px; margin: 4px 0; color: #0f766e; }
 	h2 { font-size: 14px; margin: 2px 0; text-transform: uppercase; letter-spacing: 1px; }
-	h3 { font-size: 13px; color: #0f766e; margin: 18px 0 6px; text-transform: uppercase; }
+	h3 { font-size: 13px; color: #0f766e; margin: 18px 0 6px; text-transform: uppercase; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; }
 	.info-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
 	.info-table td { padding: 4px 6px; font-size: 12px; }
 	.info-table td.label { width: 200px; font-weight: bold; }
+	.info-two-col { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 12px; }
+	.info-two-col td { padding: 3px 6px; width: 50%; }
+	.info-two-col td.lbl { font-weight: bold; width: 180px; }
 	table.data { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 12px; }
 	table.data th, table.data td { border: 1px solid #9ca3af; padding: 5px 6px; text-align: left; }
 	table.data th { background: #0f766e; color: white; }
@@ -28,10 +31,18 @@
 		<h2>Fiche de r&eacute;inscription</h2>
 	</div>
 
+	<h3>Informations de l&rsquo;&eacute;tudiant</h3>
 	<table class="info-table">
 		<tr><td class="label">N&deg; fiche</td><td>{{ doc.name }}</td></tr>
 		<tr><td class="label">&Eacute;tudiant</td><td>{{ student.nom }} {{ student.prenom }} ({{ student.matricule }})</td></tr>
 		<tr><td class="label">Email</td><td>{{ student.email or "—" }}</td></tr>
+		<tr><td class="label">Date de naissance</td><td>{{ student.date_naissance or "—" }}</td></tr>
+		<tr><td class="label">Lieu de naissance</td><td>{{ student.lieu_naissance or "—" }}</td></tr>
+		<tr><td class="label">T&eacute;l&eacute;phone</td><td>{{ student.telephone or "—" }}</td></tr>
+	</table>
+
+	<h3>Inscription</h3>
+	<table class="info-table">
 		<tr><td class="label">Fili&egrave;re</td><td>{{ doc.filiere_label }}</td></tr>
 		<tr><td class="label">Niveau</td><td>{{ doc.niveau }}</td></tr>
 		<tr><td class="label">Semestre</td><td>{{ doc.semestre }}</td></tr>
@@ -39,6 +50,61 @@
 		<tr><td class="label">Session de r&eacute;inscription</td><td>{{ doc.reinscription_session }}</td></tr>
 		<tr><td class="label">Statut</td><td class="statut">{{ doc.statut }}</td></tr>
 	</table>
+
+	{% if doc.dernier_etablissement or doc.diplome_entree %}
+	<h3>&Eacute;tudes ant&eacute;rieures</h3>
+	<table class="info-table">
+		{% if doc.dernier_etablissement %}<tr><td class="label">Dernier &eacute;tablissement</td><td>{{ doc.dernier_etablissement }}</td></tr>{% endif %}
+		{% if doc.diplome_entree %}<tr><td class="label">Dipl&ocirc;me d&rsquo;entr&eacute;e</td><td>{{ doc.diplome_entree }}</td></tr>{% endif %}
+		{% if doc.matricule_diplome %}<tr><td class="label">Matricule du dipl&ocirc;me</td><td>{{ doc.matricule_diplome }}</td></tr>{% endif %}
+	</table>
+	{% endif %}
+
+	{% if doc.nom_prenom_pere or doc.nom_prenom_mere %}
+	<h3>Famille</h3>
+	<table class="info-two-col">
+		{% if doc.nom_prenom_pere %}
+		<tr>
+			<td class="lbl">P&egrave;re :</td><td>{{ doc.nom_prenom_pere }}</td>
+			<td class="lbl">T&eacute;l. :</td><td>{{ doc.pere_telephone or "—" }}</td>
+		</tr>
+		<tr>
+			<td class="lbl">Profession :</td><td>{{ doc.pere_profession or "—" }}</td>
+			<td class="lbl">Ville :</td><td>{{ doc.pere_ville or "—" }}</td>
+		</tr>
+		{% endif %}
+		{% if doc.nom_prenom_mere %}
+		<tr>
+			<td class="lbl">M&egrave;re :</td><td>{{ doc.nom_prenom_mere }}</td>
+			<td class="lbl">T&eacute;l. :</td><td>{{ doc.telephone_mere or "—" }}</td>
+		</tr>
+		<tr>
+			<td class="lbl">Profession :</td><td>{{ doc.profession_mere or "—" }}</td>
+			<td class="lbl">Ville :</td><td>{{ doc.mere_ville or "—" }}</td>
+		</tr>
+		{% endif %}
+		{% if doc.nom_prenom_sponsor %}
+		<tr>
+			<td class="lbl">Sponsor :</td><td>{{ doc.nom_prenom_sponsor }}</td>
+			<td class="lbl">T&eacute;l. :</td><td>{{ doc.telephone_sponsor or "—" }}</td>
+		</tr>
+		<tr>
+			<td class="lbl">Profession :</td><td>{{ doc.profession_sponsor or "—" }}</td>
+			<td class="lbl">Ville :</td><td>{{ doc.sponsor_ville or "—" }}</td>
+		</tr>
+		{% endif %}
+	</table>
+	{% endif %}
+
+	{% if doc.activites_sportives or doc.activites_associatives or doc.activites_culturelles or doc.connaissances_informatiques %}
+	<h3>Activit&eacute;s compl&eacute;mentaires</h3>
+	<table class="info-table">
+		{% if doc.activites_sportives %}<tr><td class="label">Sportives</td><td>{{ doc.activites_sportives }}</td></tr>{% endif %}
+		{% if doc.activites_associatives %}<tr><td class="label">Associatives</td><td>{{ doc.activites_associatives }}</td></tr>{% endif %}
+		{% if doc.activites_culturelles %}<tr><td class="label">Culturelles</td><td>{{ doc.activites_culturelles }}</td></tr>{% endif %}
+		{% if doc.connaissances_informatiques %}<tr><td class="label">Info.</td><td>{{ doc.connaissances_informatiques }}</td></tr>{% endif %}
+	</table>
+	{% endif %}
 
 	<h3>Mati&egrave;res inscrites</h3>
 	{% if cours_inscrits %}

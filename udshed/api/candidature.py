@@ -122,7 +122,7 @@ def telecharger_fiche_pdf(dossier=None):
     """
     from frappe.utils import cint
 
-    if not dossier:
+    if not dossier or dossier.lower() in ("undefined", "null"):
         frappe.throw("Numéro de dossier manquant.")
 
     doc = frappe.get_doc("Session Inscription Candidate", dossier)
@@ -142,9 +142,21 @@ def telecharger_fiche_pdf(dossier=None):
             except OSError:
                 photo_data_uri = ""
 
+    from udshed.api.school_setting import get_school_data
+
+    school_name, school_logo = get_school_data()
+    logo_url = school_logo or "/assets/udshed/images/logo.png"
+    if logo_url.startswith("/"):
+        logo_url = frappe.utils.get_url(logo_url)
+
     html = frappe.render_template(
         "templates/print/fiche_candidature.html",
-        {"doc": doc, "photo_data_uri": photo_data_uri},
+        {
+            "doc": doc,
+            "photo_data_uri": photo_data_uri,
+            "school_name": school_name or "UNIVERSITÉ DIGITALE UDSHED",
+            "logo_url": logo_url,
+        },
     )
 
     from weasyprint import HTML

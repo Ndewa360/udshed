@@ -145,6 +145,9 @@ def _finaliser_inscription_complete(dossier, donnees):
             "connaissances_informatiques",
         }
         valeurs = {champ: donnees.get(champ) for champ in champs_autorises if donnees.get(champ) is not None}
+        for champ in ("pere_telephone", "telephone_mere", "telephone_sponsor"):
+            if champ in valeurs:
+                valeurs[champ] = _telephone_237(valeurs[champ])
 
         doc_inscription = frappe.get_doc({
             "doctype": "Inscription Academique",
@@ -608,3 +611,17 @@ def get_liste_inscriptions(filiere=None):
         "par_filiere": par_filiere,
         "par_niveau": par_niveau,
     }
+
+
+def _telephone_237(valeur):
+    """Préfixe l'indicatif pays +237 (Cameroun) aux numéros de téléphone.
+
+    Les champs de type Phone de Frappe refusent un numéro sans code pays
+    (InvalidPhoneNumberError). Si le numéro saisi n'est pas précédé de « + »,
+    on y ajoute l'indicatif camerounais.
+    """
+    texte = " ".join(str(valeur or "").split())
+    if not texte or texte.startswith("+"):
+        return texte
+    chiffres = "".join(caractere for caractere in texte if caractere.isdigit())
+    return "+237" + chiffres if chiffres else texte

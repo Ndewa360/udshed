@@ -67,11 +67,82 @@ def get_open_sessions():
 
 
 @frappe.whitelist()
-def get_student_by_matricule(matricule):
-	"""Retrouver un étudiant par son matricule"""
-	if not frappe.db.exists("Student", matricule):
+def get_student_by_matricule(matricule=None):
+	"""Retrouver l'étudiant : par matricule, ou par l'utilisateur courant
+	(le matricule fourni peut être un email / nom d'utilisateur)."""
+	if not matricule:
+		matricule = frappe.session.user
+
+	student_name = None
+	if frappe.db.exists("Student", matricule):
+		student_name = matricule
+	else:
+		# À défaut, chercher via le champ « utilisateur » lié au compte Frappe
+		student_name = frappe.db.sql(
+			"SELECT name FROM `tabStudent` WHERE utilisateur=%s LIMIT 1",
+			matricule,
+			pluck=True,
+		)
+		student_name = student_name[0] if student_name else None
+
+	if not student_name:
 		frappe.throw(f"Aucun étudiant trouvé avec le matricule {matricule}")
-	return frappe.get_doc("Student", matricule)
+
+	student = frappe.get_doc("Student", student_name)
+
+	# Récupérer la dernière Inscription Academique pour les données complémentaires
+	inscription = frappe.get_all(
+		"Inscription Academique",
+		filters={"matricule": student.name},
+		fields=["name", "dossier_origine", "dernier_etablissement", "diplome_entree",
+				"matricule_diplome", "nom_prenom_pere", "pere_telephone",
+				"pere_profession", "pere_ville", "nom_prenom_mere", "telephone_mere",
+				"profession_mere", "mere_ville", "nom_prenom_sponsor", "telephone_sponsor",
+				"profession_sponsor", "sponsor_ville", "activites_sportives",
+				"activites_associatives", "activites_culturelles",
+				"connaissances_informatiques"],
+		order_by="creation desc",
+		limit_page_length=1,
+	)
+	insc = inscription[0] if inscription else {}
+
+	return {
+		"name": student.name,
+		"matricule": student.matricule,
+		"nom": student.nom,
+		"prenom": student.prenom,
+		"nom_complet": f"{student.nom or ''} {student.prenom or ''}".strip(),
+		"filiere": student.filiere,
+		"niveau_actuel": student.niveau_actuel,
+		"cycle": student.cycle,
+		"email": student.email,
+		"utilisateur": student.utilisateur,
+		# Données depuis Student
+		"date_naissance": student.birth_date,
+		"lieu_naissance": student.birth_place,
+		"telephone": student.phone,
+		# Données depuis Inscription Academique
+		"dossier_origine": insc.get("dossier_origine"),
+		"dernier_etablissement": insc.get("dernier_etablissement"),
+		"diplome_entree": insc.get("diplome_entree"),
+		"matricule_diplome": insc.get("matricule_diplome"),
+		"nom_prenom_pere": insc.get("nom_prenom_pere"),
+		"pere_telephone": insc.get("pere_telephone"),
+		"pere_profession": insc.get("pere_profession"),
+		"pere_ville": insc.get("pere_ville"),
+		"nom_prenom_mere": insc.get("nom_prenom_mere"),
+		"telephone_mere": insc.get("telephone_mere"),
+		"profession_mere": insc.get("profession_mere"),
+		"mere_ville": insc.get("mere_ville"),
+		"nom_prenom_sponsor": insc.get("nom_prenom_sponsor"),
+		"telephone_sponsor": insc.get("telephone_sponsor"),
+		"profession_sponsor": insc.get("profession_sponsor"),
+		"sponsor_ville": insc.get("sponsor_ville"),
+		"activites_sportives": insc.get("activites_sportives"),
+		"activites_associatives": insc.get("activites_associatives"),
+		"activites_culturelles": insc.get("activites_culturelles"),
+		"connaissances_informatiques": insc.get("connaissances_informatiques"),
+	}
 
 
 @frappe.whitelist()
@@ -275,6 +346,25 @@ def get_reregistration_summary(student, academic_year):
 		"reportes": reportes,
 		"dettes": reportes
 	}
+
+
+@frappe.whitelist()
+def get_student_registrations(student):
+	"""
+	Retourne toutes les réinscriptions d'un étudiant
+	pour l'affichage dans le tableau de bord
+	"""
+	reregistrations = frappe.get_all(
+		"Academic Reregistration",
+		filters={"student": student},
+		fields=[
+			"name", "academic_year", "reinscription_session",
+			"filiere", "niveau", "semestre", "statut", "creation"
+		],
+		order_by="creation desc"
+	)
+
+	return reregistrations
 
 
 
@@ -498,6 +588,9 @@ def get_reregistrations_by_session(reinscription_session):
 
 
 @frappe.whitelist()
+
+
+@frappe.whitelist()
 def get_reregistration_report(reinscription_session=None, filiere=None, statut=None):
 	"""
 	Rapport des réinscriptions : liste détaillée + statistiques
@@ -576,13 +669,13 @@ def get_reregistration_report(reinscription_session=None, filiere=None, statut=N
 	}
 
 
-@frappe.whitelist()
+
 def telecharger_fiche_reinscription(reregistration_name):
 	"""Génère la fiche de réinscription en PDF.
 
-	L'étudiant lié ne peut la télécharger qu'une seule fois (fiche_telechargee).
+	L'étudiant peut télécharger sa fiche autant de fois qu'il le souhaite.
 	Le personnel (Coordonateur / Agent de scolarité / Comptable / System Manager)
-	peut la re-télécharger sans consommer le téléchargement unique.
+	peut aussi la télécharger.
 	"""
 	doc = frappe.get_doc("Academic Reregistration", reregistration_name)
 	student = frappe.get_doc("Student", doc.student)
@@ -596,9 +689,6 @@ def telecharger_fiche_reinscription(reregistration_name):
 	if doc.statut != "Validée":
 		frappe.throw("La fiche de réinscription n'est disponible qu'après validation.")
 
-	if is_student and doc.fiche_telechargee:
-		frappe.throw("La fiche de réinscription a déjà été téléchargée.")
-
 	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") or doc.filiere
 	school_name = frappe.get_single("Udshed Setting").school_name or ""
 	coordonnateur = _get_coordonnateur(doc.filiere, doc.niveau) or ""
@@ -611,7 +701,10 @@ def telecharger_fiche_reinscription(reregistration_name):
 				"matricule": student.name,
 				"nom": student.nom or "",
 				"prenom": student.prenom or "",
-				"email": student.email
+				"email": student.email,
+				"date_naissance": student.birth_date,
+				"lieu_naissance": student.birth_place,
+				"telephone": student.phone,
 			},
 			"doc": {
 				"name": doc.name,
@@ -620,7 +713,29 @@ def telecharger_fiche_reinscription(reregistration_name):
 				"filiere_label": filiere_label,
 				"niveau": doc.niveau,
 				"semestre": doc.semestre,
-				"statut": doc.statut
+				"statut": doc.statut,
+				# Études antérieures
+				"dernier_etablissement": doc.dernier_etablissement,
+				"diplome_entree": doc.diplome_entree,
+				"matricule_diplome": doc.matricule_diplome,
+				# Famille
+				"nom_prenom_pere": doc.nom_prenom_pere,
+				"pere_telephone": doc.pere_telephone,
+				"pere_profession": doc.pere_profession,
+				"pere_ville": doc.pere_ville,
+				"nom_prenom_mere": doc.nom_prenom_mere,
+				"telephone_mere": doc.telephone_mere,
+				"profession_mere": doc.profession_mere,
+				"mere_ville": doc.mere_ville,
+				"nom_prenom_sponsor": doc.nom_prenom_sponsor,
+				"telephone_sponsor": doc.telephone_sponsor,
+				"profession_sponsor": doc.profession_sponsor,
+				"sponsor_ville": doc.sponsor_ville,
+				# Activités
+				"activites_sportives": doc.activites_sportives,
+				"activites_associatives": doc.activites_associatives,
+				"activites_culturelles": doc.activites_culturelles,
+				"connaissances_informatiques": doc.connaissances_informatiques,
 			},
 			"coordonnateur": coordonnateur,
 			"cours_inscrits": [
@@ -641,10 +756,6 @@ def telecharger_fiche_reinscription(reregistration_name):
 	except Exception:
 		frappe.log_error("reregistration telecharger_fiche_reinscription get_pdf")
 		frappe.throw("Erreur lors de la génération du PDF. Veuillez réessayer.")
-
-	if is_student:
-		doc.db_set("fiche_telechargee", 1)
-		frappe.db.commit()
 
 	frappe.local.response.filename = f"Fiche_Reinscription_{doc.name}.pdf"
 	frappe.local.response.filecontent = pdf
@@ -672,6 +783,10 @@ def submit_reinscription(matricule, reinscription_session, semestre):
 	L'appelant doit être soit l'étudiant lui-même, soit un membre du personnel
 	autorisé (Coordonateur / Agent de scolarité / Comptable / System Manager).
 
+	RÈGLE MÉTIER : Un étudiant ne peut se réinscrire que pour l'année académique
+	SUIVANTE sa dernière inscription (ex: inscrit/réinscrit en 2025-2026 -> réinscription 2026-2027).
+	Il ne peut jamais se réinscrire pour une année antérieure à la sienne.
+
 	Args:
 		matricule: name/ID de l'étudiant (Student)
 		reinscription_session: name/ID de la Session Reinscription
@@ -694,16 +809,48 @@ def submit_reinscription(matricule, reinscription_session, semestre):
 	if not (is_self or is_staff):
 		frappe.throw("Vous n'êtes pas autorisé à soumettre cette réinscription.")
 
+	# RÈGLE : Vérifier que la session correspond à l'année SUIVANTE la dernière inscription
+	annee_session = frappe.db.get_value("Session Reinscription", reinscription_session, "academic_year")
+	annee_base = get_student_derniere_annee_academique(matricule)
+
+	if not annee_base:
+		frappe.throw("Aucune inscription initiale trouvée pour cet étudiant.")
+
+	annee_attendue = get_next_academic_year(annee_base)
+
+	if annee_session != annee_attendue:
+		frappe.throw(
+			"Réinscription refusée : vous ne pouvez vous réinscrire que pour l'année académique {0} "
+			"(suivante votre dernière inscription en {1}). "
+			"La session sélectionnée correspond à l'année {2}."
+			.format(annee_attendue, annee_base, annee_session)
+		)
+
 	# Empêcher les doublons (réinscription déjà validée cette année)
-	annee = frappe.db.get_value("Session Reinscription", reinscription_session, "academic_year")
 	exists = frappe.db.get_all(
 		"Academic Reregistration",
-		filters={"student": matricule, "academic_year": annee},
+		filters={"student": matricule, "academic_year": annee_session},
 		fields=["name"],
 		limit_page_length=1,
 	)
 	if exists:
 		return {"status": False, "message": "Vous êtes déjà réinscrit(e) pour cette année académique."}
+
+	# Récupérer les données de la dernière Inscription Academique
+	inscription = frappe.get_all(
+		"Inscription Academique",
+		filters={"matricule": matricule},
+		fields=["name", "dossier_origine", "dernier_etablissement", "diplome_entree",
+				"matricule_diplome", "nom_prenom_pere", "pere_telephone",
+				"pere_profession", "pere_ville", "nom_prenom_mere", "telephone_mere",
+				"profession_mere", "mere_ville", "nom_prenom_sponsor", "telephone_sponsor",
+				"profession_sponsor", "sponsor_ville", "activites_sportives",
+				"activites_associatives", "activites_culturelles",
+				"connaissances_informatiques"],
+		order_by="creation desc",
+		limit_page_length=1,
+	)
+	insc = inscription[0] if inscription else {}
 
 	# Construire le document ; le validate() du doctype calcule automatiquement
 	# le niveau précédent, la décision, les résultats et les cours inscrits.
@@ -711,12 +858,83 @@ def submit_reinscription(matricule, reinscription_session, semestre):
 		"doctype": "Academic Reregistration",
 		"student": matricule,
 		"reinscription_session": reinscription_session,
-		"academic_year": annee,
+		"academic_year": annee_session,
 		"filiere": student.filiere,
 		"niveau": student.niveau_actuel,
 		"semestre": semestre,
+		# Identité (depuis Student)
+		"nom_prenom": f"{student.nom or ''} {student.prenom or ''}".strip(),
+		"email": student.email,
+		"date_naissance": student.birth_date,
+		"lieu_naissance": student.birth_place,
+		"telephone": student.phone,
+		# Inscription (depuis Inscription Academique)
+		"dossier_origine": insc.get("dossier_origine"),
+		"dernier_etablissement": insc.get("dernier_etablissement"),
+		"diplome_entree": insc.get("diplome_entree"),
+		"matricule_diplome": insc.get("matricule_diplome"),
+		# Famille
+		"nom_prenom_pere": insc.get("nom_prenom_pere"),
+		"pere_telephone": insc.get("pere_telephone"),
+		"pere_profession": insc.get("pere_profession"),
+		"pere_ville": insc.get("pere_ville"),
+		"nom_prenom_mere": insc.get("nom_prenom_mere"),
+		"telephone_mere": insc.get("telephone_mere"),
+		"profession_mere": insc.get("profession_mere"),
+		"mere_ville": insc.get("mere_ville"),
+		"nom_prenom_sponsor": insc.get("nom_prenom_sponsor"),
+		"telephone_sponsor": insc.get("telephone_sponsor"),
+		"profession_sponsor": insc.get("profession_sponsor"),
+		"sponsor_ville": insc.get("sponsor_ville"),
+		# Activités
+		"activites_sportives": insc.get("activites_sportives"),
+		"activites_associatives": insc.get("activites_associatives"),
+		"activites_culturelles": insc.get("activites_culturelles"),
+		"connaissances_informatiques": insc.get("connaissances_informatiques"),
 	})
 	doc.insert(ignore_permissions=True)
 	frappe.db.commit()
 
 	return {"status": True, "message": "Réinscription soumise avec succès.", "name": doc.name}
+
+
+def get_student_premiere_inscription(student):
+	"""Année de la première inscription de l'étudiant (Inscription Academique)."""
+	return frappe.db.get_value(
+		"Inscription Academique",
+		{"matricule": student},
+		"annee_academique",
+		order_by="creation asc"
+	)
+
+
+def get_student_derniere_annee_academique(student):
+	"""Dernière année académique où l'étudiant a été inscrit.
+
+	- dernière réinscription (Academic Reregistration) ;
+	- à défaut, sa première inscription (Inscription Academique).
+	"""
+	rer = frappe.get_all(
+		"Academic Reregistration",
+		filters={"student": student},
+		fields=["academic_year"],
+		order_by="creation desc",
+		limit_page_length=1,
+	)
+	if rer:
+		return rer[0].academic_year
+	return get_student_premiere_inscription(student)
+
+
+def get_next_academic_year(current_year):
+	"""Calcule l'année académique suivante.
+	Ex: '2025-2026' -> '2026-2027'"""
+	if not current_year or "-" not in current_year:
+		return None
+	try:
+		start, end = current_year.split("-")
+		next_start = str(int(start) + 1)
+		next_end = str(int(end) + 1)
+		return f"{next_start}-{next_end}"
+	except Exception:
+		return None
