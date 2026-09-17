@@ -1,5 +1,38 @@
 # -*- coding: utf-8 -*-
+import re
+
 import frappe
+
+_EMOJI_INDIQUES = re.compile(
+    "["
+    "\U0001F1E6-\U0001F1FF"  # drapeaux (regional indicator symbols 🇨🇲)
+    "\U0001F300-\U0001F5FF"  # symboles èmoticônes divers
+    "\U0001F900-\U0001F9FF"
+    "\U00002600-\U000026FF"
+    "\U0001F000-\U0001F02F"
+    "]+"
+)
+
+
+def _nettoyer_telephone(valeur, indicatif_defaut="+237"):
+    """Retire drapeaux/emojis/espaces d'un numéro et garantit un indicatif.
+
+    Retourne le numéro au format « +23769845621 » (chiffres seuls, sans
+    drapeau ni séparateur). Si aucun indicatif (absence de « + »), on le
+    préfixe avec l'indicatif par défaut du Cameroun.
+    """
+    if not valeur:
+        return ""
+    texte = _EMOJI_INDIQUES.sub("", str(valeur))
+    signe = ""
+    if texte.lstrip().startswith("+"):
+        signe = "+"
+    chiffres = "".join(caractere for caractere in texte if caractere.isdigit())
+    if not chiffres:
+        return ""
+    if signe:
+        return signe + chiffres
+    return indicatif_defaut + chiffres
 
 
 @frappe.whitelist(allow_guest=True)
@@ -49,7 +82,7 @@ def creer_candidature(donnees=None):
         "last_name": last_name,
         "full_name": full_name,
         "email": email,
-        "phone": donnees.get("phone"),
+        "phone": _nettoyer_telephone(donnees.get("phone")),
         "sexe": donnees.get("sexe"),
         "birthdate": donnees.get("birthdate"),
         "birth_place": donnees.get("birth_place"),
@@ -67,19 +100,19 @@ def creer_candidature(donnees=None):
         "entry_diploma": donnees.get("entry_diploma"),
         "diploma_matricule": donnees.get("diploma_matricule"),
         "father_name": donnees.get("father_name"),
-        "father_phone": donnees.get("father_phone"),
+        "father_phone": _nettoyer_telephone(donnees.get("father_phone")),
         "father_profession": donnees.get("father_profession"),
         "father_email": donnees.get("father_email"),
         "father_city": donnees.get("father_city"),
         "father_country": donnees.get("father_country") or "CM",
         "mother_name": donnees.get("mother_name"),
-        "mother_phone": donnees.get("mother_phone"),
+        "mother_phone": _nettoyer_telephone(donnees.get("mother_phone")),
         "mother_profession": donnees.get("mother_profession"),
         "mother_email": donnees.get("mother_email"),
         "mother_city": donnees.get("mother_city"),
         "mother_country": donnees.get("mother_country") or "CM",
         "sponsor_name": donnees.get("sponsor_name"),
-        "sponsor_phone": donnees.get("sponsor_phone"),
+        "sponsor_phone": _nettoyer_telephone(donnees.get("sponsor_phone")),
         "sponsor_profession": donnees.get("sponsor_profession"),
         "sponsor_email": donnees.get("sponsor_email"),
         "sponsor_city": donnees.get("sponsor_city"),

@@ -527,8 +527,42 @@ frappe.ready(function() {
 		}
 	});
 
+	// ---- Normalisation des numéros de téléphone ----
+	// Le drapeau 🇨🇲 (ou tout émoji) ne doit JAMAIS faire partie de la valeur :
+	// on ne garde que les chiffres et on construit « +237 » + numéro au moment
+	// de la soumission. On écrit la valeur en direct sur le contrôle (un
+	// set_value() ControlPhone réinsérerait le séparateur « - »).
+	var PHONE_FIELDS = ['phone', 'parent_phone'];
+
+	function normalizedPhone(valeur) {
+		if (!valeur) return '';
+		let texte = String(valeur);
+		// Retire drapeaux/émojis et symboles divers
+		texte = texte.replace(/[\u{1F1E6}-\u{1F1FF}\u{1F300}-\u{1F5FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '');
+		const signe = texte.trim().startsWith('+') ? '+' : '';
+		const chiffres = texte.replace(/\D/g, '');
+		if (!chiffres) return '';
+		return (signe || '+237') + chiffres;
+	}
+
+	function nettoyerTelephonesAvantSoumission() {
+		PHONE_FIELDS.forEach(function (fieldname) {
+			const champ = frappe.web_form.fields_dict[fieldname];
+			if (!champ || !champ.get_value) return;
+			const brut = champ.get_value();
+			if (!brut) return;
+			const propre = normalizedPhone(brut);
+			champ.value = propre;
+			// Le champ n'affiche que le numéro, sans indicatif ni drapeau
+			if (champ.$input) {
+				champ.$input.val(propre.replace(/^\+/, '').replace(/^237/, ''));
+			}
+		});
+	}
+
 	// ---- Form validation before submit ----
 	frappe.web_form.validate = function() {
+		nettoyerTelephonesAvantSoumission();
 		const requiredFields = [
 			'filiere', 'niveau', 'examination_centre',
 			'first_name', 'last_name', 'birthdate', 'birth_place', 'sexe',

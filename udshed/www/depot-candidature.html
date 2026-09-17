@@ -32,7 +32,24 @@
                 <div class="col-md-6 form-group"><label>Nom(s) *</label><input name="first_name" class="form-control" required></div>
                 <div class="col-md-6 form-group"><label>Prénom *</label><input name="last_name" class="form-control" required></div>
                 <div class="col-md-6 form-group"><label>Email *</label><input type="email" name="email" class="form-control" required placeholder="exemple@email.com"></div>
-                <div class="col-md-6 form-group"><label>Téléphone (WhatsApp) *</label><input name="phone" class="form-control" required></div>
+                <div class="col-md-6 form-group">
+                    <label>Téléphone (WhatsApp) *</label>
+                    <div class="input-group">
+                        <select class="form-control indicatif" data-indicatif="phone" style="max-width: 130px; flex: 0 0 auto;">
+                            <option value="+237" selected>Cameroun +237</option>
+                            <option value="+233">Ghana +233</option>
+                            <option value="+234">Nigéria +234</option>
+                            <option value="+242">Congo +242</option>
+                            <option value="+243">RD Congo +243</option>
+                            <option value="+261">Madagascar +261</option>
+                            <option value="+33">France +33</option>
+                            <option value="+32">Belgique +32</option>
+                            <option value="+44">Royaume-Uni +44</option>
+                            <option value="+1">USA/Canada +1</option>
+                        </select>
+                        <input name="phone" data-phone-input class="form-control" required placeholder="6 98 56 23 14">
+                    </div>
+                </div>
                 <div class="col-md-6 form-group"><label>Date de naissance *</label><input type="date" name="birthdate" class="form-control" required></div>
                 <div class="col-md-6 form-group"><label>Sexe *</label><select name="sexe" class="form-control" required><option value="">Sélectionner</option><option>Homme</option><option>Femme</option></select></div>
                 <div class="col-md-6 form-group"><label>Née à *</label><input name="birth_place" class="form-control" required></div>
@@ -68,7 +85,24 @@
             <h5 class="mb-3" style="color: #2885a7; border-bottom: 1px solid #e2e4e9; padding-bottom: 12px;">Identification du Père</h5>
             <div class="row">
                 <div class="col-md-6 form-group"><label>Nom et prénom du père</label><input name="father_name" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Téléphone du père</label><input name="father_phone" class="form-control"></div>
+                <div class="col-md-6 form-group">
+                    <label>Téléphone du père</label>
+                    <div class="input-group">
+                        <select class="form-control indicatif" data-indicatif="father_phone" style="max-width: 130px; flex: 0 0 auto;">
+                            <option value="+237" selected>Cameroun +237</option>
+                            <option value="+233">Ghana +233</option>
+                            <option value="+234">Nigéria +234</option>
+                            <option value="+242">Congo +242</option>
+                            <option value="+243">RD Congo +243</option>
+                            <option value="+261">Madagascar +261</option>
+                            <option value="+33">France +33</option>
+                            <option value="+32">Belgique +32</option>
+                            <option value="+44">Royaume-Uni +44</option>
+                            <option value="+1">USA/Canada +1</option>
+                        </select>
+                        <input name="father_phone" data-phone-input class="form-control" placeholder="6 98 56 23 14">
+                    </div>
+                </div>
                 <div class="col-md-6 form-group"><label>Profession du père</label><input name="father_profession" class="form-control"></div>
                 <div class="col-md-6 form-group"><label>Email du père</label><input type="email" name="father_email" class="form-control"></div>
                 <div class="col-md-6 form-group"><label>Ville du père</label><input name="father_city" class="form-control"></div>
@@ -79,7 +113,24 @@
             <h5 class="mb-3" style="color: #2885a7; border-bottom: 1px solid #e2e4e9; padding-bottom: 12px;">Identification de la Mère</h5>
             <div class="row">
                 <div class="col-md-6 form-group"><label>Nom et prénom de la mère</label><input name="mother_name" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Téléphone de la mère</label><input name="mother_phone" class="form-control"></div>
+                <div class="col-md-6 form-group">
+                    <label>Téléphone de la mère</label>
+                    <div class="input-group">
+                        <select class="form-control indicatif" data-indicatif="mother_phone" style="max-width: 130px; flex: 0 0 auto;">
+                            <option value="+237" selected>Cameroun +237</option>
+                            <option value="+233">Ghana +233</option>
+                            <option value="+234">Nigéria +234</option>
+                            <option value="+242">Congo +242</option>
+                            <option value="+243">RD Congo +243</option>
+                            <option value="+261">Madagascar +261</option>
+                            <option value="+33">France +33</option>
+                            <option value="+32">Belgique +32</option>
+                            <option value="+44">Royaume-Uni +44</option>
+                            <option value="+1">USA/Canada +1</option>
+                        </select>
+                        <input name="mother_phone" data-phone-input class="form-control" placeholder="6 98 56 23 14">
+                    </div>
+                </div>
                 <div class="col-md-6 form-group"><label>Profession de la mère</label><input name="mother_profession" class="form-control"></div>
                 <div class="col-md-6 form-group"><label>Email de la mère</label><input type="email" name="mother_email" class="form-control"></div>
                 <div class="col-md-6 form-group"><label>Ville de la mère</label><input name="mother_city" class="form-control"></div>
@@ -90,7 +141,24 @@
             <h5 class="mb-3" style="color: #2885a7; border-bottom: 1px solid #e2e4e9; padding-bottom: 12px;">Identification du Sponsor</h5>
             <div class="row">
                 <div class="col-md-6 form-group"><label>Nom et prénom du sponsor</label><input name="sponsor_name" class="form-control"></div>
-                <div class="col-md-6 form-group"><label>Téléphone du sponsor</label><input name="sponsor_phone" class="form-control"></div>
+                <div class="col-md-6 form-group">
+                    <label>Téléphone du sponsor</label>
+                    <div class="input-group">
+                        <select class="form-control indicatif" data-indicatif="sponsor_phone" style="max-width: 130px; flex: 0 0 auto;">
+                            <option value="+237" selected>Cameroun +237</option>
+                            <option value="+233">Ghana +233</option>
+                            <option value="+234">Nigéria +234</option>
+                            <option value="+242">Congo +242</option>
+                            <option value="+243">RD Congo +243</option>
+                            <option value="+261">Madagascar +261</option>
+                            <option value="+33">France +33</option>
+                            <option value="+32">Belgique +32</option>
+                            <option value="+44">Royaume-Uni +44</option>
+                            <option value="+1">USA/Canada +1</option>
+                        </select>
+                        <input name="sponsor_phone" data-phone-input class="form-control" placeholder="6 98 56 23 14">
+                    </div>
+                </div>
                 <div class="col-md-6 form-group"><label>Profession du sponsor</label><input name="sponsor_profession" class="form-control"></div>
                 <div class="col-md-6 form-group"><label>Email du sponsor</label><input type="email" name="sponsor_email" class="form-control"></div>
                 <div class="col-md-6 form-group"><label>Ville du sponsor</label><input name="sponsor_city" class="form-control"></div>

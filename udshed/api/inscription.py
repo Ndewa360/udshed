@@ -313,8 +313,9 @@ def _generer_matricule_atomique():
         prefix = annee + lettre
 
         # Recherche du max existant pour ce préfixe
+    # Le lock nommé déjà sérialise l'accès, pas besoin de FOR UPDATE au niveau SQL
         existants = frappe.db.sql(
-            "SELECT matricule FROM `tabInscription Academique` WHERE matricule LIKE %s FOR UPDATE",
+            "SELECT matricule FROM `tabInscription Academique` WHERE matricule LIKE %s",
             (prefix + "%",),
         )
         max_numero = 0

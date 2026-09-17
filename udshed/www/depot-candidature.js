@@ -1,6 +1,20 @@
 $(document).ready(function () {
     chargerFilieres();
 
+    $("#form-candidature").on("input", "input[data-phone-input]", function () {
+        this.value = formaterNumero(this.value);
+    });
+
+    function formaterNumero(valeur) {
+        var chiffres = (valeur || "").replace(/\D/g, "").slice(0, 9);
+        if (!chiffres) return "";
+        var morceaux = [chiffres.charAt(0)];
+        for (var i = 1; i < chiffres.length; i += 2) {
+            morceaux.push(chiffres.slice(i, i + 2));
+        }
+        return morceaux.join(" ");
+    }
+
     function chargerFilieres() {
         frappe.call({
             method: "frappe.client.get_list",
@@ -39,6 +53,17 @@ $(document).ready(function () {
             .forEach(function (field) {
                 formData[field.name] = field.value;
             });
+
+        $("#form-candidature select.indicatif").each(function () {
+            var indicatif = $(this).val();
+            var cible = $(this).data("indicatif");
+            var num = (formData[cible] || "").replace(/\D/g, "");
+            if (num) {
+                formData[cible] = indicatif + num;
+            } else {
+                formData[cible] = "";
+            }
+        });
 
         if (!formData.filiere) {
             $("#btn_soumettre").prop("disabled", false).text("Soumettre ma candidature");

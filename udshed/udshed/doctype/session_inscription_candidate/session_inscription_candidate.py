@@ -8,6 +8,7 @@ from udshed.api.inscription import (
     _cree_compte_utilisateur,
     _auto_enroll_student_bulk as _auto_enroll_student,
 )
+from udshed.api.candidature import _nettoyer_telephone
 
 
 class SessionInscriptionCandidate(Document):
@@ -20,6 +21,13 @@ class SessionInscriptionCandidate(Document):
 		self.status_updated_on = frappe.utils.now_datetime()
 		if not self.session_inscription:
 			self.session_inscription = self._session_inscription_courante()
+
+	def validate(self):
+		for champ in ("phone", "parent_phone", "father_phone", "mother_phone", "sponsor_phone"):
+			valeur = getattr(self, champ, None)
+			if valeur:
+				setattr(self, champ, _nettoyer_telephone(valeur))
+		self._proteger_statut_accepte()
 
 	def _session_inscription_courante(self):
 		"""Retourne la session d'inscription ouverte, sinon la plus récente."""
@@ -47,9 +55,6 @@ class SessionInscriptionCandidate(Document):
 				frappe.utils.now_datetime(),
 				update_modified=False,
 			)
-
-	def validate(self):
-		self._proteger_statut_accepte()
 
 	def _proteger_statut_accepte(self):
 		"""Une fois une candidature acceptée, son statut ne peut plus être modifié,
