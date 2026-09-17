@@ -15,7 +15,10 @@
    "statut",
    "inscrire",
    "est_obligatoire",
-   "motif"
+   "motif",
+   "credits",
+   "source",
+   "verrouille"
   ],
   "fields": [
    {
@@ -73,13 +76,36 @@
     "label": "Obligatoire"
    },
    {
-    "fieldname": "motif",
-    "fieldtype": "Small Text",
-    "in_list_view": 1,
-    "label": "Motif",
-    "read_only": 1
-   }
-  ],
+"fieldname": "motif",
+     "fieldtype": "Small Text",
+     "in_list_view": 1,
+     "label": "Motif",
+     "read_only": 1
+    },
+    {
+     "fieldname": "credits",
+     "fieldtype": "Int",
+     "in_list_view": 1,
+     "label": "Cr\u00e9dits",
+     "read_only": 1
+    },
+    {
+     "fieldname": "source",
+     "fieldtype": "Select",
+     "in_list_view": 1,
+     "label": "Source",
+     "options": "dette\nniveau_actuel",
+     "read_only": 1
+    },
+    {
+     "default": "0",
+     "fieldname": "verrouille",
+     "fieldtype": "Check",
+     "in_list_view": 1,
+     "label": "Verrouill\u00e9",
+     "read_only": 1
+    }
+   ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,

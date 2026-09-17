@@ -240,11 +240,20 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Coordonateur",
-   "share": 1,
-   "write": 1
-  }
- ],
+"role": "Coordonateur",
+    "share": 1,
+    "write": 1
+   },
+   {
+    "email": 1,
+    "export": 1,
+    "print": 1,
+    "read": 1,
+    "report": 1,
+    "role": "student",
+    "share": 1
+   }
+  ],
  "row_format": "Dynamic",
  "search_fields": "student_name,ue_name,grade,mention",
  "sort_field": "creation",
