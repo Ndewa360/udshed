@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 
@@ -45,6 +46,8 @@ def get_current_student_profile():
 class Student(Document):
 
 	def validate(self):
+		if not self.matricule:
+			frappe.throw(_("Le matricule est obligatoire. Il provient de l'inscription académique validée."))
 		self.definir_nom_complet()
 		self.determiner_cycle()
 
@@ -65,21 +68,8 @@ class Student(Document):
 		else:
 			self.cycle = "Licence"
 
-	def before_save(self):
-		# En dernier recours uniquement : si aucun matricule n'a été fourni
-		# (ex. création manuelle), on prend le nom auto-généré STU-0001.
-		# Un matricule explicite (ex. celui de l'Inscription Academique
-		# envoyé par email) est toujours conservé.
-		if not self.matricule and self.name and not self.name.startswith("new-"):
-			self.matricule = self.name
-
 	def after_insert(self):
-		# Après insertion le name est disponible → matricule de secours
-		# si aucun matricule explicite n'a été fourni à la création.
-		if not self.matricule:
-			self.db_set("matricule", self.name)
-
-		# Crée automatiquement un compte utilisateur Frappe lié à l'étudiant
+		# Crée automatiquement un compte utilisateur Frappe lié à l'étudiant.
 		if not frappe.db.exists("User", self.email):
 			user = frappe.get_doc({
 				"doctype": "User",

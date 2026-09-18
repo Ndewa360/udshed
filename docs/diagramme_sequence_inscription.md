@@ -82,8 +82,8 @@ sequenceDiagram
     API_Insc->>DB: Rechercher Student existant par email
     DB-->>API_Insc: None (pas encore de Student)
 
-    API_Insc->>DB: INSERT Student<br/>(matricule=26B001, nom, prénom, cycle, filière...)
-    DB-->>API_Insc: student.name (STU-####)
+    API_Insc->>DB: INSERT Student<br/>(matricule=26B001, nom, prénom, cycle, filière...)<br/>name = matricule (format:{matricule})
+    DB-->>API_Insc: student.name (26B001)
 
     API_Insc->>DB: GET Session Inscription Candidate
     API_Insc->>DB: _cree_compte_utilisateur(student, candidate)<br/>Création compte Frappe (role: Student)

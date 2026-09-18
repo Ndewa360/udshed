@@ -4,10 +4,6 @@
 import frappe
 from frappe.model.document import Document
 from frappe import _
-from udshed.api.inscription import (
-    _cree_compte_utilisateur,
-    _auto_enroll_student_bulk as _auto_enroll_student,
-)
 from udshed.api.candidature import _nettoyer_telephone
 
 

@@ -110,19 +110,19 @@ class TestAnonymisationSaisie(IntegrationTestCase):
 
     def test_generer_codes_anonymes_a_cle_student(self):
         students = [
-            {"student": "STU-A", "matricule": "MAT-2"},
-            {"student": "STU-B", "matricule": "MAT-1"},
+            {"student": "E1", "matricule": "MAT-2"},
+            {"student": "E2", "matricule": "MAT-1"},
         ]
         codes = _generer_codes_anonymes(students)
-        self.assertEqual(codes["STU-A"], "AN001")
-        self.assertEqual(codes["STU-B"], "AN002")
+        self.assertEqual(codes["E1"], "AN001")
+        self.assertEqual(codes["E2"], "AN002")
 
     def test_codes_anonymes_propres_a_chaque_matiere(self):
         """Un code anonyme par (UE, type d'examen) — pas un code pour tous."""
         students = [
-            {"student": "STU-A", "matricule": "MAT-2"},
-            {"student": "STU-B", "matricule": "MAT-1"},
-            {"student": "STU-C", "matricule": "MAT-3"},
+            {"student": "E1", "matricule": "MAT-2"},
+            {"student": "E2", "matricule": "MAT-1"},
+            {"student": "E3", "matricule": "MAT-3"},
         ]
         examen_tu1 = _generer_codes_anonymes(
             students, _contexte_anonyme("TU-1", "Examen")

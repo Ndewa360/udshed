@@ -30,7 +30,9 @@ from udshed.udshed._fixture_factory import (
     make_faculty,
     make_field_of_study,
     make_level,
+    make_planning_item,
     make_session_examen,
+    make_session_examen_note,
     make_student,
     make_teacher,
     make_teaching_unit,
@@ -119,6 +121,9 @@ class TestValidationEtPublication(IntegrationTestCase):
                 self.args,
                 [{"student": self.student.name, "note_examen": 12}],
             )
+            make_planning_item(
+                self.tu, self.academic_year, self.calendar, type_dexamen=TYPE_NORMALE
+            )
         return self._session_de_type(TYPE_NORMALE)
 
     # ------------------------------------------------------------------ #
@@ -206,4 +211,35 @@ class TestValidationEtPublication(IntegrationTestCase):
             semestre="Semestre 1",
         )
         self.assertFalse(data["success"])
+
+    # ------------------------------------------------------------------ #
+    #  Examen non programmé : validation / publication bloquées
+    # ------------------------------------------------------------------ #
+    def _saisir_sans_programmation(self, statut="Saisi"):
+        """Crée session + note SANS Planning Item (scénario non programmé)."""
+        with suppress_commits():
+            session = make_session_examen(
+                self.academic_year, self.calendar, filiere=self.fos, niveau=self.niveau
+            )
+            make_session_examen_note(
+                session, self.student, self.tu, note_examen=12, statut=statut
+            )
+        return session.name
+
+    def test_9_valider_refuse_si_examen_non_programme(self):
+        session = self._saisir_sans_programmation()
+        with self.assertRaises(frappe.ValidationError) as ctx:
+            valider_notes(session)
+        self.assertIn("n'est pas programmé", str(ctx.exception))
+        self.assertEqual(self._note(session).statut, "Saisi")
+
+    def test_10_publier_refuse_si_examen_non_programme(self):
+        session = self._saisir_sans_programmation(statut="Validé")
+        with self.assertRaises(frappe.ValidationError) as ctx:
+            publier_session(session)
+        self.assertIn("n'est pas programmé", str(ctx.exception))
+        self.assertEqual(
+            frappe.db.get_value("Session Examen", session, "statut"), "Brouillon"
+        )
+        self.assertEqual(self._note(session).statut, "Validé")
 

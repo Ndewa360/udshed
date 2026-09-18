@@ -107,34 +107,6 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		a.remove();
 	}
 
-	function upload_file(file) {
-		return new Promise((resolve, reject) => {
-			const fd = new FormData();
-			fd.append("file", file);
-			fd.append("is_private", "0");
-			const xhr = new XMLHttpRequest();
-			xhr.open("POST", "/api/method/upload_file");
-			xhr.setRequestHeader("X-Frappe-CSRF-Token", frappe.csrf_token);
-			xhr.onload = () => {
-				let resp;
-				try {
-					resp = JSON.parse(xhr.responseText);
-				} catch (e) {
-					reject(new Error(__("Réponse du serveur invalide.")));
-					return;
-				}
-				if (resp && resp.message) {
-					const doc = Array.isArray(resp.message) ? resp.message[0] : resp.message;
-					resolve(doc);
-				} else {
-					reject(new Error(error_message(resp)));
-				}
-			};
-			xhr.onerror = () => reject(new Error(__("Impossible d'envoyer le fichier.")));
-			xhr.send(fd);
-		});
-	}
-
 	function is_rattrapage_view() {
 		return state.filters.session === "Rattrapage";
 	}
@@ -252,7 +224,6 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	const toolbar = $('<div class="sn-toolbar"></div>').css("display", "none").appendTo(content);
 	const tableWrap = $('<div class="sn-table-wrap"></div>').css("display", "none").appendTo(content);
 	const emptyEl = $('<div class="sn-empty"></div>').css("display", "none").appendTo(content);
-	const fileInput = $('<input type="file" accept=".xlsx,.xls" style="display:none">').appendTo(content);
 
 	// ------------------------------------------------------------------
 	// filters
@@ -790,15 +761,13 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		const session = active_session_info();
 		const pdf_msg = is_rt ? null : formule_complete_msg();
 		const pdf_disabled = is_rt ? false : !!pdf_msg;
+		const planifie = !!session && session.planifie !== false;
+		const non_planifie_attr = session && !planifie
+			? ' disabled title="' + esc(__("L'examen n'est pas programmé dans le planning académique : la validation et la publication sont impossibles.")) + '"'
+			: "";
 		toolbar.html(
 			'<button type="button" class="btn btn-primary btn-sm sn-btn sn-btn-save">' +
 				(is_rt ? __("Enregistrer le rattrapage") : __("Enregistrer les évaluations")) +
-				"</button>" +
-				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-import">' +
-				"&#8681; " + __("Importer") +
-				"</button>" +
-				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-export">' +
-				"&#8679; " + __("Exporter") +
 				"</button>" +
 				'<button type="button" class="btn ' + (state.anonyme ? "btn-warning" : "btn-default") + ' btn-sm sn-btn sn-btn-anonyme">' +
 				(state.anonyme ? "&#128065; " + __("Anonyme actif") : "&#128065; " + __("Mode anonyme")) +
@@ -818,10 +787,10 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-pdf" ' + (pdf_disabled ? "disabled title=\"" + esc(pdf_msg) + "\"" : "") + ">" +
 					"&#128196; " + __("Télécharger PDF") +
 					"</button>" +
-				'<button type="button" class="btn btn-success btn-sm sn-btn sn-btn-valider">' +
+				'<button type="button" class="btn btn-success btn-sm sn-btn sn-btn-valider"' + non_planifie_attr + ">" +
 				__("Valider") +
 				"</button>" +
-				'<button type="button" class="btn btn-danger btn-sm sn-btn sn-btn-publier">' +
+				'<button type="button" class="btn btn-danger btn-sm sn-btn sn-btn-publier"' + non_planifie_attr + ">" +
 				__("Publier") +
 				"</button>" +
 				'<span class="sn-session-label">' +
@@ -1096,71 +1065,8 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	}
 
 	// ------------------------------------------------------------------
-	// import / export
+	// export (Excel / PDF)
 	// ------------------------------------------------------------------
-	function start_import() {
-		if (!state.filters.cours || state.busy) return;
-		fileInput.val("");
-		fileInput.trigger("click");
-	}
-
-	fileInput.on("change", () => {
-		const file = fileInput[0].files && fileInput[0].files[0];
-		fileInput.val("");
-		if (!file) return;
-		state.busy = true;
-		set_busy(true);
-		upload_file(file)
-			.then((fd) => {
-				const is_rt = is_rattrapage_view();
-				frappe.call({
-					method: API + (is_rt ? "importer_notes" : "importer_evaluations"),
-					args: {
-						file_url: fd.file_url,
-						type_dexamen: is_rt ? TYPE_RATTRAPAGE : undefined,
-						academic_year: state.filters.academic_year,
-						filiere: state.filters.filiere,
-						niveau: state.filters.niveau,
-						semestre: state.filters.semestre,
-						teaching_unit: state.filters.cours,
-					},
-					freeze: true,
-					freeze_message: __("Import des notes..."),
-					callback: (r) => {
-						state.busy = false;
-						set_busy(false);
-						const n = r.message && r.message.saved != null ? r.message.saved : 0;
-						toast(__("{0} note(s) importée(s).", [n]), "green");
-						load_data();
-					},
-					error: (e) => {
-						state.busy = false;
-						set_busy(false);
-						msg_error(error_message(e));
-					},
-				});
-			})
-			.catch((e) => {
-				state.busy = false;
-				set_busy(false);
-				msg_error(e && e.message ? e.message : __("Impossible d'importer le fichier."));
-			});
-	});
-
-	function export_current() {
-		if (!state.filters.cours) return;
-		const is_rt = is_rattrapage_view();
-		api_download(API + (is_rt ? "export_notes" : "export_evaluations"), {
-			academic_year: state.filters.academic_year,
-			filiere: state.filters.filiere,
-			niveau: state.filters.niveau,
-			semestre: state.filters.semestre,
-			teaching_unit: state.filters.cours,
-			type_dexamen: is_rt ? TYPE_RATTRAPAGE : undefined,
-			anonyme: state.anonyme ? 1 : 0,
-		});
-	}
-
 	function export_feuille() {
 		if (!state.filters.cours) return;
 		api_download(API + "export_modele_pdf", {
@@ -1185,8 +1091,6 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		if (is_rattrapage_view()) save_rattrapage();
 		else save_evaluations();
 	});
-	toolbar.on("click", ".sn-btn-import", start_import);
-	toolbar.on("click", ".sn-btn-export", export_current);
 	toolbar.on("click", ".sn-btn-anonyme", () => {
 		state.anonyme = !state.anonyme;
 		render();

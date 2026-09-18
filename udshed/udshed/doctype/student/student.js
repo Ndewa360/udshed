@@ -4,9 +4,9 @@ frappe.ui.form.on("Student", {
 		frm.set_df_property("cycle", "read_only", 1);
 		frm.set_df_property("nom_complet", "read_only", 1);
 
-		// Afficher le matricule en bleu en haut du formulaire
+		// Afficher le matricule d'inscription en bleu en haut du formulaire
 		if (!frm.is_new()) {
-			frm.set_intro(`Matricule : ${frm.doc.name}`, "blue");
+			frm.set_intro(`Matricule : ${frm.doc.matricule || frm.doc.name}`, "blue");
 		}
 	},
 

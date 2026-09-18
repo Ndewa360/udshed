@@ -2,18 +2,22 @@
 
 {% block title %}Inscription académique{% endblock %}
 
+{% block style %}
+<link rel="stylesheet" href="/assets/udshed/css/inscription.css">
+{% endblock %}
+
 {% block page_content %}
-<div class="container" style="max-width: 760px; margin: 48px auto;">
-    <div class="text-center mb-4">
-        <img src="/assets/udshed/images/logo.png" alt="UDSHED" style="max-width: 160px; margin-bottom: 24px;">
-        <h3 class="mb-2">Formulaire d'inscription académique</h3>
+<div class="container inscription-form-wrap">
+    <div class="form-header text-center mb-4">
+        <img src="/assets/udshed/images/logo.png" alt="UDSHED" style="max-width: 150px; margin-bottom: 20px;">
+        <h3 class="mb-1">Formulaire d'inscription académique</h3>
         <p id="candidat-authentifie" class="text-muted">Vérification du candidat...</p>
     </div>
 
     <div id="form-error" class="alert alert-danger" style="display: none;"></div>
 
     <div id="stepper-wrapper" style="display: none;">
-        <!-- Stepper header with 4 steps -->
+        <!-- Stepper header with 5 steps -->
         <div class="stepper-progress">
             <div class="stepper-step" data-step="1">
                 <div class="stepper-circle active">1</div>
@@ -34,6 +38,11 @@
                 <div class="stepper-circle">4</div>
                 <div class="stepper-label">Informations<br>Complémentaires</div>
             </div>
+            <div class="stepper-line"></div>
+            <div class="stepper-step" data-step="5">
+                <div class="stepper-circle">5</div>
+                <div class="stepper-label">Grille<br>d'enseignement</div>
+            </div>
         </div>
 
         <form id="form-inscription-academique">
@@ -47,8 +56,8 @@
                         <div class="col-md-6 form-group"><label>Niveau</label><input id="classe" class="form-control" readonly></div>
                         <div class="col-md-6 form-group"><label>Sexe</label><select name="sexe" class="form-control"><option value="">Sélectionner</option><option>Masculin</option><option>Féminin</option></select></div>
                         <div class="col-md-6 form-group"><label>Nationalité</label><input name="nationalite" class="form-control"></div>
-                        <div class="col-md-6 form-group"><label>Région d'origine</label><input name="region_origine" class="form-control"></div>
-                        <div class="col-md-6 form-group"><label>Langue</label><input name="langue" class="form-control"></div>
+                        <div class="col-md-6 form-group"><label>Région d'origine</label><select name="region_origine" class="form-control"><option value="">Sélectionner</option><option>Adamaoua</option><option>Centre</option><option>Est</option><option>Extrême-Nord</option><option>Littoral</option><option>Nord</option><option>Nord-Ouest</option><option>Ouest</option><option>Sud</option><option>Sud-Ouest</option></select></div>
+                        <div class="col-md-6 form-group"><label>Langue</label><select name="langue" class="form-control"><option value="">Sélectionner</option><option>Français</option><option>Anglais</option></select></div>
                         <div class="col-md-6 form-group">
                             <label for="religion-select">Religion</label>
                             <select id="religion-select" class="form-control">
@@ -120,8 +129,14 @@
                             </tbody>
                         </table>
                     </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="addEtudeManuel()" style="width: 100%;">
+                        <i class="bi bi-plus"></i> Ajouter une étude
+                    </button>
+                </div>
+            </div>
+
             <!-- ÉTAPE 4 : Informations complémentaires -->
-            <div class="stepper-section" data-section="4">
+            <div class="stepper-section" data-section="4" style="display: none;">
                 <div class="card p-4 mb-4">
                     <h5 class="mb-3">Informations complémentaires</h5>
                     <div class="form-group"><label>Activités sportives</label><textarea name="activites_sportives" class="form-control" rows="3"></textarea></div>
@@ -131,9 +146,65 @@
                 </div>
             </div>
 
-                    <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="addEtudeManuel()" style="width: 100%;">
-                        <i class="bi bi-plus"></i> Ajouter une étude
-                    </button>
+            <!-- ÉTAPE 5 : Grille d'enseignement -->
+            <div class="stepper-section" data-section="5" style="display: none;">
+                <div class="card p-4 mb-4">
+                    <h5 class="mb-3">Grille d'enseignement</h5>
+                    <p class="text-muted small mb-2">Vérifiez la grille correspondant à votre filière et votre niveau, puis confirmez pour finaliser votre inscription.</p>
+                    <p class="mb-3"><strong>Filière :</strong> <span id="grille-filiere">—</span> &nbsp;|&nbsp; <strong>Niveau :</strong> <span id="grille-niveau">—</span> &nbsp;|&nbsp; <strong>Année académique :</strong> <span id="grille-annee">—</span></p>
+                    <div id="grille-loading" class="text-center py-4">Chargement de la grille d'enseignement...</div>
+                    <div id="grille-error" class="alert alert-warning" style="display: none;"></div>
+                    <div id="grille-content" style="display: none;">
+                        <h6 class="grille-sous-titre">Premier semestre</h6>
+                        <div class="table-responsive">
+                            <table class="table grille-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;">#</th>
+                                        <th>Enseignement / Unité d'enseignement</th>
+                                        <th class="text-right" style="width: 90px;">Crédits</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="grille-s1-body"></tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="2" class="text-right"><strong>Sous-total semestre 1</strong></td>
+                                        <td class="text-right"><strong id="grille-s1-total">0</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <hr class="sem-divider mt-3">
+                        <h6 class="grille-sous-titre mt-3">Deuxième semestre</h6>
+                        <div class="table-responsive">
+                            <table class="table grille-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;">#</th>
+                                        <th>Enseignement / Unité d'enseignement</th>
+                                        <th class="text-right" style="width: 90px;">Crédits</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="grille-s2-body"></tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="2" class="text-right"><strong>Sous-total semestre 2</strong></td>
+                                        <td class="text-right"><strong id="grille-s2-total">0</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <p class="text-right mb-1"><strong>Total général :</strong> <strong id="grille-total">0</strong> crédits</p>
+                        <div class="alert alert-success mt-3">
+                            En confirmant via le bouton « Confirmer ma grille et terminer », vous validez que cette grille correspond bien à la filière sélectionnée. Les enseignements listés seront inscrits à votre dossier d'étudiant (ils vous seront enseignés durant cette année académique).
+                        </div>
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="grille-confirm-check">
+                            <label class="form-check-label" for="grille-confirm-check">
+                                Je confirme avoir vérifié ma grille d'enseignement (elle correspond à ma filière et à mon niveau).
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -142,58 +213,10 @@
                 <button type="button" id="btn_prev" class="btn btn-outline-secondary" style="display: none;">Précédent</button>
                 <div></div>
                 <button type="button" id="btn_next" class="btn btn-primary">Continuer</button>
-                <button type="submit" id="btn_enregistrer" class="btn btn-primary" style="display: none;">Terminer mon inscription</button>
+                <button type="submit" id="btn_enregistrer" class="btn btn-primary" style="display: none;">Confirmer ma grille et terminer</button>
             </div>
         </form>
         <p class="text-center mb-5"><a href="/inscription/inscription">Retour à l'authentification</a></p>
     </div>
 </div>
-
-<style>
-.stepper-progress {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 32px;
-    padding: 0 16px;
-}
-.stepper-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex-shrink: 0;
-}
-.stepper-circle {
-    width: 36px; height: 36px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 14px; color: #fff;
-    background: #ccc; transition: background 0.3s;
-}
-.stepper-circle.active { background: #003B6F; }
-.stepper-circle.done { background: #28a745; }
-.stepper-label {
-    margin-top: 6px; font-size: 12px; text-align: center;
-    color: #888; line-height: 1.3; transition: color 0.3s;
-}
-.stepper-step.active .stepper-label,
-.stepper-step.done .stepper-label { color: #003B6F; font-weight: 600; }
-.stepper-line {
-    flex: 1; height: 3px; background: #ccc; margin: 0 8px;
-    margin-bottom: 22px; min-width: 40px; transition: background 0.3s;
-}
-.stepper-line.done { background: #28a745; }
-
-/* Espacement entre steps */
-.stepper-progress { gap: 24px; }
-
-/* Boutons navigation : hauteur cohérente */
-#btn_prev, #btn_next, #btn_enregistrer {
-    min-height: 38px;
-    padding: 8px 24px;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.5;
-    border-radius: 4px;
-}
-</style>
 {% endblock %}

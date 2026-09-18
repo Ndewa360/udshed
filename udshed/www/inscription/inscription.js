@@ -37,15 +37,14 @@ $(document).ready(function() {
                 if (r.message && r.message.status === "authenticated") {
                     var formUrl = "/inscription-form?numero_dossier="
                         + encodeURIComponent(numero)
-                        + "&nom_candidat=" + encodeURIComponent(nom);
+                        + "&nom_candidat=" + encodeURIComponent(nom)
+                        + "&date_naissance=" + encodeURIComponent(r.message.date_naissance || "")
+                        + "&token=" + encodeURIComponent(r.message.token || "");
                     window.location.href = formUrl;
                 } else {
-                    $("#btn_soumettre").prop('disabled', false)
-                        .html('<span class="btn-label">Continuer</span>');
-                    showAuthError(
-                        (r.message && r.message.message)
-                        || __("Numéro de dossier ou nom incorrect.")
-                    );
+                    // Nouvelle comportement : rechargement automatique de la page
+                    // pour réessayer l'authentification
+                    window.location.reload();
                 }
             }
         });

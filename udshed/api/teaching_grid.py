@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 import pandas as pd
 import os
 from frappe.query_builder import DocType
@@ -19,6 +20,11 @@ def get_academic_teaching_unit(academic_year,faculty,filiere,niveau,semestre):
 
 
 def _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semestre):
+    if not (academic_year and filiere and niveau and semestre):
+        return {
+            "stats": {"ue_count": 0, "course_count": 0, "total_credits": 0, "total_hours": 0},
+            "grid": [],
+        }
     TeachingUnit = DocType("Teaching Unit")
     TeachingUnitValue = DocType("Teaching Unit Value")
     Course = DocType("Course")
@@ -254,6 +260,7 @@ def import_grid(file_url,academic_year,faculty,filiere,niveau,semestre):
                     teachingUnit.intitule_cours=data[2]
                     teachingUnit.unite_de_valeur=worked_ue.name
                     teachingUnit.semestre = semestre
+                    teachingUnit.credits=int(data[3])
                     teachingUnit.nombre_dheure_cm=int(data[5])
                     teachingUnit.nombre_dheure_td=int(data[6])
                     teachingUnit.nombre_dheure_tp=int(data[7])
@@ -286,6 +293,7 @@ def import_grid(file_url,academic_year,faculty,filiere,niveau,semestre):
                         "unite_de_valeur":worked_ue.name,
                         "semestre":semestre,
                         "academic_year":academic_year_obj.name,
+                        "credits":int(data[3]),
                         "nombre_dheure_cm":int(data[5]),
                         "nombre_dheure_td":int(data[6]),
                         "nombre_dheure_tp":int(data[7]),

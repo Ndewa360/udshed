@@ -223,7 +223,13 @@ def _chercher_session(args, type_dexamen):
     return sessions[0]["name"] if sessions else None
 
 
-def _verifier_programmation(academic_year, teaching_unit):
+def _verifier_programmation(academic_year, teaching_unit, type_dexamen=None):
+    """Vérifie l'existence d'une programmation (Planning Item) pour une UE.
+
+    Sans ``type_dexamen``, accepte n'importe quelle évaluation (CC, examen,
+    rattrapage). Avec ``type_dexamen``, la programmation doit correspondre
+    exactement au type d'examen passé.
+    """
     from frappe.query_builder import DocType
 
     planning = DocType("Planning Item")
@@ -233,11 +239,45 @@ def _verifier_programmation(academic_year, teaching_unit):
         .where(
             (planning.cours == teaching_unit)
             & (planning.academic_year == academic_year)
-            & (planning.type.isin(TYPES_EVAL))
         )
-        .limit(1)
     )
-    return bool(query.run())
+    if type_dexamen:
+        query = query.where(planning.type == type_dexamen)
+    else:
+        query = query.where(planning.type.isin(TYPES_EVAL))
+    return bool(query.limit(1).run())
+
+
+def _verifier_programmation_sessions(session):
+    """Bloque la validation / publication si l'examen n'est pas programmé.
+
+    Règle métier : une session d'examen ne peut être validée ni publiée que
+    si chaque UE ayant des notes dans la session dispose d'une programmation
+    (Planning Item) du même type d'examen dans le planning académique.
+    """
+    doc = frappe.get_doc("Session Examen", session)
+    teaching_units = frappe.db.sql_list(
+        """SELECT DISTINCT teaching_unit
+           FROM `tabSession Examen Note`
+           WHERE session_examen = %s AND teaching_unit IS NOT NULL""",
+        session,
+    )
+    if not teaching_units:
+        return
+    non_programmees = [
+        tu
+        for tu in teaching_units
+        if not _verifier_programmation(doc.academic_year, tu, doc.type_dexamen)
+    ]
+    if non_programmees:
+        frappe.throw(
+            _("Impossible de valider ou publier : l'examen « {0} » n'est pas programmé "
+              "dans le planning académique pour l'UE {1} (année {2}).").format(
+                doc.type_dexamen,
+                ", ".join(non_programmees),
+                doc.academic_year,
+            )
+        )
 
 
 def _verifier_programmation_requise(academic_year, teaching_unit):
@@ -383,11 +423,13 @@ def _get_ue_info(teaching_unit, filiere=None, niveau=None):
 
 
 def _get_etudiants(academic_year, filiere, niveau_label, teaching_unit):
-    """Étudiants réellement inscrits au cours (teaching_unit) dans ce contexte académique.
+    """Tous les étudiants de la classe (filière/niveau) présents sur le cours.
 
     La liste est construite depuis les réinscriptions académiques validées de la
-    filière/niveau, en ne conservant que les étudiants dont la fiche de réinscription
-    contient ce cours avec un statut « Inscrit » (ni « Dispensé », ni « Reporté »).
+    filière/niveau (Semestre 1, Semestre 2 ou Les deux), pour prendre en compte
+    toute la classe : dès qu'une grille est importée, tous les étudiants inscrits
+    dans la classe apparaissent sur les cours, sauf ceux explicitement marqués
+    « Dispensé » ou « Reporté » sur ce cours.
     """
     regs = frappe.get_all(
         "Academic Reregistration",
@@ -403,18 +445,28 @@ def _get_etudiants(academic_year, filiere, niveau_label, teaching_unit):
         return []
 
     parents = [r.name for r in regs]
-    inscrits = frappe.get_all(
+    exclus = frappe.get_all(
         "Reregistration Course Item",
         filters={
             "parent": ["in", parents],
             "teaching_unit": teaching_unit,
-            "statut": ["not in", ["Dispensé", "Reporté"]],
+            "statut": ["in", ["Dispensé", "Reporté"]],
         },
         fields=["parent"],
     )
-    inscrits_parents = {i.parent for i in inscrits}
+    exclus_parents = {e.parent for e in exclus}
 
-    students = [r.student for r in regs if r.name in inscrits_parents]
+    # Un même étudiant peut apparaître sur plusieurs réinscriptions validées
+    # (saisie en double) : on déduplique pour ne renvoyer qu'une seule ligne.
+    students = []
+    vus = set()
+    for r in regs:
+        if r.name in exclus_parents:
+            continue
+        if r.student in vus:
+            continue
+        vus.add(r.student)
+        students.append(r.student)
 
     resultats = []
     for student in students:
@@ -893,10 +945,18 @@ def charger_data(academic_year, filiere, niveau, semestre, teaching_unit):
     }
 
     sessions_meta = {}
+    types_par_cle = {
+        "cc": TYPE_CC,
+        "normale": TYPE_NORMALE,
+        "rattrapage": TYPE_RATTRAPAGE,
+    }
     for cle, session in sessions_raw.items():
         sessions_meta[cle] = {
             "name": session,
             "statut": frappe.db.get_value("Session Examen", session, "statut") if session else None,
+            "planifie": _verifier_programmation(
+                academic_year, teaching_unit, types_par_cle[cle]
+            ),
         }
 
     # _charger_notes accepte des valeurs None dans le dict sessions.
@@ -1219,6 +1279,7 @@ def valider_notes(session):
     Returns:
         dict: {"session": ..., "validated": n}
     """
+    _verifier_programmation_sessions(session)
     names = frappe.get_all(
         "Session Examen Note",
         filters={"session_examen": session, "statut": ["in", ["Brouillon", "Saisi"]]},
@@ -1249,6 +1310,8 @@ def publier_session(session):
     doc = frappe.get_doc("Session Examen", session)
     if doc.statut == "Publiée":
         return {"name": doc.name, "statut": doc.statut, "date_publication": doc.date_publication}
+
+    _verifier_programmation_sessions(session)
 
     non_validees = frappe.db.count(
         "Session Examen Note",
@@ -1373,25 +1436,6 @@ def _repondre_xlsx(rows, filename):
     frappe.response["filecontent"] = xlsx.getvalue()
     frappe.response["type"] = "download"
     frappe.response["content_type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-
-
-def _lire_xlsx(file_url):
-    from frappe.utils.file_manager import get_file_path
-    from openpyxl import load_workbook
-
-    filename = get_file_path(file_url)
-    workbook = load_workbook(filename=filename, data_only=True)
-    sheet = workbook.active
-    return [list(row) for row in sheet.iter_rows(values_only=True)]
-
-
-def _valeur_note(valeur):
-    if valeur in (None, ""):
-        return None
-    try:
-        return flt(valeur)
-    except Exception:
-        return None
 
 
 @frappe.whitelist()
@@ -2274,79 +2318,6 @@ def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_d
 
 
 @frappe.whitelist()
-def importer_notes(file_url, type_dexamen, academic_year, filiere, niveau, semestre, teaching_unit, cc_columns=None):
-    """Importe des notes depuis un fichier Excel (modèle exporté)."""
-    cc_columns = _colonnes_cc(cc_columns)
-    args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
-    students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
-    par_matricule = {s["matricule"]: s["student"] for s in students}
-    par_code = {
-        code: s["student"]
-        for s, code in _generer_codes_anonymes(
-            students, _contexte_anonyme(teaching_unit, type_dexamen)
-        ).items()
-    }
-
-    lignes = _lire_xlsx(file_url)
-    if not lignes or not lignes[0]:
-        frappe.throw(_("Le fichier Excel est vide."))
-
-    entetes = [str(h).strip() if h is not None else "" for h in lignes[0]]
-    idx_matricule = entetes.index("Matricule") if "Matricule" in entetes else 0
-
-    erreurs = []
-    a_sauver = []
-
-    for ligne in lignes[1:]:
-        if not ligne or not any(l not in (None, "") for l in ligne):
-            continue
-        matricule = str(ligne[idx_matricule]).strip() if idx_matricule < len(ligne) and ligne[idx_matricule] is not None else ""
-        student = par_matricule.get(matricule) or par_code.get(matricule)
-        if not student:
-            erreurs.append(_("Matricule inconnu : {0}").format(matricule))
-            continue
-
-        if type_dexamen == "CC":
-            items = []
-            for i, c in enumerate(cc_columns):
-                col = entetes.index(c.get("label")) if c.get("label") in entetes else None
-                if col is None:
-                    continue
-                valeur = _valeur_note(ligne[col]) if col < len(ligne) else None
-                if valeur is None:
-                    continue
-                items.append({"cc_label": c.get("label"), "cc_weight": c.get("weight"), "note_cc": valeur})
-            if items:
-                a_sauver.append({"student": student, "notes_cc": items})
-        else:
-            col_note = {
-                "Examen": "Note d'examen",
-                "TP": "Note de TP",
-                "Rattrapage": "Note de rattrapage",
-            }[type_dexamen]
-            idx = entetes.index(col_note) if col_note in entetes else None
-            valeur = _valeur_note(ligne[idx]) if idx is not None and idx < len(ligne) else None
-            if valeur is None:
-                continue
-            champ = {"Examen": "note_examen", "TP": "note_tp", "Rattrapage": "note_examen_rattrapage"}[type_dexamen]
-            a_sauver.append({"student": student, champ: valeur})
-
-    if erreurs:
-        frappe.throw(_("Import impossible :\n- {0}").format("\n- ".join(erreurs[:50])))
-
-    if type_dexamen == "CC":
-        n = _sauvegarder_cc(args, a_sauver)
-    elif type_dexamen == "Examen":
-        n = _sauvegarder_examen(args, a_sauver)
-    elif type_dexamen == "TP":
-        n = _sauvegarder_tp(args, a_sauver)
-    else:
-        n = _sauvegarder_rattrapage(args, a_sauver)
-
-    return {"saved": n}
-
-
-@frappe.whitelist()
 def export_evaluations(academic_year, filiere, niveau, semestre, teaching_unit, anonyme=None):
     """Exporte la saisie unifiée (CC, CCTP, EXAMTP, EXAM) au format Excel.
 
@@ -2384,54 +2355,3 @@ def export_evaluations(academic_year, filiere, niveau, semestre, teaching_unit, 
         )
 
     _repondre_xlsx(lignes, "notes_{0}_evaluations.xlsx".format(teaching_unit.replace("/", "-")))
-
-
-@frappe.whitelist()
-def importer_evaluations(file_url, academic_year, filiere, niveau, semestre, teaching_unit):
-    """Importe la saisie unifiée depuis un Excel (Matricule + CC + CCTP + EXAMTP + EXAM)."""
-    args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
-    students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
-    par_matricule = {s["matricule"]: s["student"] for s in students}
-    par_code = {
-        code: s["student"]
-        for s, code in _generer_codes_anonymes(
-            students, _contexte_anonyme(teaching_unit, TYPE_NORMALE)
-        ).items()
-    }
-
-    lignes = _lire_xlsx(file_url)
-    if not lignes or not lignes[0]:
-        frappe.throw(_("Le fichier Excel est vide."))
-
-    entetes = [str(h).strip() if h is not None else "" for h in lignes[0]]
-    idx_matricule = entetes.index("Matricule") if "Matricule" in entetes else 0
-
-    def _idx_col(nom):
-        return entetes.index(nom) if nom in entetes else None
-
-    erreurs = []
-    a_sauver = []
-    for ligne in lignes[1:]:
-        if not ligne or not any(l not in (None, "") for l in ligne):
-            continue
-        matricule = str(ligne[idx_matricule]).strip() if idx_matricule < len(ligne) and ligne[idx_matricule] is not None else ""
-        student = par_matricule.get(matricule) or par_code.get(matricule)
-        if not student:
-            erreurs.append(_("Matricule inconnu : {0}").format(matricule))
-            continue
-        row = {"student": student}
-        for champ, colonne in (("cc", "CC"), ("note_cctp", "CCTP"), ("note_examtp", "EXAMTP"), ("note_examen", "EXAM")):
-            i = _idx_col(colonne)
-            valeur = _valeur_note(ligne[i]) if i is not None and i < len(ligne) else None
-            if valeur is not None:
-                row[champ] = valeur
-        if any(row.get(c) is not None for c in ("cc", "note_cctp", "note_examtp", "note_examen")):
-            a_sauver.append(row)
-
-    if erreurs:
-        frappe.throw(_("Import impossible :\n- {0}").format("\n- ".join(erreurs[:50])))
-
-    n = 0
-    if a_sauver:
-        n = enregistrer_evaluations(academic_year, filiere, niveau, semestre, teaching_unit, a_sauver)["saved"]
-    return {"saved": n}

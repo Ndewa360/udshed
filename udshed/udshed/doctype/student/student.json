@@ -2,7 +2,7 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "STU-.####",
+ "autoname": "format:{matricule}",
  "creation": "2026-07-10 14:13:47.941675",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -68,7 +68,6 @@
     "reqd": 1
    },
    {
-    "default": "udshed@example.com",
     "fetch_if_empty": 1,
     "fieldname": "email",
     "fieldtype": "Data",

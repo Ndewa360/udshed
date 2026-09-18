@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 
+from udshed.api.proces_verbal import _credits_ue
 from udshed.grade_calculation import get_seuil_validation, get_student_cycle
 
 TYPE_NORMALE = "Examen de session normal"
@@ -18,7 +19,7 @@ def _detail_ue_non_validee(note, student_doc, seuil):
             "Course", teaching_unit_doc.course, "intitule"
         )
 
-    credits = frappe.db.get_value("Teaching Unit", note.teaching_unit, "credits") or 0
+    credits = _credits_ue(note.teaching_unit, student_doc.filiere, student_doc.niveau_actuel or "") if student_doc.filiere else int(frappe.db.get_value("Teaching Unit", note.teaching_unit, "credits") or 0)
 
     return {
         "name": note.name,

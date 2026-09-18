@@ -241,6 +241,80 @@ def make_session_examen_note(
     return doc
 
 
+def make_planning_item(
+    teaching_unit,
+    academic_year,
+    calendar=None,
+    type_dexamen=TYPE_NORMALE,
+    date="2026-10-15 08:00:00",
+    heure_debut="08:00:00",
+    heure_fin="12:00:00",
+):
+    """Crée une programmation (Planning Item) pour une UE dans le planning.
+
+    La période horaire (Planning Period, table enfant du calendrier) est
+    créée si le calendrier n'en possède pas encore, puis référencée par
+    l'item de planning.
+    """
+    calendar = calendar or make_calendar_planing()
+    existing = frappe.db.get_value(
+        "Planning Period", {"parent": calendar.name}, "name"
+    )
+    if existing:
+        period_name = existing
+    else:
+        period_row = calendar.append("heure_planification", {})
+        period_row.libelle = f"Période {_COMPTEUR['n']}"
+        period_row.heure_de_debut = heure_debut
+        period_row.heure_de_fin = heure_fin
+        calendar.save(ignore_permissions=True)
+        period_name = period_row.name
+
+    item = frappe.new_doc("Planning Item")
+    item.cours = teaching_unit.name
+    item.type = type_dexamen
+    item.academic_year = academic_year.name
+    item.mode = "En présentiel"
+    item.date = date
+    item.period = period_name
+    item.insert(ignore_permissions=True)
+    return item
+
+
+def _session_reinscription_ouverte(academic_year_name):
+    """Retrouve une session de réinscription ouverte, ou en crée une seule.
+
+    Toutes les fixtures partagent la même session ouverte : le doctype
+    n'autorise qu'une seule « Session Reinscription » ouverte à la fois, et
+    créer une nouvelle à chaque exécution polluerait la base partagée.
+    """
+    ouverte = frappe.db.get_value(
+        "Session Reinscription", {"statut": "Ouverte"}, "name"
+    )
+    if ouverte:
+        return frappe.get_doc("Session Reinscription", ouverte)
+
+    doc = frappe.new_doc("Session Reinscription")
+    doc.academic_year = academic_year_name
+    doc.statut = "Ouverte"
+    doc.date_ouverture = "2026-09-01"
+    doc.date_cloture = "2026-12-31"
+    doc.note_minimale = 0
+    doc.note_maximale = 20
+    doc.insert(ignore_permissions=True)
+    return doc
+
+
+def _annee_precedente(academic_year_name):
+    """'2026-2027' -> '2025-2026' (année académique antérieure)."""
+    debut = (academic_year_name or "").split("-")[0]
+    try:
+        debut = int(debut)
+    except (TypeError, ValueError):
+        return None
+    return f"{debut - 1}-{debut}"
+
+
 def make_academic_reregistration(
     fos, niveau_label, academic_year, ues, student=None, semestre="Semestre 1", cycle="Licence"
 ):
@@ -270,17 +344,31 @@ def make_academic_reregistration(
             niveau = make_level(fos, level=niveau_label)
         student = make_student(fos, niveau, cycle=cycle)
 
-    reinscription = frappe.new_doc("Session Reinscription")
-    reinscription.academic_year = academic_year.name
-    reinscription.statut = "Ouverte"
-    reinscription.date_ouverture = "2026-09-01"
-    reinscription.date_cloture = "2026-12-31"
-    reinscription.note_minimale = 0
-    reinscription.note_maximale = 20
-    reinscription.insert(ignore_permissions=True)
+    reinscription = _session_reinscription_ouverte(academic_year.name)
+
+    # Ancrage « année précédente » : ces tests ciblent la saisie des notes,
+    # pas le workflow de réinscription. La règle verifier_annee_suivante exige
+    # une année antérieure à l'étudiant ; on l'ancre sur l'année qui précède
+    # avec la validation métier désactivée (dépendance propre à la fixture).
+    nom_prenom = (
+        f"{getattr(student, 'prenom', '')} {getattr(student, 'nom', '')}".strip()
+    )
+    annee_precedente = _annee_precedente(academic_year.name)
+    if annee_precedente:
+        ancrage = frappe.new_doc("Academic Reregistration")
+        ancrage.student = student.name
+        ancrage.nom_prenom = nom_prenom
+        ancrage.reinscription_session = reinscription.name
+        ancrage.academic_year = annee_precedente
+        ancrage.filiere = fos.name
+        ancrage.niveau = niveau_label
+        ancrage.semestre = semestre
+        ancrage.flags.ignore_validate = True
+        ancrage.insert(ignore_permissions=True)
 
     doc = frappe.new_doc("Academic Reregistration")
     doc.student = student.name
+    doc.nom_prenom = nom_prenom
     doc.academic_year = academic_year.name
     doc.filiere = fos.name
     doc.niveau = niveau_label

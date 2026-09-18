@@ -10,7 +10,7 @@ import frappe
 def search_students(doctype, txt, searchfield, start, page_len, filters=None):
 	"""Recherche d'étudiants pour le champ Link de la page Relevé de notes.
 
-	Cherche par nom du document (STU-####), matricule, nom ou prénom.
+	Cherche par matricule (issu de l'inscription), nom ou prénom.
 	"""
 	txt = (txt or "").strip()
 	or_filters = None

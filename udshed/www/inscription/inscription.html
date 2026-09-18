@@ -1,5 +1,9 @@
 {% extends "templates/web.html" %}
 
+{% block style %}
+<link rel="stylesheet" href="/assets/udshed/css/inscription.css">
+{% endblock %}
+
 {% block page_content %}
 <div class="auth-shell">
     <div class="container auth-container">
@@ -33,7 +37,7 @@
                     </div>
                 </div>
 
-                <button id="btn_soumettre" class="btn btn-primary btn-block">
+                <button id="btn_soumettre" type="button" class="btn btn-primary btn-block">
                     <span class="btn-label">Continuer</span>
                     <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
                 </button>

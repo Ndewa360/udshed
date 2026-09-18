@@ -136,10 +136,10 @@ pdf_body_html = "udshed.api.transcript.pdf_body_html"
 # ----------
 
 # add methods and filters to jinja environment
-# jinja = {
-# 	"methods": "udshed.utils.jinja_methods",
-# 	"filters": "udshed.utils.jinja_filters"
-# }
+jinja = {
+	"methods": "udshed.utils.jinja_methods",
+}
+# jinja_filters = "udshed.utils.jinja_filters"
 
 # Installation
 # ------------
