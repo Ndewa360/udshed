@@ -1,0 +1,44 @@
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; border-radius: 12px; overflow: hidden; border: 1px solid #e2e4e9;">
+
+  <!-- Header -->
+  <div style="background: #1e2025; padding: 32px; text-align: center;">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="Udshed" style="display: block; max-height: 72px; max-width: 200px; margin: 0 auto 12px;" />
+    {% endif %}
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0; letter-spacing: -0.02em;">Udshed</h1>
+  </div>
+
+  <!-- Body -->
+  <div style="padding: 32px; background: #ffffff;">
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Bonjour {{ nom_etudiant }},
+    </p>
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Les notes de la matière <strong>{{ matiere }}</strong> sont désormais disponibles.
+    </p>
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Veuillez consulter le babillard pour prendre connaissance de votre résultat.
+    </p>
+
+    {% if babillard_url %}
+    <div style="text-align: center; margin: 28px 0 4px;">
+      <a href="{{ babillard_url }}" style="display: inline-block; background: #1e2025; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">Consulter le babillard</a>
+    </div>
+    {% endif %}
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Cordialement,<br>
+      Administration académique
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding: 20px 32px; background: #f5f6f8; border-top: 1px solid #e2e4e9; text-align: center;">
+    <p style="color: #9ca0a8; font-size: 12px; margin: 0;">
+      Udshed — Plateforme de gestion académique
+    </p>
+  </div>
+
+</div>

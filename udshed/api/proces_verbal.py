@@ -7,6 +7,7 @@ import re
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 from udshed.grade_calculation import get_seuil_validation, get_student_cycle
 from udshed.api.saisie_notes import _get_etudiants, _get_niveau_name, get_ues
@@ -62,7 +63,7 @@ def _credits_ue(teaching_unit, filiere, niveau):
         "course_poid",
     )
     if poid:
-        return int(poid)
+        return float(poid)
     return int(frappe.db.get_value("Teaching Unit", teaching_unit, "credits") or 0)
 
 
@@ -379,6 +380,167 @@ def download_proces_verbal_pdf(academic_year, filiere, niveau, semestre):
     nom = "PV_{0}_{1}_{2}_{3}.pdf".format(
         filiere.replace("/", "-"),
         niveau.replace(" ", "-"),
+        semestre.replace(" ", ""),
+        academic_year.replace("/", "-"),
+    )
+    frappe.response["filename"] = nom
+    frappe.response["filecontent"] = pdf
+    frappe.response["type"] = "download"
+    frappe.response["content_type"] = "application/pdf"
+
+
+# --------------------------------------------------------------------------- #
+#  Procès-verbal d'une UE (colonnes = matières de l'UE)
+# --------------------------------------------------------------------------- #
+def _etudiants_de_lue(academic_year, filiere, niveau, matieres):
+    """Classe d'une UE : mêmes règles que le PV de semestre (hors dispensés)."""
+    return _etudiants_classe(
+        academic_year, filiere, niveau, [{"name": m["teaching_unit"]} for m in matieres]
+    )
+
+
+@frappe.whitelist()
+def get_pv_ue_data(academic_year, filiere, niveau, semestre, teaching_unit_value):
+    """Données du PV d'une UE : une colonne par matière, une ligne par étudiant.
+
+    Le résultat de chaque étudiant est recalculé à la volée
+    (``calculer_ue_etudiant``, fonction pure) : le PV reflète donc toujours
+    l'état de la saisie, y compris avant le premier enregistrement dans
+    ``Resultat UE``.
+    """
+    from udshed.api.resultat_ue import calculer_ue_etudiant, get_matieres_ue
+
+    matieres = get_matieres_ue(teaching_unit_value, academic_year, filiere, niveau)
+    if not matieres:
+        return {
+            "context": _contexte(academic_year, filiere, niveau, semestre),
+            "ue": None,
+            "matieres": [],
+            "etudiants": [],
+            "statistiques": {},
+        }
+
+    etudiants = _etudiants_de_lue(academic_year, filiere, niveau, matieres)
+
+    lignes = []
+    for et in etudiants:
+        resultat = calculer_ue_etudiant(
+            et["student"], teaching_unit_value, academic_year, semestre, filiere, niveau
+        )
+        if resultat is None:
+            continue
+        lignes.append(
+            {
+                "student": et["student"],
+                "matricule": et.get("matricule") or et["student"],
+                "nom": et.get("nom") or "",
+                "prenom": et.get("prenom") or "",
+                "notes": {
+                    ligne["teaching_unit"]: {
+                        "code": ligne["code"],
+                        "intitule": ligne["intitule"],
+                        "credits": ligne["credits"],
+                        "note_pct": ligne["note_pct"],
+                        "note_finale": ligne["note_finale"],
+                        "est_rattrapage": ligne["est_rattrapage"],
+                        "valide": ligne["valide"],
+                    }
+                    for ligne in resultat["lignes"]
+                },
+                "note_ue_pct": resultat["note_ue_pct"],
+                "note_ue_20": resultat["note_ue_20"],
+                "grade": resultat["grade"],
+                "point": resultat["point"],
+                "mention": resultat["mention"],
+                "statut": resultat["statut"],
+                "seuil_validation": resultat["seuil_validation"],
+                "total_credits": resultat["total_credits"],
+                "credits_obtenus": resultat["credits_obtenus"],
+                "pct_validation": resultat["pct_validation"],
+                "commentaire": resultat["commentaire"],
+            }
+        )
+
+    return {
+        "context": _contexte(academic_year, filiere, niveau, semestre),
+        "ue": _infos_ue(teaching_unit_value, matieres),
+        "matieres": matieres,
+        "etudiants": lignes,
+        "statistiques": _statistiques_ue(lignes),
+    }
+
+
+def _infos_ue(teaching_unit_value, matieres):
+    """Code, intitulé et crédits d'une UE (source : Teaching Unit Value)."""
+    ue = frappe.db.get_value(
+        "Teaching Unit Value",
+        teaching_unit_value,
+        ["code", "intitule", "semestre", "academic_year"],
+        as_dict=True,
+    )
+    if not ue:
+        return None
+    return {
+        "teaching_unit_value": teaching_unit_value,
+        "code": ue.code or "",
+        "intitule": ue.intitule or teaching_unit_value,
+        "semestre": ue.semestre or "",
+        "credits": round(sum(flt(m["credits"]) for m in matieres if flt(m["credits"]) > 0), 2),
+        "n_matieres": len(matieres),
+    }
+
+
+def _statistiques_ue(lignes):
+    """Inscrits / admis / échecs / en attente / taux de réussite.
+
+    Le taux porte sur les étudiants effectivement délibérés (admis +
+    échecs) : les lignes « En attente » ne doivent pas le faire baisser.
+    """
+    inscrits = len(lignes)
+    admis = sum(1 for l in lignes if l["statut"] == "Validé")
+    echecs = sum(1 for l in lignes if l["statut"] == "Non Validé")
+    en_attente = sum(1 for l in lignes if l["statut"] == "En attente")
+    delibere = admis + echecs
+    seuils = sorted({flt(l["seuil_validation"]) for l in lignes if l["seuil_validation"] is not None})
+
+    return {
+        "inscrits": inscrits,
+        "admis": admis,
+        "echecs": echecs,
+        "en_attente": en_attente,
+        "taux_reussite": round(admis / delibere * 100, 2) if delibere else 0.0,
+        "seuils": seuils,
+    }
+
+
+@frappe.whitelist()
+def download_pv_ue_pdf(academic_year, filiere, niveau, semestre, teaching_unit_value):
+    """Génère le PDF du procès-verbal d'une UE (A4 paysage)."""
+    from udshed.api.resultats_page import ROLES_RESULTATS
+
+    if not set(frappe.get_roles(frappe.session.user)) & set(ROLES_RESULTATS):
+        frappe.throw(_("Accès réservé au personnel."))
+
+    data = get_pv_ue_data(academic_year, filiere, niveau, semestre, teaching_unit_value)
+    if not data["ue"] or not data["matieres"]:
+        frappe.throw(_("Cette UE ne contient aucune matière pour cette année."))
+    if not data["etudiants"]:
+        frappe.throw(_("Aucun étudiant inscrit dans cette UE."))
+
+    from weasyprint import HTML
+
+    template_path = frappe.get_app_path(
+        "udshed", "public", "print_templates", "pv_ue.html"
+    )
+    with open(template_path, encoding="utf-8") as f:
+        template = f.read()
+
+    html = frappe.render_template(template, {"data": data})
+    pdf = HTML(string=html, base_url=frappe.utils.get_url()).write_pdf()
+
+    nom = "PV_UE_{0}_{1}_{2}_{3}.pdf".format(
+        (data["ue"]["code"] or "UE").replace("/", "-"),
+        filiere.replace("/", "-"),
         semestre.replace(" ", ""),
         academic_year.replace("/", "-"),
     )

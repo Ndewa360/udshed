@@ -18,10 +18,10 @@ frappe.ready(function() {
 
 		/* Conteneur principal (= main-wrapper) */
 		.web-form-container {
-			max-width: 1000px !important;
+			max-width: 1600px !important;
 			width: 100%;
 			margin: 0 auto;
-			padding: 2rem 1rem;
+			padding: 2rem 1.5rem;
 		}
 
 		/* Masque l'en-tête natif de la web-form */
@@ -196,13 +196,13 @@ frappe.ready(function() {
 		/* Tableaux (Choix de formation / Diplômes) */
 		.web-form .frappe-control[data-fieldtype="Table"] .grid,
 		.web-form .frappe-control[data-fieldtype="Table"] .form-grid {
-			border: 1px solid var(--udshed-border);
+			border: 1px solid #dfe8f2;
 			border-radius: 10px;
 			overflow: hidden;
 		}
 		.web-form .frappe-control[data-fieldtype="Table"] .grid-heading-row {
-			background: #EAF1F8;
-			border-bottom: 1px solid #cbd9e8;
+			background: #f2f6fb;
+			border-bottom: 1px solid #dce6f0;
 		}
 		.web-form .frappe-control[data-fieldtype="Table"] .grid-heading-row .grid-static-col {
 			color: #3d5877;
@@ -212,7 +212,7 @@ frappe.ready(function() {
 			letter-spacing: 0.3px;
 		}
 		.web-form .frappe-control[data-fieldtype="Table"] .grid-row {
-			border-top: 1px solid var(--udshed-border);
+			border-top: 1px solid #eef3f9;
 		}
 		.web-form .frappe-control[data-fieldtype="Table"] .grid-add-row,
 		.web-form .frappe-control[data-fieldtype="Table"] .grid-remove-rows {
@@ -226,21 +226,21 @@ frappe.ready(function() {
 			align-items: center;
 			gap: 10px;
 			width: 100%;
-			background: linear-gradient(90deg, #003B6F 0%, #1f6feb 100%);
+			background: linear-gradient(90deg, #274b81 0%, #3e7cb1 100%);
 			color: #ffffff !important;
 			font-size: 15px !important;
 			font-weight: 800 !important;
 			text-transform: uppercase;
 			letter-spacing: 0.5px;
-			padding: 13px 16px;
+			padding: 12px 16px;
 			border-radius: 10px 10px 0 0;
 			margin: 0;
-			box-shadow: 0 4px 10px rgba(0, 59, 111, 0.15);
+			box-shadow: 0 3px 8px rgba(39, 75, 129, 0.16);
 		}
 		.web-form .frappe-control[data-fieldname="choix_de_formation"] .control-label::before,
 		.web-form .frappe-control[data-fieldname="diplome_formation"] .control-label::before {
 			content: "▸";
-			color: #F08000;
+			color: #f0a35c;
 			font-size: 16px;
 			line-height: 1;
 		}
@@ -248,9 +248,49 @@ frappe.ready(function() {
 		.web-form .frappe-control[data-fieldname="diplome_formation"] .grid {
 			border-top-left-radius: 0;
 			border-top-right-radius: 0;
-			border: 2px solid #cbd9e8;
+			border: 1px solid #dfe8f2;
 			border-top: none;
-			box-shadow: 0 4px 12px rgba(0, 59, 111, 0.08);
+			box-shadow: 0 3px 10px rgba(39, 75, 129, 0.07);
+		}
+
+		/* Éditeur « Choix de formation » : blanc épuré —
+		   lignes blanches, bordures bleu doux, survol très léger */
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .grid-body .grid-row {
+			background: #ffffff;
+			--column-border-color: #dfe8f2;
+		}
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .grid-body .grid-row:hover {
+			background: #f2f6fb;
+		}
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .grid-body .grid-row.open {
+			background: #ffffff;
+			box-shadow: 0 4px 12px rgba(222, 232, 244, 0.9);
+		}
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .grid-body .form-control,
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .grid-body select.form-control {
+			background-color: #ffffff !important;
+			border-color: #dfe8f2 !important;
+			color: #1e2025 !important;
+		}
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .grid-body .form-control:focus,
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .grid-body select.form-control:focus {
+			background-color: #ffffff !important;
+			border-color: #1f6feb !important;
+			box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.12) !important;
+		}
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .grid-body .grid-static-col {
+			border-right: 1px solid #eef3f9;
+			background: #ffffff;
+		}
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .grid-body .grid-form-row {
+			background: #fafcfe;
+			border-top: 1px solid #dfe8f2;
+			border-bottom: 1px solid #dfe8f2;
+		}
+		.web-form .frappe-control[data-fieldname="choix_de_formation"] .grid-body .grid-form-row .form-control {
+			background-color: #ffffff !important;
+			border-color: #dfe8f2 !important;
+			color: #1e2025 !important;
 		}
 
 		/* Boutons — fond noir, alignés à droite (style page « Choix du candidat ») */
@@ -564,7 +604,7 @@ frappe.ready(function() {
 	frappe.web_form.validate = function() {
 		nettoyerTelephonesAvantSoumission();
 		const requiredFields = [
-			'filiere', 'niveau', 'examination_centre',
+			'examination_centre',
 			'first_name', 'last_name', 'birthdate', 'birth_place', 'sexe',
 			'phone', 'email',
 			'birth_certificate', 'access_diploma_copy', 'id_photo', 'remittance_receipt'
@@ -698,49 +738,9 @@ frappe.ready(function() {
 		};
 	})();
 
-	// ---- Choix du candidat : les options s'affichent selon la filière sélectionnée ----
+	// ---- Choix de formation : dans la table, la filière/niveau se règlent ligne par ligne ----
 	if (frappe.web_form.is_new || frappe.web_form.in_edit_mode) {
-		function chargerNiveaux(filiere, callback) {
-			if (!filiere) {
-				callback([]);
-				return;
-			}
-			frappe.call({
-				method: "udshed.api.candidature.get_niveaux_filiere",
-				args: { filiere: filiere },
-				callback: function (r) {
-					var niveaux = r.message || [];
-					callback(
-						niveaux.filter(function (v, i, arr) {
-							return arr.indexOf(v) === i;
-						})
-					);
-				},
-				error: function () {
-					callback([]);
-				},
-			});
-		}
-
-		function mettreAJourNiveauxFiliere() {
-			var filiere = frappe.web_form.get_value("filiere") || "";
-			chargerNiveaux(filiere, function (niveaux) {
-				var champ = frappe.web_form.fields_dict["niveau"];
-				if (!champ) return;
-				var options = [""];
-				niveaux.forEach(function (niveau) {
-					options.push(niveau);
-				});
-				champ.df.options = options.join("\n");
-				champ.refresh();
-				frappe.web_form.set_value("niveau", "");
-			});
-		}
-
-		frappe.web_form.on("filiere", mettreAJourNiveauxFiliere);
-
-		// Dans la table « Choix de formation », le niveau proposé pour une ligne
-		// ne contient que les niveaux de la filière choisie sur cette ligne.
+		// Le niveau proposé pour une ligne ne contient que les niveaux de la filière choisie sur cette ligne.
 		frappe.web_form.set_query("niveau", "choix_de_formation", function (frm, cdt, cdn) {
 			var filiere =
 				(frm && frm.filiere) ||
@@ -748,8 +748,6 @@ frappe.ready(function() {
 			if (!filiere) return;
 			return { filters: { parent: filiere } };
 		});
-
-		mettreAJourNiveauxFiliere();
 	}
 
 	// ---- UX: Scroll to first error ----

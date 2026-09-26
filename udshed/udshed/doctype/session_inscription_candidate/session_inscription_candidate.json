@@ -244,11 +244,13 @@
    {
     "fieldname": "father_name",
     "fieldtype": "Data",
+    "in_list_view": 1,
     "label": "Nom(s) et pr\u00e9nom(s) du p\u00e8re"
    },
    {
     "fieldname": "father_phone",
     "fieldtype": "Phone",
+    "in_list_view": 1,
     "label": "N\u00b0 T\u00e9l\u00e9phone du p\u00e8re"
    },
    {
@@ -285,11 +287,13 @@
    {
     "fieldname": "mother_name",
     "fieldtype": "Data",
+    "in_list_view": 1,
     "label": "Nom(s) et pr\u00e9nom(s) de la m\u00e8re"
    },
    {
     "fieldname": "mother_phone",
     "fieldtype": "Phone",
+    "in_list_view": 1,
     "label": "N\u00b0 T\u00e9l\u00e9phone de la m\u00e8re"
    },
    {
@@ -326,6 +330,7 @@
    {
     "fieldname": "sponsor_name",
     "fieldtype": "Data",
+    "in_list_view": 1,
     "label": "Nom(s) et pr\u00e9nom(s) du sponsor"
    },
    {

@@ -2,8 +2,10 @@
 
   <!-- Header -->
   <div style="background: #1e2025; padding: 32px; text-align: center;">
-    <h1 style="color: #ffffff; font-size: 20px; margin: 0; letter-spacing: -0.02em;">UDSHED</h1>
-    <p style="color: #9ca0a8; font-size: 13px; margin: 6px 0 0 0;">Université Dshang</p>
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="Udshed" style="display: block; max-height: 72px; max-width: 200px; margin: 0 auto 12px;" />
+    {% endif %}
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0; letter-spacing: -0.02em;">Udshed</h1>
   </div>
 
   <!-- Body -->
@@ -11,23 +13,30 @@
     <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
       Bonjour {{ nom_prenom }},
     </p>
-    <hr style="border: 0; border-top: 1px solid #e2e4e9; margin: 24px 0;">
+
     <p style="color: #28a745; font-size: 15px; font-weight: bold; line-height: 1.6;">
       Félicitations ! Votre inscription est confirmée
     </p>
     <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
       Votre numéro de matricule est : <strong>{{ matricule }}</strong>.
     </p>
+
+    {% if pdf_url %}
+    <div style="text-align: center; margin: 28px 0 4px;">
+      <a href="{{ base_url }}{{ pdf_url }}" style="display: inline-block; background: #1e2025; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">&#128196; Télécharger ma fiche d'inscription</a>
+    </div>
+    {% endif %}
+
     <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
       Cordialement,<br>
-      L'équipe UDSHED
+      L'équipe Udshed
     </p>
   </div>
 
   <!-- Footer -->
   <div style="padding: 20px 32px; background: #f5f6f8; border-top: 1px solid #e2e4e9; text-align: center;">
     <p style="color: #9ca0a8; font-size: 12px; margin: 0;">
-      UDSHED — Plateforme de gestion des inscriptions académiques
+      Udshed — Plateforme de gestion des inscriptions académiques
     </p>
   </div>
 

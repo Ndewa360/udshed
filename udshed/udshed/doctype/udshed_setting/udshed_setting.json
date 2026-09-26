@@ -60,6 +60,35 @@
    "label": "Logo"
   },
   {
+   "fieldname": "column_break_ecole",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "school_institute",
+   "fieldtype": "Data",
+   "label": "Institut / Ecole"
+  },
+  {
+   "fieldname": "school_address",
+   "fieldtype": "Data",
+   "label": "Adresse (BP, ville)"
+  },
+  {
+   "fieldname": "school_phone",
+   "fieldtype": "Data",
+   "label": "T\u00e9l\u00e9phone"
+  },
+  {
+   "fieldname": "school_email",
+   "fieldtype": "Data",
+   "label": "Email"
+  },
+  {
+   "fieldname": "school_website",
+   "fieldtype": "Data",
+   "label": "Site web"
+  },
+  {
    "fieldname": "section_break_bsrn",
     "fieldtype": "Section Break"
   },

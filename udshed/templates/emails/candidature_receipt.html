@@ -2,8 +2,10 @@
 
   <!-- Header -->
   <div style="background: #1e2025; padding: 32px; text-align: center;">
-    <h1 style="color: #ffffff; font-size: 20px; margin: 0; letter-spacing: -0.02em;">UDSHED</h1>
-    <p style="color: #9ca0a8; font-size: 13px; margin: 6px 0 0 0;">Université Dshang</p>
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="Udshed" style="display: block; max-height: 72px; max-width: 200px; margin: 0 auto 12px;" />
+    {% endif %}
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0; letter-spacing: -0.02em;">Udshed</h1>
   </div>
 
   <!-- Body -->
@@ -15,7 +17,7 @@
     </p>
 
     <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
-      Nous avons bien reçu votre candidature sur la plateforme UDSHED.
+      Nous avons bien reçu votre candidature sur la plateforme Udshed.
     </p>
 
     <!-- Numéro de dossier -->
@@ -38,12 +40,20 @@
     <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
       Notre équipe examinera votre dossier dans les meilleurs délais.
     </p>
+
+    <!-- Téléchargement de la fiche d'inscription -->
+    <div style="text-align: center; margin: 28px 0 4px;">
+      <a href="{{ base_url }}/api/method/udshed.api.candidature.telecharger_fiche_pdf?dossier={{ doc_name }}" style="display: inline-block; background: #1e2025; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">&#128196; Télécharger ma fiche d'inscription</a>
+    </div>
+    <p style="color: #9ca0a8; font-size: 13px; line-height: 1.5; text-align: center; margin: 10px 0 0;">
+      Vous pouvez la télécharger à tout moment pour archiver votre dossier de candidature.
+    </p>
   </div>
 
   <!-- Footer -->
   <div style="padding: 20px 32px; background: #f5f6f8; border-top: 1px solid #e2e4e9; text-align: center;">
     <p style="color: #9ca0a8; font-size: 12px; margin: 0;">
-      UDSHED — Plateforme de gestion des inscriptions académiques
+      Udshed — Plateforme de gestion des inscriptions académiques
     </p>
   </div>
 

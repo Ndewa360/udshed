@@ -81,6 +81,24 @@
   },
   {
    "doc_view": "",
+   "label": "Fiche de report",
+   "link_to": "Fiche Report",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Examen Anonymat",
+   "link_to": "Examen Anonymat",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Correction des copies",
+   "link_to": "correction-copies",
+   "type": "Page"
+  },
+  {
+   "doc_view": "",
    "label": "Proc\u00e8s-Verbal r\u00e9capitulatif",
    "link_to": "Proces Verbal Recapitulatif",
    "report_ref_doctype": "Resultat Academique",

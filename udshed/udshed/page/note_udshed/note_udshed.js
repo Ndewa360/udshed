@@ -1,7 +1,12 @@
 frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	const API = "udshed.api.saisie_notes.";
+	const API_ANON = "udshed.api.examen_anonymat.";
 	const TYPE_EXAMEN = "Examen";
 	const TYPE_RATTRAPAGE = "Rattrapage";
+	const TYPE_CC_EVAL = "Contrôle continu (CC)";
+	const TYPE_EXAMEN_EVAL = "Examen normal";
+	const TYPE_RATTRAPAGE_EVAL = "Rattrapage";
+	const TYPES_EVALUATION = [TYPE_CC_EVAL, TYPE_EXAMEN_EVAL, TYPE_RATTRAPAGE_EVAL];
 
 	// Colonnes d'évaluations de la saisie unifiée (ordre d'affichage).
 	const EVALUATIONS = [
@@ -108,11 +113,45 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	}
 
 	function is_rattrapage_view() {
-		return state.filters.session === "Rattrapage";
+		return selected_mode() === "rattrapage";
+	}
+
+	function is_cc_view() {
+		return selected_mode() === "cc";
+	}
+
+	function selected_mode() {
+		const t = state.filters.session || TYPE_EXAMEN_EVAL;
+		if (t === TYPE_CC_EVAL) return "cc";
+		if (t === TYPE_RATTRAPAGE_EVAL) return "rattrapage";
+		return "examen";
 	}
 
 	function active_type() {
-		return is_rattrapage_view() ? TYPE_RATTRAPAGE : TYPE_EXAMEN;
+		const mode = selected_mode();
+		if (mode === "cc") return "CC";
+		if (mode === "rattrapage") return TYPE_RATTRAPAGE;
+		return TYPE_EXAMEN;
+	}
+
+	function has_composante(code) {
+		const comps = (state.data && state.data.formule && state.data.formule.composantes) || [];
+		return comps.some((c) => c.composante === code);
+	}
+
+	function mode_fields(mode) {
+		if (mode === "cc") {
+			const fields = [{ field: "cc", label: "CC" }];
+			if (has_composante("Controle Continu Travaux Pratiques(CCTP)")) {
+				fields.push({ field: "cctp", label: "CCTP" });
+			}
+			return fields;
+		}
+		const fields = [{ field: "examen", label: "EXAM" }];
+		if (has_composante("Examen Travaux Pratiques(EXAMTP)")) {
+			fields.push({ field: "examtp", label: "EXAMTP" });
+		}
+		return fields;
 	}
 
 	// ------------------------------------------------------------------
@@ -120,6 +159,9 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	// ------------------------------------------------------------------
 	let preview_timer = null;
 	let preview_dirty = {};
+	let autosave_timer = null;
+	let autosave_running = false;
+	const AUTOSAVE_DELAY = 1200;
 
 	function preview_val(student, key, fallback) {
 		const pv = state.preview[student];
@@ -149,8 +191,9 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			}
 			// On transmet CC (moyenne) et note initiale pour que l'aperçu
 			// reproduise exactement le calcul de la note de rattrapage enregistrée.
-			const cc = (state.data.notes.CC[student] || {}).note_cc_moyenne;
-			const initiale = (state.data.notes.Rattrapage[student] || {}).note_examen;
+			const rt_note = state.data.notes.Rattrapage[student] || {};
+			const cc = rt_note.note_cc_moyenne != null ? rt_note.note_cc_moyenne : (state.data.notes.CC[student] || {}).note_cc_moyenne;
+			const initiale = rt_note.note_examen;
 			if (cc != null) args.notes_cc = JSON.stringify([{ cc_label: "CC", cc_weight: 1, note_cc: cc }]);
 			if (initiale != null) args.note_examen = initiale;
 			args.note_examen_rattrapage = rt;
@@ -222,6 +265,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	const infoBar = $('<div class="sn-info"></div>').css("display", "none").appendTo(content);
 	const formuleBar = $('<div class="sn-ue-formule sn-formule-bar"></div>').css("display", "none").appendTo(content);
 	const toolbar = $('<div class="sn-toolbar"></div>').css("display", "none").appendTo(content);
+	const anonBar = $('<div class="sn-anonbar"></div>').css("display", "none").appendTo(content);
 	const tableWrap = $('<div class="sn-table-wrap"></div>').css("display", "none").appendTo(content);
 	const emptyEl = $('<div class="sn-empty"></div>').css("display", "none").appendTo(content);
 
@@ -297,9 +341,9 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	});
 	fld.session = page.add_field({
 		fieldname: "session",
-		label: __("Session"),
+		label: __("Type d'évaluation"),
 		fieldtype: "Select",
-		options: ["Examen normal", "Rattrapage"],
+		options: TYPES_EVALUATION,
 		change: () => {
 			read_filters();
 			if (state.filters.cours) render();
@@ -307,7 +351,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	});
 
 	fld.semestre.set_input("Semestre 1");
-	fld.session.set_input("Examen normal");
+	fld.session.set_input(TYPE_EXAMEN_EVAL);
 
 	function read_filters() {
 		const vals = page.get_form_values();
@@ -317,7 +361,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		state.filters.niveau = vals.niveau || null;
 		state.filters.semestre = vals.semestre || null;
 		state.filters.cours = vals.cours || null;
-		state.filters.session = vals.session || "Examen normal";
+		state.filters.session = vals.session || TYPE_EXAMEN_EVAL;
 	}
 
 	const FIELD_ORDER = ["academic_year", "faculty", "filiere", "niveau", "semestre", "cours"];
@@ -367,6 +411,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		state.preview = {};
 		preview_dirty = {};
 		clearTimeout(preview_timer);
+		clearTimeout(autosave_timer);
 		render();
 	}
 
@@ -654,6 +699,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		tableWrap.toggle(has_data);
 		infoBar.toggle(has_data);
 		formuleBar.toggle(has_data);
+		anonBar.toggle(has_data);
 		if (!has_data) {
 			emptyEl.show().html(
 				'<div class="sn-empty-icon">' +
@@ -671,24 +717,18 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		emptyEl.hide();
 		render_info();
 		render_toolbar();
-		if (is_rattrapage_view()) render_rattrapage();
-		else render_unifie();
+		render_anonymat();
+		if (selected_mode() === "rattrapage") render_rattrapage();
+		else render_ev(selected_mode());
 	}
 
 	function render_info() {
 		const ue = state.data.ue_info || {};
-		const sessions = state.data.sessions || {};
 		const enseignant_names = (ue.enseignants || []).map((e) => e.full_name || e.name).filter(Boolean);
 		const combinaison_labels = ((state.data.formule || {}).combinaison || "")
 			.split(" + ")
 			.map((c) => COMPOSANTE_COURT[c.trim()] || c.trim())
 			.filter(Boolean);
-		const session_dot = (name) => {
-			const s = sessions[name];
-			const statut = s ? s.statut : "";
-			const cls = statut === "Publiée" ? "blue" : statut === "Saisi" ? "orange" : statut === "Validé" ? "green" : "gray";
-			return '<span class="sn-dot ' + cls + '"></span>' + esc(statut || "Brouillon");
-		};
 		const initials = (name) =>
 			name
 				.trim()
@@ -740,10 +780,6 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				'<div class="sn-ue-students">' +
 				(state.data.students.length === 1 ? __("1 étudiant inscrit") : __("{0} étudiants inscrits", [state.data.students.length])) +
 				"</div>" +
-				"</div>" +
-				'<div class="sn-info-right">' +
-				"<div class=\"sn-session\"><span class=\"sn-session-label\">Examen</span> " + session_dot("normale") + "</div>" +
-				"<div class=\"sn-session\"><span class=\"sn-session-label\">Rattrapage</span> " + session_dot("rattrapage") + "</div>" +
 				"</div>"
 		);
 		update_formule_banner(state.data.formule);
@@ -751,13 +787,16 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 
 	function active_session_info() {
 		if (!state.data || !state.data.sessions) return null;
-		return is_rattrapage_view()
-			? state.data.sessions.rattrapage || null
-			: state.data.sessions.normale || null;
+		const mode = selected_mode();
+		if (mode === "cc") return state.data.sessions.cc || null;
+		if (mode === "rattrapage") return state.data.sessions.rattrapage || null;
+		return state.data.sessions.normale || null;
 	}
 
 	function render_toolbar() {
-		const is_rt = is_rattrapage_view();
+		const mode = selected_mode();
+		const is_rt = mode === "rattrapage";
+		const is_cc = mode === "cc";
 		const session = active_session_info();
 		const pdf_msg = is_rt ? null : formule_complete_msg();
 		const pdf_disabled = is_rt ? false : !!pdf_msg;
@@ -769,64 +808,128 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			'<button type="button" class="btn btn-primary btn-sm sn-btn sn-btn-save">' +
 				(is_rt ? __("Enregistrer le rattrapage") : __("Enregistrer les évaluations")) +
 				"</button>" +
-				'<button type="button" class="btn ' + (state.anonyme ? "btn-warning" : "btn-default") + ' btn-sm sn-btn sn-btn-anonyme">' +
-				(state.anonyme ? "&#128065; " + __("Anonyme actif") : "&#128065; " + __("Mode anonyme")) +
-				"</button>" +
-				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-feuille">' +
-				"&#128196; " + __("Feuille de saisie") +
-				"</button>" +
+				(!is_cc
+					? '<button type="button" class="btn ' + (state.anonyme ? "btn-warning" : "btn-default") + ' btn-sm sn-btn sn-btn-anonyme">' +
+						(state.anonyme ? "&#128065; " + __("Anonyme actif") : "&#128065; " + __("Mode anonyme")) +
+						"</button>"
+					: "") +
+				(!is_cc
+					? '<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-feuille">' +
+						"&#128196; " + __("Feuille de saisie") +
+						"</button>"
+					: "") +
 				(is_rt
 					? '<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-modele">' + __("Modèle Excel") + "</button>"
 					: '') +
-				'<span class="sn-toolbar-hint">' +
-				(is_rt
-					? __("La note retenue = MAX(Session examen, Session rattrapage).")
-					: __("La combinaison (CC, CCTP, EXAMTP, EXAM) est détectée automatiquement ; les poids proviennent de la Grade Formula.")) +
-				"</span>" +
 				'<span class="sn-toolbar-sep"></span>' +
 				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-pdf" ' + (pdf_disabled ? "disabled title=\"" + esc(pdf_msg) + "\"" : "") + ">" +
 					"&#128196; " + __("Télécharger PDF") +
 					"</button>" +
-				'<button type="button" class="btn btn-success btn-sm sn-btn sn-btn-valider"' + non_planifie_attr + ">" +
-				__("Valider") +
-				"</button>" +
-				'<button type="button" class="btn btn-danger btn-sm sn-btn sn-btn-publier"' + non_planifie_attr + ">" +
-				__("Publier") +
-				"</button>" +
-				'<span class="sn-session-label">' +
-				(session ? esc(session.statut || "Brouillon") : "") +
-				"</span>" +
+				(!is_cc
+					? '<button type="button" class="btn btn-success btn-sm sn-btn sn-btn-valider"' + non_planifie_attr + ">" +
+						__("Valider") +
+						"</button>" +
+						'<button type="button" class="btn btn-danger btn-sm sn-btn sn-btn-publier"' + non_planifie_attr + ">" +
+						__("Publier") +
+						"</button>"
+					: '') +
+				(is_rt ? "" : '<span class="sn-session-label">' +
+					(session ? esc(session.statut || "Brouillon") : "") +
+					"</span>") +
 				(pdf_disabled && pdf_msg ? '<span class="sn-pdf-msg">' + esc(pdf_msg) + "</span>" : "")
 		);
 	}
 
 	// ------------------------------------------------------------------
-	// tableau unifié (Examen normal)
+	// anonymat des copies (fiches d'anonymat / de report)
 	// ------------------------------------------------------------------
-	function render_unifie() {
+	function render_anonymat() {
+		if (selected_mode() === "cc") {
+			anonBar.toggle(false);
+			return;
+		}
+		const session = active_session_info();
+		anonBar.toggle(!!session && !!session.name);
+		if (!session || !session.name) return;
+		anonBar.html(
+			'<div class="sn-anonbar-load">' + __("Chargement de l'état de l'anonymat...") + "</div>"
+		);
+		frappe.call({
+			method: API_ANON + "obtenir_etat_anonymat",
+			args: { session: session.name, teaching_unit: state.filters.cours || null },
+			callback: (r) => render_anonymat_panel(r.message || {}),
+			error: () => anonBar.toggle(false),
+		});
+	}
+
+	function render_anonymat_panel(etat) {
+		const copies = etat.copies || {};
+		const ue = (state.data && state.data.ue_info) || {};
+		const titre_ue = ue.intitule || state.filters.cours || "";
+		const lock = etat.responsable
+			? ""
+			: '<span class="sn-anonbar-lock">&#128274; ' + __("Réservé au responsable des examens.") + "</span>";
+		const actions = etat.responsable
+			? '<span class="sn-anonbar-actions">' +
+				'<button type="button" class="btn btn-default btn-sm sn-btn sn-anon-generer">' + __("Générer les codes") + "</button>" +
+				'<button type="button" class="btn btn-default btn-sm sn-btn sn-anon-fiche">&#128196; ' + __("Fiche d'anonymat (PDF)") + "</button>" +
+				'<button type="button" class="btn btn-default btn-sm sn-btn sn-anon-report">&#128196; ' + __("Fiche de report (PDF)") + "</button>" +
+				"</span>"
+			: '<a class="btn btn-default btn-sm sn-btn" href="/app/correction-copies">' + __("Corriger les copies") + "</a>";
+		anonBar.html(
+			'<div class="sn-anonbar-head">' +
+				'<div class="sn-anonbar-left">' +
+					'<span class="sn-anonbar-title">&#128451; ' + __("Anonymat des copies") + "</span>" +
+					(titre_ue ? '<span class="sn-anonbar-sub">' + esc(titre_ue) + "</span>" : "") +
+					lock +
+				"</div>" +
+				'<div class="sn-anonbar-stats">' +
+					'<span class="sn-anonbar-stat sn-anonbar-stat-strong">' + __("Codes : {0}", [etat.codes != null ? etat.codes : 0]) + "</span>" +
+				"</div>" +
+				actions +
+			"</div>"
+		);
+	}
+
+	// ------------------------------------------------------------------
+	// tableau évaluations : Contrôle continu (CC) ou Examen normal (EXAM)
+	// ------------------------------------------------------------------
+	function render_ev(mode) {
+		const is_cc = mode === "cc";
 		const anon = state.anonyme;
+		const fields = mode_fields(mode);
 		const headers =
-			"<th>" + __("N°") + "</th><th>" + __(anon ? "Code" : "Matricule") + "</th><th>" + __(anon ? "Étudiant (anonyme)" : "Nom et Prénoms") + "</th>" +
-			EVALUATIONS.map((e) => '<th class="sn-ev-head">' + esc(e.label) + "</th>").join("") +
+			"<th>" + __("N°") + "</th>" +
+			(is_cc
+				? "<th>" + __(anon ? "Code" : "Matricule") + "</th>"
+				: "<th>" + __("Code") + "</th>" +
+				  (!anon ? "<th>" + __("Matricule") + "</th>" : "")) +
+			"<th>" + __(anon ? "Étudiant (anonyme)" : "Nom et Prénoms") + "</th>" +
+			fields.map((e) => '<th class="sn-ev-head">' + esc(e.label) + "</th>").join("") +
 			"<th>" + __("MOY (%)") + "</th><th>" + __("GRD") + "</th><th>" + __("PTS") + "</th>";
 
 		const body = (state.data.lignes || [])
 			.map((ligne, idx) => {
 				const row = state.cur[ligne.student] || {};
-				const inputs = EVALUATIONS.map(
-					(e) =>
-						'<td class="sn-num"><input type="number" class="sn-note sn-ev-note" data-student="' +
-						esc(ligne.student) +
-						'" data-field="' +
-						esc(e.field) +
-						'" min="0" max="20" step="0.25" value="' +
-						esc(row[e.field] || "") +
-						'"></td>'
-				).join("");
+				const inputs = fields
+					.map(
+						(e) =>
+							'<td class="sn-num"><input type="number" class="sn-note sn-ev-note" data-student="' +
+							esc(ligne.student) +
+							'" data-field="' +
+							esc(e.field) +
+							'" min="0" max="20" step="0.25" value="' +
+							esc(row[e.field] || "") +
+							'"></td>'
+					)
+					.join("");
 				return (
 					"<tr>" +
 					'<td class="sn-num">' + (idx + 1) + "</td>" +
-					'<td class="sn-mono">' + esc(anon ? ligne.code_anonyme : ligne.matricule) + "</td>" +
+					(is_cc
+						? '<td class="sn-mono">' + esc(anon ? ligne.code_anonyme : ligne.matricule) + "</td>"
+						: '<td class="sn-mono">' + esc(ligne.code_anonyme) + "</td>" +
+						  (!anon ? '<td class="sn-mono">' + esc(ligne.matricule) + "</td>" : "")) +
 					"<td" + (anon ? ' class="sn-anon"' : "") + ">" + esc(anon ? "Anonyme" : lbl_nom(ligne)) + "</td>" +
 					inputs +
 					'<td class="sn-num sn-strong" data-pv-student="' + esc(ligne.student) + '" data-pv="note_pct" data-pv-saved="' +
@@ -849,11 +952,12 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			})
 			.join("");
 
+		const nb_cols = (headers.match(/<th(?:\s|>)/g) || []).length;
 		tableWrap.html(
 			'<table class="sn-table"><thead><tr>' +
 				headers +
 				"</tr></thead><tbody>" +
-				(body || '<tr><td colspan="' + (3 + EVALUATIONS.length + 3) + '" class="sn-norows">' + __("Aucun étudiant inscrit à ce cours dans ce contexte académique.") + "</td></tr>") +
+				(body || '<tr><td colspan="' + nb_cols + '" class="sn-norows">' + __("Aucun étudiant inscrit à ce cours dans ce contexte académique.") + "</td></tr>") +
 				"</tbody></table>"
 		);
 		bind_table_events();
@@ -874,13 +978,14 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			.map((ligne) => {
 				const cc = notes_cc[ligne.student] || {};
 				const rt = notes_rt[ligne.student] || {};
+				const cc_moy = rt.note_cc_moyenne != null ? rt.note_cc_moyenne : cc.note_cc_moyenne;
 				const v = state.rt_cur[ligne.student] || "";
 				const src = rt;
-				return (
-					"<tr>" +
-					'<td class="sn-mono">' + esc(anon ? ligne.code_anonyme_rattrapage : ligne.matricule) + "</td>" +
-					"<td" + (anon ? ' class="sn-anon"' : "") + ">" + esc(anon ? "Anonyme" : lbl_nom(ligne)) + "</td>" +
-					'<td class="sn-num">' + fmt_num(cc.note_cc_moyenne) + "</td>" +
+			return (
+				"<tr>" +
+				'<td class="sn-mono">' + esc(anon ? ligne.code_anonyme_rattrapage : ligne.matricule) + "</td>" +
+				"<td" + (anon ? ' class="sn-anon"' : "") + ">" + esc(anon ? "Anonyme" : lbl_nom(ligne)) + "</td>" +
+				'<td class="sn-num">' + fmt_num(cc_moy) + "</td>" +
 					'<td class="sn-num">' + fmt_num(rt.note_examen) + "</td>" +
 					'<td class="sn-num"><input type="number" class="sn-note sn-rt-note" data-student="' + esc(ligne.student) +
 					'" min="0" max="20" step="0.25" value="' + esc(v) + '"></td>' +
@@ -952,6 +1057,11 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				state.rt_cur[student] = value;
 			}
 			schedule_preview(student);
+			schedule_autosave();
+		});
+		tableWrap.off("blur", ".sn-note");
+		tableWrap.on("blur", ".sn-note", () => {
+			flush_autosave();
 		});
 	}
 
@@ -971,24 +1081,31 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 
 	function save_evaluations() {
 		if (!state.data || state.busy) return;
+		const mode = selected_mode();
+		const is_cc = mode === "cc";
+		const fields = mode_fields(mode);
 		const problems = [];
 		const rows = [];
 		state.data.students.forEach((s) => {
 			const row = state.cur[s.student] || {};
-			EVALUATIONS.forEach((e) => {
+			fields.forEach((e) => {
 				const v = to_num(row[e.field]);
 				if (v != null && (v < 0 || v > 20)) {
 					problems.push(esc(s.matricule) + " — " + esc(e.label) + " : " + v);
 				}
 			});
 			if (row_changed(s.student)) {
-				rows.push({
-					student: s.student,
-					cc: to_num(row.cc),
-					note_cctp: to_num(row.cctp),
-					note_examtp: to_num(row.examtp),
-					note_examen: to_num(row.examen),
-				});
+				const entry = { student: s.student };
+				if (is_cc) {
+					entry.cc = to_num(row.cc);
+					entry.note_cctp = to_num(row.cctp);
+				} else {
+					entry.note_examen = to_num(row.examen);
+					entry.note_examtp = to_num(row.examtp);
+					const ligne = (state.data.lignes || []).find((l) => l.student === s.student);
+					entry.code_anonyme = ligne ? ligne.code_anonyme || "" : "";
+				}
+				rows.push(entry);
 			}
 		});
 		if (problems.length) {
@@ -1004,7 +1121,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			toast(__("Aucune évaluation à enregistrer."), "blue");
 			return;
 		}
-		do_save("enregistrer_evaluations", rows, {});
+		do_save("enregistrer_evaluations", rows, { type_dexamen: is_cc ? "CC" : "Examen" });
 	}
 
 	function save_rattrapage() {
@@ -1025,6 +1142,95 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			return;
 		}
 		do_save("enregistrer_rattrapage", rows, {});
+	}
+
+	function schedule_autosave() {
+		clearTimeout(autosave_timer);
+		if (state.busy || autosave_running || !state.data || !state.filters.cours) return;
+		autosave_timer = setTimeout(run_autosave, AUTOSAVE_DELAY);
+	}
+
+	function flush_autosave() {
+		clearTimeout(autosave_timer);
+		run_autosave();
+	}
+
+	function pending_autosave_rows(is_rt) {
+		const students = (state.data && state.data.students) || [];
+		const rows = [];
+		if (is_rt) {
+			students.forEach((s) => {
+				const v = to_num(state.rt_cur[s.student]);
+				if (v === state.rt_snap[s.student]) return;
+				if (v != null && (v < 0 || v > 20)) return;
+				rows.push({ student: s.student, note_examen_rattrapage: v });
+			});
+			return rows;
+		}
+		const mode = selected_mode();
+		const is_cc = mode === "cc";
+		const fields = mode_fields(mode);
+		students.forEach((s) => {
+			if (!row_changed(s.student)) return;
+			const row = state.cur[s.student] || {};
+			const c = { student: s.student };
+			if (is_cc) {
+				c.cc = to_num(row.cc);
+				c.note_cctp = to_num(row.cctp);
+			} else {
+				c.note_examen = to_num(row.examen);
+				c.note_examtp = to_num(row.examtp);
+				const ligne = (state.data.lignes || []).find((l) => l.student === s.student);
+				c.code_anonyme = ligne ? ligne.code_anonyme || "" : "";
+			}
+			const vals = fields.map((e) => to_num(row[e.field]));
+			if (vals.some((v) => v != null && (v < 0 || v > 20))) return;
+			rows.push(c);
+		});
+		return rows;
+	}
+
+	function run_autosave() {
+		if (state.busy || autosave_running || !state.data || !state.filters.cours) return;
+		const is_rt = is_rattrapage_view();
+		const rows = pending_autosave_rows(is_rt);
+		if (!rows.length) return;
+		autosave_running = true;
+		page.set_indicator(__("Enregistrement auto..."), "orange");
+		const args = {
+			academic_year: state.filters.academic_year,
+			filiere: state.filters.filiere,
+			niveau: state.filters.niveau,
+			semestre: state.filters.semestre,
+			teaching_unit: state.filters.cours,
+			rows,
+		};
+		if (!is_rt) args.type_dexamen = selected_mode() === "cc" ? "CC" : "Examen";
+		frappe.call({
+			method: API + (is_rt ? "enregistrer_rattrapage" : "enregistrer_evaluations"),
+			args,
+			callback: () => {
+				autosave_running = false;
+				page.set_indicator(__("Prêt"), "green");
+				rows.forEach((row) => {
+					const student = row.student;
+					if (is_rt) {
+						state.rt_snap[student] = to_num(state.rt_cur[student]);
+					} else {
+						const cur = state.cur[student] || {};
+						state.snap[student] = EVALUATIONS.reduce((acc, e) => {
+							acc[e.field] = to_num(cur[e.field]);
+							return acc;
+						}, {});
+					}
+				});
+				if (pending_autosave_rows(is_rt).length) schedule_autosave();
+			},
+			error: () => {
+				autosave_running = false;
+				page.set_indicator(__("Échec d'enregistrement"), "red");
+			},
+		});
 	}
 
 	function do_save(method, rows, extra) {
@@ -1070,7 +1276,20 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	function export_feuille() {
 		if (!state.filters.cours) return;
 		api_download(API + "export_modele_pdf", {
-			type_dexamen: is_rattrapage_view() ? TYPE_RATTRAPAGE : TYPE_EXAMEN,
+			type_dexamen: active_type(),
+			academic_year: state.filters.academic_year,
+			filiere: state.filters.filiere,
+			niveau: state.filters.niveau,
+			semestre: state.filters.semestre,
+			teaching_unit: state.filters.cours,
+			anonyme: state.anonyme ? 1 : 0,
+		});
+	}
+
+	function export_cc() {
+		if (!state.filters.cours) return;
+		api_download(API + "export_notes", {
+			type_dexamen: "CC",
 			academic_year: state.filters.academic_year,
 			filiere: state.filters.filiere,
 			niveau: state.filters.niveau,
@@ -1103,6 +1322,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	});
 	toolbar.on("click", ".sn-btn-feuille", export_feuille);
 	toolbar.on("click", ".sn-btn-modele", export_modele);
+	toolbar.on("click", ".sn-btn-exportcc", export_cc);
 	toolbar.on("click", ".sn-btn-pdf", () => {
 		if (!state.filters.cours) return;
 		const msg = formule_complete_msg();
@@ -1123,7 +1343,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			);
 			return;
 		}
-		api_download(API + "generer_pdf", {
+		api_download(API + (selected_mode() === "cc" ? "generer_pdf_cc" : "generer_pdf"), {
 			academic_year: state.filters.academic_year,
 			filiere: state.filters.filiere,
 			niveau: state.filters.niveau,
@@ -1171,6 +1391,51 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	});
 
 	// ------------------------------------------------------------------
+	// anonymat des copies : actions du panneau
+	// ------------------------------------------------------------------
+	anonBar.on("click", ".sn-anon-generer", () => {
+		const session = active_session_info();
+		if (!session || !session.name) return;
+		frappe.confirm(
+			__("Générer les codes d'anonymat pour toute la session ? Les codes déjà attribués aux copies déposées seront conservés."),
+			() => {
+				frappe.call({
+					method: API_ANON + "generer_codes",
+					args: { session: session.name },
+					freeze: true,
+					freeze_message: __("Génération des codes d'anonymat..."),
+					callback: () => {
+						toast(__("Codes d'anonymat générés."), "green");
+						render_anonymat();
+					},
+					error: (e) => msg_error(error_message(e)),
+				});
+			}
+		);
+	});
+
+	anonBar.on("click", ".sn-anon-fiche", () => {
+		const session = active_session_info();
+		if (!session || !session.name) return;
+		api_download(API_ANON + "download_fiche_anonymat_pdf", {
+			session: session.name,
+			teaching_unit: state.filters.cours || null,
+		});
+	});
+
+	anonBar.on("click", ".sn-anon-report", () => {
+		if (!state.filters.cours) return;
+		api_download(API + "download_fiche_report_pdf", {
+			academic_year: state.filters.academic_year,
+			filiere: state.filters.filiere,
+			niveau: state.filters.niveau,
+			semestre: state.filters.semestre,
+			teaching_unit: state.filters.cours,
+			type_dexamen: is_rattrapage_view() ? TYPE_RATTRAPAGE_EVAL : TYPE_EXAMEN_EVAL,
+		});
+	});
+
+	// ------------------------------------------------------------------
 	// boot
 	// ------------------------------------------------------------------
 	render();
@@ -1196,6 +1461,17 @@ const STYLES =
 	".sn-toolbar-sep{display:inline-block;width:1px;height:22px;background:#e2e6f0;margin:0 6px;}" +
 	".sn-toolbar .sn-session-label{font-size:11px;color:#687178;background:#f7f9fc;border:1px solid #e2e6f0;border-radius:5px;padding:3px 8px;text-transform:capitalize;}" +
 	".sn-formule-bar{margin:10px 0 0;}" +
+	".sn-anonbar{margin:10px 0 0;background:#fff;border:1px solid #e2e6f0;border-radius:8px;padding:10px 14px;}" +
+	".sn-anonbar-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}" +
+	".sn-anonbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;}" +
+	".sn-anonbar-title{font-size:13px;font-weight:700;color:#1d273b;white-space:nowrap;}" +
+	".sn-anonbar-sub{font-size:12px;color:#687178;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px;}" +
+	".sn-anonbar-lock{font-size:11px;color:#8a93a3;}" +
+	".sn-anonbar-stats{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#f7f9fc;border:1px solid #eef1f7;border-radius:6px;padding:3px 10px;}" +
+	".sn-anonbar-stat{font-size:11px;color:#687178;white-space:nowrap;}" +
+	".sn-anonbar-stat-strong{font-weight:600;color:#3a478e;}" +
+	".sn-anonbar-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto;}" +
+	".sn-anonbar-load{font-size:12px;color:#8a93a3;padding:4px 0;}" +
 	".sn-table-wrap{overflow-x:auto;background:#fff;border:1px solid #e2e6f0;border-radius:8px;}" +
 	".sn-table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px;}" +
 	".sn-table th{background:#f7f9fc;color:#475069;font-weight:600;font-size:12px;padding:9px 10px;border-bottom:1px solid #e2e6f0;text-align:left;white-space:nowrap;position:sticky;top:0;}" +

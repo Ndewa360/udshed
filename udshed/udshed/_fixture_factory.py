@@ -54,6 +54,17 @@ def _next(prefix="TEST"):
     return f"{prefix}-{_COMPTEUR['n']:04d}"
 
 
+def unique_code(base="TEST"):
+    """Variante ``unique`` d'un code lisible, pour les tests.
+
+    `IntegrationTestCase` ne fait le rollback qu'en fin de classe : les
+    documents créés par un test restent donc visibles des suivants. Or
+    `Teaching Unit Value.code` et `Course.code` portent une contrainte
+    d'unicité : un code figé (« UTI308 ») planterait dès le deuxième test.
+    """
+    return f"{base}-{_next('T')}"
+
+
 @contextlib.contextmanager
 def suppress_commits():
     """Neutralise les frappe.db.commit() pendant un bloc (tests)."""
@@ -155,7 +166,20 @@ def make_course(code=None, intitule=None, semestre="Semestre 1"):
     return doc
 
 
-def make_teaching_unit(course, academic_year, fos, niveau, credits=3, type_ue="Sans TP"):
+def make_teaching_unit_value(academic_year, code=None, intitule=None, semestre="Semestre 1"):
+    """Crée une UE (`Teaching Unit Value`), point d'entrée de la grille."""
+    doc = frappe.new_doc("Teaching Unit Value")
+    doc.academic_year = academic_year.name
+    doc.code = code or _next("UE")
+    doc.intitule = intitule or f"Unité de valeur {doc.code}"
+    doc.semestre = semestre or "Semestre 1"
+    doc.insert(ignore_permissions=True)
+    return doc
+
+
+def make_teaching_unit(
+    course, academic_year, fos, niveau, credits=3, type_ue="Sans TP", unite_de_valeur=None
+):
     doc = frappe.new_doc("Teaching Unit")
     doc.course = course.name
     doc.academic_year = academic_year.name
@@ -163,6 +187,8 @@ def make_teaching_unit(course, academic_year, fos, niveau, credits=3, type_ue="S
     doc.semestre = "Semestre 1"
     doc.credits = credits
     doc.type_ue = type_ue
+    if unite_de_valeur:
+        doc.unite_de_valeur = getattr(unite_de_valeur, "name", unite_de_valeur)
     doc.append(
         "course_levels",
         {"filiere": fos.name, "niveau": niveau.name, "course_poid": credits},
@@ -223,6 +249,7 @@ def make_session_examen_note(
     note_tp=None,
     note_cctp=None,
     note_examtp=None,
+    note_examen_rattrapage=None,
     statut="Publié",
 ):
     doc = frappe.new_doc("Session Examen Note")
@@ -236,6 +263,7 @@ def make_session_examen_note(
     doc.note_tp = note_tp
     doc.note_cctp = note_cctp
     doc.note_examtp = note_examtp
+    doc.note_examen_rattrapage = note_examen_rattrapage
     doc.statut = statut
     doc.insert(ignore_permissions=True)
     return doc

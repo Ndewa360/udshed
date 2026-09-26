@@ -16,6 +16,8 @@ class ExamenAnonymat(Document):
         if not self.code_anonymat:
             frappe.throw("Le code d'anonymat est obligatoire.")
 
+        self.synchroniser_identite_etudiant()
+
         doublon = frappe.db.exists(
             "Examen Anonymat",
             {
@@ -39,3 +41,24 @@ class ExamenAnonymat(Document):
             frappe.throw(
                 "Le code d'anonymat <b>{0}</b> est déjà attribué.".format(self.code_anonymat)
             )
+
+    def synchroniser_identite_etudiant(self):
+        """Recopie le matricule et l'identité de l'étudiant inscrit.
+
+        Le matricule provient exclusivement du document Student (lui-même
+        alimenté par l'inscription académique validée) : jamais d'un système
+        STU-xxx généré localement.
+        """
+        if not self.student:
+            return
+        etudiant = frappe.db.get_value(
+            "Student",
+            self.student,
+            ["matricule", "nom", "prenom"],
+            as_dict=1,
+        )
+        if not etudiant:
+            return
+        self.matricule = etudiant.matricule or self.student
+        self.nom = etudiant.nom or ""
+        self.prenom = etudiant.prenom or ""

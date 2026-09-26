@@ -220,6 +220,11 @@ def calculer_resultat_semestre(student, semestre, academic_year):
 
     resultats = []
     for session in sessions:
+        if not frappe.db.exists(
+            "Session Examen Note",
+            {"session_examen": session, "student": student, "statut": "Publié"},
+        ):
+            continue
         try:
             data = calculer_resultat_session(student, session)
             resultats.extend(data["resultats"])
@@ -441,10 +446,10 @@ def _get_credits(student, teaching_unit):
             "course_poid",
         )
         if credits:
-            return int(credits)
+            return float(credits)
 
     credits = frappe.db.get_value("Teaching Unit", teaching_unit, "credits")
-    return int(credits) if credits else 0
+    return float(credits) if credits else 0
 
 
 def calculer_mps(student, semestre, academic_year, teaching_unit_a_exclure=None):

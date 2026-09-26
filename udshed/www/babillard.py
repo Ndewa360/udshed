@@ -3,8 +3,12 @@
 
 """Page publique « Babillard des Notes » (/babillard).
 
-Accessible sans connexion. Le formulaire (Niveau + Matricule + Année +
-Semestre) appelle l'endpoint ``udshed.api.babillard.consulter_notes``.
+Accessible sans connexion. L'étudiant est recherché par Niveau (+ Filière)
+et Matricule, puis choisit une session (semestre) et une matière : la page
+affiche la note de Contrôle continu et d'Examen publiée pour cette seule
+matière. Endpoints utilisés :
+``udshed.api.babillard.list_students``, ``matieres_publiees`` et
+``consulter_matiere``.
 """
 
 import frappe
@@ -31,7 +35,7 @@ def get_context(context):
 	options = frappe.get_meta("Field of study Level").get_field("level").options or ""
 	context.niveaux = [n for n in options.split("\n") if n]
 
-	# Filières et leurs niveaux (pour la consultation « par filière »)
+	# Filières et leurs niveaux (filtre facultatif de la recherche étudiant)
 	filieres = []
 	for f in frappe.get_all("Field of study", fields=["name"], order_by="name"):
 		doc = frappe.get_cached_doc("Field of study", f["name"])
@@ -41,15 +45,6 @@ def get_context(context):
 			"niveaux": [row.level for row in (doc.get("field_of_study_level") or [])],
 		})
 	context.filieres = filieres
-
-	# Matières (cours) disponibles pour le filtre « Cours »
-	cours = []
-	for c in frappe.get_all("Course", fields=["name", "code", "intitule"], order_by="intitule"):
-		intitule = c["intitule"] or ""
-		code = c["code"] or c["name"]
-		label = "{0} ({1})".format(intitule, code) if intitule else code
-		cours.append({"name": c["name"], "label": label})
-	context.cours = cours
 
 	# Années académiques triées de la plus récente à la plus ancienne
 	years = frappe.get_all("Academic Year", fields=["name"])
@@ -66,6 +61,5 @@ def get_context(context):
 	context.niveau = frappe.form_dict.get("niveau") or ""
 	context.matricule = frappe.form_dict.get("matricule") or ""
 	context.academic_year = frappe.form_dict.get("academic_year") or context.current_year
-	context.semestre = frappe.form_dict.get("semestre") or ""
 
 	return context

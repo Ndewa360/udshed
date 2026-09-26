@@ -2,8 +2,11 @@
 
   <!-- Header -->
   <div style="background: #1e2025; padding: 28px; text-align: center;">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="Udshed" style="display: block; max-height: 72px; max-width: 200px; margin: 0 auto 12px;" />
+    {% endif %}
     <h1 style="color: #ffffff; font-size: 18px; margin: 0; letter-spacing: -0.02em;">📋 Nouvelle candidature reçue</h1>
-    <p style="color: #9ca0a8; font-size: 12px; margin: 6px 0 0 0;">UDSHED — Notification automatique</p>
+    <p style="color: #9ca0a8; font-size: 12px; margin: 6px 0 0 0;">Udshed — Notification automatique</p>
   </div>
 
   <!-- Body -->
@@ -62,14 +65,14 @@
 
     <!-- Action -->
     <div style="text-align: center; margin-top: 24px;">
-      <a href="/app/session-inscription-candidate/{{ doc_name }}" style="display: inline-block; background: #1e2025; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">Consulter le dossier</a>
+      <a href="/app/session-inscription-candidate/{{ doc_name }}" style="display: inline-block; background: #1e2025; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">Consulter la candidature</a>
     </div>
   </div>
 
   <!-- Footer -->
   <div style="padding: 16px 28px; background: #f5f6f8; border-top: 1px solid #e2e4e9; text-align: center;">
     <p style="color: #9ca0a8; font-size: 12px; margin: 0;">
-      UDSHED — Plateforme de gestion des inscriptions académiques
+      Udshed — Plateforme de gestion des inscriptions académiques
     </p>
   </div>
 

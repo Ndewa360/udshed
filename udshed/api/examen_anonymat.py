@@ -28,7 +28,11 @@ from frappe.utils import cint, flt, now
 
 from udshed.api.resultats_page import _etudiants_classe, _ues_classe
 from udshed.api.saisie_notes import (
+    TYPE_NORMALE,
     TYPE_RATTRAPAGE,
+    _get_or_create_session,
+    _get_ue_info,
+    _html_en_pdf,
     _sauvegarder_examen,
     _sauvegarder_rattrapage,
 )
@@ -65,6 +69,11 @@ def _verifier_responsable():
         frappe.throw(
             _("Accès refusé : opération réservée au responsable des examens.")
         )
+
+
+def _est_responsable():
+    """True si l'utilisateur connecté est un responsable autorisé."""
+    return bool(set(frappe.get_roles(frappe.session.user)) & set(ROLES_RESPONSABLE))
 
 
 def _niveau_label(niveau_row):
@@ -209,6 +218,56 @@ def obtenir_ues_session(session):
 
 
 @frappe.whitelist()
+def obtenir_etat_anonymat(session, teaching_unit=None):
+    """Résumé de l'anonymat pour la page « saisie des notes ».
+
+    Visible par correcteur et responsable ; les actions ne sont proposées
+    qu'au responsable (ROLES_RESPONSABLE).
+    """
+    _verifier_correcteur()
+    templatefilter = {"session_examen": session}
+    if teaching_unit:
+        templatefilter["teaching_unit"] = teaching_unit
+
+    codes = frappe.db.count("Examen Anonymat", templatefilter)
+
+    copies = frappe.get_all(
+        "Copie Examen",
+        filters=templatefilter,
+        fields=["statut_correction", "absent"],
+    )
+    resume = {"total": 0, "corrigees": 0, "validees": 0, "manquantes": 0}
+    for row in copies:
+        resume["total"] += 1
+        if row.statut_correction == "Corrigée":
+            resume["corrigees"] += 1
+        elif row.statut_correction == "Validée":
+            resume["validees"] += 1
+        elif row.statut_correction == "Copie manquante" or row.absent:
+            resume["manquantes"] += 1
+
+    report_filters = {
+        "session_examen": session,
+        "statut_correction": "Validée",
+        "note_examen": ["is", "set"],
+    }
+    if teaching_unit:
+        report_filters["teaching_unit"] = teaching_unit
+
+    return {
+        "session": session,
+        "enseignement": teaching_unit or None,
+        "codes": codes,
+        "copies": resume,
+        "fiches_report": frappe.db.count("Copie Examen", report_filters),
+        "statut_session": frappe.db.get_value(
+            "Session Examen", session, "statut"
+        ),
+        "responsable": _est_responsable(),
+    }
+
+
+@frappe.whitelist()
 def charger_copies(session, teaching_unit=None):
     """Copies à corriger : uniquement code, matière, fichier et note.
 
@@ -321,6 +380,12 @@ def lever_anonymat(session):
     Seules les copies au statut « Validée » sont injectées ; les copies
     manquantes sont ignorées (aucune note). Les codes levés ne sont jamais
     réinjectés (idempotence).
+
+    Pour chaque note injectée, une « Fiche Report » est créée : matricule,
+    nom/prénom, matière, session et note reportée (celle enregistrée lors de
+    la correction). Cette fiche constitue la trace de la levée d'anonymat et
+    référence le document « Session Examen Note » qui alimente ensuite les
+    résultats académiques.
     """
     _verifier_responsable()
     session_doc = frappe.get_doc("Session Examen", session)
@@ -331,7 +396,16 @@ def lever_anonymat(session):
         for a in frappe.get_all(
             "Examen Anonymat",
             filters={"session_examen": session, "statut": ["!=", "Levé"]},
-            fields=["name", "student", "filiere", "niveau", "code_anonymat"],
+            fields=[
+                "name",
+                "student",
+                "filiere",
+                "niveau",
+                "code_anonymat",
+                "matricule",
+                "nom",
+                "prenom",
+            ],
         )
     }
     copies = frappe.get_all(
@@ -350,6 +424,11 @@ def lever_anonymat(session):
             {
                 "anonymat_name": anonymat["name"],
                 "student": anonymat["student"],
+                "matricule": anonymat.get("matricule") or anonymat["student"],
+                "nom": anonymat.get("nom") or "",
+                "prenom": anonymat.get("prenom") or "",
+                "code_anonymat": copie["code_anonymat"],
+                "copie": copie["name"],
                 "note": flt(copie["note_examen"]),
             }
         )
@@ -380,9 +459,17 @@ def lever_anonymat(session):
             message = str(exc) or exc
             erreurs.append("<b>{0}</b> ({1}/{2}) : {3}".format(ue, filiere, niveau, message))
             continue
+
+        session_notes = _get_or_create_session(
+            args, TYPE_RATTRAPAGE if est_rattrapage else TYPE_NORMALE
+        )
+
         for ligne in lignes:
-            frappe.db.set_value(
-                "Examen Anonymat", ligne["anonymat_name"], "statut", "Levé"
+            _enregistrer_trace_levee(
+                session=session,
+                session_notes=session_notes,
+                teaching_unit=ue,
+                ligne=ligne,
             )
         injecte += len(lignes)
         leve += len(lignes)
@@ -393,3 +480,401 @@ def lever_anonymat(session):
         )
 
     return {"session": session, "injectees": injecte, "levees": leve}
+
+
+def _enregistrer_trace_levee(session, session_notes, teaching_unit, ligne):
+    """Trace la levée : statut/anonymat + création de la fiche de report.
+
+    La fiche de report porte l'identité (matricule, nom, prénom), la matière,
+    la session et la note reportée issue de la correction. Elle référence le
+    document « Session Examen Note » créé dans le flux des notes.
+    """
+    frappe.db.set_value(
+        "Examen Anonymat",
+        ligne["anonymat_name"],
+        {
+            "statut": "Levé",
+            "leve_par": frappe.session.user,
+            "leve_le": now(),
+        },
+    )
+
+    note_doc = frappe.db.get_value(
+        "Session Examen Note",
+        {
+            "session_examen": session_notes,
+            "student": ligne["student"],
+            "teaching_unit": teaching_unit,
+        },
+        "name",
+    )
+
+    fiche = frappe.new_doc("Fiche Report")
+    fiche.session_examen = session_notes
+    fiche.teaching_unit = teaching_unit
+    fiche.code_anonymat = ligne["code_anonymat"]
+    fiche.student = ligne["student"]
+    fiche.matricule = ligne["matricule"]
+    fiche.nom = ligne["nom"]
+    fiche.prenom = ligne["prenom"]
+    fiche.note_reportee = flt(ligne["note"])
+    fiche.session_examen_note = note_doc
+    fiche.examen_anonymat = ligne["anonymat_name"]
+    fiche.copie_examen = ligne["copie"]
+    fiche.leve_par = frappe.session.user
+    fiche.leve_le = now()
+    fiche.insert(ignore_permissions=True)
+
+
+# ---------------------------------------------------------------------------
+# Fiches imprimables (PDF)
+# ---------------------------------------------------------------------------
+_CSS_FICHE = """
+* { box-sizing: border-box; }
+body { font-family: "Times New Roman", Times, serif; color: #1e2025; margin: 0; padding: 0; font-size: 12px; }
+.page { width: 100%; }
+.header { display: flex; align-items: center; border-bottom: 3px solid #1e2025; padding-bottom: 10px; margin-bottom: 14px; }
+.header .logo { height: 56px; margin-right: 14px; }
+.header .logo-placeholder { width: 56px; height: 56px; border: 1.5px dashed #b9bcc4; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #a0a4ad; font-size: 8px; text-transform: uppercase; text-align: center; padding: 4px; }
+.header .brand { flex: 1; }
+.header .brand .univ { font-size: 15px; font-weight: 800; letter-spacing: .5px; }
+.header .brand .sub { font-size: 10px; color: #525462; margin-top: 2px; }
+.header .titre { text-align: right; }
+.header .titre .doc { font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+.header .titre .conf { font-size: 10px; font-weight: 700; margin-top: 4px; color: #b91c1c; text-transform: uppercase; letter-spacing: .5px; }
+.header .titre .date { font-size: 10px; color: #6b6d7a; margin-top: 2px; }
+.bandeau { background: #f4f6f9; border: 1px solid #e0e3ea; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
+.bandeau .row { display: flex; flex-wrap: wrap; gap: 8px 26px; font-size: 11.5px; }
+.bandeau .row span b { color: #525462; }
+.bandeau .matiere { margin-top: 8px; font-size: 11.5px; }
+.bandeau .matiere b { color: #525462; }
+table.data { width: 100%; border-collapse: collapse; margin-top: 6px; }
+table.data th { background: #1e2025; color: #fff; border: 1px solid #1e2025; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; padding: 6px 8px; }
+table.data td { border: 1px solid #d4d6dd; padding: 6px 8px; font-size: 11px; }
+tr.row-even td { background: #fafbfc; }
+.td-num { text-align: right; }
+.vide { color: #9aa0a8; font-style: italic; }
+.sign { display: flex; justify-content: space-between; margin-top: 44px; }
+.sign .s { width: 42%; border-top: 1px solid #1e2025; padding-top: 6px; font-size: 11px; text-align: center; color: #525462; }
+.footer { margin-top: 18px; border-top: 1px solid #e0e3ea; padding-top: 8px; font-size: 9.5px; color: #6b6d7a; text-align: center; }
+
+/* ================= FILIGRANE ================= */
+.watermark {
+    position: fixed;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%) rotate(-28deg);
+    font-family: Arial, Helvetica, sans-serif;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+}
+.watermark img {
+    width: 150mm;
+    opacity: 0.08;
+}
+"""
+
+
+def _matiere_label(teaching_unit):
+    """Libellé lisible d'une matière (code + intitulé du cours)."""
+    try:
+        info = _get_ue_info(teaching_unit)
+        code = info.get("code") or ""
+        intitule = info.get("intitule") or teaching_unit
+        if code and code != intitule:
+            return "{0} — {1}".format(code, intitule)
+        return intitule
+    except Exception:
+        return teaching_unit or ""
+
+
+def _repondre_pdf(html, filename):
+    """Renvoie un PDF en téléchargement (réponse HTTP)."""
+    frappe.response["filename"] = filename
+    frappe.response["filecontent"] = _html_en_pdf(html)
+    frappe.response["type"] = "download"
+    frappe.response["content_type"] = "application/pdf"
+
+
+def _html_fiche(
+    titre,
+    mention_confidentiel,
+    session_doc=None,
+    matiere=None,
+    colonnes=None,
+    lignes=None,
+    notes_footer=None,
+    vide="—",
+):
+    """Construit le HTML imprimable d'une fiche (anonymat ou report).
+
+    ``vide`` : texte affiché dans les cellules vides (défaut « — ») ; passer
+    ``&nbsp;`` pour une feuille de saisie à remplir (cellules laissées en
+    blanc).
+    """
+    try:
+        from udshed.api.school_setting import get_logo_data_uri
+
+        logo = get_logo_data_uri() or ""
+    except Exception:
+        logo = ""
+
+    ecole = frappe.db.get_single_value("Udshed Setting", "school_name") or ""
+
+    logo_html = (
+        '<img class="logo" src="{0}" alt="logo">'.format(logo)
+        if logo
+        else '<div class="logo-placeholder">Logo</div>'
+    )
+
+    logo_wm = ""
+    try:
+        from udshed.api.school_setting import get_logo_data_uri
+
+        logo_wm = get_logo_data_uri() or ""
+    except Exception:
+        logo_wm = ""
+    wm_html = '<img src="{0}" alt="">'.format(logo_wm) if logo_wm else ""
+
+    session_doc = session_doc or frappe._dict(
+        academic_year="",
+        semestre="",
+        type_dexamen="",
+        statut="",
+    )
+
+    session_type = session_doc.type_dexamen or ""
+    if session_type == TYPE_NORMALE:
+        session_type = "Examen de session normal"
+    elif session_type == TYPE_RATTRAPAGE:
+        session_type = "Examen de rattrapage"
+
+    today = frappe.utils.formatdate(frappe.utils.today(), "dd-mm-yyyy")
+
+    ths = "".join(
+        "<th>{0}</th>".format(frappe.utils.escape_html(h)) for h in colonnes
+    )
+    corps = ""
+    for i, ligne in enumerate(lignes):
+        classe = "row-even" if i % 2 == 0 else "row-odd"
+        cellules = ""
+        for h in colonnes:
+            valeur = ligne.get(h, "")
+            if valeur in (None, ""):
+                cellule = '<span class="vide">{0}</span>'.format(vide)
+            elif h == "N°" or h.startswith("Note") or h == "Crédit":
+                cellule = '<span class="td-num">{0}</span>'.format(
+                    frappe.utils.escape_html(str(valeur))
+                )
+            else:
+                cellule = frappe.utils.escape_html(str(valeur))
+            cellules += "<td>{0}</td>".format(cellule)
+        corps += "<tr class='{0}'>{1}</tr>".format(classe, cellules)
+
+    if not corps:
+        corps = "<tr><td colspan='{0}' class='vide'>Aucune ligne.</td></tr>".format(
+            len(colonnes)
+        )
+
+    bandeau = (
+        "<div class='bandeau'>"
+        "<div class='row'>"
+        "<span><b>Année académique :</b> {0}</span>"
+        "<span><b>Semestre :</b> {1}</span>"
+        "<span><b>Session :</b> {2}</span>"
+        "<span><b>Statut :</b> {3}</span>"
+        "</div>"
+        "<div class='matiere'><b>Matière :</b> {4}</div>"
+        "</div>"
+    ).format(
+        frappe.utils.escape_html(session_doc.academic_year or ""),
+        frappe.utils.escape_html(session_doc.semestre or ""),
+        frappe.utils.escape_html(session_type),
+        frappe.utils.escape_html(session_doc.statut or ""),
+        frappe.utils.escape_html(matiere or "Toutes les matières"),
+    )
+
+    notes_html = ""
+    if notes_footer:
+        notes_html = "<div class='notes-footer'>{0}</div>".format(notes_footer)
+
+    return (
+        "<html><head><meta charset='utf-8'><style>{css}</style></head><body>"
+        "<div class='watermark'>{wm}</div>"
+        "<div class='page'>"
+        "<div class='header'>"
+        "{logo}"
+        "<div class='brand'>"
+        "<div class='univ'>{ecole}</div>"
+        "<div class='sub'>Gestion des examens et des notes — Udshed</div>"
+        "</div>"
+        "<div class='titre'>"
+        "<div class='doc'>{titre}</div>"
+        "<div class='conf'>{conf}</div>"
+        "<div class='date'>Édité le {date}</div>"
+        "</div>"
+        "</div>"
+        "{bandeau}"
+        "<table class='data'><thead><tr>{ths}</tr></thead><tbody>{corps}</tbody></table>"
+        "{notes}"
+        "<div class='sign'>"
+        "<div class='s'>Le responsable des examens</div>"
+        "<div class='s'>Le Coordonnateur</div>"
+        "</div>"
+        "<div class='footer'>Document généré automatiquement par Udshed.</div>"
+        "</div>"
+        "</body></html>"
+    ).format(
+        css=_CSS_FICHE,
+        logo=logo_html,
+        ecole=frappe.utils.escape_html(ecole),
+        wm=wm_html,
+        titre=frappe.utils.escape_html(titre),
+        conf=frappe.utils.escape_html(mention_confidentiel or ""),
+        date=today,
+        bandeau=bandeau,
+        ths=ths,
+        corps=corps,
+        notes=notes_html,
+    )
+
+
+@frappe.whitelist()
+def download_fiche_anonymat_pdf(session, teaching_unit=None):
+    """PDF confidentiel de la fiche d'anonymat d'une session (responsable).
+
+    Fiche unique par combinaison (étudiant, matière, session) : code
+    d'anonymat, matricule, nom/prénom, matière et session. Document réservé
+    aux utilisateurs autorisés (jamais le correcteur).
+    """
+    _verifier_responsable()
+    session_doc = frappe.get_doc("Session Examen", session)
+
+    filters = {"session_examen": session}
+    if teaching_unit:
+        filters["teaching_unit"] = teaching_unit
+    anonymats = frappe.get_all(
+        "Examen Anonymat",
+        filters=filters,
+        fields=[
+            "code_anonymat",
+            "teaching_unit",
+            "student",
+            "matricule",
+            "nom",
+            "prenom",
+        ],
+        order_by="teaching_unit, code_anonymat",
+    )
+    if not anonymats:
+        frappe.throw(_("Aucune fiche d'anonymat pour ces critères."))
+
+    colonnes = ["N°", "Code anonymat", "Matricule", "Nom", "Prénom", "Matière"]
+    lignes = [
+        {
+            "N°": i + 1,
+            "Code anonymat": a["code_anonymat"],
+            "Matricule": a["matricule"] or a["student"],
+            "Nom": a["nom"] or "",
+            "Prénom": a["prenom"] or "",
+            "Matière": _matiere_label(a["teaching_unit"]),
+        }
+        for i, a in enumerate(anonymats)
+    ]
+
+    html = _html_fiche(
+        titre="Fiche d'anonymat",
+        mention_confidentiel="Document confidentiel — réservé au responsable des examens",
+        session_doc=session_doc,
+        matiere=_matiere_label(teaching_unit) if teaching_unit else None,
+        colonnes=colonnes,
+        lignes=lignes,
+    )
+
+    _repondre_pdf(html, "Fiche_anonymat_{0}.pdf".format(session))
+
+
+@frappe.whitelist()
+def download_fiche_report_pdf(session, teaching_unit=None):
+    """PDF de la fiche de report d'une session (avant ou après levée).
+
+    La fiche relie chaque copie corrigée et validée (note) à l'étudiant
+    (matricule, nom/prénom) via son code d'anonymat. Elle est disponible dès
+    que des copies sont validées, y compris avant la levée de l'anonymat ;
+    après la levée, la trace « levé par / le » est ajoutée en pied de page.
+    """
+    _verifier_responsable()
+    session_doc = frappe.get_doc("Session Examen", session)
+
+    filters = {"session_examen": session, "statut_correction": "Validée"}
+    if teaching_unit:
+        filters["teaching_unit"] = teaching_unit
+    copies = frappe.get_all(
+        "Copie Examen",
+        filters=filters,
+        fields=["code_anonymat", "teaching_unit", "note_examen"],
+        order_by="teaching_unit, code_anonymat",
+    )
+    copies = [c for c in copies if c["note_examen"] is not None]
+    if not copies:
+        frappe.throw(
+            _("Aucune fiche de report pour ces critères : aucune copie corrigée et validée (avec note) dans cette session/matière.")
+        )
+
+    anonymats = {
+        a["code_anonymat"]: a
+        for a in frappe.get_all(
+            "Examen Anonymat",
+            filters={"session_examen": session},
+            fields=[
+                "code_anonymat",
+                "student",
+                "matricule",
+                "nom",
+                "prenom",
+                "statut",
+                "leve_par",
+                "leve_le",
+            ],
+        )
+    }
+
+    colonnes = ["N°", "Code anonymat", "Matricule", "Nom", "Prénom", "Matière", "Note"]
+    lignes = []
+    for i, c in enumerate(copies):
+        a = anonymats.get(c["code_anonymat"]) or {}
+        lignes.append(
+            {
+                "N°": i + 1,
+                "Code anonymat": c["code_anonymat"],
+                "Matricule": a.get("matricule") or a.get("student") or "",
+                "Nom": a.get("nom") or "",
+                "Prénom": a.get("prenom") or "",
+                "Matière": _matiere_label(c["teaching_unit"]),
+                "Note": "{0}/20".format("{:.2f}".format(c["note_examen"])),
+            }
+        )
+
+    levees = [
+        a
+        for a in anonymats.values()
+        if a.get("statut") == "Levé" and a.get("leve_par")
+    ]
+    note_footer = ""
+    if levees:
+        note_footer = "Anonymat levé par : {0}".format(
+            ", ".join(sorted({a["leve_par"] for a in levees}))
+        )
+
+    html = _html_fiche(
+        titre="Fiche de report",
+        mention_confidentiel="",
+        session_doc=session_doc,
+        matiere=_matiere_label(teaching_unit) if teaching_unit else None,
+        colonnes=colonnes,
+        lignes=lignes,
+        notes_footer=note_footer,
+    )
+
+    _repondre_pdf(html, "Fiche_report_{0}.pdf".format(session))

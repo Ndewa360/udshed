@@ -2,6 +2,9 @@
 
   <!-- Header -->
   <div style="background: #1e2025; padding: 32px; text-align: center;">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="{{ school_name }}" style="display: block; max-height: 72px; max-width: 200px; margin: 0 auto 12px;" />
+    {% endif %}
     <h1 style="color: #ffffff; font-size: 20px; margin: 0; letter-spacing: -0.02em;">{{ school_name }}</h1>
     <p style="color: #9ca0a8; font-size: 13px; margin: 6px 0 0 0;">Validation d'inscription</p>
   </div>

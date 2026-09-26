@@ -42,13 +42,34 @@ $(document).ready(function() {
                         + "&token=" + encodeURIComponent(r.message.token || "");
                     window.location.href = formUrl;
                 } else {
-                    // Nouvelle comportement : rechargement automatique de la page
-                    // pour réessayer l'authentification
-                    window.location.reload();
+                    // Erreur d'authentification : recharge automatique de la page
+                    // pour permettre au candidat de remplir à nouveau ses infos.
+                    showAuthError(__("Authentification échouée. Numéro de dossier ou nom incorrect."));
+                    rechargerPage();
                 }
+            },
+            error: function(r) {
+                var message = (r && r._server_messages)
+                    ? r._server_messages
+                    : (r && r.message && r.message.message) || __("Une erreur est survenue. Veuillez réessayer.");
+                showAuthError(String(message));
+                rechargerPage();
             }
         });
     });
+
+    function resetButton() {
+        $("#btn_soumettre").prop("disabled", false).html('<span class="btn-label">Continuer</span>');
+    }
+
+    // Recharge automatiquement la page pour laisser le candidat ressaisir
+    // ses informations sans avoir à actualiser manuellement.
+    function rechargerPage() {
+        resetButton();
+        setTimeout(function() {
+            window.location.reload();
+        }, 2000);
+    }
 
     $("#religion-select").on("change", function() {
         var val = $(this).val();

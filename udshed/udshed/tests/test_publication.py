@@ -10,13 +10,14 @@ Cas couverts (règles du cahier des charges) :
   - après validation, la publication passe les notes à « Publié » ;
   - la publication est réversible : les notes restent modifiables après
     publication (requêtes et corrections), y compris le CC ;
-  - le babillard public n'expose que les notes publiées, en pourcentage.
+  - le babillard public n'expose que les notes publiées (CC + Examen par
+    matière, lire les notes telles que publiées).
 """
 
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from udshed.api.babillard import consulter_notes
+from udshed.api.babillard import consulter_matiere
 from udshed.api.saisie_notes import (
     _sauvegarder_cc,
     _sauvegarder_examen,
@@ -181,34 +182,35 @@ class TestValidationEtPublication(IntegrationTestCase):
     test_5_session_publiee_restera_modifiable.ACADEMIC_YEAR = "2025"
 #  Babillard
     # ------------------------------------------------------------------ #
-    def test_7_babillard_affiche_la_note_publiee_en_pourcentage(self):
+    def test_7_babillard_affiche_la_note_publiee_cc_et_examen(self):
         session = self._saisir_cc_examen()
         valider_notes(session)
         publier_session(session)
 
-        data = consulter_notes(
+        data = consulter_matiere(
             niveau="BTS 1",
             matricule=self.student.matricule,
             academic_year=self.academic_year.name,
-            semestre="Semestre 1",
+            teaching_unit=self.tu.name,
         )
         self.assertTrue(data["success"], data.get("message"))
-        semestre = data["semesters"][0]
-        self.assertEqual(len(semestre["ues"]), 1)
-        ue = semestre["ues"][0]
-        self.assertEqual(ue["note_finale"], 12.8)
-        self.assertEqual(ue["note_pct"], 64.0)
-        self.assertEqual(ue["statut"], "Validé")
+        self.assertEqual(data["notes"]["cc"], 14)
+        self.assertEqual(data["notes"]["examen"], 12)
+        self.assertEqual(data["notes"]["moyenne"], 12.8)
+        self.assertEqual(data["notes"]["note_pct"], 64.0)
+        self.assertTrue(data["notes"]["grade"])
+        self.assertIsNotNone(data["notes"]["point"])
+        self.assertEqual(data["semestre"], "Semestre 1")
 
-    test_7_babillard_affiche_la_note_publiee_en_pourcentage.ACADEMIC_YEAR = "2027"
+    test_7_babillard_affiche_la_note_publiee_cc_et_examen.ACADEMIC_YEAR = "2027"
 
     def test_8_babillard_ignore_les_notes_non_publiees(self):
         self._saisir_cc_examen()
-        data = consulter_notes(
+        data = consulter_matiere(
             niveau="BTS 1",
             matricule=self.student.matricule,
             academic_year=self.academic_year.name,
-            semestre="Semestre 1",
+            teaching_unit=self.tu.name,
         )
         self.assertFalse(data["success"])
 

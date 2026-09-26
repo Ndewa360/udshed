@@ -2,10 +2,17 @@ import frappe
 from frappe import _
 import pandas as pd
 import os
+import unicodedata
 from frappe.query_builder import DocType
 from frappe.utils import get_site_path
 import udshed.utils.file_utils as file_utils
 import udshed.api.course as cours_api
+
+
+def _cle_alphabetique(texte):
+    """Clé de tri : insensible à la casse et aux accents (ordinal alphabétique)."""
+    norm = unicodedata.normalize("NFD", str(texte or "")).encode("ascii", "ignore").decode()
+    return norm.lower()
 
 #Todo 
 # 1 - Rétirer les teaching units non utilisé d'une année  
@@ -117,15 +124,15 @@ def _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semest
                         "teacher":doc.enseignant,
                         "type_cours":doc.type_de_cours
                     })
-                result[ue_code]["ue_credits"] += int(doc.course_poid) 
+                result[ue_code]["ue_credits"] += float(doc.course_poid) 
                 stat_result["course_count"] +=1
-                stat_result["total_credits"] +=int(doc.course_poid) 
+                stat_result["total_credits"] +=float(doc.course_poid) 
                 stat_result["total_hours"] +=int(doc.nombre_dheure_cm) + int(doc.nombre_dheure_td) + int(doc.nombre_dheure_tp) + int(doc.nombre_dheure_tpe)
         else:
             result[doc.ue_code] = {
                 "ue_code":doc.ue_code,
                 "ue_title":doc.ue_intitule,
-                "ue_credits":int(doc.course_poid),
+                "ue_credits":float(doc.course_poid),
                 "courses":[
                     {
                         "code":doc.course_name,
@@ -154,12 +161,14 @@ def _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semest
                 })
             stat_result["ue_count"] +=1
             stat_result["course_count"] +=1
-            stat_result["total_credits"] +=int(doc.course_poid) 
+            stat_result["total_credits"] +=float(doc.course_poid) 
             stat_result["total_hours"] +=int(doc.nombre_dheure_cm) + int(doc.nombre_dheure_td) + int(doc.nombre_dheure_tp) + int(doc.nombre_dheure_tpe)
 
     
     for ue in result.keys():
-        result[ue]["courses"] = sorted(result[ue]["courses"],key = lambda course: course["code"])
+        result[ue]["courses"] = sorted(
+            result[ue]["courses"], key=lambda course: (_cle_alphabetique(course["title"]), course["code"])
+        )
 
     return {"stats":stat_result,"grid":dict(sorted(result.items())).values()}
 
@@ -343,7 +352,7 @@ def import_grid(file_url,academic_year,faculty,filiere,niveau,semestre):
                 teachingUnit.append("course_levels", {
                     "filiere":filiere,
                     "niveau":niveau,
-                    "course_poid":int(data[3])
+                    "course_poid":float(data[3])
                 })            
                 teaching_unit_in_grid.append(teachingUnit.name)
 

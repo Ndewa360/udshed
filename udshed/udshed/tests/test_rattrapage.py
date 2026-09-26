@@ -20,7 +20,7 @@ from udshed.api.retake import (
     identifier_rattrapages,
 )
 from udshed.api.resultat_academique import calculer_resultat_session
-from udshed.api.saisie_notes import _sauvegarder_rattrapage
+from udshed.api.saisie_notes import _charger_notes, _chercher_session, _sauvegarder_rattrapage
 from udshed.grade_calculation import est_valide
 from udshed.udshed._fixture_factory import (
     make_academic_year,
@@ -42,6 +42,7 @@ from udshed.udshed._fixture_factory import (
 
 TYPE_NORMALE = "Examen de session normal"
 TYPE_RATTRAPAGE = "Examen de rattrapage"
+TYPE_CC = "Controlle Continue (CC)"
 
 
 class TestSessionNormaleEtRattrapage(IntegrationTestCase):
@@ -251,6 +252,46 @@ class TestSessionNormaleEtRattrapage(IntegrationTestCase):
         self.assertEqual(rattrapage_note.note_examen_active, 19)
         self.assertFalse(rattrapage_note.note_tp)
         self.assertEqual(rattrapage_note.note_finale, 14.3)
+
+    def test_19b_rattrapage_recupere_cc_sans_session_cc(self):
+        """La vue rattrapage doit exposer le CC conservé même sans session CC."""
+        self._note(16, 18)
+        args = {
+            "academic_year": self.academic_year.name,
+            "teaching_unit": self.tu.name,
+            "semestre": "Semestre 1",
+            "filiere": self.fos.name,
+            "niveau": "BTS 1",
+        }
+        with suppress_commits():
+            _sauvegarder_rattrapage(
+                args, [{"student": self.student.name, "note_examen_rattrapage": 19}]
+            )
+
+        sessions = {
+            "cc": _chercher_session(args, TYPE_CC),
+            "normale": _chercher_session(args, TYPE_NORMALE),
+            "rattrapage": _chercher_session(args, TYPE_RATTRAPAGE),
+        }
+        self.assertIsNone(sessions["cc"])  # aucune session CC dédiée
+        notes = _charger_notes(
+            [{"student": self.student.name}], self.tu.name, sessions
+        )
+
+        # CC porté par la note de rattrapage, même sans session CC
+        rt = notes["Rattrapage"][self.student.name]
+        self.assertEqual(rt["note_cc_moyenne"], 16)
+        self.assertEqual(rt["note_examen"], 18)
+
+        # Aperçu avant toute note de rattrapage (note pas encore créée) :
+        # le CC doit provenir de la note de la session normale.
+        notes2 = _charger_notes(
+            [{"student": self.student.name}],
+            self.tu.name,
+            {"cc": None, "normale": sessions["normale"], "rattrapage": None},
+        )
+        rt2 = notes2["Rattrapage"][self.student.name]
+        self.assertEqual(rt2["note_cc_moyenne"], 16)
 
     # ------------------------------------------------------------------ #
     #  20 : structure de l'identification

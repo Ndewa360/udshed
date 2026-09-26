@@ -100,6 +100,8 @@ frappe.pages["correction-copies"].on_page_load = function (wrapper) {
 				? '      <button class="btn btn-default btn-sm" id="cb_generer">Générer les codes</button>'
 					+ '      <button class="btn btn-default btn-sm" id="cb_valider">Valider les corrections</button>'
 					+ '      <button class="btn btn-danger btn-sm" id="cb_lever">Lever l\'anonymat</button>'
+					+ '      <button class="btn btn-default btn-sm" id="cb_fiche_anon">Fiche d\'anonymat (PDF)</button>'
+					+ '      <button class="btn btn-default btn-sm" id="cb_fiche_report">Fiche de report (PDF)</button>'
 				: "")
 			+ '    </div>'
 			+ '  </div>'
@@ -152,7 +154,7 @@ frappe.pages["correction-copies"].on_page_load = function (wrapper) {
 	$("#cb_lever").on("click", function () {
 		if (!state.session) return toast("Choisissez d'abord une session", "orange");
 		frappe.confirm(
-			"Lever l'anonymat enregistre définitivement les notes corrigées dans le flux de validation. Continuer ?",
+			"Lever l'anonymat enregistre définitivement les notes corrigées dans le flux de validation et crée la fiche de report. Continuer ?",
 			() =>
 				api("lever_anonymat", { session: state.session }).then((r) => {
 					toast("Notes injectées : " + (r.injectees || 0) + " — codes levés : " + (r.levees || 0));
@@ -160,6 +162,28 @@ frappe.pages["correction-copies"].on_page_load = function (wrapper) {
 				})
 		);
 	});
+	$("#cb_fiche_anon").on("click", function () {
+		if (!state.session) return toast("Choisissez d'abord une session", "orange");
+		download_pdf("download_fiche_anonymat_pdf", { session: state.session, teaching_unit: state.teaching_unit });
+	});
+	$("#cb_fiche_report").on("click", function () {
+		if (!state.session) return toast("Choisissez d'abord une session", "orange");
+		download_pdf("download_fiche_report_pdf", { session: state.session, teaching_unit: state.teaching_unit });
+	});
+
+	function download_pdf(method, args) {
+		const p = new URLSearchParams();
+		for (const [k, v] of Object.entries(args || {})) {
+			if (v === null || v === undefined || v === "") continue;
+			p.append(k, v);
+		}
+		const a = document.createElement("a");
+		a.href = "/api/method/" + API + method + "?" + p.toString();
+		a.style.display = "none";
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
+	}
 
 	function render_resume(matieres) {
 		const wrap = $page.find("#resume_wrap");

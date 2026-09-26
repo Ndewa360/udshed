@@ -361,7 +361,7 @@ def _credit_from_grid(filiere, niveau_name, teaching_unit):
 		"course_poid",
 	)
 	if row:
-		return int(row)
+		return float(row)
 	return int(frappe.db.get_value("Teaching Unit", teaching_unit, "credits") or 0)
 
 

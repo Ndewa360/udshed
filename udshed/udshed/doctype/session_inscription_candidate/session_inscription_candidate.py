@@ -4,7 +4,7 @@
 import frappe
 from frappe.model.document import Document
 from frappe import _
-from udshed.api.candidature import _nettoyer_telephone
+from udshed.api.candidature import _nettoyer_telephone, get_school_logo_url
 
 
 class SessionInscriptionCandidate(Document):
@@ -14,6 +14,28 @@ class SessionInscriptionCandidate(Document):
 			self.last_name = self.last_name.upper().strip()
 		if self.first_name:
 			self.first_name = self.first_name.upper().strip()
+		modele_full_name = 'f"{first_name} {last_name}"'
+		if not self.full_name or self.full_name == modele_full_name:
+			self.full_name = " ".join(filter(None, [self.first_name, self.last_name]))
+		# Champs absents du formulaire de candidature : on retire les valeurs par
+		# défaut (Frappe applique la 1re option d'un Select et les defaults du
+		# doctype) afin que le dossier soit vierge tant que ces infos ne sont pas
+		# réellement renseignées.
+		valeur_par_defaut = {
+			"nationality": "CM",
+			"religion": "CHRÉTIEN",
+			"employment_status": "SANS EMPLOI",
+			"marital_status": "CELIBATAIRE",
+			"language": "FR",
+			"handicap": "NON",
+			"father_country": "CM",
+			"mother_country": "CM",
+			"sponsor_country": "CM",
+			"entry_diploma": "BAC",
+		}
+		for champ, defaut in valeur_par_defaut.items():
+			if self.get(champ) == defaut:
+				self.set(champ, "")
 		self.status_updated_on = frappe.utils.now_datetime()
 		if not self.session_inscription:
 			self.session_inscription = self._session_inscription_courante()
@@ -23,7 +45,30 @@ class SessionInscriptionCandidate(Document):
 			valeur = getattr(self, champ, None)
 			if valeur:
 				setattr(self, champ, _nettoyer_telephone(valeur))
+		self._deduire_filiere_niveau_des_choix()
 		self._proteger_statut_accepte()
+		if self.candidature_status == "Refusé" and not (self.status_comment or "").strip():
+			frappe.throw(_("Le motif du rejet est obligatoire pour un statut « Refusé »."))
+
+	def _deduire_filiere_niveau_des_choix(self):
+		"""Le formulaire ne collecte plus filière/niveau en haut de page : on les
+		déduit donc du 1er choix. À la création on écrase les valeurs par défaut
+		(frappe met automatiquement la 1re option d'un champ Select), ensuite on ne
+		complète que si le dossier est encore vide."""
+		if not self.is_new() and self.get("filiere") and self.get("niveau"):
+			return
+		rows = self.get("choix_de_formation") or []
+		if not rows:
+			return
+		premier = rows[0]
+		if premier.get("filiere") and (self.is_new() or not self.get("filiere")):
+			self.filiere = premier.get("filiere")
+		niveau_name = premier.get("niveau")
+		if niveau_name and (self.is_new() or not self.get("niveau")):
+			niveau_label = frappe.db.get_value(
+				"Field of study Level", niveau_name, "level"
+			)
+			self.niveau = niveau_label or niveau_name
 
 	def _session_inscription_courante(self):
 		"""Retourne la session d'inscription ouverte, sinon la plus récente."""
@@ -43,14 +88,24 @@ class SessionInscriptionCandidate(Document):
 		self._send_coordinator_email()
 
 	def on_update(self):
-		if self.has_value_changed("candidature_status"):
-			frappe.db.set_value(
-				"Session Inscription Candidate",
-				self.name,
-				"status_updated_on",
-				frappe.utils.now_datetime(),
-				update_modified=False,
-			)
+		old_doc = self.get_doc_before_save()
+		if not old_doc:
+			return
+		if old_doc.candidature_status == self.candidature_status:
+			return
+		frappe.db.set_value(
+			"Session Inscription Candidate",
+			self.name,
+			"status_updated_on",
+			frappe.utils.now_datetime(),
+			update_modified=False,
+		)
+		if self.candidature_status == "Accepté":
+			_send_confirmation_email(self)
+		elif self.candidature_status == "Refusé":
+			_send_rejection_email(self, (self.status_comment or "").strip())
+		elif self.candidature_status == "Inscrit":
+			_send_validation_email(self)
 
 	def _proteger_statut_accepte(self):
 		"""Une fois une candidature acceptée, son statut ne peut plus être modifié,
@@ -93,6 +148,8 @@ class SessionInscriptionCandidate(Document):
 					"doc_name": self.name,
 					"niveau": self.niveau or "",
 					"filiere": self.filiere or "",
+					"base_url": frappe.utils.get_url(),
+					"logo_url": get_school_logo_url(),
 				},
 				now=True,
 			)
@@ -141,6 +198,7 @@ class SessionInscriptionCandidate(Document):
 					"choix_text": choix_text,
 					"birth_place": self.birth_place or "",
 					"sexe": self.sexe or "",
+					"logo_url": get_school_logo_url(),
 				},
 				now=True,
 			)
@@ -395,14 +453,7 @@ def update_candidate_status(name, new_status, comment=None):
 	doc.status_updated_on = frappe.utils.now_datetime()
 	doc.save()
 
-	if new_status == "Accepté" and old_status != "Accepté":
-		_send_confirmation_email(doc)
-
-	if new_status == "Inscrit" and old_status != "Inscrit":
-		_send_validation_email(doc)
-
-	if new_status == "Refusé":
-		_send_rejection_email(doc, comment)
+	# Les emails (confirmation / rejet / validation) sont envoyés dans on_update
 
 	return {"ok": True, "old_status": old_status, "new_status": new_status}
 
@@ -414,7 +465,7 @@ def update_candidate_status(name, new_status, comment=None):
 def _get_sender():
 	"""Return the formatted sender name from Udshed Setting."""
 	setting = frappe.get_single("Udshed Setting")
-	sender_name = getattr(setting, "email_candidature_sender_name", None) or "UDSHED"
+	sender_name = getattr(setting, "email_candidature_sender_name", None) or "Udshed"
 	email_account = frappe.db.get_value("Email Account", {"default_outgoing": 1}, "email_id")
 	if email_account:
 		return f"{sender_name} <{email_account}>"
@@ -429,18 +480,35 @@ def _send_confirmation_email(doc):
 		)
 		return
 
-	setting = frappe.get_single("Udshed Setting")
-	school_name = getattr(setting, "school_name", "UDSHED")
 	sender = _get_sender()
+	academic_year = frappe.db.get_value(
+		"Session Inscription", {}, "academic_year", order_by="creation desc"
+	) or ""
+	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
 
-	frappe.sendmail(
-		recipients=[doc.email],
-		sender=sender,
-		subject=_("Félicitations"),
-		message=_("Félicitations, votre candidature a été acceptée."),
-		now=True,
-	)
-	frappe.logger().info(f"Email confirmation envoyé à {doc.email} pour {doc.name}")
+	try:
+		frappe.sendmail(
+			recipients=[doc.email],
+			sender=sender,
+			subject=_("Félicitations, votre candidature a été acceptée - Udshed"),
+			template="candidature_confirmation",
+			args={
+				"first_name": doc.first_name,
+				"last_name": doc.last_name,
+				"doc_name": doc.name,
+				"academic_year": academic_year,
+				"filiere": filiere_label,
+				"niveau": doc.niveau or "",
+				"centre": doc.examination_centre or "",
+				"logo_url": get_school_logo_url(),
+			},
+			now=True,
+		)
+		frappe.logger().info(f"Email confirmation envoyé à {doc.email} pour {doc.name}")
+	except Exception as e:
+		frappe.log_error(
+			message=str(e), title=f"Échec email confirmation {doc.name}"
+		)
 
 
 def _send_validation_email(doc):
@@ -495,6 +563,7 @@ def _send_validation_email(doc):
 				"school_name": school_name,
 				"academic_year": academic_year or "",
 				"uv_liste": uv_liste,
+				"logo_url": get_school_logo_url(),
 			},
 			now=True,
 		)
@@ -513,27 +582,30 @@ def _send_rejection_email(doc, motif=None):
 		)
 		return
 
-	setting = frappe.get_single("Udshed Setting")
-	school_name = getattr(setting, "school_name", "UDSHED")
 	sender = _get_sender()
 	academic_year = frappe.db.get_value(
 		"Session Inscription", {}, "academic_year", order_by="creation desc"
-	)
+	) or ""
 	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
 
-	motif_message = motif or ""
-
-	subject = _("Résultat de votre candidature")
-	message = _("Désolée, votre candidature a été rejetée.")
-	if motif_message:
-		message += "\n\n" + _("Motif du rejet : {0}").format(motif_message)
+	motif = (motif or doc.status_comment or "").strip()
 
 	try:
 		frappe.sendmail(
 			recipients=[doc.email],
 			sender=sender,
-			subject=subject,
-			message=message,
+			subject=_("Résultat de votre candidature"),
+			template="candidature_rejection",
+			args={
+				"first_name": doc.first_name,
+				"last_name": doc.last_name,
+				"doc_name": doc.name,
+				"academic_year": academic_year,
+				"filiere": filiere_label,
+				"niveau": doc.niveau or "",
+				"motif": motif,
+				"logo_url": get_school_logo_url(),
+			},
 			now=True,
 		)
 		frappe.logger().info(f"Email rejet envoyé à {doc.email} pour {doc.name}")

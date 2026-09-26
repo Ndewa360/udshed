@@ -1,0 +1,443 @@
+<style>
+    @page {
+        size: A4;
+        margin: 12mm 12mm 16mm 12mm;
+    }
+
+    body {
+        font-family: "Times New Roman", Times, serif;
+        color: #000;
+        font-size: 12px;
+        margin: 0;
+        padding: 0;
+    }
+
+    .page {
+        width: 210mm;
+        min-height: 272mm;
+        margin: 0 auto;
+        position: relative;
+        page-break-after: always;
+    }
+
+    .page:last-child {
+        page-break-after: auto;
+    }
+
+    /* ============ EN-TÊTE ============ */
+    .header {
+        text-align: center;
+        margin-bottom: 8px;
+    }
+
+    .header img.logo {
+        max-height: 62px;
+        margin-bottom: 6px;
+    }
+
+    .university {
+        font-size: 17px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .institute {
+        font-size: 14px;
+        font-weight: bold;
+        margin-top: 2px;
+    }
+
+    .department {
+        font-size: 13px;
+        margin-top: 2px;
+    }
+
+    .year {
+        font-size: 13px;
+        margin-top: 2px;
+    }
+
+    .header-title {
+        font-size: 15px;
+        font-weight: bold;
+        margin-top: 10px;
+        text-transform: uppercase;
+    }
+
+    .header-subtitle {
+        font-size: 12px;
+        margin-top: 2px;
+        font-style: italic;
+    }
+
+    .student-info {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0 4px 0;
+        font-size: 13px;
+        font-weight: bold;
+    }
+
+    /* ============ SECTIONS ============ */
+    .section-title {
+        background: #e5e5e5;
+        border: 1px solid #000;
+        padding: 4px 7px;
+        font-size: 13px;
+        font-weight: bold;
+        margin-top: 9px;
+        text-transform: uppercase;
+    }
+
+    .section {
+        border: 1px solid #000;
+        border-top: none;
+        padding: 5px 6px;
+    }
+
+    table.field {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    table.field td {
+        padding: 3px 4px;
+        font-size: 12px;
+        vertical-align: top;
+    }
+
+    table.field td.lbl {
+        font-weight: bold;
+        width: 34%;
+    }
+
+    table.field td.lbl2 {
+        font-weight: bold;
+        width: 24%;
+    }
+
+    td.spacer {
+        width: 1%;
+    }
+
+    /* ============ GRILLE ============ */
+    .semester-title {
+        font-weight: bold;
+        font-size: 13px;
+        margin-top: 10px;
+        margin-bottom: 3px;
+        text-transform: uppercase;
+    }
+
+    table.grid {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+
+    table.grid th,
+    table.grid td {
+        border: 1px solid #000;
+        padding: 4px 6px;
+    }
+
+    table.grid th {
+        background: #e5e5e5;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    table.grid td.center {
+        text-align: center;
+    }
+
+    table.grid td.total {
+        font-weight: bold;
+        text-align: right;
+        padding-right: 8px;
+    }
+
+    .no-grid {
+        border: 1px solid #000;
+        padding: 18px 10px;
+        text-align: center;
+        font-style: italic;
+        font-size: 12px;
+        margin-top: 10px;
+    }
+
+    /* ============ PIED DE PAGE ============ */
+    .footer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        border-top: 1px solid #000;
+        padding-top: 5px;
+        text-align: center;
+        font-size: 9px;
+    }
+
+    .footer .generation {
+        margin-bottom: 3px;
+    }
+
+    .footer .contact {
+        margin-top: 2px;
+    }
+
+    .certification {
+        margin-top: 16px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .signature {
+        margin-top: 26px;
+        font-size: 12px;
+    }
+</style>
+
+{% set infos = frappe.get_module("udshed.api.inscription").donnees_fiche_inscription(doc) %}
+{% set etab = infos["etablissement"] %}
+{% set date_jour = frappe.utils.formatdate(frappe.utils.today(), "dd/mm/yyyy") %}
+{% set contacts = [etab["school_address"], etab["school_phone"], etab["school_email"], etab["school_website"] | string] %}
+
+<!-- =============================================================
+     PAGE 1  —  IDENTIFICATION
+============================================================= -->
+<div class="page">
+
+    <div class="header">
+        <img src="{{ get_logo_data_uri() }}" class="logo" alt="{{ etab['school_name'] }}">
+        <div class="university">{{ etab["school_name"] }}</div>
+        {% if etab["school_institute"] %}<div class="institute">{{ etab["school_institute"] }}</div>{% endif %}
+        <div class="department">{{ infos["departement"] }}</div>
+        <div class="year">{{ infos["annee_academique"] }}</div>
+        <div class="header-title">Fiche d'inscription administrative et académique</div>
+        <div class="header-subtitle">Administrative and Academic Registration File</div>
+
+        <div class="student-info">
+            <span>{{ infos["classe_tag"] }}</span>
+            <span>Matricule : {{ infos["matricule"] }}</span>
+            <span>N° dossier : {{ infos["numero_dossier"] }}</span>
+        </div>
+    </div>
+
+    <!-- IDENTIFICATION DE L'ETUDIANT -->
+    <div class="section-title">Identification de l'étudiant</div>
+    <div class="section">
+        <table class="field">
+            <tr>
+                <td class="lbl">Nom(s) et Prénom(s) :</td>
+                <td>{{ doc.nom_prenom or "" }}</td>
+                <td class="lbl2">Sexe :</td>
+                <td>{{ doc.sexe or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">Date de naissance :</td>
+                <td>{{ frappe.utils.formatdate(doc.date_naissance, "dd/mm/yyyy") if doc.date_naissance else "" }}</td>
+                <td class="lbl2">Lieu de naissance :</td>
+                <td>{{ doc.lieu_naissance or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">Nationalité :</td>
+                <td>{{ doc.nationalite or "" }}</td>
+                <td class="lbl2">Région d'origine :</td>
+                <td>{{ doc.region_origine or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">Langue :</td>
+                <td>{{ doc.langue or "" }}</td>
+                <td class="lbl2">Handicapé :</td>
+                <td>{{ doc.handicape or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">Religion :</td>
+                <td>{{ doc.religion or "" }}</td>
+                <td class="lbl2">Situation matrimoniale :</td>
+                <td>{{ doc.situation_matrimoniale or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">Situation d'emploi :</td>
+                <td>{{ doc.situatio_emploi or "" }}</td>
+                <td class="lbl2">N° Téléphone :</td>
+                <td>{{ doc.telephone or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">Email :</td>
+                <td colspan="3">{{ doc.email or "" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- IDENTIFICATION DU PERE -->
+    <div class="section-title">Identification du Père</div>
+    <div class="section">
+        <table class="field">
+            <tr>
+                <td class="lbl">Nom(s) et prénom(s) :</td>
+                <td>{{ doc.nom_prenom_pere or "" }}</td>
+                <td class="lbl2">Profession :</td>
+                <td>{{ doc.pere_profession or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">N° téléphone :</td>
+                <td>{{ doc.pere_telephone or "" }}</td>
+                <td class="lbl2">Ville de résidence :</td>
+                <td>{{ doc.pere_ville or "" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- IDENTIFICATION DE LA MERE -->
+    <div class="section-title">Identification de la Mère</div>
+    <div class="section">
+        <table class="field">
+            <tr>
+                <td class="lbl">Nom(s) et prénom(s) :</td>
+                <td>{{ doc.nom_prenom_mere or "" }}</td>
+                <td class="lbl2">Profession :</td>
+                <td>{{ doc.profession_mere or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">N° téléphone :</td>
+                <td>{{ doc.telephone_mere or "" }}</td>
+                <td class="lbl2">Ville de résidence :</td>
+                <td>{{ doc.mere_ville or "" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- IDENTIFICATION DU SPONSOR -->
+    <div class="section-title">Identification du Sponsor</div>
+    <div class="section">
+        <table class="field">
+            <tr>
+                <td class="lbl">Nom(s) et prénom(s) :</td>
+                <td>{{ doc.nom_prenom_sponsor or "" }}</td>
+                <td class="lbl2">Profession :</td>
+                <td>{{ doc.profession_sponsor or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">N° téléphone :</td>
+                <td>{{ doc.telephone_sponsor or "" }}</td>
+                <td class="lbl2">Ville de résidence :</td>
+                <td>{{ doc.sponsor_ville or "" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ETUDES ANTERIEURES -->
+    <div class="section-title">Études antérieures</div>
+    <div class="section">
+        <table class="field">
+            <tr>
+                <td class="lbl">Dernier établissement :</td>
+                <td>{{ doc.dernier_etablissement or "" }}</td>
+                <td class="lbl2">Diplôme d'entrée :</td>
+                <td>{{ doc.diplome_entree or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">Matricule du diplôme :</td>
+                <td colspan="3">{{ doc.matricule_diplome or "" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- INFORMATIONS COMPLEMENTAIRES -->
+    <div class="section-title">Informations complémentaires</div>
+    <div class="section">
+        <table class="field">
+            <tr>
+                <td class="lbl">Activité(s) sportive(s) :</td>
+                <td colspan="3">{{ doc.activites_sportives or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">Activité(s) associative(s) :</td>
+                <td colspan="3">{{ doc.activites_associatives or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">Activité(s) culturelle(s) :</td>
+                <td colspan="3">{{ doc.activites_culturelles or "" }}</td>
+            </tr>
+            <tr>
+                <td class="lbl">Connaissances informatiques :</td>
+                <td colspan="3">{{ doc.connaissances_informatiques or "" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        <div class="generation">Fiche générée le {{ date_jour }}</div>
+        <div class="contact">{{ contacts | select("string") | join("   |   ") }}</div>
+    </div>
+
+</div>
+
+<!-- =============================================================
+     PAGE 2  —  GRILLE D'ENSEIGNEMENT
+============================================================= -->
+<div class="page">
+
+    <div class="header">
+        <div class="university">{{ etab["school_name"] }}</div>
+        {% if etab["school_institute"] %}<div class="institute">{{ etab["school_institute"] }}</div>{% endif %}
+        <div class="department">{{ infos["departement"] }}</div>
+        <div class="year">{{ infos["annee_academique"] }}</div>
+        <div class="header-title">Inscription académique</div>
+    </div>
+
+    <p style="font-size:13px; margin-top:12px;">
+        Liste exhaustive des unités d'enseignement auxquelles vous prendrez part
+        au cours de l'année académique :
+    </p>
+
+    {% if infos["grille"] %}
+        {% for sem in infos["grille"] %}
+            <div class="semester-title">{{ sem["label"] }}</div>
+            <table class="grid">
+                <thead>
+                    <tr>
+                        <th style="width:8%;">N°</th>
+                        <th style="width:20%;">Code</th>
+                        <th>Intitulé</th>
+                        <th style="width:12%;">Crédits</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in sem["rows"] %}
+                    <tr>
+                        <td class="center">{{ loop.index }}</td>
+                        <td class="center">{{ row["code"] }}</td>
+                        <td>{{ row["intitule"] }}</td>
+                        <td class="center">{{ row["credits"] }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <td colspan="3" class="total">Total crédits inscrits</td>
+                        <td class="center"><strong>{{ sem["total"] }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        {% endfor %}
+    {% else %}
+        <div class="no-grid">Aucune unité d'enseignement configurée pour cette filière et ce niveau.</div>
+    {% endif %}
+
+    <div class="certification">
+        <strong>
+            Je certifie que les informations que je fournis à travers le présent
+            formulaire sont exactes et vérifiables.
+        </strong>
+    </div>
+
+    <div class="signature">
+        Fait à __________________________ le ____/____/________
+    </div>
+
+    <div class="footer">
+        <div class="contact">{{ contacts | select("string") | join("   |   ") }}</div>
+    </div>
+
+</div>

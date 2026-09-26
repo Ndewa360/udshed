@@ -3,6 +3,7 @@
 
 import hashlib
 import re
+import unicodedata
 
 import frappe
 from frappe import _
@@ -22,6 +23,29 @@ TYPE_RATTRAPAGE = "Examen de rattrapage"
 TYPES_EVAL = [TYPE_CC, TYPE_NORMALE, TYPE_RATTRAPAGE]
 
 NOTE_MAX = 20
+
+# Libellés du « Type d'évaluation » choisi côté interface -> mode interne de la
+# fonction d'enregistrement (cc / examen / rattrapage).
+TYPE_SAISIE_ALIASES = {
+    "Contrôle continu (CC)": "cc",
+    "Controle continue (CC)": "cc",
+    "Controle continu (CC)": "cc",
+    "Contrôle continu": "cc",
+    "CC": "cc",
+    "Examen normal": "examen",
+    "Examen": "examen",
+    "Rattrapage": "rattrapage",
+}
+
+
+def _mode_saisie(type_dexamen=None):
+    """Normalise le type d'évaluation choisi côté interface en un mode interne.
+
+    Repli sur « examen » si le libellé est inconnu ou absent afin de préserver
+    le comportement historique de la saisie unifiée (CC + CCTP + EXAMTP + EXAM).
+    """
+    cle = (type_dexamen or "").strip()
+    return TYPE_SAISIE_ALIASES.get(cle, "examen")
 
 
 def _cycle_pour_niveau(niveau_label):
@@ -482,7 +506,11 @@ def _get_etudiants(academic_year, filiere, niveau_label, teaching_unit):
             }
         )
 
-    resultats.sort(key=lambda s: (s["matricule"] or s["student"]).lower())
+    def _cle_nom(s):
+        norm = unicodedata.normalize("NFD", "{} {}".format(s["nom"] or "", s["prenom"] or ""))
+        return norm.encode("ascii", "ignore").decode().lower()
+
+    resultats.sort(key=lambda s: (_cle_nom(s), (s["matricule"] or s["student"]).lower()))
     return resultats
 
 
@@ -676,6 +704,16 @@ def _charger_notes(students, teaching_unit, sessions):
 
         rattrapage = (par_session.get(sessions["rattrapage"]) or {}).get(nom)
         initiale = normale.note_examen if normale and normale.examen_saisi else None
+
+        # Moyenne CC effective au rattrapage : celle portée par la note de
+        # rattrapage (copiée à l'enregistrement), sinon la session CC, sinon le
+        # CC conservé sur la note de la session normale.
+        cc_moyenne = rattrapage.note_cc_moyenne if rattrapage and rattrapage.cc_saisi else None
+        if cc_moyenne is None and cc_note and cc_note.cc_saisi:
+            cc_moyenne = cc_note.note_cc_moyenne
+        if cc_moyenne is None and normale and normale.cc_saisi:
+            cc_moyenne = normale.note_cc_moyenne
+
         if rattrapage:
             resultats["Rattrapage"][nom] = {
                 "note_examen": rattrapage.note_examen
@@ -690,6 +728,10 @@ def _charger_notes(students, teaching_unit, sessions):
                 "grade": rattrapage.grade,
                 "point": rattrapage.point,
                 "mention": rattrapage.mention,
+                "note_cc_moyenne": rattrapage.note_cc_moyenne
+                if rattrapage.cc_saisi
+                else cc_moyenne,
+                "cc_saisi": rattrapage.cc_saisi,
             }
         elif initiale is not None:
             resultats["Rattrapage"][nom] = {
@@ -703,6 +745,8 @@ def _charger_notes(students, teaching_unit, sessions):
                 "grade": None,
                 "point": None,
                 "mention": None,
+                "note_cc_moyenne": cc_moyenne,
+                "cc_saisi": 1 if cc_moyenne is not None else 0,
             }
 
     return resultats
@@ -724,6 +768,42 @@ def _passer_saisi(note):
     """
     if note.statut in (None, "", "Brouillon"):
         note.statut = "Saisi"
+
+
+def _poser_note(note, champ, drapeau, valeur):
+    """Noue une valeur de note + son drapeau de saisie (None = champ effacé)."""
+    setattr(note, champ, None if valeur in (None, "") else flt(valeur))
+    setattr(note, drapeau, 1 if valeur not in (None, "") else 0)
+
+
+def _verifier_codes_anonymes(rows, args):
+    """Vérifie l'association Code d'anonymat -> étudiant pour la matière.
+
+    Les codes anonymes sont déterministes et propres à chaque (UE, type
+    d'examen) : l'enseignant, qui saisit l'examen uniquement via les codes,
+    est ainsi relié au bon étudiant. Un code absent ou qui ne correspond pas
+    au contexte de la matière est refusé et l'enregistrement est annulé.
+    """
+    students = _get_etudiants(
+        args["academic_year"], args["filiere"], args["niveau"], args["teaching_unit"]
+    )
+    codes = _generer_codes_anonymes(
+        students, _contexte_anonyme(args["teaching_unit"], TYPE_NORMALE)
+    )
+    for row in rows:
+        valeur = (row.get("code_anonyme") or "").strip()
+        if not valeur:
+            frappe.throw(
+                _("Le code d'anonymat de l'étudiant <b>{0}</b> est manquant pour l'examen.").format(
+                    row["student"]
+                )
+            )
+        if codes.get(row["student"]) != valeur:
+            frappe.throw(
+                _("Le code d'anonymat <b>{0}</b> ne correspond pas à l'étudiant <b>{1}</b> pour cette matière.").format(
+                    valeur, row["student"]
+                )
+            )
 
 
 def _verifier_cc_modifiable(note):
@@ -1205,38 +1285,51 @@ def enregistrer_cc(academic_year, filiere, niveau, semestre, teaching_unit, rows
 
 
 @frappe.whitelist()
-def enregistrer_evaluations(academic_year, filiere, niveau, semestre, teaching_unit, rows):
-    """Enregistre la saisie unifiée (CC, CCTP, EXAMTP, EXAM) d'une UE.
+def enregistrer_evaluations(academic_year, filiere, niveau, semestre, teaching_unit, rows, type_dexamen=None):
+    """Enregistre la saisie des évaluations d'une UE selon le type d'évaluation.
 
-    Chaque ligne : {"student", "cc", "note_cctp", "note_examtp", "note_examen"}.
-    Les quatre évaluations sont stockées sur la note de la session normale : le
-    CC comme une note CC unique (poids 1), les autres dans leurs champs dédiés.
-    La combinaison est détectée et la formule résolue par le moteur central.
+    Chaque ligne : {"student", ...}. Seuls les champs présents dans la ligne
+    sont mis à jour (une saisie de CC ne touche jamais aux notes d'examen et
+    réciproquement), et la note existante de la session normale est mise à
+    jour — jamais dupliquée :
+    - type_dexamen = "CC"      -> {"student", "cc", "note_cctp"} (Contrôle continu).
+    - type_dexamen = "Examen"  -> {"student", "code_anonyme", "note_examen", "note_examtp"}.
+    - type_dexamen = "Rattrapage" -> redirige vers enregistrer_rattrapage.
+    - sans type_dexamen (appels historiques/tests) -> comportement unifié
+      CC + CCTP + EXAMTP + EXAM conservé tel quel.
     """
     _verifier_acces_enseignant(teaching_unit)
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
+    mode = _mode_saisie(type_dexamen)
+    if mode == "rattrapage":
+        return enregistrer_rattrapage(academic_year, filiere, niveau, semestre, teaching_unit, rows)
     rows = _valider_lignes(rows)
     _verifier_programmation_requise(args["academic_year"], args["teaching_unit"])
     session = _get_or_create_session(args, TYPE_NORMALE)
     _verifier_non_publiee(session)
+    if type_dexamen and mode == "examen":
+        _verifier_codes_anonymes(rows, args)
     n = 0
     for row in rows:
         note = _get_or_create_note(session, row["student"], args)
         _copier_cc_dans_note(args, row["student"], note)
-        cc = row.get("cc")
-        if cc not in (None, ""):
-            note.set("notes_cc", [])
-            note.append("notes_cc", {"cc_label": "CC", "cc_weight": 1, "note_cc": flt(cc)})
-        for champ in ("note_cctp", "note_examtp", "note_examen"):
-            valeur = row.get(champ)
-            setattr(note, champ, None if valeur in (None, "") else flt(valeur))
-        note.cctp_saisi = 1 if row.get("note_cctp") not in (None, "") else 0
-        note.examtp_saisi = 1 if row.get("note_examtp") not in (None, "") else 0
-        note.examen_saisi = 1 if row.get("note_examen") not in (None, "") else 0
+        if "cc" in row:
+            cc = row.get("cc")
+            if cc not in (None, ""):
+                note.set("notes_cc", [])
+                note.append("notes_cc", {"cc_label": "CC", "cc_weight": 1, "note_cc": flt(cc)})
+            elif mode == "cc":
+                note.set("notes_cc", [])
+        if "note_cctp" in row:
+            _poser_note(note, "note_cctp", "cctp_saisi", row.get("note_cctp"))
+        if "note_examtp" in row:
+            _poser_note(note, "note_examtp", "examtp_saisi", row.get("note_examtp"))
+        if "note_examen" in row:
+            _poser_note(note, "note_examen", "examen_saisi", row.get("note_examen"))
         _passer_saisi(note)
         note.save(ignore_permissions=True)
         n += 1
-    return {"saved": n}
+    return {"saved": n, "type_dexamen": mode}
 
 
 @frappe.whitelist()
@@ -1295,46 +1388,85 @@ def valider_notes(session):
 def publier_session(session):
     """Publie une session d'examen.
 
-    Toutes les notes de la session doivent d'abord être validées
-    (statut « Validé »). Elles passent alors au statut « Publié » et
+    Toutes les notes de la session passent au statut « Publié » et
     deviennent consultables au babillard public. La publication n'est pas
     définitive : les notes restent modifiables (corrections / réclamations)
     après publication.
+
+    La publication est **idempotente** : republier une session déjà
+    marquée « Publiée » publie les notes restées en attente (saisies ou
+    validées après une correction) sans planter ni re-valider l'ensemble.
+    C'est volontaire pour réparer les sessions dont le champ statut avait
+    été positionné sur « Publiée » à la main, sans publier leurs notes.
 
     Args:
         session: Nom du document Session Examen
 
     Returns:
-        dict: {"name", "statut", "date_publication"}
+        dict: {"name", "statut", "date_publication", "publied"}
     """
     doc = frappe.get_doc("Session Examen", session)
-    if doc.statut == "Publiée":
-        return {"name": doc.name, "statut": doc.statut, "date_publication": doc.date_publication}
+    deja_publiee = doc.statut == "Publiée"
 
-    _verifier_programmation_sessions(session)
+    if not deja_publiee:
+        _verifier_programmation_sessions(session)
 
-    non_validees = frappe.db.count(
-        "Session Examen Note",
-        {"session_examen": session, "statut": ["not in", ["Validé", "Publié"]]},
-    )
-    if non_validees:
-        frappe.throw(
-            _("Impossible de publier : {0} note(s) de la session {1} ne sont pas validées. "
-              "Validez d'abord les notes avant de publier.").format(non_validees, session)
+    # Garde métier : une session jamais publiée ne se publie qu'avec des
+    # notes validées. Sauf si le document est déjà étiqueté « Publiée » :
+    # c'est alors une re-publication (notes corrigées/ajoutées ensuite).
+    if not deja_publiee:
+        non_validees = frappe.db.count(
+            "Session Examen Note",
+            {"session_examen": session, "statut": ["not in", ["Validé", "Publié"]]},
         )
+        if non_validees:
+            frappe.throw(
+                _("Impossible de publier : {0} note(s) de la session {1} ne sont pas validées. "
+                  "Validez d'abord les notes avant de publier.").format(non_validees, session)
+            )
 
-    frappe.db.set_value(
+    notes = frappe.get_all(
         "Session Examen Note",
-        {"session_examen": session, "statut": "Validé"},
-        "statut",
-        "Publié",
+        filters={"session_examen": session, "statut": ["!=", "Publié"]},
+        pluck="name",
     )
+    for name in notes:
+        frappe.db.set_value("Session Examen Note", name, "statut", "Publié")
+
     doc.db_set("statut", "Publiée")
-    doc.db_set("date_publication", today())
+    if not doc.date_publication:
+        doc.db_set("date_publication", today())
 
     _declencher_calcul_resultats_post_publication(doc)
+    _declencher_notification_publication(doc)
 
-    return {"name": doc.name, "statut": doc.statut, "date_publication": doc.date_publication}
+    return {
+        "name": doc.name,
+        "statut": doc.statut,
+        "date_publication": doc.date_publication,
+        "publied": len(notes),
+    }
+
+
+def _declencher_notification_publication(session_doc):
+    """Planifie l'envoi des e-mails de publication (après le commit).
+
+    L'envoi est confié à un worker RQ déclenché uniquement après la
+    validation du commit : les notes sont alors effectivement publiées,
+    ce qui garantit qu'aucun e-mail ne part avant la publication.
+    """
+    try:
+        frappe.enqueue(
+            "udshed.api.note_notification.notifier_publication_matiere",
+            session=session_doc.name,
+            queue="short",
+            enqueue_after_commit=True,
+        )
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "udshed: planification notification publication {}".format(session_doc.name),
+        )
 
 
 def _declencher_calcul_resultats_post_publication(session_doc):
@@ -1382,6 +1514,19 @@ def _declencher_calcul_resultats_post_publication(session_doc):
                     frappe.get_traceback(),
                     "udshed: calcul résultat post-publication",
                 )
+        # Persiste le Resultat Semestre (MPS / MPC) : c'est lui qui alimente
+        # le relevé de notes et les résultats académiques du semestre.
+        try:
+            from udshed.api.resultat_academique import calculer_et_sauvegarder_mps_mpc
+
+            calculer_et_sauvegarder_mps_mpc(
+                student, session_doc.semestre, session_doc.academic_year
+            )
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                "udshed: sauvegarde Resultat Semestre post-publication",
+            )
 
 
 def _colonnes_cc(cc_columns):
@@ -1472,193 +1617,6 @@ def _html_en_pdf(html):
             browser.close()
 
 
-def _html_modele_pdf(titre, entetes, lignes):
-    """Construit le HTML d'un modèle PDF imprimable — design professionnel."""
-    nb_cols = len(entetes)
-
-    # En-têtes du tableau
-    entetes_html = ""
-    for h in entetes:
-        h_esc = frappe.utils.escape_html(h)
-        if h in ("Matricule",):
-            entetes_html += "<th class='col-mat'>{0}</th>".format(h_esc)
-        elif h in ("Nom", "Prénom"):
-            entetes_html += "<th class='col-name'>{0}</th>".format(h_esc)
-        elif h in ("Crédit",):
-            entetes_html += "<th class='col-num'>{0}</th>".format(h_esc)
-        else:
-            entetes_html += "<th class='col-note'>{0}</th>".format(h_esc)
-
-    # Lignes du tableau
-    lignes_html = ""
-    for i, ligne in enumerate(lignes):
-        row_class = "row-even" if i % 2 == 0 else "row-odd"
-        cellules = ""
-        for j, c in enumerate(ligne):
-            val = frappe.utils.escape_html(str(c) if c is not None else "")
-            h = entetes[j] if j < len(entetes) else ""
-            if h == "Matricule":
-                cellules += "<td class='col-mat'>{0}</td>".format(val)
-            elif h in ("Nom", "Prénom"):
-                cellules += "<td class='col-name'>{0}</td>".format(val)
-            elif h == "Crédit":
-                cellules += "<td class='col-num'>{0}</td>".format(val)
-            else:
-                cellules += "<td class='col-note saisie'></td>"
-        lignes_html += "<tr class='{0}'>{1}</tr>".format(row_class, cellules)
-
-    if not lignes_html:
-        lignes_html = "<tr><td colspan='{0}' class='empty-row'>Aucun étudiant inscrit</td></tr>".format(nb_cols)
-
-    # Détecter le type depuis le titre pour la couleur d'accent
-    titre_lower = titre.lower()
-    if "rattrapage" in titre_lower:
-        accent = "#e05c2a"
-        accent_light = "#fdf0eb"
-        badge_label = "RATTRAPAGE"
-        badge_bg = "#e05c2a"
-    elif "examen" in titre_lower:
-        accent = "#2563eb"
-        accent_light = "#eff6ff"
-        badge_label = "EXAMEN"
-        badge_bg = "#2563eb"
-    elif "cc" in titre_lower or "contrôle" in titre_lower or "continu" in titre_lower:
-        accent = "#7c3aed"
-        accent_light = "#f5f3ff"
-        badge_label = "CONTRÔLE CONTINU"
-        badge_bg = "#7c3aed"
-    elif "tp" in titre_lower:
-        accent = "#059669"
-        accent_light = "#ecfdf5"
-        badge_label = "TRAVAUX PRATIQUES"
-        badge_bg = "#059669"
-    else:
-        accent = "#1e40af"
-        accent_light = "#eff6ff"
-        badge_label = "NOTES"
-        badge_bg = "#1e40af"
-
-    return """
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<style>
-  @page {{ size: A4 landscape; margin: 14mm 12mm 16mm 12mm; }}
-  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: #fff; font-size: 10px; }}
-
-  /* ── Bandeau supérieur ── */
-  .header {{ display: flex; align-items: stretch; margin-bottom: 14px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.10); }}
-  .header-accent {{ width: 8px; background: {accent}; flex-shrink: 0; }}
-  .header-body {{ flex: 1; padding: 10px 14px; background: #fff; border: 1px solid #e2e8f0; border-left: none; border-radius: 0 8px 8px 0; }}
-  .header-top {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }}
-  .header-title {{ font-size: 15px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px; }}
-  .badge {{ display: inline-block; background: {badge_bg}; color: #fff; font-size: 8px; font-weight: 700; letter-spacing: 0.8px; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; }}
-  .header-meta {{ display: flex; gap: 18px; }}
-  .meta-item {{ font-size: 9px; color: #64748b; }}
-  .meta-item strong {{ color: #334155; font-weight: 600; }}
-  .header-note {{ font-size: 8.5px; color: #94a3b8; margin-top: 4px; font-style: italic; }}
-
-  /* ── Tableau ── */
-  table {{ width: 100%; border-collapse: collapse; font-size: 9.5px; }}
-  thead tr {{ background: {accent}; }}
-  thead th {{ color: #fff; font-weight: 600; font-size: 8.5px; padding: 7px 8px; text-align: left; letter-spacing: 0.3px; border: 1px solid rgba(255,255,255,0.15); white-space: nowrap; }}
-  thead th.col-num, thead th.col-note {{ text-align: center; }}
-
-  tbody tr.row-even {{ background: #fff; }}
-  tbody tr.row-odd  {{ background: {accent_light}; }}
-  tbody tr:hover    {{ background: #f1f5f9; }}
-
-  td {{ padding: 5px 8px; border: 1px solid #e2e8f0; vertical-align: middle; height: 22px; }}
-  td.col-mat  {{ font-family: 'Courier New', monospace; font-size: 8.5px; color: #475569; white-space: nowrap; }}
-  td.col-name {{ color: #1e293b; font-weight: 500; }}
-  td.col-num  {{ text-align: center; color: #475569; font-weight: 600; }}
-  td.col-note {{ text-align: center; min-width: 52px; }}
-  td.saisie   {{ background: rgba(255,255,255,0.7); }}
-
-  .empty-row  {{ text-align: center; color: #94a3b8; padding: 20px; font-style: italic; }}
-
-  /* ── Numérotation des lignes ── */
-  tbody td:first-child {{ position: relative; }}
-  .row-num {{ display: inline-block; width: 14px; height: 14px; line-height: 14px; text-align: center; background: {accent}; color: #fff; border-radius: 50%; font-size: 7px; font-weight: 700; margin-right: 5px; vertical-align: middle; }}
-
-  /* ── Pied de page ── */
-  .footer {{ margin-top: 12px; display: flex; justify-content: space-between; align-items: flex-end; }}
-  .footer-left {{ font-size: 8px; color: #94a3b8; }}
-  .footer-right {{ font-size: 8px; color: #94a3b8; text-align: right; }}
-  .signature-block {{ display: flex; gap: 40px; margin-top: 10px; }}
-  .signature-item {{ text-align: center; }}
-  .signature-line {{ width: 120px; border-bottom: 1px solid #cbd5e1; margin-bottom: 4px; height: 28px; }}
-  .signature-label {{ font-size: 8px; color: #64748b; }}
-
-  /* ── Séparateur de section ── */
-  .section-bar {{ height: 3px; background: linear-gradient(90deg, {accent} 0%, {accent_light} 100%); border-radius: 2px; margin-bottom: 10px; }}
-</style>
-</head>
-<body>
-
-<div class="header">
-  <div class="header-accent"></div>
-  <div class="header-body">
-    <div class="header-top">
-      <div class="header-title">{titre}</div>
-      <span class="badge">{badge_label}</span>
-    </div>
-    <div class="header-meta">
-      <div class="meta-item"><strong>Établissement :</strong> UDSHED</div>
-      <div class="meta-item"><strong>Barème :</strong> Notes sur 20</div>
-      <div class="meta-item"><strong>Étudiants :</strong> {nb_etudiants}</div>
-      <div class="meta-item"><strong>Colonnes :</strong> {nb_notes_cols}</div>
-    </div>
-    <div class="header-note">&#9432; Feuille de saisie officielle — à remplir au stylo et à conserver dans les archives pédagogiques.</div>
-  </div>
-</div>
-
-<div class="section-bar"></div>
-
-<table>
-  <thead><tr>{entetes_html}</tr></thead>
-  <tbody>{lignes_html}</tbody>
-</table>
-
-<div class="footer">
-  <div class="footer-left">
-    Document généré par UDSHED &mdash; Confidentiel<br>
-    <em>Toute modification doit être paraphée par l'enseignant responsable.</em>
-  </div>
-  <div class="footer-right">
-    <div class="signature-block">
-      <div class="signature-item">
-        <div class="signature-line"></div>
-        <div class="signature-label">Enseignant responsable</div>
-      </div>
-      <div class="signature-item">
-        <div class="signature-line"></div>
-        <div class="signature-label">Responsable pédagogique</div>
-      </div>
-      <div class="signature-item">
-        <div class="signature-line"></div>
-        <div class="signature-label">Cachet &amp; Date</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-</body>
-</html>
-""".format(
-        accent=accent,
-        accent_light=accent_light,
-        badge_bg=badge_bg,
-        badge_label=badge_label,
-        titre=frappe.utils.escape_html(titre),
-        nb_etudiants=len(lignes),
-        nb_notes_cols=sum(1 for h in entetes if h not in ("Matricule", "Nom", "Prénom", "Crédit")),
-        entetes_html=entetes_html,
-        lignes_html=lignes_html,
-    )
-
 
 def _fmt(v):
     if v is None or v == "":
@@ -1693,6 +1651,7 @@ def _html_pv_matiere_pdf(
     institut,
     departement,
     logo_html,
+    logo_wm,
     classe,
     annee,
     semestre_label,
@@ -1762,6 +1721,14 @@ def _html_pv_matiere_pdf(
     titre_matiere = esc(matiere or "")
     if code_matiere:
         titre_matiere += "({0})".format(esc(code_matiere))
+
+    # Filigrane : logo UDSHED en image (data-URI embarquée) si dispo,
+    # sinon repli sur le nom de l'établissement en texte.
+    wm_html = ""
+    if logo_wm:
+        wm_html = '<img src="{0}" alt="">'.format(esc(logo_wm))
+    else:
+        wm_html = esc(ecole)
 
     return """
 <!DOCTYPE html>
@@ -1977,13 +1944,17 @@ def _html_pv_matiere_pdf(
         pointer-events: none;
         z-index: 10;
     }}
+    .watermark img {{
+        width: 150mm;
+        opacity: 0.08;
+    }}
 </style>
 </head>
 <body>
 
 <div class="page">
 
-    <div class="watermark">{0}</div>
+    <div class="watermark">{14}</div>
 
     <div class="header">
         <div class="universite">
@@ -2091,6 +2062,7 @@ def _html_pv_matiere_pdf(
         taux,
         eval_rows,
         notes_rows,
+        wm_html,
     )
 
 
@@ -2172,6 +2144,14 @@ def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
             logo_url = frappe.utils.get_url(logo_url)
         logo_html = '<img src="{0}" alt="logo">'.format(frappe.utils.escape_html(logo_url))
 
+    logo_wm = ""
+    try:
+        from udshed.api.school_setting import get_logo_data_uri
+
+        logo_wm = get_logo_data_uri() or ""
+    except Exception:
+        logo_wm = ""
+
     fos_doc = frappe.get_doc("Field of study", filiere)
     faculte = ""
     if fos_doc.faculte:
@@ -2182,6 +2162,7 @@ def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
         institut=faculte,
         departement=fos_doc.name_of_field or "",
         logo_html=logo_html,
+        logo_wm=logo_wm,
         classe=_code_classe(fos_doc.field_of_study_code or "", niveau),
         annee=academic_year,
         semestre_label=_code_semestre(semestre_effectif),
@@ -2205,6 +2186,115 @@ def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
 
 
 @frappe.whitelist()
+def generer_pdf_cc(academic_year, filiere, niveau, semestre, teaching_unit):
+    """Génère la feuille des notes de contrôle continu (CC uniquement).
+
+    Document de travail présentant, pour chaque étudiant inscrit, uniquement
+    la note de CC (moyenne harmonisée, plus le CCTP si la formule l'utilise) :
+    le « Télécharger PDF » du mode Contrôle continu ne mélange jamais les
+    notes d'examen. Le document réutilise le template de la fiche de report.
+    """
+    _verifier_acces_enseignant(teaching_unit)
+    args = {
+        "academic_year": academic_year,
+        "semestre": _semestre_effectif(
+            {
+                "academic_year": academic_year,
+                "semestre": semestre,
+                "teaching_unit": teaching_unit,
+            }
+        ),
+        "filiere": filiere,
+        "niveau": niveau,
+        "teaching_unit": teaching_unit,
+    }
+    students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
+    sessions = {
+        "cc": _get_or_create_session(args, TYPE_CC),
+        "normale": _get_or_create_session(args, TYPE_NORMALE),
+        "rattrapage": _get_or_create_session(args, TYPE_RATTRAPAGE),
+    }
+    notes = _charger_notes(students, teaching_unit, sessions)
+    lignes = _lignes_unifiees(students, notes, teaching_unit)
+    credit = _credits_ue(teaching_unit, filiere, niveau)
+
+    has_cctp = any(ligne.get("cctp") is not None for ligne in lignes)
+
+    ue_info = _get_ue_info(teaching_unit, filiere, niveau)
+    code = ue_info.get("code") or ""
+    intitule = ue_info.get("intitule") or teaching_unit
+    matiere = "{0} — {1}".format(code, intitule) if code and code != intitule else intitule
+
+    colonnes = [_("N°"), _("Matricule"), _("Nom"), _("Prénom"), _("Crédit")]
+    if has_cctp:
+        colonnes.append("CCTP")
+    colonnes.append(_("Note CC"))
+
+    lignes_fiche = []
+    for i, ligne in enumerate(lignes, start=1):
+        valeurs = {
+            "N°": i,
+            "Matricule": ligne["matricule"] or ligne["student"],
+            "Nom": ligne["nom"],
+            "Prénom": ligne["prenom"],
+            "Crédit": credit,
+        }
+        if has_cctp:
+            valeurs["CCTP"] = _fmt(ligne.get("cctp"))
+        valeurs["Note CC"] = _fmt(ligne.get("cc"))
+        lignes_fiche.append(valeurs)
+
+    from types import SimpleNamespace
+
+    from udshed.api.examen_anonymat import _html_fiche
+
+    session_doc = SimpleNamespace(
+        academic_year=academic_year or "",
+        semestre=args["semestre"],
+        type_dexamen=_("Contrôle continu"),
+        statut=frappe.db.get_value("Session Examen", sessions["cc"], "statut") or "",
+    )
+    html = _html_fiche(
+        titre=_("Notes de contrôle continu"),
+        mention_confidentiel="",
+        session_doc=session_doc,
+        matiere=matiere,
+        colonnes=colonnes,
+        lignes=lignes_fiche,
+    )
+
+    frappe.response["filename"] = "Notes_CC_{0}.pdf".format(
+        teaching_unit.replace("/", "-")
+    )
+    frappe.response["filecontent"] = _html_en_pdf(html)
+    frappe.response["type"] = "download"
+    frappe.response["content_type"] = "application/pdf"
+
+
+@frappe.whitelist()
+def _feuille_saisie_entetes(entetes):
+    """Colonnes de la feuille de saisie : Code d'anonymat + Crédit + notes.
+
+    La feuille s'imprime en mode anonyme : la colonne « Matricule » devient
+    « Code d'anonymat » et les colonnes Nom / Prénom sont supprimées. Seules
+    restent l'identification par code et les colonnes de notes à remplir
+    (le crédit est conservé).
+    """
+    feuille = []
+    for h in entetes:
+        if h == _("Matricule"):
+            feuille.append(_("Code d'anonymat"))
+        elif h in (_("Nom"), _("Prénom")):
+            continue
+        else:
+            feuille.append(h)
+    if _("Crédit") not in feuille:
+        pos = 1 if feuille[0:1] == [_("Code d'anonymat")] else 0
+        feuille.insert(pos, _("Crédit"))
+    return feuille
+
+
+@frappe.whitelist()
 def export_modele_pdf(
     type_dexamen,
     cc_columns=None,
@@ -2215,17 +2305,20 @@ def export_modele_pdf(
     teaching_unit=None,
     anonyme=None,
 ):
-    """Télécharge un modèle PDF imprimable, étudiants pré-remplis si un contexte est fourni.
+    """Télécharge la feuille de saisie des notes en PDF (étudiants pré-remplis).
 
-    ``anonyme`` (0/1) : les étudiants sont identifiés par un code propre à la
-    matière et au type d'examen (AN001…) et les colonnes Nom / Prénom restent
-    vides. La feuille reste utilisable comme support papier, les codes
-    correspondant à ceux de la page de saisie.
+    La feuille réutilise le template de la fiche de report (logo, bandeau,
+    filigrane, signatures) : chaque étudiant figure ligne par ligne,
+    identifié uniquement par son **code d'anonymat** (propre à la matière et
+    au type d'examen), suivi du crédit de l'UE et des colonnes de notes à
+    remplir (cellules blanches). Les colonnes Matricule / Nom / Prénom sont
+    supprimées.
     """
     cc_columns = _colonnes_cc(cc_columns)
     entetes = _en_tetes(type_dexamen, cc_columns)
     if teaching_unit:
         entetes = _entetes_avec_tp(entetes, type_dexamen, teaching_unit)
+    entetes = _feuille_saisie_entetes(entetes)
 
     students = []
     credit = ""
@@ -2233,28 +2326,156 @@ def export_modele_pdf(
         students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
         credit = _credits_ue(teaching_unit, filiere, niveau)
 
-    anonymes = bool(anonyme)
-    codes = _generer_codes_anonymes(students, _contexte_anonyme(teaching_unit, type_dexamen))
+    codes = _generer_codes_anonymes(
+        students, _contexte_anonyme(teaching_unit, type_dexamen)
+    )
     lignes = []
     for s in students:
-        cellule = []
+        ligne = {}
         for h in entetes:
-            if h == "Matricule":
-                cellule.append(codes.get(s["student"]) if anonymes else (s.get("matricule") or s.get("student") or ""))
-            elif h == "Nom":
-                cellule.append("" if anonymes else (s.get("nom") or ""))
-            elif h == "Prénom":
-                cellule.append("" if anonymes else (s.get("prenom") or ""))
-            elif h == "Crédit":
-                cellule.append(credit)
+            if h == _("Code d'anonymat"):
+                ligne[h] = codes.get(s["student"], "")
+            elif h == _("Crédit"):
+                ligne[h] = credit
             else:
-                cellule.append("")
-        lignes.append(cellule)
+                ligne[h] = ""
+        lignes.append(ligne)
+
+    if type_dexamen == "Examen":
+        session_type = _("Examen de session normal")
+    elif type_dexamen == "Rattrapage":
+        session_type = _("Examen de rattrapage")
+    elif type_dexamen == "CC":
+        session_type = _("Contrôle continu")
+    elif type_dexamen == "TP":
+        session_type = _("Travaux pratiques")
+    else:
+        session_type = type_dexamen or ""
 
     titre = _("Modèle de saisie des notes — {0}").format(type_dexamen)
-    html = _html_modele_pdf(titre, entetes, lignes)
+    from types import SimpleNamespace
 
-    frappe.response["filename"] = "modele_{0}.pdf".format(type_dexamen.lower())
+    from udshed.api.examen_anonymat import _html_fiche, _matiere_label
+
+    session_doc = SimpleNamespace(
+        academic_year=academic_year or "",
+        semestre=_semestre_effectif(
+            {
+                "academic_year": academic_year,
+                "semestre": semestre,
+                "teaching_unit": teaching_unit,
+            }
+        ),
+        type_dexamen=session_type,
+        statut=_("À saisir"),
+    )
+    html = _html_fiche(
+        titre=titre,
+        mention_confidentiel="",
+        session_doc=session_doc,
+        matiere=_matiere_label(teaching_unit) if teaching_unit else None,
+        colonnes=entetes,
+        lignes=lignes,
+        notes_footer=None,
+        vide="&nbsp;",
+    )
+
+    frappe.response["filename"] = "Feuille_saisie_{0}.pdf".format(
+        type_dexamen.lower()
+    )
+    frappe.response["filecontent"] = _html_en_pdf(html)
+    frappe.response["type"] = "download"
+    frappe.response["content_type"] = "application/pdf"
+
+
+@frappe.whitelist()
+def download_fiche_report_pdf(academic_year, filiere, niveau, semestre, teaching_unit, type_dexamen=None):
+    """Fiche de report vierge (Examen ou Rattrapage) avec les codes d'anonymat.
+
+    Fiche que l'enseignant imprime pour relever les notes au moment de la
+    correction : chaque étudiant figure ligne par ligne, identifié par son
+    code d'anonymat propre à la matière et au type d'examen (normal ou
+    rattrapage), avec une colonne vide « Note /20 » à remplir. Aucune copie
+    corrigée n'est nécessaire : la fiche est disponible dès l'inscription des
+    étudiants. Le template (fiche d'anonymat avec filigrane) est identique
+    pour l'examen et le rattrapage ; seul le type d'examen et le jeu de codes
+    changent.
+    """
+    if _mode_saisie(type_dexamen) == "rattrapage":
+        type_reel = TYPE_RATTRAPAGE
+        titre = _("Fiche de report — Rattrapage")
+        suffixe = "rattrapage"
+    else:
+        type_reel = TYPE_NORMALE
+        titre = _("Fiche de report — Examen normal")
+        suffixe = "examen"
+    args = {
+        "academic_year": academic_year,
+        "filiere": filiere,
+        "niveau": niveau,
+        "semestre": _semestre_effectif(
+            {
+                "academic_year": academic_year,
+                "semestre": semestre,
+                "teaching_unit": teaching_unit,
+            }
+        ),
+        "teaching_unit": teaching_unit,
+    }
+    students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
+    if not students:
+        frappe.throw(_("Aucun étudiant inscrit pour générer la fiche de report."))
+    codes = _generer_codes_anonymes(
+        students, _contexte_anonyme(teaching_unit, type_reel)
+    )
+
+    ue_info = _get_ue_info(teaching_unit, filiere, niveau)
+    code = ue_info.get("code") or ""
+    intitule = ue_info.get("intitule") or teaching_unit
+    matiere = "{0} — {1}".format(code, intitule) if code and code != intitule else intitule
+
+    session_name = _chercher_session(args, type_reel)
+    if session_name:
+        session_doc = frappe.get_doc("Session Examen", session_name)
+    else:
+        from types import SimpleNamespace
+
+        session_doc = SimpleNamespace(
+            academic_year=academic_year,
+            semestre=args["semestre"],
+            type_dexamen=type_reel,
+            statut="",
+        )
+
+    colonnes = [_("N°"), _("Code anonymat"), _("Matricule"), _("Nom"), _("Prénom"), _("Note /20")]
+    lignes = []
+    for i, s in enumerate(students, start=1):
+        lignes.append(
+            {
+                "N°": i,
+                "Code anonymat": codes.get(s["student"], ""),
+                "Matricule": s.get("matricule") or s.get("student") or "",
+                "Nom": s.get("nom") or "",
+                "Prénom": s.get("prenom") or "",
+                "Note /20": " ",
+            }
+        )
+
+    from udshed.api.examen_anonymat import _html_fiche
+
+    html = _html_fiche(
+        titre=titre,
+        mention_confidentiel="",
+        session_doc=session_doc,
+        matiere=matiere,
+        colonnes=colonnes,
+        lignes=lignes,
+        notes_footer=None,
+    )
+
+    frappe.response["filename"] = "Fiche_report_{0}_{1}.pdf".format(
+        suffixe, teaching_unit.replace("/", "-")
+    )
     frappe.response["filecontent"] = _html_en_pdf(html)
     frappe.response["type"] = "download"
     frappe.response["content_type"] = "application/pdf"
@@ -2280,6 +2501,7 @@ def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_d
         "rattrapage": _get_or_create_session(args, TYPE_RATTRAPAGE),
     }
     notes = _charger_notes(students, teaching_unit, sessions)
+    lignes_unifiees = _lignes_unifiees(students, notes, teaching_unit)
     credit = _credits_ue(teaching_unit, filiere, niveau)
 
     entetes = _en_tetes(type_dexamen, cc_columns)
@@ -2289,14 +2511,13 @@ def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_d
         nom = s["student"]
         identite = _identite_export(s, anonymes, codes)
         if type_dexamen == "CC":
-            cc = notes["CC"].get(nom, {})
-            valeurs = {}
-            for item in cc.get("notes_cc", []):
-                valeurs[item.get("cc_label")] = item.get("note_cc")
+            harmonise = next((l for l in lignes_unifiees if l["student"] == nom), {})
+            valeur_cc = harmonise.get("cc")
+            if valeur_cc is None:
+                # Repli sur la session CC historique (saisie indépendante).
+                valeur_cc = notes["CC"].get(nom, {}).get("note_cc_moyenne")
             lignes.append(
-                identite + [credit]
-                + [valeurs.get(c.get("label")) for c in cc_columns]
-                + [cc.get("note_cc_moyenne")]
+                identite + [credit] + [valeur_cc for _ in cc_columns] + [valeur_cc]
             )
         elif type_dexamen == "Examen":
             ex = notes["Examen"].get(nom, {})

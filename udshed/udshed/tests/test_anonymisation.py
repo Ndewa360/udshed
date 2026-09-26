@@ -193,7 +193,10 @@ class TestAnonymisationSaisie(IntegrationTestCase):
         self.assertNotIn(self.student2.nom, html)
         self.assertNotIn(self.student2.prenom, html)
 
-    def test_export_modele_pdf_nominatif_par_defaut(self):
+    def test_export_modele_pdf_toujours_anonyme(self):
+        # La feuille de saisie utilise toujours le code d'anonymat : plus de
+        # colonnes Matricule / Nom / Prénom, seuls restent le code, le crédit
+        # et les colonnes de notes.
         with patch("udshed.api.saisie_notes._html_en_pdf", return_value=b"%PDF") as mock_pdf:
             export_modele_pdf(
                 "Examen",
@@ -204,10 +207,17 @@ class TestAnonymisationSaisie(IntegrationTestCase):
                 teaching_unit=self.args["teaching_unit"],
             )
         html = mock_pdf.call_args[0][0]
-        self.assertNotIn("AN001", html)
-        self.assertIn(self.student.matricule, html)
-        self.assertIn(self.student.nom, html)
-        self.assertIn(self.student.prenom, html)
+        self.assertIn("AN001", html)
+        self.assertIn("AN002", html)
+        for fragment in ["Code d&apos;anonymat", "Crédit", "Note d&apos;examen"]:
+            self.assertIn(fragment, html, "colonne attendue : " + fragment)
+        for absent in ["Matricule", "Nom", "Prénom", self.student.matricule,
+                       self.student.nom, self.student.prenom,
+                       self.student2.matricule, self.student2.nom]:
+            self.assertNotIn(absent, html, "élément à ne pas afficher : " + str(absent))
+
+        # Filigrane du logo présent comme sur les autres documents (PV, fiches).
+        self.assertIn("watermark", html)
 
     # ------------------------------------------------------------------ #
     #  Exports Excel

@@ -10,12 +10,17 @@
   "teaching_unit",
   "column_break_statut",
   "statut",
-  "section_break_confidentiel",
-  "student",
-  "filiere",
-  "niveau",
-  "code_anonymat"
- ],
+"section_break_confidentiel",
+   "student",
+   "matricule",
+   "nom",
+   "prenom",
+   "filiere",
+   "niveau",
+   "code_anonymat",
+   "leve_par",
+   "leve_le"
+  ],
  "fields": [
   {
    "fieldname": "session_examen",
@@ -60,6 +65,26 @@
    "reqd": 1
   },
   {
+   "fieldname": "matricule",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Matricule",
+   "read_only": 1
+  },
+  {
+   "fieldname": "nom",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nom",
+   "read_only": 1
+  },
+  {
+   "fieldname": "prenom",
+   "fieldtype": "Data",
+   "label": "Prénom",
+   "read_only": 1
+  },
+  {
    "fieldname": "filiere",
    "fieldtype": "Link",
    "label": "Filière",
@@ -77,6 +102,18 @@
    "label": "Code Anonymat",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "leve_par",
+   "fieldtype": "Data",
+   "label": "Anonymat levé par",
+   "read_only": 1
+  },
+  {
+   "fieldname": "leve_le",
+   "fieldtype": "Datetime",
+   "label": "Anonymat levé le",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

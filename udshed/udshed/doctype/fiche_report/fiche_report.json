@@ -1,0 +1,191 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format: FREP-{YYYY}-{####}",
+ "creation": "2026-09-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_identification",
+  "session_examen",
+  "teaching_unit",
+  "code_anonymat",
+  "column_break_identite",
+  "student",
+  "matricule",
+  "nom",
+  "prenom",
+  "section_break_report",
+  "note_reportee",
+  "session_examen_note",
+  "section_break_tracabilite",
+  "examen_anonymat",
+  "copie_examen",
+  "leve_par",
+  "leve_le"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_identification",
+   "fieldtype": "Section Break",
+   "label": "Identification"
+  },
+  {
+   "fieldname": "session_examen",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Session Examen",
+   "options": "Session Examen",
+   "reqd": 1
+  },
+  {
+   "fieldname": "teaching_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Teaching Unit",
+   "options": "Teaching Unit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "code_anonymat",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code Anonymat"
+  },
+  {
+   "fieldname": "column_break_identite",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1
+  },
+  {
+   "fieldname": "matricule",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Matricule",
+   "read_only": 1
+  },
+  {
+   "fieldname": "nom",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nom",
+   "read_only": 1
+  },
+  {
+   "fieldname": "prenom",
+   "fieldtype": "Data",
+   "label": "Prénom",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_report",
+   "fieldtype": "Section Break",
+   "label": "Note Reportée"
+  },
+  {
+   "fieldname": "note_reportee",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Note Reportée (/20)",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "session_examen_note",
+   "fieldtype": "Link",
+   "label": "Note Session Examen",
+   "options": "Session Examen Note",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_tracabilite",
+   "fieldtype": "Section Break",
+   "label": "Traçabilité de la levée d'anonymat"
+  },
+  {
+   "fieldname": "examen_anonymat",
+   "fieldtype": "Link",
+   "label": "Examen Anonymat",
+   "options": "Examen Anonymat",
+   "read_only": 1
+  },
+  {
+   "fieldname": "copie_examen",
+   "fieldtype": "Link",
+   "label": "Copie Examen",
+   "options": "Copie Examen",
+   "read_only": 1
+  },
+  {
+   "fieldname": "leve_par",
+   "fieldtype": "Data",
+   "label": "Anonymat levé par",
+   "read_only": 1
+  },
+  {
+   "fieldname": "leve_le",
+   "fieldtype": "Datetime",
+   "label": "Anonymat levé le",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Fiche Report",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Coordonateur",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Registration Manager",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -117,7 +117,7 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 	function update_results($sec, allRows, q) {
 		let filtered = allRows.filter(r => matches_search(r, q, [
 			"matricule", "nom_complet", "email", "phone",
-			"filiere_label", "niveau"
+			"filiere_label", "niveau", "father_name", "mother_name", "sponsor_name"
 		]));
 		refresh_stats($sec, filtered);
 		let $results = $sec.find(".bureau-search-results");
@@ -166,6 +166,31 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 					${detail_item("Niveau", r.niveau)}
 					${detail_item("Centre d'examen", r.examination_centre)}
 					${detail_item("Numéro de dossier", r.name)}
+				</div>
+			</div>
+			<div class="bureau-detail-section">
+				<h6>Parents / Tuteur</h6>
+				<div class="bureau-detail-grid">
+					${detail_item("Père — Nom", r.father_name)}
+					${detail_item("Père — Téléphone", r.father_phone)}
+					${detail_item("Père — Profession", r.father_profession)}
+					${detail_item("Père — Email", r.father_email)}
+					${detail_item("Père — Ville", r.father_city)}
+					${detail_item("Père — Pays", r.father_country)}
+					${detail_item("Mère — Nom", r.mother_name)}
+					${detail_item("Mère — Téléphone", r.mother_phone)}
+					${detail_item("Mère — Profession", r.mother_profession)}
+					${detail_item("Mère — Email", r.mother_email)}
+					${detail_item("Mère — Ville", r.mother_city)}
+					${detail_item("Mère — Pays", r.mother_country)}
+					${detail_item("Sponsor — Nom", r.sponsor_name)}
+					${detail_item("Sponsor — Téléphone", r.sponsor_phone)}
+					${detail_item("Sponsor — Profession", r.sponsor_profession)}
+					${detail_item("Sponsor — Email", r.sponsor_email)}
+					${detail_item("Sponsor — Ville", r.sponsor_city)}
+					${detail_item("Sponsor — Pays", r.sponsor_country)}
+					${detail_item("Contact parent", r.parent_phone)}
+					${detail_item("Email parent", r.email_parent)}
 				</div>
 			</div>
 			<div class="bureau-detail-actions">

@@ -3,9 +3,11 @@ import frappe
 import unicodedata
 import hmac
 import hashlib
+import re
 from frappe import _
 from frappe.utils import now_datetime, get_url
 from contextlib import contextmanager
+from udshed.api.candidature import get_school_logo_url
 
 _DUREE_JETON_SEC = 60 * 60  # validité du jeton de connexion formulaire : 1 h
 
@@ -28,7 +30,6 @@ def authentifier_et_inscrire(numero_dossier, nom_candidat):
     deja_inscrit = frappe.db.exists(
         "Inscription Academique",
         {"dossier_origine": dossier.name},
-        as_dict=True,
     )
     if deja_inscrit:
         frappe.throw("Le candidat est déjà inscrit.")
@@ -115,7 +116,7 @@ def get_grille_enseignement(numero_dossier, nom_candidat, token=None):
             "teaching_unit": ligne.get("name"),
             "intitule": ligne.get("intitule_cours") or ligne.get("name"),
             "semestre": ligne.get("semestre") or "",
-            "credits": int(credits) or 0,
+            "credits": float(credits) or 0,
         })
 
     filiere_label = (
@@ -169,7 +170,7 @@ def _construire_grille_depuis_doc(doc):
         credits = ligne.get("course_poid") or ligne.get("tu_credits") or 0
         c = {
             "intitule": ligne.get("intitule_cours") or ligne.get("name") or "—",
-            "credits": int(credits) or 0,
+            "credits": float(credits) or 0,
         }
         sem = String(ligne.get("semestre") or "").lower()
         if any(kw in sem for kw in ["2", "second", "deux", "s2"]):
@@ -672,6 +673,7 @@ def _envoyer_email_matricule_async(dossier, matricule, nom_inscription):
             numero_dossier=dossier.name,
             matricule=matricule,
             nom_inscription=nom_inscription,
+            base_url=frappe.utils.get_url(),
             queue="default",
             enqueue_after_commit=True,
         )
@@ -679,7 +681,7 @@ def _envoyer_email_matricule_async(dossier, matricule, nom_inscription):
         frappe.log_error(message=str(e), title=f"Échec planification e-mail matricule {dossier.name}")
 
 
-def _envoyer_email_matricule(email, nom_prenom, numero_dossier, matricule, nom_inscription):
+def _envoyer_email_matricule(email, nom_prenom, numero_dossier, matricule, nom_inscription, base_url=None):
     """Envoie l'email du matricule (exécuté par le worker RQ)."""
     try:
         pdf_url = _pdf_url(matricule)
@@ -695,6 +697,8 @@ def _envoyer_email_matricule(email, nom_prenom, numero_dossier, matricule, nom_i
                 "nom_prenom": nom_prenom,
                 "numero_dossier": numero_dossier,
                 "pdf_url": pdf_url,
+                "base_url": base_url or frappe.utils.get_url(),
+                "logo_url": get_school_logo_url(),
             },
             now=True,
         )
@@ -872,9 +876,145 @@ def _annee_academique_courante():
     return ""
 
 
+# -------------------- Fiche d'inscription (Print Format « Fiche Officielle UDM ») --------------------
+
+def _info_etablissement():
+    """Coordonnées de l'établissement (Udshed Setting) pour les impressions."""
+    st = frappe.get_single("Udshed Setting")
+    champ = lambda cle: str(st.get(cle) or "").strip()  # noqa: E731
+    return {
+        "school_name": champ("school_name"),
+        "school_institute": champ("school_institute"),
+        "school_address": champ("school_address"),
+        "school_phone": champ("school_phone"),
+        "school_email": champ("school_email"),
+        "school_website": champ("school_website"),
+    }
+
+
+def _chiffres_niveau(label):
+    """'Licence 3' -> '3', 'BTS 1' -> '1'."""
+    m = re.search(r"(\d+)", str(label or ""))
+    return m.group(1) if m else ""
+
+
+def _rang_niveau(filiere, niveau_label, niveau_grid):
+    """Numéro d'année du niveau (1, 2, 3…) via la ligne du Field of study."""
+    try:
+        doc = frappe.get_doc("Field of study", filiere)
+        for ligne in doc.get("field_of_study_level") or []:
+            if str(ligne.get("name")) == str(niveau_grid):
+                if ligne.get("order"):
+                    try:
+                        return int(ligne.get("order"))
+                    except (TypeError, ValueError):
+                        pass
+                break
+    except frappe.DoesNotExistError:
+        pass
+    rang = _chiffres_niveau(niveau_label)
+    try:
+        return int(rang) or 1
+    except (TypeError, ValueError):
+        return 1
+
+
+def _indice_semestre(sem):
+    """'Semestre 2'/'S2' -> 2, sinon -> 1 (« Les deux » rangé au premier)."""
+    s = unicodedata.normalize("NFKD", str(sem or "")).lower()
+    if "les deux" in s:
+        return 1
+    if re.search(r"(^|[^0-9])2([^0-9]|$)", s) or "second" in s or "deuxi" in s:
+        return 2
+    return 1
+
+
+def _grille_enseignement_fiche(doc):
+    """Grille d'enseignement d'un Inscription Academique (même requête que le
+    chargement de la grille : Teaching Unit × Course Field of study level item).
+
+    Semestres numérotés globalement comme sur le modèle papier :
+    Licence 1 -> SEMESTRE 1 / 2, Licence 2 -> SEMESTRE 3 / 4, Licence 3 -> 5 / 6…
+
+    Retourne (grille, total_credits).
+    """
+    filiere = (doc.get("filiere") or "").strip()
+    niveau_label = (doc.get("classe") or "").strip()
+    academic_year = (doc.get("annee_academique") or "").strip()
+
+    niveau_grid = _resolve_niveau_grid(filiere, niveau_label)
+    if not niveau_grid:
+        return [], 0
+
+    lignes = frappe.db.sql(
+        """
+        SELECT tu.name, tu.intitule_cours, tu.semestre,
+               tu.credits AS tu_credits, MAX(cfsli.course_poid) AS course_poid
+        FROM `tabTeaching Unit` tu
+        INNER JOIN `tabCourse Field of study level item` cfsli
+            ON cfsli.parent = tu.name
+        WHERE tu.academic_year = %s
+          AND cfsli.filiere = %s
+          AND cfsli.niveau = %s
+        GROUP BY tu.name, tu.intitule_cours, tu.semestre, tu.credits
+        ORDER BY tu.semestre, MAX(cfsli.course_poid) DESC, tu.intitule_cours
+        """,
+        (academic_year, filiere, niveau_grid),
+        as_dict=True,
+    )
+
+    rang = _rang_niveau(filiere, niveau_label, niveau_grid)
+    total_credits = 0
+    semestres = {}
+    for ligne in lignes or []:
+        credits = float(ligne.get("course_poid") or ligne.get("tu_credits") or 0)
+        num = (rang - 1) * 2 + _indice_semestre(ligne.get("semestre"))
+        semestres.setdefault(num, []).append({
+            "code": ligne.get("name"),
+            "intitule": ligne.get("intitule_cours") or ligne.get("name"),
+            "credits": credits,
+        })
+        total_credits += credits
+
+    grille = [
+        {
+            "label": "SEMESTRE {0}".format(num),
+            "rows": semestres[num],
+            "total": sum(r["credits"] for r in semestres[num]),
+        }
+        for num in sorted(semestres)
+    ]
+    return grille, total_credits
+
+
+def donnees_fiche_inscription(doc):
+    """Données dynamiques du Print Format « Fiche Officielle UDM ».
+
+    Regroupe les coordonnées de l'établissement (config), l'en-tête
+    (département = Field of study, matricule, n° de dossier) et la grille
+    d'enseignement du candidat, prêtes à être rendues par le template Jinja.
+    """
+    filiere = (doc.get("filiere") or "").strip()
+    niveau_label = (doc.get("classe") or "").strip()
+    departement = frappe.db.get_value("Field of study", filiere, "name_of_field") or filiere
+
+    grille, total_credits = _grille_enseignement_fiche(doc)
+
+    return {
+        "etablissement": _info_etablissement(),
+        "departement": departement,
+        "classe_tag": (filiere + _chiffres_niveau(niveau_label)).upper(),
+        "matricule": (doc.get("matricule") or "").strip(),
+        "numero_dossier": (doc.get("dossier_origine") or "").strip(),
+        "annee_academique": (doc.get("annee_academique") or "").strip(),
+        "grille": grille,
+        "total_credits": total_credits,
+    }
+
+
 def _get_sender():
     setting = frappe.get_single("Udshed Setting")
-    sender_name = getattr(setting, "email_candidature_sender_name", None) or "UDSHED"
+    sender_name = getattr(setting, "email_candidature_sender_name", None) or "Udshed"
     email_account = frappe.db.get_value("Email Account", {"default_outgoing": 1}, "email_id")
     if email_account:
         return f"{sender_name} <{email_account}>"
@@ -947,13 +1087,23 @@ def get_liste_inscriptions(filiere=None):
     if filiere:
         filters["filiere"] = filiere
 
+    parents_fields = [
+        "father_name", "father_phone", "father_profession", "father_email",
+        "father_city", "father_country",
+        "mother_name", "mother_phone", "mother_profession", "mother_email",
+        "mother_city", "mother_country",
+        "sponsor_name", "sponsor_phone", "sponsor_profession", "sponsor_email",
+        "sponsor_city", "sponsor_country",
+        "parent_phone", "email_parent",
+    ]
+
     candidates = frappe.get_all(
         "Session Inscription Candidate",
         filters=filters,
         fields=[
             "name", "first_name", "last_name", "full_name", "email",
             "phone", "filiere", "niveau", "examination_centre", "creation",
-        ],
+        ] + parents_fields,
         order_by="creation desc",
     )
 
@@ -986,6 +1136,7 @@ def get_liste_inscriptions(filiere=None):
             "niveau": (insc.get("classe") if insc else None) or c.get("niveau") or "Non défini",
             "examination_centre": c.get("examination_centre") or "Non défini",
             "creation": str(c.get("creation") or ""),
+            **{field: c.get(field) or "" for field in parents_fields},
         })
 
     par_filiere = {}

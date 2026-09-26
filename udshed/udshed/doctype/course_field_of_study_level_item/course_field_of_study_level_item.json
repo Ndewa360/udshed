@@ -33,13 +33,13 @@
    "label": "Fili\u00e9re",
    "options": "Field of study"
   },
-  {
-   "fieldname": "course_poid",
-   "fieldtype": "Int",
-   "in_list_view": 1,
-   "label": "Cr\u00e9dit",
-   "non_negative": 1
-  }
+{
+    "fieldname": "course_poid",
+    "fieldtype": "Float",
+    "in_list_view": 1,
+    "label": "Cr\u00e9dit",
+    "non_negative": 1
+   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,

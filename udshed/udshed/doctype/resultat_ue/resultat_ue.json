@@ -1,0 +1,301 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "format:RES-UE-{student}-{academic_year}-{teaching_unit_value}",
+ "creation": "2026-09-25 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "identification_section",
+  "student",
+  "student_name",
+  "teaching_unit_value",
+  "column_break_ue",
+  "ue_code",
+  "ue_intitule",
+  "section_break_contexte",
+  "academic_year",
+  "column_break_contexte",
+  "semestre",
+  "n_matieres",
+  "section_break_credits",
+  "total_credits",
+  "credits_obtenus",
+  "column_break_credits",
+  "pct_validation",
+  "section_break_note",
+  "note_ue_pct",
+  "note_ue_20",
+  "column_break_note",
+  "grade",
+  "point",
+  "mention",
+  "section_break_matieres",
+  "table_matieres",
+  "section_break_statut",
+  "statut",
+  "statut_color",
+  "column_break_statut",
+  "seuil_validation",
+  "type_resultat",
+  "capitalise",
+  "commentaire"
+ ],
+ "fields": [
+  {
+   "fieldname": "identification_section",
+   "fieldtype": "Section Break",
+   "label": "Identification"
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Étudiant",
+   "options": "Student",
+   "reqd": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Nom",
+   "read_only": 1
+  },
+  {
+   "fieldname": "teaching_unit_value",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "UE",
+   "options": "Teaching Unit Value",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ue",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ue_code",
+   "fieldtype": "Data",
+   "label": "Code UE",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ue_intitule",
+   "fieldtype": "Data",
+   "label": "Intitulé de l'UE",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_contexte",
+   "fieldtype": "Section Break",
+   "label": "Contexte"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_contexte",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "semestre",
+   "fieldtype": "Select",
+   "label": "Semestre",
+   "options": "Semestre 1\nSemestre 2",
+   "read_only": 1
+  },
+  {
+   "description": "Nombre de matières de l'UE (information ; la moyenne est pondérée par les crédits)",
+   "fieldname": "n_matieres",
+   "fieldtype": "Int",
+   "label": "Nombre de matières",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_credits",
+   "fieldtype": "Section Break",
+   "label": "Crédits"
+  },
+  {
+   "fieldname": "total_credits",
+   "fieldtype": "Float",
+   "label": "Crédits inscrits",
+   "read_only": 1
+  },
+  {
+   "fieldname": "credits_obtenus",
+   "fieldtype": "Float",
+   "label": "Crédits obtenus",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_credits",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pct_validation",
+   "fieldtype": "Percent",
+   "label": "% de validation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_note",
+   "fieldtype": "Section Break",
+   "label": "Note de l'UE"
+  },
+  {
+   "description": "Moyenne pondérée par les crédits des matières de l'UE",
+   "fieldname": "note_ue_pct",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Note UE (%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "note_ue_20",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Note UE (/20)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_note",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "grade",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Grade",
+   "read_only": 1
+  },
+  {
+   "fieldname": "point",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Points",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mention",
+   "fieldtype": "Data",
+   "label": "Mention",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_matieres",
+   "fieldtype": "Section Break",
+   "label": "Matières de l'UE"
+  },
+  {
+   "fieldname": "table_matieres",
+   "fieldtype": "Table",
+   "label": "Détail par matière",
+   "options": "Resultat UE Matiere"
+  },
+  {
+   "fieldname": "section_break_statut",
+   "fieldtype": "Section Break",
+   "label": "Validation"
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Statut",
+   "options": "\nEn attente\nNon Validé\nValidé",
+   "read_only": 1
+  },
+  {
+   "fieldname": "statut_color",
+   "fieldtype": "Data",
+   "label": "Couleur du statut",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_statut",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Vrai seulement si toutes les matières de l'UE ont une note retenue. Les colonnes numériques de Frappe sont NOT NULL DEFAULT 0 : sans ce drapeau, une UE incomplète serait enregistrée avec 0.00 et lee comme « Non Validé » auSaving suivant.",
+   "fieldname": "est_calculable",
+   "fieldtype": "Check",
+   "label": "Note UE calculable",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "seuil_validation",
+   "fieldtype": "Percent",
+   "label": "Seuil de validation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "type_resultat",
+   "fieldtype": "Data",
+   "label": "Type de résultat",
+   "read_only": 1
+  },
+  {
+   "fieldname": "capitalise",
+   "fieldtype": "Check",
+   "label": "Crédits capitalisés",
+   "read_only": 1
+  },
+  {
+   "fieldname": "commentaire",
+   "fieldtype": "Small Text",
+   "label": "Commentaire",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-25 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Resultat UE",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "student_name,ue_code,ue_intitule,statut",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "student_name",
+ "track_changes": 1
+}

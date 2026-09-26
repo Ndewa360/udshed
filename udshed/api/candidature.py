@@ -14,6 +14,23 @@ _EMOJI_INDIQUES = re.compile(
 )
 
 
+def get_school_logo_url():
+    """Retourne l'URL absolue du logo configuré (Udshed Setting → school_logo).
+
+    Retourne une chaîne vide si aucun logo n'est configuré.
+    """
+    setting = frappe.get_single("Udshed Setting")
+    logo = getattr(setting, "school_logo", None) or ""
+    if not logo:
+        return ""
+    try:
+        if logo.startswith(("http://", "https://")):
+            return logo
+        return frappe.utils.get_url(logo)
+    except Exception:
+        return ""
+
+
 def _nettoyer_telephone(valeur, indicatif_defaut="+237"):
     """Retire drapeaux/emojis/espaces d'un numéro et garantit un indicatif.
 

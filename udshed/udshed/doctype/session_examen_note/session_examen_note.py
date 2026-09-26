@@ -88,6 +88,73 @@ class SessionExamenNote(Document):
         self.calculer_note_finale()
         self.determiner_grade()
 
+    def on_update(self):
+        """Notifie l'étudiant lorsque sa note passe au statut « Publié ».
+
+        Couvre la publication unitaire (bouton « Publier » du DocType).
+        La publication en lot (``publier_session``) met à jour les notes via
+        ``frappe.db.set_value``, qui ne déclenche pas ce hook : elle est
+        notifiée séparément au niveau de la session. L'envoi est délégué à
+        un worker après commit et dédupliqué (session × matière × étudiant).
+        """
+        if self.flags.in_import:
+            return
+        if getattr(frappe.flags, "in_migrate", False) or getattr(frappe.flags, "in_install", False):
+            return
+
+        self.declencher_calcul_ue()
+
+        avant = self.get_doc_before_save()
+        if not avant or avant.statut == "Publié" or self.statut != "Publié":
+            return
+
+        try:
+            frappe.enqueue(
+                "udshed.api.note_notification.notifier_publication_note",
+                session=self.session_examen,
+                student=self.student,
+                teaching_unit=self.teaching_unit,
+                queue="short",
+                enqueue_after_commit=True,
+            )
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                "udshed: planification notification publication note {}".format(self.name),
+            )
+
+    def declencher_calcul_ue(self):
+        """Calcule le résultat de l'UE dès que la note est enregistrée.
+
+        Le résultat d'une UE (moyenne pondérée par les crédits de ses
+        matières, meilleure note entre session normale et rattrapage) est
+        donc disponible dès la saisie, sans attendre la publication.
+
+        Placé ici, et non dans ``validate()``, pour trois raisons :
+        toutes les saisies passent par ``save()`` (donc par ce hook) ; les
+        garde-fous import / migrate sont réutilisés tels quels ; et la
+        publication en lot, qui écrit via ``frappe.db.set_value``,
+        n'y passe pas — le calcul ne se fait donc qu'une fois.
+
+        Une erreur de calcul ne doit jamais faire échouer la saisie de la
+        note : elle est journalisée et la saisie est conservée.
+        """
+        from udshed.api.resultat_ue import recalculer_ue_depuis_note
+
+        try:
+            recalculer_ue_depuis_note(
+                teaching_unit=self.teaching_unit,
+                student=self.student,
+                session_examen=self.session_examen,
+                filiere=self.filiere,
+                niveau=self.niveau,
+            )
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                "udshed: calcul Resultat UE depuis la note {}".format(self.name),
+            )
+
     # ------------------------------------------------------------------ #
     #  Identification
     # ------------------------------------------------------------------ #

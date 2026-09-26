@@ -1,47 +1,106 @@
 <!-- Babillard Public des Notes — /babillard -->
 <style>
+:root {
+  --blue-900: #14344f;
+  --blue-800: #1a4a74;
+  --blue-700: #1f5b8c;
+  --blue-600: #286d9e;
+  --blue-500: #3b82b8;
+  --blue-100: #dcebf7;
+  --blue-050: #f0f6fb;
+  --orange-700: #d97d0f;
+  --orange-600: #e8870e;
+  --orange-500: #f68d10;
+  --orange-100: #fdeed8;
+  --ink: #16283a;
+  --ink-soft: #5d6b7a;
+  --line: #e2e8f0;
+}
+
 .babillard {
-  font-family: "Helvetica Neue", Arial, sans-serif;
-  color: #1f2937;
-  max-width: 1000px;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  max-width: 880px;
   margin: 0 auto;
-  padding: 8px 16px 40px;
+  padding: 22px 20px 36px;
 }
 .babillard * { box-sizing: border-box; }
-.bab-header {
+
+/* ------------------------------------------------------------------ */
+/*  Bandeau d'en-tête                                                  */
+/* ------------------------------------------------------------------ */
+.bab-banner {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--blue-900) 0%, var(--blue-700) 55%, var(--blue-600) 100%);
+  border-radius: 16px;
+  padding: 30px 24px 24px;
   text-align: center;
-  padding: 24px 0 8px;
+  color: #fff;
+  box-shadow: 0 14px 32px -14px rgba(20, 52, 79, 0.5);
 }
-.bab-header .bab-logo {
-  max-height: 70px;
-  margin-bottom: 6px;
+.bab-banner::before,
+.bab-banner::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
 }
-.bab-header h1 {
-  margin: 6px 0 2px;
-  font-size: 1.5rem;
-  color: #111827;
+.bab-banner::before {
+  width: 210px; height: 210px;
+  right: -70px; top: -90px;
+  background: radial-gradient(circle, rgba(246, 141, 16, 0.55) 0%, rgba(246, 141, 16, 0) 70%);
 }
-.bab-header .bab-school {
-  margin: 0;
-  color: #4b5563;
-  font-size: 0.95rem;
+.bab-banner::after {
+  width: 260px; height: 260px;
+  left: -100px; bottom: -130px;
+  background: radial-gradient(circle, rgba(59, 130, 184, 0.5) 0%, rgba(59, 130, 184, 0) 70%);
 }
+.bab-logo-box {
+  display: inline-block;
+  background: #fff;
+  border-radius: 16px;
+  padding: 8px 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  line-height: 0;
+}
+.bab-logo { max-height: 66px; }
+.bab-title {
+  margin: 14px 0 0;
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.bab-title-bar {
+  width: 58px;
+  height: 4px;
+  margin: 10px auto 0;
+  background: linear-gradient(90deg, var(--orange-500), var(--orange-600));
+  border-radius: 2px;
+}
+.bab-school { margin: 10px 0 0; color: #dbe8f4; font-size: 0.98rem; font-weight: 500; }
+.bab-sub { margin: 3px 0 0; color: #9fbcd4; font-size: 0.85rem; }
+
+/* ------------------------------------------------------------------ */
+/*  Cartes                                                             */
+/* ------------------------------------------------------------------ */
 .bab-card {
   background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px -10px rgba(20, 52, 79, 0.14);
+  padding: 20px 22px;
   margin-top: 18px;
 }
 .bab-card h2 {
-  margin: 0 0 12px;
-  font-size: 1.05rem;
-  color: #111827;
-  border-bottom: 2px solid #2563eb;
-  padding-bottom: 6px;
-  display: inline-block;
+  margin: 0 0 14px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--blue-800);
+  padding-left: 11px;
+  border-left: 4px solid var(--orange-500);
 }
+
 .bab-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -49,77 +108,75 @@
 }
 .bab-field label {
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #374151;
-  margin-bottom: 4px;
+  color: var(--ink-soft);
+  margin-bottom: 5px;
 }
 .bab-field input,
 .bab-field select {
   width: 100%;
-  padding: 9px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
   font-size: 0.95rem;
   background: #fff;
-  color: #111827;
+  color: var(--ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .bab-field input:focus,
 .bab-field select:focus {
-  outline: 2px solid #2563eb;
-  outline-offset: -1px;
-  border-color: #2563eb;
+  outline: none;
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 3px rgba(40, 109, 158, 0.16);
 }
-.bab-hint {
-  display: block;
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-top: 4px;
-}
-.bab-studlist {
-  margin: 10px 0 2px;
-  font-size: 0.8rem;
-}
-.bab-studlist a {
-  color: #2563eb;
-  text-decoration: none;
-  margin-right: 10px;
-  white-space: nowrap;
-}
+.bab-field input[disabled] { background: #f3f6f9; }
+.bab-hint { display: block; font-size: 0.75rem; color: var(--ink-soft); margin-top: 5px; }
+
 .bab-btn {
   margin-top: 16px;
-  padding: 10px 28px;
-  background: #2563eb;
+  padding: 11px 30px;
+  background: linear-gradient(180deg, var(--blue-500), var(--blue-700));
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 4px 12px -4px rgba(40, 109, 158, 0.5);
+  transition: filter 0.15s ease;
 }
-.bab-btn:hover { background: #1d4ed8; }
-.bab-btn:disabled { background: #93c5fd; cursor: not-allowed; }
+.bab-btn:hover { filter: brightness(1.08); }
+.bab-btn:disabled { background: #bcd2e4; box-shadow: none; cursor: not-allowed; }
+.bab-btn-accent {
+  background: linear-gradient(180deg, #f79e2e, var(--orange-600));
+  box-shadow: 0 4px 12px -4px rgba(246, 141, 16, 0.55);
+}
+.bab-btn-accent:hover { filter: brightness(1.04); }
 
+/* ------------------------------------------------------------------ */
+/*  Alertes / chargement                                               */
+/* ------------------------------------------------------------------ */
 .bab-alert {
   margin-top: 18px;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.95rem;
 }
-.bab-alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
-.bab-alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+.bab-alert-error { background: #fdecec; border: 1px solid #f5bcbb; color: #b3352c; }
+.bab-alert-info { background: var(--blue-050); border: 1px solid var(--blue-100); color: var(--blue-700); }
 
 .bab-loading {
   margin-top: 18px;
   text-align: center;
-  color: #4b5563;
+  color: var(--ink-soft);
   font-size: 0.95rem;
 }
 .bab-spinner {
   display: inline-block;
   width: 16px; height: 16px;
-  border: 3px solid #dbeafe;
-  border-top-color: #2563eb;
+  border: 3px solid var(--blue-100);
+  border-top-color: var(--blue-600);
   border-radius: 50%;
   animation: babspin 0.8s linear infinite;
   vertical-align: -3px;
@@ -127,152 +184,149 @@
 }
 @keyframes babspin { to { transform: rotate(360deg); } }
 
-.bab-student { display: flex; flex-wrap: wrap; gap: 8px 28px; }
-.bab-student .bab-k { color: #6b7280; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
-.bab-student .bab-v { font-size: 1.02rem; font-weight: 600; color: #111827; margin-top: 2px; }
-.bab-decision {
-  margin-top: 12px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 1.05rem;
-  font-weight: 700;
-  text-align: center;
-}
-.bab-decision.ok { background: #ecfdf5; border: 1px solid #6ee7b7; color: #047857; }
-.bab-decision.ko { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+/* ------------------------------------------------------------------ */
+/*  Fiche étudiant                                                     */
+/* ------------------------------------------------------------------ */
+.bab-student { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 24px; }
+.bab-student .bab-item { padding: 10px 12px; background: var(--blue-050); border: 1px solid var(--blue-100); border-radius: 10px; }
+.bab-student .bab-k { color: var(--ink-soft); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.bab-student .bab-v { font-size: 1rem; font-weight: 700; color: var(--blue-800); margin-top: 3px; }
 
-.bab-nav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-top: 18px;
-}
-.bab-nav select {
-  padding: 8px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  background: #fff;
-}
-.bab-btn-secondary {
-  padding: 8px 16px;
-  background: #f3f4f6;
-  color: #111827;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-.bab-btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
-.bab-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.bab-sem {
-  margin-top: 18px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  overflow: hidden;
-}
-.bab-sem-head {
-  background: #f9fafb;
-  padding: 12px 16px;
-  border-bottom: 1px solid #e5e7eb;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.bab-sem-title { font-weight: 700; font-size: 1rem; color: #111827; }
-.bab-sem-year { color: #6b7280; font-size: 0.85rem; }
-
-.bab-summary {
+.bab-consult { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.bab-consult .bab-two {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 10px;
-  padding: 14px 16px;
-  background: #eff6ff;
-  border-bottom: 1px solid #e5e7eb;
-}
-.bab-summary .bab-k { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.03em; }
-.bab-summary .bab-v { font-size: 1.15rem; font-weight: 700; color: #1e3a8a; margin-top: 2px; }
-.bab-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-.bab-badge-ok { background: #dcfce7; color: #166534; }
-.bab-badge-ko { background: #fee2e2; color: #991b1b; }
-.bab-badge-neutral { background: #e5e7eb; color: #374151; }
-
-.bab-table-wrap { overflow-x: auto; }
-table.bab-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.88rem;
-  min-width: 720px;
-}
-.bab-table th, .bab-table td {
-  padding: 9px 10px;
-  text-align: left;
-  border-bottom: 1px solid #f3f4f6;
-  white-space: nowrap;
-}
-.bab-table th {
-  background: #f9fafb;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #6b7280;
-}
-.bab-table td.num { text-align: right; }
-.bab-ue-main { font-weight: 600; color: #111827; }
-.bab-ue-sub {
-  font-size: 0.75rem;
-  color: #6b7280;
-  white-space: normal;
-}
-table.bab-table th .bab-th-sub {
-  display: block;
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 500;
-  white-space: normal;
-}
-.bab-empty {
-  padding: 20px;
-  text-align: center;
-  color: #6b7280;
-  font-size: 0.95rem;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
 }
 
-.bab-legend .bab-l-row {
+/* ------------------------------------------------------------------ */
+/*  Carte matière                                                      */
+/* ------------------------------------------------------------------ */
+.bab-matiere-head {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 18px;
-  font-size: 0.85rem;
-  color: #374151;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
 }
-.bab-legend .bab-l-item { white-space: nowrap; }
-.bab-legend b { color: #111827; }
+.bab-matiere-code {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--blue-700);
+  background: var(--blue-050);
+  border: 1px solid var(--blue-100);
+  border-radius: 8px;
+  padding: 3px 12px;
+}
+.bab-matiere-titre { font-size: 1.2rem; font-weight: 700; color: var(--ink); }
+.bab-matiere-sub { font-size: 0.85rem; color: var(--ink-soft); }
+.bab-matiere-meta { margin: 8px 0 16px; font-size: 0.82rem; color: var(--ink-soft); }
+
+.bab-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+.bab-note {
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--blue-600);
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: #ffffff;
+  text-align: center;
+  box-shadow: 0 4px 12px -8px rgba(20, 52, 79, 0.12);
+}
+.bab-note-exam { border-top-color: var(--orange-500); }
+.bab-note .bab-note-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+.bab-note .bab-note-value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--blue-700);
+  margin-top: 6px;
+}
+.bab-note-exam .bab-note-value { color: var(--orange-700); }
+.bab-note .bab-note-value small { font-size: 0.95rem; font-weight: 500; color: var(--ink-soft); }
+.bab-note .bab-note-dispo { font-size: 0.76rem; color: var(--ink-soft); margin-top: 6px; }
+
+.bab-result {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0 22px;
+  margin-top: 18px;
+  background: var(--blue-050);
+  border: 1px solid var(--blue-100);
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+.bab-result > div + div { border-left: 1px solid var(--blue-100); padding-left: 22px; }
+.bab-result .bab-k {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+.bab-result .bab-v {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--blue-800);
+  margin-top: 4px;
+}
+.bab-result .bab-v small { font-size: 0.85rem; font-weight: 500; color: var(--ink-soft); }
+.bab-grade-chip {
+  display: inline-block;
+  background: var(--blue-600);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 4px 16px;
+  margin-top: 4px;
+}
+
+.bab-published {
+  margin-top: 16px;
+  font-size: 0.85rem;
+  color: var(--orange-700);
+  font-weight: 700;
+}
+.bab-published::before {
+  content: "●";
+  margin-right: 8px;
+  color: var(--orange-500);
+}
+
+.bab-footer {
+  margin-top: 26px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.bab-footer b { color: var(--blue-700); }
 
 @media (max-width: 600px) {
-  .bab-summary { grid-template-columns: repeat(2, 1fr); }
-  .bab-table th, .bab-table td { padding: 7px 8px; }
+  .bab-notes { grid-template-columns: 1fr; }
+  .bab-result > div + div { border-left: none; padding-left: 0; border-top: 1px solid var(--blue-100); padding-top: 12px; }
 }
 </style>
 
 <div class="babillard">
-  <header class="bab-header">
+  <header class="bab-banner">
     {% if school_logo %}
-      <img class="bab-logo" src="{{ school_logo }}" alt="Logo">
+      <span class="bab-logo-box">
+        <img class="bab-logo" src="{{ school_logo }}" alt="Logo">
+      </span>
     {% endif %}
-    <h1>Babillard des Notes</h1>
+    <h1 class="bab-title">Babillard des Notes</h1>
+    <div class="bab-title-bar"></div>
     {% if school_name %}<p class="bab-school">{{ school_name }}</p>{% endif %}
-    <p class="bab-school">Consultation publique des résultats</p>
+    <p class="bab-sub">Consultation publique des notes d'examen</p>
   </header>
 
   <section class="bab-card">
@@ -289,15 +343,13 @@ table.bab-table th .bab-th-sub {
           </select>
         </div>
         <div class="bab-field">
-          <label for="babStudentSelect">Étudiant</label>
-          <select id="babStudentSelect">
-            <option value="">— Choisir un étudiant (liste des matricules) —</option>
+          <label for="babFiliere">Filière (facultatif)</label>
+          <select id="babFiliere">
+            <option value="">Toutes les filières</option>
+            {% for f in filieres %}
+              <option value="{{ f.name }}">{{ f.name_of_field }} ({{ f.name }})</option>
+            {% endfor %}
           </select>
-          <small class="bab-hint">Sélectionnez un étudiant : son matricule est pré-rempli ci-dessous.</small>
-        </div>
-        <div class="bab-field">
-          <label for="babMatricule">Matricule *</label>
-          <input id="babMatricule" type="text" value="{{ matricule }}" placeholder="Ex : 25A003" required>
         </div>
         <div class="bab-field">
           <label for="babYear">Année académique</label>
@@ -309,88 +361,20 @@ table.bab-table th .bab-th-sub {
           </select>
         </div>
         <div class="bab-field">
-          <label for="babSemestre">Semestre</label>
-          <select id="babSemestre">
-            <option value="">Tous</option>
-            <option value="Semestre 1" {% if semestre == "Semestre 1" %}selected{% endif %}>Semestre 1</option>
-            <option value="Semestre 2" {% if semestre == "Semestre 2" %}selected{% endif %}>Semestre 2</option>
+          <label for="babStudentSelect">Étudiant</label>
+          <select id="babStudentSelect">
+            <option value="">— Choisissez d'abord un niveau —</option>
           </select>
+          <small class="bab-hint">La sélection pré-remplit le matricule.</small>
         </div>
         <div class="bab-field">
-          <label for="babCours">Cours</label>
-          <select id="babCours">
-            <option value="">Toutes les matières</option>
-            {% for c in cours %}
-              <option value="{{ c.name }}">{{ c.label }}</option>
-            {% endfor %}
-          </select>
+          <label for="babMatricule">Matricule *</label>
+          <input id="babMatricule" type="text" value="{{ matricule }}" placeholder="Ex : 25A003" required>
         </div>
       </div>
-      <button type="submit" class="bab-btn" id="babSubmit">Consulter</button>
+      <button type="submit" class="bab-btn" id="babSubmit">Rechercher</button>
     </form>
   </section>
-
-  <section class="bab-card">
-    <h2>Notes d'une filière</h2>
-    <form id="babFiliereForm">
-      <div class="bab-form-grid">
-        <div class="bab-field">
-          <label for="babFiliere">Filière *</label>
-          <select id="babFiliere" required>
-            <option value="">— Choisir —</option>
-            {% for f in filieres %}
-              <option value="{{ f.name }}">{{ f.name_of_field }} ({{ f.name }})</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="bab-field">
-          <label for="babFiliereNiveau">Niveau *</label>
-          <select id="babFiliereNiveau" required>
-            <option value="">— Choisir d'abord la filière —</option>
-          </select>
-        </div>
-        <div class="bab-field">
-          <label for="babFiliereYear">Année académique</label>
-          <select id="babFiliereYear">
-            <option value="">— Année en cours —</option>
-            {% for y in academic_years %}
-              <option value="{{ y }}">{{ y }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="bab-field">
-          <label for="babFiliereSemestre">Semestre</label>
-          <select id="babFiliereSemestre">
-            <option value="">Toute l'année</option>
-            <option value="Semestre 1">Semestre 1</option>
-            <option value="Semestre 2">Semestre 2</option>
-          </select>
-        </div>
-        <div class="bab-field">
-          <label for="babFiliereCours">Cours</label>
-          <select id="babFiliereCours">
-            <option value="">Toutes les matières</option>
-            {% for c in cours %}
-              <option value="{{ c.name }}">{{ c.label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <button type="submit" class="bab-btn" id="babFiliereSubmit">Afficher les notes</button>
-    </form>
-  </section>
-
-  <div id="babFiliereAlert" class="bab-alert" hidden></div>
-  <div id="babFiliereResult" hidden>
-    <div class="bab-card">
-      <h2>Bulletin de la filière</h2>
-      <div class="bab-student" id="babFiliereInfo"></div>
-      <div class="bab-table-wrap">
-        <table class="bab-table" id="babFiliereTable"></table>
-      </div>
-      <div class="bab-empty" id="babFiliereEmpty" hidden>Aucun étudiant à afficher.</div>
-    </div>
-  </div>
 
   <div id="babLoading" class="bab-loading" hidden>
     <span class="bab-spinner"></span>Recherche des notes…
@@ -403,32 +387,84 @@ table.bab-table th .bab-th-sub {
       <div class="bab-student" id="babStudent"></div>
     </div>
 
-    <div class="bab-nav">
-      <select id="babYearNav" aria-label="Année consultée"></select>
-      <button type="button" class="bab-btn-secondary" id="babPrevYear">← Année précédente</button>
-      <span id="babCurrentInfo" style="font-size:0.85rem;color:#6b7280;"></span>
+    <div class="bab-card">
+      <h2>Consulter une matière</h2>
+      <form id="babMatiereForm">
+        <div class="bab-consult">
+          <div class="bab-two">
+            <div class="bab-field">
+              <label for="babSession">Session *</label>
+              <select id="babSession" required>
+                <option value="">— Choisir un semestre —</option>
+              </select>
+            </div>
+            <div class="bab-field">
+              <label for="babMatiere">Matière *</label>
+              <select id="babMatiere" required>
+                <option value="">— Choisir une matière —</option>
+              </select>
+              <small class="bab-hint">Seules les matières avec une note publiée sont proposées.</small>
+            </div>
+          </div>
+          <div>
+            <button type="submit" class="bab-btn bab-btn-accent" id="babMatiereSubmit">Afficher la note</button>
+          </div>
+        </div>
+      </form>
     </div>
 
-    <div class="bab-card" id="babAnnual" hidden>
-      <h2>Récapitulatif de l'année</h2>
-      <div class="bab-student" id="babAnnualInfo"></div>
-      <div class="bab-decision" id="babAnnualDecision"></div>
-    </div>
+    <div id="babNote" hidden>
+      <div class="bab-card">
+        <div class="bab-matiere-head">
+          <span class="bab-matiere-code" id="babNoteCode"></span>
+          <span class="bab-matiere-titre" id="babNoteTitre"></span>
+        </div>
+        <div class="bab-matiere-sub" id="babNoteCourse"></div>
+        <div class="bab-matiere-meta" id="babNoteMeta"></div>
 
-    <div id="babSemesters"></div>
+        <div class="bab-notes">
+          <div class="bab-note">
+            <div class="bab-note-label">Contrôle continu</div>
+            <div class="bab-note-value" id="babNoteCC">—</div>
+            <div class="bab-note-dispo">Note de CC publiée</div>
+          </div>
+          <div class="bab-note bab-note-exam">
+            <div class="bab-note-label">Examen</div>
+            <div class="bab-note-value" id="babNoteExamen">—</div>
+            <div class="bab-note-dispo">Note d'examen publiée</div>
+          </div>
+        </div>
 
-    <div class="bab-card bab-legend">
-      <h2>Grille des grades</h2>
-      <div class="bab-l-row" id="babLegend"></div>
+        <div class="bab-result" id="babResultat">
+          <div>
+            <div class="bab-k">Moyenne</div>
+            <div class="bab-v" id="babNoteMoyenne">—</div>
+          </div>
+          <div>
+            <div class="bab-k">Grade</div>
+            <div class="bab-v"><span class="bab-grade-chip" id="babNoteGrade">—</span></div>
+          </div>
+          <div>
+            <div class="bab-k">Points</div>
+            <div class="bab-v" id="babNotePoints">—</div>
+          </div>
+        </div>
+
+        <div class="bab-published">Résultat officiellement publié</div>
+      </div>
     </div>
   </section>
+
+  <footer class="bab-footer">
+    {% if school_name %}<b>{{ school_name }}</b> · {% endif %}Babillard des notes
+  </footer>
 </div>
 
 <script>
 (function () {
   "use strict";
 
-  var currentData = null;
+  var matieresData = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -455,23 +491,61 @@ table.bab-table th .bab-th-sub {
 
   function hideAlert() { $("babAlert").hidden = true; }
 
-  function showLoading(on) { $("babLoading").hidden = !on; $("babSubmit").disabled = on; }
-
-  function badge(text, cls) {
-    var el = document.createElement("span");
-    el.className = "bab-badge " + cls;
-    el.textContent = text;
-    return el;
+  function showLoading(on) {
+    $("babLoading").hidden = !on;
+    $("babSubmit").disabled = on;
   }
 
-  function consult() {
+  function renderStudent(s) {
+    var wrap = $("babStudent");
+    wrap.innerHTML = "";
+    var items = [
+      ["Nom", (s.nom || "") + " " + (s.prenom || "")],
+      ["Matricule", s.matricule || ""],
+      ["Filière", s.filiere || s.filiere_code || ""],
+      ["Niveau", s.niveau || ""],
+      ["Cycle", s.cycle || ""]
+    ];
+    items.forEach(function (it) {
+      var d = document.createElement("div");
+      d.className = "bab-item";
+      var k = document.createElement("div"); k.className = "bab-k"; k.textContent = it[0];
+      var v = document.createElement("div"); v.className = "bab-v"; v.textContent = it[1];
+      d.appendChild(k); d.appendChild(v);
+      wrap.appendChild(d);
+    });
+  }
+
+  function fillMatiereSelect(semestre, keepValue) {
+    var matieres = matieresData || [];
+    var sel = $("babMatiere");
+    sel.innerHTML = "";
+    var emptySel = document.createElement("option");
+    emptySel.value = "";
+    emptySel.textContent = semestre ? "— Choisir une matière —" : "— Choisir d'abord une session —";
+    sel.appendChild(emptySel);
+
+    matieres.forEach(function (m) {
+      if (semestre && m.semestre !== semestre) return;
+      var opt = document.createElement("option");
+      opt.value = m.teaching_unit;
+      var parts = [];
+      if (m.code) parts.push(m.code);
+      if (m.intitule) parts.push(m.intitule);
+      if (!parts.length) parts.push(m.teaching_unit);
+      opt.textContent = parts.join(" — ");
+      if (keepValue && m.teaching_unit === keepValue) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  function recherche() {
     var niveau = $("babNiveau").value.trim();
     var matricule = $("babMatricule").value.trim();
     var year = $("babYear").value.trim();
-    var semestre = $("babSemestre").value;
 
     if (!niveau || !matricule) {
-      showAlert("Veuillez sélectionner un niveau et saisir un matricule.", "error");
+      showAlert("Veuillez sélectionner un niveau et saisir le matricule de l'étudiant.", "error");
       return;
     }
 
@@ -479,13 +553,11 @@ table.bab-table th .bab-th-sub {
     params.set("niveau", niveau);
     params.set("matricule", matricule);
     if (year) params.set("academic_year", year);
-    if (semestre) params.set("semestre", semestre);
 
     showLoading(true);
     hideAlert();
-    $("babResult").hidden = true;
 
-    fetch("/api/method/udshed.api.babillard.consulter_notes?" + params.toString(), {
+    fetch("/api/method/udshed.api.babillard.matieres_publiees?" + params.toString(), {
       method: "GET",
       credentials: "same-origin",
       headers: { "Accept": "application/json" }
@@ -494,11 +566,38 @@ table.bab-table th .bab-th-sub {
       .then(function (json) {
         var data = json && json.message ? json.message : json;
         if (!data || !data.success) {
+          $("babResult").hidden = true;
           showAlert((data && data.message) || "Impossible de récupérer les notes.", "error");
           return;
         }
-        currentData = data;
-        render(data);
+
+        matieresData = data.matieres || [];
+        renderStudent(data.student);
+
+        var sessions = $("babSession");
+        sessions.innerHTML = "";
+        var empty = document.createElement("option");
+        empty.value = "";
+        if (data.semestres && data.semestres.length) {
+          empty.textContent = "— Choisir un semestre —";
+        } else {
+          empty.textContent = "Aucune note publiée";
+        }
+        sessions.appendChild(empty);
+        (data.semestres || []).forEach(function (s) {
+          var opt = document.createElement("option");
+          opt.value = s;
+          opt.textContent = s;
+          sessions.appendChild(opt);
+        });
+
+        fillMatiereSelect(sessions.value || ($("babSession").options[1] && $("babSession").options[1].value), "");
+
+        $("babNote").hidden = true;
+        $("babResult").hidden = false;
+        if (!(data.semestres && data.semestres.length)) {
+          showAlert("Aucune note publiée pour cet étudiant en " + (data.academic_year || "") + ".", "info");
+        }
       })
       .catch(function () {
         showAlert("Erreur réseau. Veuillez réessayer.", "error");
@@ -506,19 +605,107 @@ table.bab-table th .bab-th-sub {
       .finally(function () { showLoading(false); });
   }
 
-  function loadStudents() {
+  function renderNote(data) {
+    var m = data.matiere || {};
+    var notes = data.notes || {};
+
+    setText($("babNoteCode"), m.code || m.teaching_unit || "");
+    setText($("babNoteTitre"), m.intitule || m.ue_intitule || m.teaching_unit || "");
+    setText($("babNoteCourse"), m.course_intitule || "");
+
+    var meta = [];
+    if (data.semestre) meta.push(data.semestre);
+    if (data.student && data.student.filiere) meta.push(data.student.filiere);
+    if (data.academic_year) meta.push(data.academic_year);
+    setText($("babNoteMeta"), meta.join(" · "));
+    if (!meta.length) $("babNoteMeta").hidden = true;
+
+    var ccEl = $("babNoteCC");
+    if (notes.cc != null) {
+      ccEl.innerHTML = esc(fmt(notes.cc)) + " <small>/ 20</small>";
+    } else {
+      setText(ccEl, "Non publiée");
+    }
+
+    var exEl = $("babNoteExamen");
+    if (notes.examen != null) {
+      exEl.innerHTML = esc(fmt(notes.examen)) + " <small>/ 20</small>";
+    } else {
+      setText(exEl, "Non publiée");
+    }
+
+    var moyEl = $("babNoteMoyenne");
+    if (notes.moyenne != null) {
+      var moyHtml = esc(fmt(notes.moyenne)) + " <small>/ 20</small>";
+      if (notes.note_pct != null) {
+        moyHtml += " <small>(" + esc(fmt(notes.note_pct)) + " %)</small>";
+      }
+      moyEl.innerHTML = moyHtml;
+    } else {
+      setText(moyEl, "—");
+    }
+
+    setText($("babNoteGrade"), notes.grade || "—");
+    setText($("babNotePoints"), notes.point != null ? fmt(notes.point) : "—");
+    $("babResultat").hidden = (notes.moyenne == null && !notes.grade && notes.point == null);
+
+    $("babNote").hidden = false;
+  }
+
+  function consulter() {
     var niveau = $("babNiveau").value.trim();
+    var matricule = $("babMatricule").value.trim();
+    var year = $("babYear").value.trim();
+    var teachingUnit = $("babMatiere").value.trim();
+
+    if (!teachingUnit) {
+      showAlert("Veuillez sélectionner une matière.", "error");
+      return;
+    }
+
+    var params = new URLSearchParams();
+    params.set("niveau", niveau);
+    params.set("matricule", matricule);
+    if (year) params.set("academic_year", year);
+    params.set("teaching_unit", teachingUnit);
+
+    hideAlert();
+
+    fetch("/api/method/udshed.api.babillard.consulter_matiere?" + params.toString(), {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { "Accept": "application/json" }
+    })
+      .then(function (resp) { return resp.json(); })
+      .then(function (json) {
+        var data = json && json.message ? json.message : json;
+        if (!data || !data.success) {
+          $("babNote").hidden = true;
+          showAlert((data && data.message) || "Impossible de récupérer la note.", "error");
+          return;
+        }
+        renderNote(data);
+      })
+      .catch(function () {
+        showAlert("Erreur réseau. Veuillez réessayer.", "error");
+      });
+  }
+
+  function loadStudents(first) {
+    var niveau = $("babNiveau").value.trim();
+    var filiere = $("babFiliere").value.trim();
     var year = $("babYear").value.trim();
     var sel = $("babStudentSelect");
-    var current = sel.value;
+
     if (!niveau) {
       sel.innerHTML = "";
       var empty0 = document.createElement("option");
       empty0.value = "";
-      empty0.textContent = "— Choisir d'abord le niveau —";
+      empty0.textContent = "— Choisir d'abord un niveau —";
       sel.appendChild(empty0);
       return;
     }
+
     sel.innerHTML = "";
     var loading = document.createElement("option");
     loading.value = "";
@@ -528,6 +715,7 @@ table.bab-table th .bab-th-sub {
 
     var params = new URLSearchParams();
     params.set("niveau", niveau);
+    if (filiere) params.set("filiere", filiere);
     if (year) params.set("academic_year", year);
 
     fetch("/api/method/udshed.api.babillard.list_students?" + params.toString(), {
@@ -543,21 +731,17 @@ table.bab-table th .bab-th-sub {
         empty.value = "";
         if (data && data.success) {
           var students = data.students || [];
-          empty.textContent = students.length
-            ? "— Choisir un étudiant —"
-            : "Aucun étudiant pour ce niveau";
+          empty.textContent = students.length ? "— Choisir un étudiant —" : "Aucun étudiant pour ce niveau";
         } else {
           empty.textContent = "— Erreur de chargement —";
         }
         sel.appendChild(empty);
+        var current = first ? $("babMatricule").value.trim() : "";
         (data && data.students || []).forEach(function (s) {
           var opt = document.createElement("option");
           opt.value = s.matricule;
           opt.textContent = (s.nom || "") + " " + (s.prenom || "") + "  [" + s.matricule + "]";
-          opt.setAttribute("data-name", s.name);
-          if (s.matricule === current || s.matricule === $("babMatricule").value.trim()) {
-            opt.selected = true;
-          }
+          if (first && s.matricule === current) opt.selected = true;
           sel.appendChild(opt);
         });
       })
@@ -574,489 +758,37 @@ table.bab-table th .bab-th-sub {
   function onStudentSelected() {
     var val = $("babStudentSelect").value;
     $("babMatricule").value = val;
-    if (val) consult();
-  }
-
-  function filterSemestersByCours(semesters, cours) {
-    if (!cours) return semesters;
-    return semesters.map(function (sem) {
-      var clone = {};
-      for (var k in sem) {
-        if (Object.prototype.hasOwnProperty.call(sem, k)) clone[k] = sem[k];
-      }
-      clone.ues = (sem.ues || []).filter(function (u) { return u.course === cours; });
-      return clone;
-    });
-  }
-
-  function render(data) {
-    hideAlert();
-    var student = data.student || {};
-    renderStudent(student);
-    renderYearNav(data);
-    renderAnnual(data);
-    renderSemesters(filterSemestersByCours(data.semesters || [], $("babCours").value));
-    renderLegend(data.grade_scale || []);
-    $("babResult").hidden = false;
-  }
-
-  function renderAnnual(data) {
-    var wrap = $("babAnnual");
-    var hasAnnual = typeof data.annee_credits_valides === "number";
-    wrap.hidden = !hasAnnual;
-    if (!hasAnnual) return;
-
-    var info = $("babAnnualInfo");
-    info.innerHTML = "";
-    [
-      ["Crédits validés", data.annee_credits_valides + " / " + (data.annee_credits_inscrits || 0)],
-      ["Pourcentage de validation", fmt(data.annee_pct_validation) + " %"]
-    ].forEach(function (it) {
-      var d = document.createElement("div");
-      var k = document.createElement("div"); k.className = "bab-k"; k.textContent = it[0];
-      var v = document.createElement("div"); v.className = "bab-v"; v.textContent = it[1];
-      d.appendChild(k); d.appendChild(v);
-      info.appendChild(d);
-    });
-
-    var dec = $("babAnnualDecision");
-    dec.innerHTML = "";
-    if (!data.decision_annuelle) return;
-    var label = data.decision_annuelle === "Admis" ? "ADMIS(E)" : "AJOURNÉ(E)";
-    dec.textContent = "Décision : " + label;
-    dec.className = "bab-decision " + (data.decision_annuelle === "Admis" ? "ok" : "ko");
-  }
-
-  function renderStudent(s) {
-    var wrap = $("babStudent");
-    wrap.innerHTML = "";
-    var items = [
-      ["Nom", (s.nom || "") + " " + (s.prenom || "")],
-      ["Matricule", s.matricule || ""],
-      ["Filière", s.filiere || ""],
-      ["Niveau", s.niveau || ""],
-      ["Cycle", s.cycle || ""]
-    ];
-    items.forEach(function (it) {
-      var d = document.createElement("div");
-      var k = document.createElement("div"); k.className = "bab-k"; k.textContent = it[0];
-      var v = document.createElement("div"); v.className = "bab-v"; v.textContent = it[1];
-      d.appendChild(k); d.appendChild(v);
-      wrap.appendChild(d);
-    });
-  }
-
-  function renderYearNav(data) {
-    var sel = $("babYearNav");
-    sel.innerHTML = "";
-    (data.years_available || []).forEach(function (y) {
-      var opt = document.createElement("option");
-      opt.value = y;
-      opt.textContent = y;
-      if (y === data.academic_year) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    sel.onchange = function () { goYear(sel.value); };
-
-    var btn = $("babPrevYear");
-    btn.disabled = !data.prev_year;
-    btn.onclick = function () { if (data.prev_year) goYear(data.prev_year); };
-
-    setText($("babCurrentInfo"), data.prev_year
-      ? "Consulter aussi les résultats de l'année précédente"
-      : "");
-  }
-
-  function goYear(year) {
-    var prev = $("babYear");
-    var matched = false;
-    Array.prototype.forEach.call(prev.options, function (o) {
-      if (o.value === year) { prev.value = year; matched = true; }
-    });
-    if (!matched && year) {
-      var opt = document.createElement("option");
-      opt.value = year; opt.textContent = year; opt.selected = true;
-      prev.appendChild(opt);
-    }
-    $("babSemestre").value = "";
-    consult();
-  }
-
-  function renderSemesters(semesters) {
-    var wrap = $("babSemesters");
-    wrap.innerHTML = "";
-
-    if (!semesters.length) {
-      var empty = document.createElement("div");
-      empty.className = "bab-empty";
-      empty.textContent = "Aucun résultat à afficher.";
-      wrap.appendChild(empty);
-      return;
-    }
-
-    semesters.forEach(function (sem) {
-      var block = document.createElement("div");
-      block.className = "bab-sem";
-
-      var head = document.createElement("div");
-      head.className = "bab-sem-head";
-      var title = document.createElement("span");
-      title.className = "bab-sem-title";
-      title.textContent = sem.semestre;
-      var year = document.createElement("span");
-      year.className = "bab-sem-year";
-      year.textContent = "Année académique " + sem.academic_year;
-      head.appendChild(title);
-      head.appendChild(year);
-      block.appendChild(head);
-
-      var sum = document.createElement("div");
-      sum.className = "bab-summary";
-      addSummary(sum, "Crédits validés", sem.credits_obtenus + " / " + sem.total_credits);
-      addSummary(sum, "MPS (%)", fmt(sem.mps));
-      addSummary(sum, "MPC (%)", fmt(sem.mpc));
-      addSummary(sum, "Mention", sem.mention || "—");
-      var dec = addSummary(sum, "Décision", sem.decision || "—");
-      if (sem.decision === "Admis") dec.className += " " + "bab-v";
-      block.appendChild(sum);
-
-      if (sem.ues && sem.ues.length) {
-        var wrapT = document.createElement("div");
-        wrapT.className = "bab-table-wrap";
-        wrapT.appendChild(buildTable(sem.ues));
-        block.appendChild(wrapT);
-      } else {
-        var empty = document.createElement("div");
-        empty.className = "bab-empty";
-        empty.textContent = "Aucune note publiée pour ce semestre.";
-        block.appendChild(empty);
-      }
-
-      wrap.appendChild(block);
-    });
-  }
-
-  function addSummary(container, key, value) {
-    var d = document.createElement("div");
-    var k = document.createElement("div"); k.className = "bab-k"; k.textContent = key;
-    var v = document.createElement("div"); v.className = "bab-v"; v.textContent = value;
-    d.appendChild(k); d.appendChild(v);
-    container.appendChild(d);
-    return v;
-  }
-
-  function buildTable(ues) {
-    var table = document.createElement("table");
-    table.className = "bab-table";
-
-    var thead = document.createElement("thead");
-    var tr = document.createElement("tr");
-    ["Matière", "Crédits", "Note /20", "Note (%)", "Grade", "Pts", "Mention", "Session", "Statut"].forEach(function (h) {
-      var th = document.createElement("th");
-      th.textContent = h;
-      tr.appendChild(th);
-    });
-    thead.appendChild(tr);
-    table.appendChild(thead);
-
-    var tbody = document.createElement("tbody");
-    ues.forEach(function (u) {
-      var row = document.createElement("tr");
-      var tdUE = document.createElement("td");
-      var matiere = u.ue_intitule || u.intitule || u.teaching_unit || "";
-      var ueMain = document.createElement("div");
-      ueMain.className = "bab-ue-main";
-      ueMain.textContent = matiere;
-      tdUE.appendChild(ueMain);
-      var coursParts = [];
-      if (u.code) coursParts.push(u.code);
-      if (u.course_intitule && u.course_intitule !== u.intitule) coursParts.push(u.course_intitule);
-      if (!coursParts.length && u.teaching_unit && u.intitule !== u.teaching_unit) {
-        coursParts.push(u.teaching_unit);
-      }
-      if (coursParts.length) {
-        var ueSub = document.createElement("div");
-        ueSub.className = "bab-ue-sub";
-        ueSub.textContent = "Cours : " + coursParts.join(" — ");
-        tdUE.appendChild(ueSub);
-      }
-      tdUE.title = [matiere, coursParts.join(" — ")].filter(Boolean).join(" — ");
-      row.appendChild(tdUE);
-      var tdC = document.createElement("td");
-      tdC.className = "num";
-      tdC.textContent = u.credits;
-      row.appendChild(tdC);
-      var tdN = document.createElement("td");
-      tdN.className = "num";
-      tdN.textContent = fmt(u.note_finale);
-      row.appendChild(tdN);
-      var tdPct = document.createElement("td");
-      tdPct.className = "num";
-      tdPct.textContent = fmt(u.note_pct) + " %";
-      row.appendChild(tdPct);
-      var tdG = document.createElement("td");
-      tdG.textContent = u.grade || "";
-      row.appendChild(tdG);
-      var tdP = document.createElement("td");
-      tdP.className = "num";
-      tdP.textContent = u.point;
-      row.appendChild(tdP);
-      var tdM = document.createElement("td");
-      tdM.textContent = u.mention || "";
-      row.appendChild(tdM);
-      var tdS = document.createElement("td");
-      tdS.textContent = u.session || "";
-      row.appendChild(tdS);
-      var tdSt = document.createElement("td");
-      tdSt.appendChild(badge(u.statut === "Validé" ? "Validé" : "Non Validé", u.statut === "Validé" ? "bab-badge-ok" : "bab-badge-ko"));
-      row.appendChild(tdSt);
-      tbody.appendChild(row);
-    });
-    table.appendChild(tbody);
-    return table;
-  }
-
-  function renderLegend(scale) {
-    var wrap = $("babLegend");
-    wrap.innerHTML = "";
-    if (!scale.length) {
-      var p = document.createElement("span");
-      p.textContent = "Grille non configurée.";
-      wrap.appendChild(p);
-      return;
-    }
-    scale.forEach(function (g) {
-      var item = document.createElement("span");
-      item.className = "bab-l-item";
-      item.textContent = g.grade + " : " + g.note_min_pct + "–" + g.note_max_pct + " %  (" + g.point + " pt" + (g.mention ? ", " + g.mention : "") + ")";
-      wrap.appendChild(item);
-    });
-  }
-
-  // ------------------------------------------------------------------ //
-  //  Consultation « par filière »
-  // ------------------------------------------------------------------ //
-  var FILIERES = {{ filieres | tojson }};
-
-  function filiereNiveaux(name) {
-    for (var i = 0; i < FILIERES.length; i++) {
-      if (FILIERES[i].name === name) return FILIERES[i].niveaux || [];
-    }
-    return [];
-  }
-
-  function showFiliereAlert(message, type) {
-    var alert = $("babFiliereAlert");
-    alert.hidden = false;
-    alert.className = "bab-alert " + (type === "error" ? "bab-alert-error" : "bab-alert-info");
-    setText(alert, message);
-  }
-  function hideFiliereAlert() { $("babFiliereAlert").hidden = true; }
-
-  function consultFiliere() {
-    var filiere = $("babFiliere").value.trim();
-    var niveau = $("babFiliereNiveau").value.trim();
-    var year = $("babFiliereYear").value.trim();
-    var semestre = $("babFiliereSemestre").value;
-
-    if (!filiere || !niveau) {
-      showFiliereAlert("Veuillez sélectionner une filière et un niveau.", "error");
-      return;
-    }
-
-    var params = new URLSearchParams();
-    params.set("filiere", filiere);
-    params.set("niveau", niveau);
-    if (year) params.set("academic_year", year);
-    if (semestre) params.set("semestre", semestre);
-
-    var btn = $("babFiliereSubmit");
-    btn.disabled = true;
-    hideFiliereAlert();
-    $("babFiliereResult").hidden = true;
-
-    fetch("/api/method/udshed.api.babillard.consulter_notes_filiere?" + params.toString(), {
-      method: "GET",
-      credentials: "same-origin",
-      headers: { "Accept": "application/json" }
-    })
-      .then(function (resp) { return resp.json(); })
-      .then(function (json) {
-        var data = json && json.message ? json.message : json;
-        if (!data || !data.success) {
-          showFiliereAlert((data && data.message) || "Impossible de récupérer les notes.", "error");
-          return;
-        }
-        renderFiliere(data);
-      })
-      .catch(function () {
-        showFiliereAlert("Erreur réseau. Veuillez réessayer.", "error");
-      })
-      .finally(function () { btn.disabled = false; });
-  }
-
-  function renderFiliereInfo(data) {
-    var wrap = $("babFiliereInfo");
-    wrap.innerHTML = "";
-    var items = [
-      ["Filière", data.filiere_name || data.filiere],
-      ["Niveau", data.niveau || ""],
-      ["Année académique", data.academic_year || ""],
-      ["Semestre", data.semestre || "Toute l'année"],
-      ["Seuil de validation", data.seuil != null ? data.seuil + " %" : ""]
-    ];
-    items.forEach(function (it) {
-      var d = document.createElement("div");
-      var k = document.createElement("div"); k.className = "bab-k"; k.textContent = it[0];
-      var v = document.createElement("div"); v.className = "bab-v"; v.textContent = it[1];
-      d.appendChild(k); d.appendChild(v);
-      wrap.appendChild(d);
-    });
-  }
-
-  function renderFiliere(data) {
-    hideFiliereAlert();
-    renderFiliereInfo(data);
-    var table = $("babFiliereTable");
-    var empty = $("babFiliereEmpty");
-    var students = data.students || [];
-    var ues = data.ues || [];
-    var coursFiltre = $("babFiliereCours").value;
-    if (coursFiltre) {
-      ues = ues.filter(function (u) { return u.course === coursFiltre; });
-    }
-
-    empty.hidden = students.length > 0;
-    table.hidden = !students.length;
-    if (!students.length) {
-      $("babFiliereResult").hidden = false;
-      return;
-    }
-
-    var thead = document.createElement("thead");
-    var tr = document.createElement("tr");
-    ["Matricule", "Nom"].forEach(function (h) {
-      var th = document.createElement("th");
-      th.textContent = h;
-      tr.appendChild(th);
-    });
-    ues.forEach(function (u) {
-      var th = document.createElement("th");
-      var main = document.createElement("span");
-      main.textContent = (u.code || u.teaching_unit || u.name || "");
-      th.appendChild(main);
-      var detail = u.ue_intitule || u.intitule || "";
-      if (detail) {
-        var sub = document.createElement("span");
-        sub.className = "bab-th-sub";
-        sub.textContent = detail;
-        th.appendChild(sub);
-      }
-      var cr = document.createElement("span");
-      cr.className = "bab-th-sub";
-      cr.textContent = "(" + (u.credits != null ? u.credits : "?") + " cr)";
-      th.appendChild(cr);
-      th.title = "Matière : " + (u.ue_intitule || u.intitule || u.teaching_unit || "")
-        + "\nCours : " + [u.code, u.course_intitule].filter(Boolean).join(" — ");
-      tr.appendChild(th);
-    });
-    ["MPS (%)", "Crédits", "Décision"].forEach(function (h) {
-      var th = document.createElement("th");
-      th.textContent = h;
-      tr.appendChild(th);
-    });
-    thead.appendChild(tr);
-    table.appendChild(thead);
-
-    var tbody = document.createElement("tbody");
-    students.forEach(function (s) {
-      var row = document.createElement("tr");
-      var tdM = document.createElement("td");
-      tdM.textContent = s.matricule || "";
-      row.appendChild(tdM);
-      var tdN = document.createElement("td");
-      tdN.textContent = (s.nom || "") + " " + (s.prenom || "");
-      row.appendChild(tdN);
-
-      ues.forEach(function (u) {
-        var key = u.teaching_unit || u.name;
-        var res = (s.resultats || {})[key];
-        var td = document.createElement("td");
-        td.className = "num";
-        if (res) {
-          td.textContent = fmt(res.note_finale) + " — " + (res.grade || "");
-          td.title = "Note (%) : " + fmt(res.note_pct) + " % — " + (res.mention || "") + " — " + (res.statut || "");
-          td.style.color = res.statut === "Validé" ? "#166534" : "#991b1b";
-        } else {
-          td.textContent = "—";
-          td.style.color = "#9ca3af";
-        }
-        row.appendChild(td);
-      });
-
-      var tdMps = document.createElement("td");
-      tdMps.className = "num";
-      tdMps.textContent = fmt(s.mps);
-      row.appendChild(tdMps);
-      var tdC = document.createElement("td");
-      tdC.className = "num";
-      tdC.textContent = (s.credits_obtenus || 0) + " / " + (s.total_credits || 0);
-      row.appendChild(tdC);
-      var tdD = document.createElement("td");
-      tdD.appendChild(badge(s.decision === "Admis" ? "Admis" : "Ajourné", s.decision === "Admis" ? "bab-badge-ok" : "bab-badge-ko"));
-      row.appendChild(tdD);
-      tbody.appendChild(row);
-    });
-    table.appendChild(tbody);
-    $("babFiliereResult").hidden = false;
+    if (val) recherche();
   }
 
   document.addEventListener("DOMContentLoaded", function () {
     $("babForm").addEventListener("submit", function (e) {
       e.preventDefault();
-      consult();
+      recherche();
     });
 
-    // Liste des étudiants / matricules selon niveau + année
-    $("babNiveau").addEventListener("change", loadStudents);
-    $("babYear").addEventListener("change", loadStudents);
+    $("babNiveau").addEventListener("change", function () { loadStudents(false); });
+    $("babFiliere").addEventListener("change", function () { loadStudents(false); });
+    $("babYear").addEventListener("change", function () { loadStudents(false); });
     $("babStudentSelect").addEventListener("change", onStudentSelected);
 
-    $("babFiliere").addEventListener("change", function () {
-      var niveaux = filiereNiveaux(this.value);
-      var sel = $("babFiliereNiveau");
-      sel.innerHTML = "";
-      var empty = document.createElement("option");
-      empty.value = "";
-      empty.textContent = niveaux.length ? "— Choisir —" : "Aucun niveau";
-      sel.appendChild(empty);
-      niveaux.forEach(function (n) {
-        var opt = document.createElement("option");
-        opt.value = n;
-        opt.textContent = n;
-        sel.appendChild(opt);
-      });
+    $("babSession").addEventListener("change", function () {
+      fillMatiereSelect(this.value, "");
+      if (this.value) $("babNote").hidden = true;
     });
 
-    $("babFiliereForm").addEventListener("submit", function (e) {
+    $("babMatiereForm").addEventListener("submit", function (e) {
       e.preventDefault();
-      consultFiliere();
-    });
-
-    // Re-filtrage instantané au changement du sélecteur « Cours »
-    $("babCours").addEventListener("change", function () {
-      if (currentData && !$("babResult").hidden) render(currentData);
-    });
-    $("babFiliereCours").addEventListener("change", function () {
-      if (!$("babFiliereResult").hidden && !$("babFiliereTable").hidden) consultFiliere();
+      consulter();
     });
 
     // Consultation automatique si la page est ouverte avec un lien pré-rempli
     var niveau = $("babNiveau").value.trim();
     var matricule = $("babMatricule").value.trim();
-    if (niveau) loadStudents();
-    if (niveau && matricule) {
-      consult();
+    if (niveau) loadStudents(niveau && matricule);
+    if (matricule) {
+      $("babMatricule").value = matricule;
+      recherche();
     }
   });
 })();

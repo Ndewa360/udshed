@@ -1,0 +1,117 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-09-25 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_identification",
+  "teaching_unit",
+  "code",
+  "intitule",
+  "column_break_matiere",
+  "credits",
+  "section_break_note",
+  "note_pct",
+  "note_finale",
+  "column_break_note",
+  "est_rattrapage",
+  "valide"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_identification",
+   "fieldtype": "Section Break",
+   "label": "Matière"
+  },
+  {
+   "fieldname": "teaching_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Matière",
+   "options": "Teaching Unit",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "intitule",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Intitulé",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_matiere",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Poids de la matière dans l'UE (grille d'enseignement)",
+   "fieldname": "credits",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Crédits",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_note",
+   "fieldtype": "Section Break",
+   "label": "Note retenue"
+  },
+  {
+   "fieldname": "note_pct",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Note (%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "note_finale",
+   "fieldtype": "Float",
+   "label": "Note (/20)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_note",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Coché si la note retenue provient de la session de rattrapage",
+   "fieldname": "est_rattrapage",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Rattrapage",
+   "read_only": 1
+  },
+  {
+   "fieldname": "valide",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Validée",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-25 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Resultat UE Matiere",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
