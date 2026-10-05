@@ -657,7 +657,7 @@ def submit_inscription(doc_name: str, data: str) -> dict:
 
 	Délègue à la fonction unifiée dans inscription.py pour éviter la duplication.
 	"""
-	from udshed.udshed.api.inscription import _finaliser_inscription_complete
+	from udshed.api.inscription import _finaliser_inscription_complete
 
 	if not doc_name:
 		frappe.throw(_("Numéro de dossier manquant."))
