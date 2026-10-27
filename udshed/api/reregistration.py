@@ -10,6 +10,7 @@ from udshed.utils.niveaux import (
 	niveau_precedent,
 	prochain_niveau,
 )
+from udshed.api.school_setting import get_logo_data_uri
 
 STAFF_ROLES = {"System Manager", "Coordonateur", "Agent de scolarité", "Comptable"}
 
@@ -1061,6 +1062,7 @@ def telecharger_fiche_reinscription(reregistration_name):
 	with open(template_path, encoding="utf-8") as f:
 		html = frappe.render_template(f.read(), {
 			"school_name": school_name,
+			"logo": get_logo_data_uri(),
 			"student": {
 				"matricule": student.name,
 				"nom": student.nom or "",

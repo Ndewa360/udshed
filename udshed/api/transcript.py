@@ -176,39 +176,59 @@ def get_transcript_data(doc):
                     "intitule": uv_intitule,
                     "total_credits": 0,
                     "items": [],
+                    "incompletes": 0,
                     "has_rattrapage": False,
                 }
             ues_par_uv[uv_code]["total_credits"] += credits_val
-            ues_par_uv[uv_code]["items"].append({
-                "note_pct": ue.note_pct or 0,
-                "credits": credits_val,
-                "est_rattrapage": ue.est_rattrapage or 0,
-            })
+            if ue.note_pct is None:
+                # Une matière présente au relevé mais sans note ne vaut pas 0 :
+                # la compter comme un zéro faisait chuter la moyenne de l'UE
+                # alors que le PV affiche « En attente ». L'UE est donc marquée
+                # incomplète et sa moyenne n'est pas calculée.
+                ues_par_uv[uv_code]["incompletes"] += 1
+            else:
+                ues_par_uv[uv_code]["items"].append({
+                    "note_pct": ue.note_pct,
+                    "credits": credits_val,
+                    "est_rattrapage": ue.est_rattrapage or 0,
+                })
             if ue.est_rattrapage:
                 ues_par_uv[uv_code]["has_rattrapage"] = True
 
         # Note UE = Σ(note_pct_i × credits_i) / Σ(credits_i)
+        # Tant qu'une matière de l'UE n'a pas de note, aucune moyenne n'est
+        # publiée : on affiche « En attente », comme le PV par UE.
         ue_list = []
         for uv_code, groupe in ues_par_uv.items():
-            tc = groupe["total_credits"]
-            somme = sum(
-                item["note_pct"] * item["credits"] for item in groupe["items"]
-            )
-            note_pct_ue = round(somme / tc, 2) if tc > 0 else 0
-            info = get_grade_info(note_pct_ue, echelle=100) or {}
+            incomplete = bool(groupe["incompletes"]) or not groupe["items"]
+            if incomplete:
+                note_pct_ue = None
+                info = {}
+                statut = "En attente"
+            else:
+                somme = sum(
+                    item["note_pct"] * item["credits"] for item in groupe["items"]
+                )
+                poids = sum(item["credits"] for item in groupe["items"])
+                note_pct_ue = round(somme / poids, 2) if poids > 0 else None
+                if note_pct_ue is None:
+                    statut = "En attente"
+                else:
+                    info = get_grade_info(note_pct_ue, echelle=100) or {}
+                    statut = "Validé" if note_pct_ue >= seuil else "Non Validé"
 
             ue_list.append({
                 "code": groupe["code"],
                 "intitule": groupe["intitule"],
-                "credits": int(tc),
-                "note_finale": round(note_pct_ue * 20 / 100, 2),
+                "credits": int(groupe["total_credits"]),
+                "note_finale": (
+                    round(note_pct_ue * 20 / 100, 2) if note_pct_ue is not None else None
+                ),
                 "note_pct": note_pct_ue,
                 "grade": info.get("grade", ""),
                 "point": info.get("point", 0),
                 "mention": info.get("mention", ""),
-                "statut": (
-                    "Validé" if note_pct_ue >= seuil else "Non Validé"
-                ),
+                "statut": statut,
                 "est_rattrapage": 1 if groupe["has_rattrapage"] else 0,
                 "session": (
                     _("Rattrapage") if groupe["has_rattrapage"]

@@ -16,11 +16,21 @@
 		justify-content: space-between;
 		margin-bottom: 24px;
 	}
+	.esp-brand-wrap {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+	.esp-logo {
+		height: 40px;
+		width: auto;
+		display: block;
+	}
 	.esp-brand {
 		font-size: 22px;
 		font-weight: 800;
 		letter-spacing: 1px;
-		color: #003B6F;
+		color: #1E40AF;
 		text-transform: uppercase;
 	}
 	.esp-topbar .btn { border-radius: 8px; }
@@ -94,7 +104,10 @@
 
 <div class="esp-wrapper">
 	<div class="esp-topbar">
-		<div class="esp-brand">UDSHED</div>
+		<div class="esp-brand-wrap">
+			<img class="esp-logo" src="/assets/udshed/images/logo1.png" alt="UDSHED">
+			<span class="esp-brand">UDSHED</span>
+		</div>
 		<div>
 			<a class="btn btn-outline-secondary btn-sm" href="/reinscription-etudiant">Ma réinscription</a>
 			<a class="btn btn-outline-secondary btn-sm" href="/api/method/logout">Déconnexion</a>

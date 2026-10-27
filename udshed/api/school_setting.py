@@ -19,16 +19,28 @@ def get_school_data():
     return get_school_name(), get_school_logo()
 
 
-def _chemin_fichier_logo():
+def _chemin_fichier_logo(valeur=None):
     """Résout le chemin disque du logo d'école (Udshed Setting.school_logo),
-    avec repli sur le logo par défaut de l'app."""
+    avec repli sur le logo par défaut de l'app.
+
+    ``valeur`` permet à l'appelant de passer explicitement un chemin à
+    résoudre ; par défaut la valeur du réglage est utilisée.
+    """
     import os
 
-    valeur = (get_school_logo() or "").strip()
+    if valeur is None:
+        valeur = get_school_logo()
+    valeur = (valeur or "").strip()
     if valeur.startswith("/"):
         basename = valeur.rsplit("/", 1)[-1]
         if valeur.startswith("/assets/udshed/images/"):
             chemin = frappe.get_app_path("udshed", "public", "images", basename)
+        elif valeur.startswith("/assets/"):
+            # Asset d'une autre app : /assets/<app>/<reste> -> apps/<app>/public/<reste>
+            reste = valeur[len("/assets/"):]
+            app = reste.split("/", 1)[0] if "/" in reste else "udshed"
+            sous_chemin = reste.split("/", 1)[1] if "/" in reste else reste
+            chemin = frappe.get_app_path(app, "public", *sous_chemin.split("/"))
         elif valeur.startswith("/private/files/"):
             chemin = frappe.utils.get_site_path("private", "files", basename)
         elif valeur.startswith("/files/"):

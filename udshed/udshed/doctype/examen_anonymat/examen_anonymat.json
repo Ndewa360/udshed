@@ -100,6 +100,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Code Anonymat",
+   "read_only": 1,
    "reqd": 1,
    "unique": 1
   },

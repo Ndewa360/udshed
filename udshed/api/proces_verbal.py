@@ -522,10 +522,21 @@ def download_pv_ue_pdf(academic_year, filiere, niveau, semestre, teaching_unit_v
         frappe.throw(_("Accès réservé au personnel."))
 
     data = get_pv_ue_data(academic_year, filiere, niveau, semestre, teaching_unit_value)
-    if not data["ue"] or not data["matieres"]:
-        frappe.throw(_("Cette UE ne contient aucune matière pour cette année."))
+    if not data["ue"]:
+        frappe.throw(
+            _("L'UE {0} n'existe pas pour l'année {1}.").format(
+                teaching_unit_value, academic_year
+            )
+        )
+    if not data["matieres"]:
+        frappe.throw(
+            _(
+                "L'UE {0} n'a aucune matière pour la filière {1}, niveau {2}, année {3}. "
+                "Vérifiez la grille pédagogique (Course Field of study level item)."
+            ).format(teaching_unit_value, filiere, niveau, academic_year)
+        )
     if not data["etudiants"]:
-        frappe.throw(_("Aucun étudiant inscrit dans cette UE."))
+        frappe.throw(_("Aucun étudiant inscrit dans cette UE pour cette filière/niveau."))
 
     from weasyprint import HTML
 

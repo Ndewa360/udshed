@@ -9,8 +9,7 @@ frappe.pages['planning-academique'].on_page_load = function(wrapper) {
 		'/assets/udshed/js/planning_calendar/planning_queries.js',
 		'/assets/udshed/js/utils/utils_queries.js',
 		'/assets/udshed/js/planning_calendar/ui.js',
-		'/assets/udshed/js/utils/permission.js',
-		'/assets/udshed/js/planning_calendar/grade_entry_dialog.js'
+		'/assets/udshed/js/utils/permission.js'
 	]).then(async () => {
 
 
@@ -307,24 +306,14 @@ frappe.pages['planning-academique'].on_page_load = function(wrapper) {
 			const courseData = $(this).data("course");
 
 			if (courseData) {
-				const itemType = courseData.item && courseData.item.type;
-				const isGradeType = itemType && (
-					itemType.includes("CC") || 
-					itemType === "Controlle Continue (CC)" ||
-					itemType.includes("Examen") || 
-					itemType.includes("examen") ||
-					itemType.includes("rattrapage")
-				);
-
-				if (isGradeType) {
-					Udshed.GradeEntry.openGradeEntryDialog(courseData, () => {
-						loadPlanning(weekSelect,monthPicker,filters,calendar_zone,periods)
-					});
-				} else {
-					Udshed.Dialogs.openEditPlanningDialog(filters,currentDay,half,halfLibelle,courseData,userContext,() => {
-						loadPlanning(weekSelect,monthPicker,filters,calendar_zone,periods)
-					});
-				}
+				// Un clic ouvre systematiquement la fiche du creneau programme
+				// (modifier salle / batiment / mode). Ouvrir directement la
+				// saisie des notes depuis le planning a ete retire : la saisie
+				// se fait dans la page « Saisie des notes », ou via la page
+				// « Corriger les copies » pour les copies anonymisees.
+				Udshed.Dialogs.openEditPlanningDialog(filters,currentDay,half,halfLibelle,courseData,userContext,() => {
+					loadPlanning(weekSelect,monthPicker,filters,calendar_zone,periods)
+				});
 			} else {
 				Udshed.Dialogs.openCreatePlanningDialog(filters,currentDay,half,halfLibelle,userContext, () => {
 					loadPlanning(weekSelect,monthPicker,filters,calendar_zone,periods)

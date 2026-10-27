@@ -31,9 +31,6 @@ from udshed.api.saisie_notes import (
     TYPE_CC,
     TYPE_NORMALE,
     TYPE_RATTRAPAGE,
-    _contexte_anonyme,
-    _generer_codes_anonymes,
-    _get_etudiants,
     charger_data,
     download_fiche_report_pdf,
     enregistrer_evaluations,
@@ -51,6 +48,7 @@ from udshed.udshed._fixture_factory import (
     make_faculty,
     make_field_of_study,
     make_level,
+    make_session_examen,
     make_student,
     make_teacher,
     make_teaching_unit,
@@ -141,17 +139,33 @@ class TestSaisieParType(IntegrationTestCase):
             },
         )
 
-    def _codes(self):
-        students = charger_data(
-            self.args["academic_year"],
-            self.args["filiere"],
-            self.args["niveau"],
-            self.args["semestre"],
-            self.args["teaching_unit"],
-        )["students"]
-        return _generer_codes_anonymes(
-            students, _contexte_anonyme(self.args["teaching_unit"], TYPE_NORMALE)
+    def _session_ou_creation(self, type_dexamen):
+        """Session d'un type donné, créée seulement si elle n'existe pas encore.
+
+        Créer une seconde session du même type disperserait les notes sur
+        deux sessions : la production n'en utilise qu'une par
+        (année, semestre, filière, niveau, type).
+        """
+        existante = self._session(type_dexamen)
+        if existante:
+            return existante
+        doc = make_session_examen(
+            self.academic_year, self.calendar,
+            filiere=self.fos, niveau=self.niveau, type_dexamen=type_dexamen,
         )
+        return doc.name
+
+    def _codes(self, type_dexamen=TYPE_NORMALE):
+        """Codes d'anonymat réels, lus sur les fiches d'anonymat de la session.
+
+        Les codes ne sont plus calculés : ce sont ceux générés par la session
+        d'examen, au format AN0001, et donc ceux inscrits sur les copies.
+        """
+        from udshed.api.examen_anonymat import generer_codes
+        from udshed.api.saisie_notes import _codes_fiches_anonymat
+
+        generer_codes(self._session_ou_creation(type_dexamen))
+        return _codes_fiches_anonymat(self.args["teaching_unit"], type_dexamen)
 
     def _sauver_cc(self, cc=None, cctp=None):
         return enregistrer_evaluations(
@@ -212,6 +226,7 @@ class TestSaisieParType(IntegrationTestCase):
         self.assertIsNone(ligne["examen"])
 
         # Feuille de saisie PDF du CC.
+        self._codes(TYPE_CC)
         with patch("udshed.api.saisie_notes._html_en_pdf", return_value=b"%PDF") as mock_pdf:
             export_modele_pdf(
                 "CC",
@@ -388,6 +403,7 @@ class TestSaisieParType(IntegrationTestCase):
     #  TEST 5 : fiche de report vierge avec codes d'anonymat (Examen)
     # ------------------------------------------------------------------ #
     def test_fiche_report_vierge_avec_codes(self):
+        code = self._codes()[self.student.name]
         with patch("udshed.api.saisie_notes._html_en_pdf", return_value=b"%PDF") as mock_pdf:
             download_fiche_report_pdf(
                 self.args["academic_year"],
@@ -404,7 +420,6 @@ class TestSaisieParType(IntegrationTestCase):
         self.assertIn("Fiche de report — Examen normal", html)
         for fragment in ["N°", "Code anonymat", "Matricule", "Nom", "Prénom", "Note /20"]:
             self.assertIn(fragment, html, "colonne manquante : " + fragment)
-        code = self._codes()[self.student.name]
         self.assertIn(code, html, "le code d'anonymat de l'étudiant doit figurer")
         self.assertIn(self.student.matricule, html)
         self.assertIn(self.student.nom, html)
@@ -414,6 +429,7 @@ class TestSaisieParType(IntegrationTestCase):
         # codes propres au type « Examen de rattrapage ».
         self._sauver_cc(cc=12, cctp=13)
         self._sauver_examen(self._codes()[self.student.name], examen=10, examtp=9)
+        codes_rt = self._codes(TYPE_RATTRAPAGE)
         enregistrer_rattrapage(
             self.args["academic_year"],
             self.args["filiere"],
@@ -441,15 +457,6 @@ class TestSaisieParType(IntegrationTestCase):
         self.assertIn("Examen de rattrapage", html)  # bandeau session
         for fragment in ["N°", "Code anonymat", "Matricule", "Nom", "Prénom", "Note /20"]:
             self.assertIn(fragment, html, "colonne manquante : " + fragment)
-        codes_rt = _generer_codes_anonymes(
-            _get_etudiants(
-                self.args["academic_year"],
-                self.args["filiere"],
-                self.args["niveau"],
-                self.args["teaching_unit"],
-            ),
-            _contexte_anonyme(self.args["teaching_unit"], TYPE_RATTRAPAGE),
-        )
         self.assertIn(codes_rt[self.student.name], html)
         self.assertIn(self.student.matricule, html)
 

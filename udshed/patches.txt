@@ -7,3 +7,5 @@
 udshed.patches.ajout_lien_saisie_notes
 udshed.patches.remplacer_grille_officielle
 udshed.patches.filigrane_logo_impressions
+udshed.patches.aligner_code_anonymat_copie
+udshed.patches.renumeroter_code_anonymat_an0001

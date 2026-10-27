@@ -46,6 +46,21 @@ frappe.query_reports["PV par UE"] = {
 			fieldtype: "Link",
 			options: "Teaching Unit Value",
 			reqd: 1,
+			on_change: (report) => {
+				const ue = report.get_filter_value("teaching_unit_value");
+				if (!ue) {
+					return;
+				}
+				// `Teaching Unit Value.semestre` fait foi : le PV porte sur une UE,
+				// pas sur une session. Un semestre codé en dur envoyait vers un
+				// filtre sans rapport avec l'UE choisie. Écrire la valeur suffit :
+				// le filtre modifié déclenche le rafraîchissement lui-même.
+				frappe.db.get_value("Teaching Unit Value", ue, "semestre", (r) => {
+					if (r && r.semestre && r.semestre !== report.get_filter_value("semestre")) {
+						report.set_filter_value("semestre", r.semestre);
+					}
+				});
+			},
 		},
 	],
 
@@ -88,12 +103,11 @@ frappe.query_reports["PV par UE"] = {
 	},
 
 	onload(report) {
-		// Le filtre UE reste un `Link` simple : `QueryReport` écrase le
-		// `df.onchange` de chaque filtre à la construction et n'expose pas
-		// `get_field()`. Restreindre ses options dynamiquement casserait le
-		// `onload` tout entier. Le périmètre est donc validé côté serveur
+		// Le filtre UE reste un `Link` simple : le rapport ne restreint pas ses
+		// options dynamiquement, et le périmètre est validé côté serveur
 		// (`execute`), qui renvoie un message explicite si l'UE n'a aucune
-		// matière dans la classe choisie.
+		// matière dans la classe choisie. Le semestre, lui, est déduit de l'UE
+		// via `on_change`.
 		report.page.add_inner_button(__("Télécharger le PV de l'UE (PDF)"), () => {
 			const f = report.get_filter_values();
 			if (!f.teaching_unit_value) {

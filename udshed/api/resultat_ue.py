@@ -156,7 +156,32 @@ def get_ues_de_matiere(teaching_unit):
 # ---------------------------------------------------------------------- #
 #  Note d'une matière : meilleure des deux sessions
 # ---------------------------------------------------------------------- #
-def _meilleure_note(student, teaching_unit, academic_year, semestre, filiere=None, niveau=None):
+def _semestres_retenus(semestre, semestre_matiere):
+    """Semestres de session susceptibles de porter la note d'une matière.
+
+    ``Session Examen.semestre`` et ``Teaching Unit.semestre`` sont deux champs
+    indépendants : exiger qu'ils coïncident faisait disparaître du PV une note
+    pourtant saisie et publiée, dès que la session avait été créée dans un autre
+    semestre. Les deux sont donc acceptés — le semestre demandé d'abord, celui de
+    la matière ensuite — pour qu'une UE ne se vide plus sur une incohérence de
+    saisie. La matière et l'année suffisent déjà à désigner la note.
+    """
+    semestres = []
+    for candidat in (semestre, semestre_matiere):
+        if candidat and candidat not in semestres:
+            semestres.append(candidat)
+    return semestres
+
+
+def _meilleure_note(
+    student,
+    teaching_unit,
+    academic_year,
+    semestre,
+    filiere=None,
+    niveau=None,
+    semestre_matiere=None,
+):
     """Note retenue d'une matière : max(session normale, session rattrapage).
 
     Une seule requête : la meilleure note saisie, toutes sessions confondues. Le
@@ -172,7 +197,6 @@ def _meilleure_note(student, teaching_unit, academic_year, semestre, filiere=Non
         "n.statut IN %(statuts)s",
         "n.note_pct IS NOT NULL",
         "s.academic_year = %(academic_year)s",
-        "s.semestre = %(semestre)s",
         "s.type_dexamen IN %(types)s",
     ]
     valeurs = {
@@ -180,9 +204,14 @@ def _meilleure_note(student, teaching_unit, academic_year, semestre, filiere=Non
         "teaching_unit": teaching_unit,
         "statuts": STATUTS_SAISIS,
         "academic_year": academic_year,
-        "semestre": semestre,
         "types": (TYPE_NORMALE, TYPE_RATTRAPAGE),
     }
+
+    semestres = _semestres_retenus(semestre, semestre_matiere)
+    if semestres:
+        conditions.append("s.semestre IN %(semestres)s")
+        valeurs["semestres"] = semestres
+
     # Restreint à la classe quand elle est connue : sinon les notes du même
     # étudiant dans une autre filière peuvent entrer dans la moyenne, et la
     # requête ramène des sessions sans rapport.
@@ -249,7 +278,13 @@ def calculer_ue_etudiant(student, teaching_unit_value, academic_year, semestre, 
 
     for matiere in matieres:
         note = _meilleure_note(
-            student, matiere["teaching_unit"], academic_year, semestre, filiere, niveau_id
+            student,
+            matiere["teaching_unit"],
+            academic_year,
+            semestre,
+            filiere,
+            niveau_id,
+            semestre_matiere=matiere.get("semestre"),
         )
         credits = flt(matiere["credits"])
         note_pct = note["note_pct"] if note else None

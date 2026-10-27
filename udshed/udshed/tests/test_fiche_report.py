@@ -30,7 +30,13 @@ from udshed.api.examen_anonymat import (
     lever_anonymat,
     valider_corrections,
 )
-from udshed.api.saisie_notes import TYPE_NORMALE
+from udshed.api.saisie_notes import (
+    TYPE_NORMALE,
+    TYPE_RATTRAPAGE,
+)
+from udshed.api.saisie_notes import (
+    download_fiche_report_pdf as download_fiche_report_saisie,
+)
 from udshed.udshed._fixture_factory import (
     make_academic_reregistration,
     make_academic_year,
@@ -247,6 +253,249 @@ class TestFichesAnonymatReport(IntegrationTestCase):
         generer_codes(self.session.name)
         with self.assertRaises(frappe.ValidationError):
             download_fiche_report_pdf(self.session.name)
+
+    # ------------------------------------------------------------------ #
+    #  Cohérence du code d'anonymat entre les deux fiches
+    # ------------------------------------------------------------------ #
+    def test_code_anonymat_identique_fiche_anonymat_et_report(self):
+        """Les deux PDF doivent porter le même numéro pour un même étudiant.
+
+        Régression : la fiche de report lisait le code recopié dans la copie,
+        la fiche d'anonymat celui de la fiche d'anonymat. Les deux valeurs
+        pouvaient diverger et afficher des numéros différents.
+        """
+        generer_codes(self.session.name)
+        copies = frappe.get_all(
+            "Copie Examen",
+            filters={"session_examen": self.session.name},
+            order_by="code_anonymat",
+            fields=["name"],
+        )
+        for i, copie in enumerate(copies):
+            enregistrer_correction(copie.name, note=str(11 + i))
+        valider_corrections(self.session.name)
+
+        codes_attendus = {
+            a.code_anonymat
+            for a in frappe.get_all(
+                "Examen Anonymat",
+                filters={"session_examen": self.session.name},
+                fields=["code_anonymat"],
+            )
+        }
+        self.assertTrue(codes_attendus)
+
+        texte_fiches = self._texte_du_pdf(download_fiche_anonymat_pdf, self.session.name)
+        texte_report = self._texte_du_pdf(download_fiche_report_pdf, self.session.name)
+
+        for code in codes_attendus:
+            self.assertIn(code, texte_fiches, "Code absent de la fiche d'anonymat")
+            self.assertIn(code, texte_report, "Code absent de la fiche de report")
+
+        # Et la fiche de report (document) porte le code de la fiche d'anonymat.
+        lever_anonymat(self.session.name)
+        expected = {
+            (a.student, a.teaching_unit): a.code_anonymat
+            for a in frappe.get_all(
+                "Examen Anonymat",
+                filters={"session_examen": self.session.name},
+                fields=["student", "teaching_unit", "code_anonymat"],
+            )
+        }
+        fiches = frappe.get_all(
+            "Fiche Report",
+            filters={"session_examen": self.session.name},
+            fields=["student", "teaching_unit", "code_anonymat"],
+        )
+        self.assertTrue(fiches)
+        for fiche in fiches:
+            self.assertEqual(
+                fiche.code_anonymat,
+                expected[(fiche.student, fiche.teaching_unit)],
+                "La fiche de report doit porter le code de la fiche d'anonymat",
+            )
+
+    def test_code_anonymat_identique_fiche_report_de_la_prise_de_notes(self):
+        """La fiche de report de saisie des notes porte le code de l'anonymat.
+
+        Régression : cette fiche (« Fiche de report — Examen normal »)
+        recalculait ses propres codes ``AN001``, ``AN002``… au lieu de lire
+        ceux des fiches d'anonymat, qui sont ceux imprimés sur les copies.
+        Le même étudiant y recevait donc deux numéros différents.
+        """
+        generer_codes(self.session.name)
+
+        codes_attendus = {
+            a.code_anonymat
+            for a in frappe.get_all(
+                "Examen Anonymat",
+                filters={
+                    "session_examen": self.session.name,
+                    "teaching_unit": self.tu.name,
+                },
+                fields=["code_anonymat"],
+            )
+        }
+        self.assertTrue(codes_attendus)
+
+        texte_report = self._texte_du_pdf_de_saisie(
+            self.academic_year.name, self.fos.name, "BTS 1", self.tu.name, TYPE_NORMALE
+        )
+        for code in codes_attendus:
+            self.assertIn(code, texte_report, "Code absent de la fiche de report")
+        self.assertNotRegex(
+            texte_report, r"AN\d{3}(?!\d)", "Un ancien code de 3 chiffres s'est glissé dans la fiche"
+        )
+        for code in codes_attendus:
+            self.assertRegex(code, r"^AN\d{4}$")
+
+    def test_codes_anonymes_propres_a_chaque_type_de_session(self):
+        """Examen normal et rattrapage portent chacun leurs propres codes.
+
+        Le code d'anonymat est propre à la session : la fiche de report du
+        rattrapage doit donc afficher les codes de la session rattrapage, et
+        ceux du rattrapage ne doivent pas apparaître sur la fiche du normal.
+        """
+        session_rt = make_session_examen(
+            self.academic_year, self.calendar,
+            filiere=self.fos, niveau=self.niveau, type_dexamen=TYPE_RATTRAPAGE,
+        )
+        generer_codes(self.session.name)
+        generer_codes(session_rt.name)
+
+        codes_normale = {
+            a.code_anonymat
+            for a in frappe.get_all(
+                "Examen Anonymat",
+                filters={
+                    "session_examen": self.session.name,
+                    "teaching_unit": self.tu.name,
+                },
+                fields=["code_anonymat"],
+            )
+        }
+        codes_rt = {
+            a.code_anonymat
+            for a in frappe.get_all(
+                "Examen Anonymat",
+                filters={
+                    "session_examen": session_rt.name,
+                    "teaching_unit": self.tu.name,
+                },
+                fields=["code_anonymat"],
+            )
+        }
+        self.assertTrue(codes_normale and codes_rt)
+        self.assertFalse(
+            codes_normale & codes_rt, "Les codes doivent être propres à chaque session"
+        )
+
+        texte_normal = self._texte_du_pdf_de_saisie(
+            self.academic_year.name, self.fos.name, "BTS 1", self.tu.name, TYPE_NORMALE
+        )
+        texte_rt = self._texte_du_pdf_de_saisie(
+            self.academic_year.name, self.fos.name, "BTS 1", self.tu.name, TYPE_RATTRAPAGE
+        )
+        for code in codes_normale:
+            self.assertIn(code, texte_normal)
+        for code in codes_rt:
+            self.assertIn(code, texte_rt)
+        for code in codes_rt:
+            self.assertNotIn(code, texte_normal)
+
+    def _texte_du_pdf_de_saisie(
+        self, academic_year, filiere, niveau, teaching_unit, type_dexamen
+    ):
+        """Texte du PDF de fiche de report produit par la saisie des notes."""
+        import io
+
+        import pypdf
+
+        download_fiche_report_saisie(
+            academic_year, filiere, niveau, "Semestre 1", teaching_unit,
+            type_dexamen=type_dexamen,
+        )
+        pdf = frappe.response.get("filecontent") or b""
+        return "\n".join(
+            page.extract_text() or "" for page in pypdf.PdfReader(io.BytesIO(pdf)).pages
+        )
+
+    def test_code_anonymat_non_modifiable_sur_la_copie(self):
+        """Le code de la copie suit sa fiche d'anonymat, même s'il est forcé."""
+        generer_codes(self.session.name)
+        copie = frappe.get_all(
+            "Copie Examen",
+            filters={"session_examen": self.session.name},
+            limit=1,
+            fields=["name", "examen_anonymat", "code_anonymat"],
+        )[0]
+        attendu = frappe.db.get_value(
+            "Examen Anonymat", copie.examen_anonymat, "code_anonymat"
+        )
+
+        doc = frappe.get_doc("Copie Examen", copie.name)
+        doc.code_anonymat = "FAUX123"
+        doc.save()
+
+        self.assertEqual(
+            frappe.db.get_value("Copie Examen", copie.name, "code_anonymat"),
+            attendu,
+            "Le code doit être réaligné sur la fiche d'anonymat",
+        )
+
+    def test_code_anonymat_non_modifiable_sur_la_fiche_de_report(self):
+        """Le code de la fiche de report suit sa fiche d'anonymat.
+
+        Régression : le champ dupliquait un code independent, encore
+        modifiable, qui pouvait s'écarter de celui imprimé sur les copies.
+        """
+        generer_codes(self.session.name)
+        self._corriger_et_lever()
+        fiche = frappe.get_all(
+            "Fiche Report",
+            filters={"session_examen": self.session.name},
+            limit=1,
+            fields=["name", "examen_anonymat"],
+        )[0]
+        attendu = frappe.db.get_value(
+            "Examen Anonymat", fiche.examen_anonymat, "code_anonymat"
+        )
+
+        doc = frappe.get_doc("Fiche Report", fiche.name)
+        doc.code_anonymat = "FAUX123"
+        doc.save()
+
+        self.assertEqual(
+            frappe.db.get_value("Fiche Report", fiche.name, "code_anonymat"),
+            attendu,
+            "Le code doit être réaligné sur la fiche d'anonymat",
+        )
+
+    def test_copie_sans_fiche_d_anonymat_refusee(self):
+        """Une copie sans lien confidentiel n'a pas de code à porter."""
+        generer_codes(self.session.name)
+        copie = frappe.get_all(
+            "Copie Examen",
+            filters={"session_examen": self.session.name},
+            limit=1,
+            fields=["name"],
+        )[0]
+        doc = frappe.get_doc("Copie Examen", copie.name)
+        doc.examen_anonymat = None
+        with self.assertRaises(frappe.ValidationError):
+            doc.save()
+
+    def _texte_du_pdf(self, fonction, session, teaching_unit=None):
+        """Texte extrait du PDF réellement généré par ``fonction``."""
+        import io
+
+        import pypdf
+
+        fonction(session, teaching_unit)
+        pdf = frappe.response.get("filecontent") or b""
+        return "\n".join(
+            page.extract_text() or "" for page in pypdf.PdfReader(io.BytesIO(pdf)).pages
+        )
 
     # ------------------------------------------------------------------ #
     #  Confidentialité : le correcteur ne doit jamais accéder aux fiches

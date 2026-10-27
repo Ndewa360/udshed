@@ -20,7 +20,7 @@ sont injectées dans le flux existant via les fonctions de saisie
 inchangée : validation, publication, calcul automatique des résultats MPS/MPC.
 """
 
-import random
+import re
 
 import frappe
 from frappe import _
@@ -42,11 +42,6 @@ ROLES_CORRECTION = ("System Manager", "Coordonateur", "Correcteur", "Teacher")
 
 # Rôles pouvant générer les codes, valider la correction et lever l'anonymat.
 ROLES_RESPONSABLE = ("System Manager", "Coordonateur", "Registration Manager")
-
-# Alphabet sans ambiguïté (ni 0/O/1/I/l).
-ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-
-LONGUEUR_CODE = 6
 
 STATUTS_ATTENTE = ("En attente", "Déposée", "En correction")
 STATUTS_INJECTABLES = ("Validée",)
@@ -87,13 +82,68 @@ def _niveau_label(niveau_row):
 # ---------------------------------------------------------------------------
 # Génération des codes
 # ---------------------------------------------------------------------------
+# Format unique et définitif du code d'anonymat : AN0001, AN0002, AN0003…
+# Préfixe « AN » + numéro sur 4 chiffres, sans exception. L'ancien format
+# aléatoire à 6 caractères (ex. XRTUSD) est supprimé : il produisait des
+# codes illisibles et surtout non raccordables au format attendu par les
+# fiches de report, ce qui affichait deux numéros pour un même étudiant.
+PREFIXE_CODE_ANONYMAT = "AN"
+LARGEUR_NUMERO_ANONYMAT = 4
+MOTIF_CODE_ANONYMAT = re.compile(
+    r"^{0}[0-9]{{{1}}}$".format(PREFIXE_CODE_ANONYMAT, LARGEUR_NUMERO_ANONYMAT)
+)
+
+
+def _numero_suivant_code_anonymat():
+    """Numéro suivant dans la séquence globale AN0001, AN0002, …
+
+    La séquence est globale à l'application : chaque fiche d'anonymat reçoit
+    le prochain numéro disponible, tous examens confondus. Un même étudiant
+    porte donc des codes différents d'une matière à l'autre — le code ne peut
+    pas servir à corréler ses copies entre matières.
+
+    Les codes qui ne suivent pas le format (données antérieures) sont ignorés
+    pour le calcul du maximum, puis renumérotés par le patch de migration.
+    """
+    return frappe.db.sql(
+        """
+        select ifnull(max(cast(substring(code_anonymat, 3) as unsigned)), 0) + 1
+        from `tabExamen Anonymat`
+        where code_anonymat regexp %s
+        """,
+        (r"^" + PREFIXE_CODE_ANONYMAT + r"[0-9]{" + str(LARGEUR_NUMERO_ANONYMAT) + r"}$",),
+    )[0][0]
+
+
 def _generer_code_anonymat():
-    """Code aléatoire court, non prédictible, garanti unique."""
-    for _ in range(60):
-        code = "".join(random.choice(ALPHABET) for _ in range(LONGUEUR_CODE))
+    """Code d'anonymat séquentiel, au format AN0001, garanti unique.
+
+    Le numéro est relu à chaque tentative : si deux générations simultanées
+    visaient le même numéro, la contrainte d'unicité de la base rejette la
+    seconde et la nouvelle tentative repart du numéro suivant.
+    """
+    for _ in range(50):
+        code = "{0}{1:0{2}d}".format(
+            PREFIXE_CODE_ANONYMAT,
+            cint(_numero_suivant_code_anonymat()),
+            LARGEUR_NUMERO_ANONYMAT,
+        )
         if not frappe.db.exists("Examen Anonymat", {"code_anonymat": code}):
             return code
     frappe.throw(_("Impossible de générer un code d'anonymat unique."))
+
+
+def valider_code_anonymat(code):
+    """Refuse tout code qui ne respecte pas le format AN0001.
+
+    Garantit qu'un ancien code aléatoire (XRTUSD…) ne peut plus être
+    enregistré, ni subsister sur une fiche modifiée après la migration.
+    """
+    if not code or not MOTIF_CODE_ANONYMAT.match(code):
+        frappe.throw(
+            _("Le code d'anonymat <b>{0}</b> est invalide : le format attendu est "
+              "AN0001, AN0002, AN0003…").format(code or _("(vide)"))
+        )
 
 
 def _creer_copie(anonymat):
@@ -296,6 +346,14 @@ def charger_copies(session, teaching_unit=None):
         ],
         order_by="code_anonymat",
     )
+
+    # `code_anonymat` est celui de la fiche d'anonymat : `Copie Examen.validate`
+    # le réaligne à chaque enregistrement (et le patch
+    # `aligner_code_anonymat_copie` a rattrapé les copies antérieures). Il est
+    # donc identique à celui imprimé sur la fiche d'anonymat, sans qu'aucune
+    # jointure vers le document confidentiel ne soit nécessaire ici.
+    copies.sort(key=lambda c: (c.teaching_unit, c.code_anonymat or ""))
+
     return {"session": session, "teaching_unit": teaching_unit, "copies": copies}
 
 
@@ -392,7 +450,7 @@ def lever_anonymat(session):
     est_rattrapage = session_doc.type_dexamen == TYPE_RATTRAPAGE
 
     anonymats = {
-        a.code_anonymat: a
+        a.name: a
         for a in frappe.get_all(
             "Examen Anonymat",
             filters={"session_examen": session, "statut": ["!=", "Levé"]},
@@ -411,12 +469,15 @@ def lever_anonymat(session):
     copies = frappe.get_all(
         "Copie Examen",
         filters={"session_examen": session, "statut_correction": "Validée"},
-        fields=["name", "teaching_unit", "code_anonymat", "note_examen"],
+        fields=["name", "teaching_unit", "examen_anonymat", "code_anonymat", "note_examen"],
     )
 
     groupes = {}
     for copie in copies:
-        anonymat = anonymats.get(copie.code_anonymat)
+        # Jointure sur le lien « Examen Anonymat » et non sur le code recopié
+        # dans la copie : c'est la fiche d'anonymat qui fait foi, donc aucune
+        # saisie manuelle ne peut faire perdre une note à la levée.
+        anonymat = anonymats.get(copie.examen_anonymat)
         if not anonymat or copie["note_examen"] is None:
             continue
         cle = (anonymat["filiere"], anonymat["niveau"], copie["teaching_unit"])
@@ -427,7 +488,7 @@ def lever_anonymat(session):
                 "matricule": anonymat.get("matricule") or anonymat["student"],
                 "nom": anonymat.get("nom") or "",
                 "prenom": anonymat.get("prenom") or "",
-                "code_anonymat": copie["code_anonymat"],
+                "code_anonymat": anonymat["code_anonymat"],
                 "copie": copie["name"],
                 "note": flt(copie["note_examen"]),
             }
@@ -813,7 +874,7 @@ def download_fiche_report_pdf(session, teaching_unit=None):
     copies = frappe.get_all(
         "Copie Examen",
         filters=filters,
-        fields=["code_anonymat", "teaching_unit", "note_examen"],
+        fields=["code_anonymat", "examen_anonymat", "teaching_unit", "note_examen"],
         order_by="teaching_unit, code_anonymat",
     )
     copies = [c for c in copies if c["note_examen"] is not None]
@@ -823,11 +884,12 @@ def download_fiche_report_pdf(session, teaching_unit=None):
         )
 
     anonymats = {
-        a["code_anonymat"]: a
+        a.name: a
         for a in frappe.get_all(
             "Examen Anonymat",
             filters={"session_examen": session},
             fields=[
+                "name",
                 "code_anonymat",
                 "student",
                 "matricule",
@@ -843,11 +905,15 @@ def download_fiche_report_pdf(session, teaching_unit=None):
     colonnes = ["N°", "Code anonymat", "Matricule", "Nom", "Prénom", "Matière", "Note"]
     lignes = []
     for i, c in enumerate(copies):
-        a = anonymats.get(c["code_anonymat"]) or {}
+        # Le code affiché provient toujours de la fiche d'anonymat (et non de la
+        # copie) : c'est la valeur qui figure sur la fiche d'anonymat, donc les
+        # deux documents ne peuvent pas afficher deux numéros différents.
+        a = anonymats.get(c.examen_anonymat) or {}
+        code = a.get("code_anonymat") or c["code_anonymat"]
         lignes.append(
             {
                 "N°": i + 1,
-                "Code anonymat": c["code_anonymat"],
+                "Code anonymat": code,
                 "Matricule": a.get("matricule") or a.get("student") or "",
                 "Nom": a.get("nom") or "",
                 "Prénom": a.get("prenom") or "",

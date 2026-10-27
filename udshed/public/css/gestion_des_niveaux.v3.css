@@ -36,6 +36,34 @@ body[data-route="gestion-des-niveaux"] .layout-main,
 	overflow: hidden !important;
 }
 
+/* ── Plein écran ──
+   Frappe impose au wrapper de section une largeur de 80 % (page.scss :
+   `.layout-main-section-wrapper { flex: 1 0 80%; width: 80%; }`), d'où
+   l'impression que l'interface est « reculée ». On le force à 100 %. */
+body[data-route="gestion-des-niveaux"] .layout-main-section-wrapper,
+.page-body:has(.gn-layout) .layout-main-section-wrapper {
+	width: 100% !important;
+	max-width: 100% !important;
+	flex: 1 1 100% !important;
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
+/* La colonne latérale vide de la page ne doit pas réserver d'espace. */
+body[data-route="gestion-des-niveaux"] .layout-side-section,
+.page-body:has(.gn-layout) .layout-side-section {
+	display: none !important;
+}
+
+/* Le conteneur de page occupe toute la largeur disponible. */
+body[data-route="gestion-des-niveaux"] .page-container,
+.page-body:has(.gn-layout) {
+	width: 100% !important;
+	max-width: 100% !important;
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
 /* ── Root layout ── */
 .gn-layout {
 	display: flex;

@@ -67,13 +67,13 @@
    "label": "Identité de l'étudiant"
   },
   {
+   "description": "Hors candidature (arrivée en cours d'année) : généré (série Z) au téléchargement de la fiche.",
    "fieldname": "matricule",
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Matricule",
    "read_only": 1,
-   "reqd": 1,
    "unique": 1
   },
   {
@@ -82,8 +82,7 @@
    "in_list_view": 1,
    "label": "Dossier d'origine",
    "options": "Session Inscription Candidate",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "column_break_id1",
@@ -94,33 +93,37 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Nom et Prénom",
-   "read_only": 1,
+   "read_only_depends_on": "eval:doc.dossier_origine",
    "reqd": 1
   },
   {
    "fieldname": "email",
    "fieldtype": "Data",
    "label": "Email",
+   "mandatory_depends_on": "eval:!doc.dossier_origine",
    "options": "Email",
-   "read_only": 1
+   "read_only_depends_on": "eval:doc.dossier_origine"
   },
   {
    "fieldname": "date_naissance",
    "fieldtype": "Date",
    "label": "Date de naissance",
-   "read_only": 1
+   "mandatory_depends_on": "eval:!doc.dossier_origine",
+   "read_only_depends_on": "eval:doc.dossier_origine"
   },
   {
    "fieldname": "lieu_naissance",
    "fieldtype": "Data",
    "label": "Lieu de naissance",
-   "read_only": 1
+   "mandatory_depends_on": "eval:!doc.dossier_origine",
+   "read_only_depends_on": "eval:doc.dossier_origine"
   },
   {
    "fieldname": "telephone",
    "fieldtype": "Phone",
    "label": "Téléphone",
-   "read_only": 1
+   "mandatory_depends_on": "eval:!doc.dossier_origine",
+   "read_only_depends_on": "eval:doc.dossier_origine"
   },
   {
    "fieldname": "section_academique",
@@ -142,7 +145,7 @@
    "in_standard_filter": 1,
    "label": "Filière",
    "options": "Field of study",
-   "read_only": 1,
+   "read_only_depends_on": "eval:doc.dossier_origine",
    "reqd": 1
   },
   {
@@ -150,7 +153,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Niveau",
-   "read_only": 1,
+   "read_only_depends_on": "eval:doc.dossier_origine",
    "reqd": 1
   },
   {
@@ -354,7 +357,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-27 10:00:00.000000",
+ "modified": "2026-10-26 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Inscription Academique",
@@ -392,6 +395,17 @@
    "read": 1,
    "report": 1,
    "role": "Agent de scolarité",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Registration Manager",
    "share": 1,
    "write": 1
   },

@@ -604,13 +604,18 @@ def _cree_compte_utilisateur(student_name, dossier):
 	frappe.db.set_value("Student", student_name, "utilisateur", email)
 
 
-def _generer_matricule_atomique():
+def _generer_matricule_atomique(lettre=None):
     """
     Génère un matricule unique de façon ATOMIQUE (avec verrou SQL nommé).
     Évite les doublons sous concurrence.
 
     Frappe 16 n'expose pas frappe.db.lock : on utilise GET_LOCK() MariaDB,
     qui est lié à la session SQL de la requête HTTP.
+
+    `lettre` force la série (ex. « Z » pour les inscriptions hors candidature :
+    25Z001, 25Z002…) sur l'année académique courante ; le maximum tient alors
+    aussi compte des matricules déjà portés par un Student (import d'étudiants
+    avec leur matricule).
     """
     lock_key = f"udshed_matricule:{_matricule_annee(_annee_academique_courante())}"
 
@@ -619,22 +624,20 @@ def _generer_matricule_atomique():
         frappe.throw(_("Impossible de générer le matricule (concurrence). Réessayez."))
 
     try:
-        session, lettre = _session_et_lettre()
-        academic_year = session.get("academic_year") if session else _annee_academique_courante()
-        prefix = _matricule_annee(academic_year) + lettre
+        if lettre:
+            if not _annee_academique_courante():
+                frappe.throw(_("Aucune année académique courante n'est configurée dans Udshed Setting."))
+            prefix = _matricule_annee(_annee_academique_courante()) + lettre
+            doctypes = ("Inscription Academique", "Student")
+        else:
+            session, lettre = _session_et_lettre()
+            academic_year = session.get("academic_year") if session else _annee_academique_courante()
+            prefix = _matricule_annee(academic_year) + lettre
+            doctypes = ("Inscription Academique",)
 
         # Le verrou nominal sérialise déjà l'accès ; le max est calculé en SQL
         # (pas de transfert de l'ensemble des lignes vers Python).
-        row = frappe.db.sql(
-            """
-            SELECT MAX(CAST(SUBSTRING(matricule, %s) AS UNSIGNED))
-            FROM `tabInscription Academique`
-            WHERE matricule LIKE %s
-              AND SUBSTRING(matricule, %s) REGEXP '^[0-9]+$'
-            """,
-            (len(prefix) + 1, prefix + "%", len(prefix) + 1),
-        )
-        max_numero = int((row[0][0] if row and row[0] else 0) or 0)
+        max_numero = max(_max_numero_matricule(doctype, prefix) for doctype in doctypes)
 
         return prefix + str(max_numero + 1).zfill(3)
     finally:
@@ -642,6 +645,20 @@ def _generer_matricule_atomique():
             frappe.db.sql("SELECT RELEASE_LOCK(%s)", (lock_key,))
         except Exception:
             pass
+
+
+def _max_numero_matricule(doctype, prefix):
+    """Plus grand numéro déjà attribué derrière `prefix` dans `doctype`."""
+    row = frappe.db.sql(
+        f"""
+        SELECT MAX(CAST(SUBSTRING(matricule, %s) AS UNSIGNED))
+        FROM `tab{doctype}`
+        WHERE matricule LIKE %s
+          AND SUBSTRING(matricule, %s) REGEXP '^[0-9]+$'
+        """,
+        (len(prefix) + 1, prefix + "%", len(prefix) + 1),
+    )
+    return int((row[0][0] if row and row[0] else 0) or 0)
 
 
 @contextmanager
@@ -1082,75 +1099,18 @@ def get_inscription_report(filiere=None, candidature_status=None):
 
 
 @frappe.whitelist()
-def get_liste_inscriptions(filiere=None):
-    filters = {"candidature_status": "Inscrit"}
-    if filiere:
-        filters["filiere"] = filiere
+def get_liste_inscriptions(filiere=None, annee_academique=None, niveau=None, statut=None):
+    """Liste des inscrits (page « Liste des inscriptions »).
 
-    parents_fields = [
-        "father_name", "father_phone", "father_profession", "father_email",
-        "father_city", "father_country",
-        "mother_name", "mother_phone", "mother_profession", "mother_email",
-        "mother_city", "mother_country",
-        "sponsor_name", "sponsor_phone", "sponsor_profession", "sponsor_email",
-        "sponsor_city", "sponsor_country",
-        "parent_phone", "email_parent",
-    ]
+    Construite à partir des Inscription Academique (candidatures ET
+    inscriptions hors candidature : arrivée en cours d'année, import), dans le
+    respect des permissions Frappe de l'utilisateur.
+    """
+    from udshed.api.inscription_import_export import lister_inscriptions
 
-    candidates = frappe.get_all(
-        "Session Inscription Candidate",
-        filters=filters,
-        fields=[
-            "name", "first_name", "last_name", "full_name", "email",
-            "phone", "filiere", "niveau", "examination_centre", "creation",
-        ] + parents_fields,
-        order_by="creation desc",
+    return lister_inscriptions(
+        filiere=filiere, annee_academique=annee_academique, niveau=niveau, statut=statut
     )
-
-    filiere_map = {
-        field_of_study: frappe.db.get_value(
-            "Field of study", field_of_study, "name_of_field"
-        ) or field_of_study
-        for field_of_study in {c.get("filiere") for c in candidates if c.get("filiere")}
-    }
-
-    rows = []
-    for c in candidates:
-        insc = frappe.db.get_value(
-            "Inscription Academique",
-            {"dossier_origine": c.get("name")},
-            ["matricule", "annee_academique", "classe"],
-            as_dict=True,
-        )
-        rows.append({
-            "name": c.get("name"),
-            "nom_complet": c.get("full_name") or (
-                f"{c.get('first_name', '')} {c.get('last_name', '')}"
-            ).strip(),
-            "email": c.get("email") or "",
-            "phone": c.get("phone") or "",
-            "matricule": (insc.get("matricule") if insc else "") or "",
-            "annee_academique": (insc.get("annee_academique") if insc else "") or "",
-            "filiere": c.get("filiere") or "",
-            "filiere_label": filiere_map.get(c.get("filiere"), c.get("filiere") or "Non défini"),
-            "niveau": (insc.get("classe") if insc else None) or c.get("niveau") or "Non défini",
-            "examination_centre": c.get("examination_centre") or "Non défini",
-            "creation": str(c.get("creation") or ""),
-            **{field: c.get(field) or "" for field in parents_fields},
-        })
-
-    par_filiere = {}
-    par_niveau = {}
-    for row in rows:
-        par_filiere[row["filiere_label"]] = par_filiere.get(row["filiere_label"], 0) + 1
-        par_niveau[row["niveau"]] = par_niveau.get(row["niveau"], 0) + 1
-
-    return {
-        "rows": rows,
-        "total": len(rows),
-        "par_filiere": par_filiere,
-        "par_niveau": par_niveau,
-    }
 
 
 def _telephone_237(valeur):

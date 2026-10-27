@@ -12,9 +12,27 @@ class ExamenAnonymat(Document):
     Registration Manager). Le rôle « Correcteur » ne doit jamais y avoir accès.
     """
 
+    def before_validate(self):
+        """Attribue un code d'anonymat si aucun n'est fourni.
+
+        Le code est généré et non saisi : le champ est en lecture seule dans
+        l'interface, la fiche reste donc utilisable depuis le Desk (création
+        manuelle) comme depuis `generer_codes`.
+        """
+        if not self.code_anonymat:
+            from udshed.api.examen_anonymat import _generer_code_anonymat
+
+            self.code_anonymat = _generer_code_anonymat()
+
     def validate(self):
         if not self.code_anonymat:
             frappe.throw("Le code d'anonymat est obligatoire.")
+
+        # Format unique et définitif : AN0001, AN0002, AN0003… Un ancien code
+        # aléatoire (ex. XRTUSD) est refusé, il ne doit plus subsister.
+        from udshed.api.examen_anonymat import valider_code_anonymat
+
+        valider_code_anonymat(self.code_anonymat)
 
         self.synchroniser_identite_etudiant()
 

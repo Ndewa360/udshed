@@ -157,13 +157,19 @@ def calculer_resultat_session(student, session_examen, teaching_unit=None):
     Prend la meilleure note entre session normale et session de rattrapage
     pour chaque UE, puis crée / met à jour les Resultat Academique.
 
+    Un étudiant sans aucune note publiée dans la session n'est pas une erreur :
+    la fonction renvoie alors un résultat vide. Lever une exception ici faisait
+    planter tout le calcul de semestre et de l'année, et le message se
+    propageait jusqu'à la réinscription, où il était avalé en Error Log —
+    l'étudiant se retrouvait sans décision, sans trace du motif.
+
     Args:
         student: Nom du Student
         session_examen: Nom de la Session Examen (session normale)
         teaching_unit: UE à recalculer (optionnel ; sinon toutes les UE)
 
     Returns:
-        dict: {"resultats": [...], "total": n}
+        dict: {"resultats": [...], "total": n} — liste vide si rien à calculer
     """
     session_doc = frappe.get_doc("Session Examen", session_examen)
 
@@ -185,11 +191,7 @@ def calculer_resultat_session(student, session_examen, teaching_unit=None):
     )
 
     if not notes_normales:
-        frappe.throw(
-            _("Aucune note publiée trouvée pour l'étudiant {0} dans la session {1}").format(
-                student, session_examen
-            )
-        )
+        return {"resultats": [], "total": 0}
 
     resultats = [_resultat_ue(student, session_doc, n) for n in notes_normales]
 
@@ -228,7 +230,9 @@ def calculer_resultat_semestre(student, semestre, academic_year):
         try:
             data = calculer_resultat_session(student, session)
             resultats.extend(data["resultats"])
-        except frappe.DoesNotExistError:
+        except frappe.ValidationError:
+            # Une session normale sans note exploitable pour cet étudiant ne
+            # doit pas interrompre le calcul des autres sessions du semestre.
             continue
 
     if not resultats:

@@ -1,7 +1,6 @@
 # Copyright (c) 2026, Cédric Nguendap Bedjama and contributors
 # For license information, please see license.txt
 
-import hashlib
 import re
 import unicodedata
 
@@ -37,15 +36,46 @@ TYPE_SAISIE_ALIASES = {
     "Rattrapage": "rattrapage",
 }
 
+# Clé de session (« cc » / « normale » / « rattrapage ») -> libellé interne du
+# type d'évaluation, et mode de saisie correspondant. Le sélecteur de session
+# de la page utilise ces clés pour router la session choisie vers le bon type.
+TYPE_DE_SESSION = {
+    "cc": TYPE_CC,
+    "normale": TYPE_NORMALE,
+    "rattrapage": TYPE_RATTRAPAGE,
+}
+SESSION_DE_MODE = {"cc": "cc", "normale": "examen", "rattrapage": "rattrapage"}
+
 
 def _mode_saisie(type_dexamen=None):
     """Normalise le type d'évaluation choisi côté interface en un mode interne.
+
+    Les libellés internes aux sessions (« Examen de session normal », « Examen
+    de rattrapage », « Controlle Continue (CC) ») sont aussi reconnus : sans
+    cela, un appel passé avec `TYPE_RATTRAPAGE` retombait sur « examen » et
+    produisait la fiche de report — et les codes — de la session normale.
 
     Repli sur « examen » si le libellé est inconnu ou absent afin de préserver
     le comportement historique de la saisie unifiée (CC + CCTP + EXAMTP + EXAM).
     """
     cle = (type_dexamen or "").strip()
-    return TYPE_SAISIE_ALIASES.get(cle, "examen")
+    if cle in TYPE_SAISIE_ALIASES:
+        return TYPE_SAISIE_ALIASES[cle]
+    if cle == TYPE_RATTRAPAGE:
+        return "rattrapage"
+    if cle == TYPE_CC:
+        return "cc"
+    return "examen"
+
+
+def _cle_session(type_dexamen):
+    """Clé de session (« cc » / « normale » / « rattrapage ») depuis un libellé d'interface."""
+    mode = _mode_saisie(type_dexamen)
+    if mode == "cc":
+        return "cc"
+    if mode == "rattrapage":
+        return "rattrapage"
+    return "normale"
 
 
 def _cycle_pour_niveau(niveau_label):
@@ -186,8 +216,93 @@ def _get_calendar_defaut():
     return doc.name
 
 
-def _get_or_create_session(args, type_dexamen):
-    """Retrouve ou crée la Session Examen d'un type donné pour (année, semestre, filière, niveau)."""
+def _sessions_du_contexte(args, type_dexamen):
+    """Sessions d'un type pour (année, semestre), de la plus ancienne à la plus récente.
+
+    `order_by="creation asc"` est explicite et indispensable : sans tri, Frappe
+    renvoie la dernière session *modifiée*, si bien qu'enregistrer une note
+    ailleurs suffisait à faire basculer la page de saisie sur une autre
+    session. Le tri par création rend le choix stable et reproductible.
+    """
+    return frappe.get_all(
+        "Session Examen",
+        filters={
+            "academic_year": args["academic_year"],
+            "semestre": args.get("semestre"),
+            "type_dexamen": type_dexamen,
+        },
+        fields=["name", "statut", "date_debut", "date_de_fin", "date_publication", "creation"],
+        order_by="creation asc",
+    )
+
+
+def _sessions_couvrant(args, type_dexamen):
+    """Sessions d'un type couvrant réellement la filière/niveau du contexte."""
+    filiere = args.get("filiere")
+    if not filiere:
+        return _sessions_du_contexte(args, type_dexamen)
+    niveau = _get_niveau_name(filiere, args.get("niveau"))
+    if not niveau:
+        return []
+    return [
+        s
+        for s in _sessions_du_contexte(args, type_dexamen)
+        if frappe.db.exists(
+            "Session Examen Field of study Level",
+            {"parent": s["name"], "filiere": filiere, "niveau": niveau},
+        )
+    ]
+
+
+def _valider_session_cible(args, session_examen, type_dexamen):
+    """Contrôle la session fournie par le sélecteur avant de l'utiliser.
+
+    Sans ce contrôle, un client pourrait écrire dans la session d'une autre
+    filière, d'un autre semestre ou d'un autre type d'évaluation.
+    """
+    if not session_examen or session_examen in ("auto", "Nouvelle", ""):
+        return None
+    if not frappe.db.exists("Session Examen", session_examen):
+        frappe.throw(
+            _("La session d'examen {0} est introuvable.").format(session_examen)
+        )
+    data = frappe.db.get_value(
+        "Session Examen", session_examen, ["academic_year", "semestre", "type_dexamen"], as_dict=True
+    )
+    if data.academic_year != args["academic_year"] or data.semestre != args.get("semestre"):
+        frappe.throw(
+            _("La session {0} n'appartient pas à {1} / {2}.").format(
+                session_examen, args["academic_year"], args.get("semestre")
+            )
+        )
+    if data.type_dexamen != type_dexamen:
+        frappe.throw(
+            _("La session {0} n'est pas une session « {1} ».").format(session_examen, type_dexamen)
+        )
+    filiere = args.get("filiere")
+    if filiere:
+        niveau = _get_niveau_name(filiere, args.get("niveau"))
+        if niveau and not frappe.db.exists(
+            "Session Examen Field of study Level",
+            {"parent": session_examen, "filiere": filiere, "niveau": niveau},
+        ):
+            frappe.throw(
+                _("La session {0} ne couvre pas la classe {1} / {2}.").format(
+                    session_examen, filiere, niveau
+                )
+            )
+    return session_examen
+
+
+def _get_or_create_session(args, type_dexamen, session_examen=None):
+    """Retrouve ou crée la Session Examen d'un type pour (année, semestre, filière, niveau).
+
+    `session_examen` permet de forcer une session existante (sélecteur de
+    session de la page de saisie). Elle est validée avant usage.
+    """
+    session_cible = _valider_session_cible(args, session_examen, type_dexamen)
+    if session_cible:
+        return session_cible
     academic_year = args["academic_year"]
     semestre = args.get("semestre")
     filiere = args["filiere"]
@@ -195,11 +310,7 @@ def _get_or_create_session(args, type_dexamen):
     if not niveau:
         frappe.throw(_("Le niveau {0} est introuvable pour la filière {1}.").format(args["niveau"], filiere))
 
-    sessions = frappe.get_all(
-        "Session Examen",
-        filters={"academic_year": academic_year, "semestre": semestre, "type_dexamen": type_dexamen},
-        fields=["name"],
-    )
+    sessions = _sessions_du_contexte(args, type_dexamen)
 
     for session in sessions:
         if frappe.db.exists(
@@ -228,23 +339,17 @@ def _get_or_create_session(args, type_dexamen):
 
 
 def _chercher_session(args, type_dexamen):
-    """Retrouve (sans la créer) la Session Examen d'un type donné pour la filière/niveau."""
-    academic_year = args["academic_year"]
-    semestre = args.get("semestre")
-    filiere = args["filiere"]
-    niveau = _get_niveau_name(filiere, args["niveau"])
-    sessions = frappe.get_all(
-        "Session Examen",
-        filters={"academic_year": academic_year, "semestre": semestre, "type_dexamen": type_dexamen},
-        fields=["name"],
-    )
-    for session in sessions:
-        if frappe.db.exists(
-            "Session Examen Field of study Level",
-            {"parent": session.name, "filiere": filiere, "niveau": niveau},
-        ):
-            return session.name
-    return sessions[0]["name"] if sessions else None
+    """Retrouve (sans la créer) la Session Examen d'un type pour la filière/niveau.
+
+    La plus ancienne l'emporte : c'est la session d'origine du couple
+    (année, semestre, filière, niveau, type). Le sélecteur de session de la
+    page permet d'afficher et de saisir les autres.
+    """
+    candidates = _sessions_couvrant(args, type_dexamen)
+    if candidates:
+        return candidates[0]["name"]
+    toutes = _sessions_du_contexte(args, type_dexamen)
+    return toutes[0]["name"] if toutes else None
 
 
 def _verifier_programmation(academic_year, teaching_unit, type_dexamen=None):
@@ -514,58 +619,90 @@ def _get_etudiants(academic_year, filiere, niveau_label, teaching_unit):
     return resultats
 
 
-_CANONIQUE_TYPE_EXAMEN = {
-    "Examen": "EXAMEN",
-    TYPE_NORMALE: "EXAMEN",
-    "Rattrapage": "RATTRAPAGE",
-    TYPE_RATTRAPAGE: "RATTRAPAGE",
-}
+def _codes_fiches_anonymat(teaching_unit, type_dexamen=""):
+    """Codes d'anonymat faisant foi, par étudiant, pour une matière et un type.
 
+    L'anonymat est unique dans l'application : il est porté par le document
+    « Examen Anonymat », c'est-à-dire par la fiche d'anonymat, au format
+    AN0001, AN0002, AN0003…, et c'est ce code qui est écrit sur les copies.
+    Toutes les feuilles qui doivent correspondre à ces copies (fiche de
+    report, feuille de saisie, relevés, exports) lisent donc cette source.
 
-def _contexte_anonyme(teaching_unit, type_dexamen=""):
-    """Contexte (UE, type d'examen) qui détermine un jeu de codes anonymes.
+    Aucun code n'est inventé ici : un code calculé localement donnait un
+    numéro différent de celui des copies pour un même étudiant.
 
-    Deux libellés désignant la même session (ex. « Examen » côté interface et
-    « Examen de session normal » côté moteur) sont ramenés à la même clé,
-    pour que la page, la feuille PDF et les exports utilisent les mêmes codes.
+    Returns:
+        dict[str, str]: ``{student: code}`` pour les fiches existantes.
     """
-    t = _CANONIQUE_TYPE_EXAMEN.get(type_dexamen, type_dexamen or "")
-    return "{0}|{1}".format((teaching_unit or "").strip(), t.strip())
+    if not teaching_unit:
+        return {}
+
+    # `Session Examen.type_dexamen` stocke le libellé long (« Examen de session
+    # normal »), tandis que l'interface peut envoyer « Examen ». Toutes les
+    # écritures possibles du type sont donc admises.
+    mode = _mode_saisie(type_dexamen)
+    if mode == "rattrapage":
+        variantes = {TYPE_RATTRAPAGE, "Rattrapage", "RATTRAPAGE"}
+    elif mode == "cc":
+        variantes = {TYPE_CC, "CC", "Controle continu (CC)", "CONTROLE CONTINU (CC)"}
+    else:
+        variantes = {TYPE_NORMALE, "Examen", "Examen normal", "EXAMEN"}
+    variantes = {v for v in variantes if v}
+
+    conditions = " or ".join(
+        "s.type_dexamen = %(v{0})s".format(i) for i in range(len(variantes))
+    )
+    params = {"teaching_unit": teaching_unit}
+    params.update({"v{0}".format(i): v for i, v in enumerate(sorted(variantes))})
+
+    sql = (
+        "select a.student, a.code_anonymat "
+        "from `tabExamen Anonymat` a "
+        "inner join `tabSession Examen` s on s.name = a.session_examen "
+        "where a.teaching_unit = %(teaching_unit)s "
+        "and (" + conditions + ") "
+        "order by s.creation desc"
+    )
+
+    fiches = frappe.db.sql(sql, params, as_dict=True)
+
+    codes = {}
+    for fiche in fiches:
+        # Première fiche rencontrée (sessions les plus récentes) : une seule
+        # valeur par étudiant.
+        codes.setdefault(fiche.student, fiche.code_anonymat)
+    return codes
 
 
-def _generer_codes_anonymes(students, contexte=""):
-    """Codes anonymes stables **propres à chaque matière et à chaque session**.
+def _codes_anonymes(students, teaching_unit=None, type_dexamen=""):
+    """Code d'anonymat à afficher pour chaque étudiant (source unique).
 
-    Il n'existe pas un code anonyme unique pour tous les cours : chaque UE
-    (et chaque type d'examen : examen normal ≠ rattrapage) génère son propre
-    jeu de codes via une empreinte (matricule + contexte). Le même étudiant
-    porte donc des codes différents d'une matière à l'autre, ce qui empêche
-    de corréler les copies entre matières.
-
-    La fonction est déterministe : pour un contexte donné (UE + type), la
-    liste est triée par empreinte puis renumérotée AN001, AN002, … Les codes
-    restent reproductibles entre la page de saisie, la feuille de saisie PDF
-    et les exports Excel d'un même (UE, type d'examen).
-
-    Sans contexte (comportement historique), les codes suivent l'ordre de la
-    liste fournie.
+    Ne renvoie que des codes réellement portés par une fiche d'anonymat. Un
+    étudiant sans code n'est pas inventorié : aucun numéro n'est fabriqué à la
+    volée, sinon la fiche imprimée ne correspondrait à aucune copie.
     """
-    if not contexte:
-        return {
-            s["student"]: "AN{0:03d}".format(i)
-            for i, s in enumerate(students or [], start=1)
-        }
-    graines = [
-        (
-            hashlib.sha256(
-                "{0}|{1}".format(s.get("matricule") or s.get("student") or "", contexte).encode("utf-8")
-            ).hexdigest(),
-            s["student"],
+    codes = _codes_fiches_anonymat(teaching_unit, type_dexamen)
+    return {s["student"]: codes[s["student"]] for s in students or [] if s["student"] in codes}
+
+
+def _exiger_codes_anonymes(students, teaching_unit, type_dexamen, libelle=""):
+    """Codes d'anonymat de la matière, en refusant de travailler sans.
+
+    Sans fiche d'anonymat, il n'existe aucun code : lTeacher doit d'abord
+    lancer la génération des codes de la session, faute de quoi la fiche
+    imprimée porterait des numéros qui ne correspondent à aucune copie.
+    """
+    codes = _codes_anonymes(students, teaching_unit, type_dexamen)
+    manquants = [s for s in students or [] if not codes.get(s["student"])]
+    if manquants:
+        frappe.throw(
+            _("Aucun code d'anonymat n'a été généré pour cette matière. Générez les "
+              "codes d'anonymat de la session avant d'utiliser {0}, afin que les "
+              "numéros imprimés correspondent aux copies.").format(
+                libelle or _("ces codes d'anonymat")
+            )
         )
-        for s in students or []
-    ]
-    graines.sort(key=lambda g: g[0])
-    return {nom: "AN{0:03d}".format(i) for i, (_, nom) in enumerate(graines, start=1)}
+    return codes
 
 
 def _identite_export(s, anonymes, codes):
@@ -752,6 +889,24 @@ def _charger_notes(students, teaching_unit, sessions):
     return resultats
 
 
+def _sessions_avec_choix(args, session_examen=None, type_dexamen=None):
+    """Les trois sessions (CC / normale / rattrapage) en respectant le sélecteur.
+
+    Sans `session_examen`, la résolution est automatique comme historiquement.
+    Avec, la session choisie s'applique au type d'évaluation affiché et les
+    deux autres restent résolus automatiquement : c'est ce qui permet à un
+    PV ou à un export de refléter exactement la session affichée à l'écran.
+    """
+    sessions = {
+        cle: _get_or_create_session(args, type_session)
+        for cle, type_session in TYPE_DE_SESSION.items()
+    }
+    if session_examen:
+        cle = _cle_session(type_dexamen)
+        sessions[cle] = _get_or_create_session(args, TYPE_DE_SESSION[cle], session_examen)
+    return sessions
+
+
 def _verifier_non_publiee(session):
     """Publication non verrouillante.
 
@@ -779,16 +934,17 @@ def _poser_note(note, champ, drapeau, valeur):
 def _verifier_codes_anonymes(rows, args):
     """Vérifie l'association Code d'anonymat -> étudiant pour la matière.
 
-    Les codes anonymes sont déterministes et propres à chaque (UE, type
-    d'examen) : l'enseignant, qui saisit l'examen uniquement via les codes,
-    est ainsi relié au bon étudiant. Un code absent ou qui ne correspond pas
-    au contexte de la matière est refusé et l'enregistrement est annulé.
+    Le code attendu est celui de la fiche d'anonymat, qui fait foi : c'est lui,
+    au format AN0001, qui est imprimé sur les copies. Un code absent, ou ne
+    correspondant pas à la fiche d'anonymat de l'étudiant pour cette matière,
+    est refusé : aucun code n'est calculé localement, donc aucun autre numéro
+    ne peut être accepté.
     """
     students = _get_etudiants(
         args["academic_year"], args["filiere"], args["niveau"], args["teaching_unit"]
     )
-    codes = _generer_codes_anonymes(
-        students, _contexte_anonyme(args["teaching_unit"], TYPE_NORMALE)
+    codes = _exiger_codes_anonymes(
+        students, args["teaching_unit"], TYPE_NORMALE
     )
     for row in rows:
         valeur = (row.get("code_anonyme") or "").strip()
@@ -921,7 +1077,7 @@ def _sauvegarder_tp(args, rows):
 def _sauvegarder_rattrapage(args, rows):
     rows = _valider_lignes(rows)
     _verifier_programmation_requise(args["academic_year"], args["teaching_unit"])
-    session = _get_or_create_session(args, TYPE_RATTRAPAGE)
+    session = _get_or_create_session(args, TYPE_RATTRAPAGE, args.get("session_examen"))
     session_normale = _get_or_create_session(args, TYPE_NORMALE)
     _verifier_non_publiee(session)
     for row in rows:
@@ -982,7 +1138,59 @@ def _sauvegarder_rattrapage(args, rows):
 
 
 @frappe.whitelist()
-def charger_data(academic_year, filiere, niveau, semestre, teaching_unit):
+def lister_sessions(academic_year, filiere, niveau, semestre, teaching_unit=None):
+    """Sessions d'examen disponibles pour le contexte de saisie.
+
+    Alimente le sélecteur de session : sans lui, la page ne pouvait afficher
+    qu'une session par type d'évaluation, et la création d'une nouvelle
+    session rendait la précédente inaccessible alors que ses notes restaient
+    en base.
+    """
+    if teaching_unit:
+        _verifier_acces_enseignant(teaching_unit)
+    args = {
+        "academic_year": academic_year,
+        "filiere": filiere,
+        "niveau": niveau,
+        "semestre": _semestre_effectif(
+            {"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}
+        )
+        if teaching_unit
+        else semestre,
+    }
+    resultat = {}
+    for cle, type_dexamen in (
+        ("cc", TYPE_CC),
+        ("normale", TYPE_NORMALE),
+        ("rattrapage", TYPE_RATTRAPAGE),
+    ):
+        items = []
+        for s in _sessions_couvrant(args, type_dexamen):
+            ues = frappe.get_all(
+                "Session Examen Note",
+                filters={"session_examen": s["name"]},
+                fields=["teaching_unit"],
+                distinct=True,
+                pluck="teaching_unit",
+            )
+            items.append(
+                {
+                    "name": s["name"],
+                    "statut": s["statut"],
+                    "date_debut": s["date_debut"],
+                    "date_de_fin": s["date_de_fin"],
+                    "date_publication": s["date_publication"],
+                    "nb_notes": frappe.db.count("Session Examen Note", {"session_examen": s["name"]}),
+                    "nb_ues": len(ues),
+                    "ues": sorted(ues),
+                }
+            )
+        resultat[cle] = items
+    return resultat
+
+
+@frappe.whitelist()
+def charger_data(academic_year, filiere, niveau, semestre, teaching_unit, type_dexamen=None, session_examen=None):
     """Charge la configuration, l'UE, les étudiants et toutes les notes pour la page de saisie.
 
     Les sessions existantes sont recherchées (sans création) afin d'éviter
@@ -1024,6 +1232,12 @@ def charger_data(academic_year, filiere, niveau, semestre, teaching_unit):
         "rattrapage": _chercher_session(args, TYPE_RATTRAPAGE),
     }
 
+    # Session imposée par le sélecteur de session : elle ne concerne que le
+    # type d'évaluation affiché, les autres restent résolus automatiquement.
+    if session_examen:
+        cle = _cle_session(type_dexamen)
+        sessions_raw[cle] = _valider_session_cible(args, session_examen, TYPE_DE_SESSION[cle])
+
     sessions_meta = {}
     types_par_cle = {
         "cc": TYPE_CC,
@@ -1031,9 +1245,19 @@ def charger_data(academic_year, filiere, niveau, semestre, teaching_unit):
         "rattrapage": TYPE_RATTRAPAGE,
     }
     for cle, session in sessions_raw.items():
+        meta = (
+            frappe.db.get_value(
+                "Session Examen",
+                session,
+                ["statut", "date_publication"],
+                as_dict=True,
+            )
+            or {}
+        ) if session else {}
         sessions_meta[cle] = {
             "name": session,
-            "statut": frappe.db.get_value("Session Examen", session, "statut") if session else None,
+            "statut": meta.get("statut"),
+            "date_publication": meta.get("date_publication"),
             "planifie": _verifier_programmation(
                 academic_year, teaching_unit, types_par_cle[cle]
             ),
@@ -1048,6 +1272,9 @@ def charger_data(academic_year, filiere, niveau, semestre, teaching_unit):
         "formule": _formule_detectee(teaching_unit, filiere, niveau, notes, students),
         "students": students,
         "sessions": sessions_meta,
+        "sessions_liste": lister_sessions(
+            academic_year, filiere, niveau, semestre_effectif, teaching_unit
+        ),
         "notes": notes,
         "lignes": _lignes_unifiees(students, notes, teaching_unit),
     }
@@ -1066,8 +1293,8 @@ def _lignes_unifiees(students, notes, teaching_unit=None):
     ``code_anonyme`` pour l'examen normal et ``code_anonyme_rattrapage``
     pour la session de rattrapage (deux jeux distincts).
     """
-    codes = _generer_codes_anonymes(students, _contexte_anonyme(teaching_unit, TYPE_NORMALE))
-    codes_rt = _generer_codes_anonymes(students, _contexte_anonyme(teaching_unit, TYPE_RATTRAPAGE))
+    codes = _codes_anonymes(students, teaching_unit, TYPE_NORMALE)
+    codes_rt = _codes_anonymes(students, teaching_unit, TYPE_RATTRAPAGE)
     notes_cc = (notes or {}).get("CC", {})
     lignes = []
     for s in students or []:
@@ -1285,7 +1512,7 @@ def enregistrer_cc(academic_year, filiere, niveau, semestre, teaching_unit, rows
 
 
 @frappe.whitelist()
-def enregistrer_evaluations(academic_year, filiere, niveau, semestre, teaching_unit, rows, type_dexamen=None):
+def enregistrer_evaluations(academic_year, filiere, niveau, semestre, teaching_unit, rows, type_dexamen=None, session_examen=None):
     """Enregistre la saisie des évaluations d'une UE selon le type d'évaluation.
 
     Chaque ligne : {"student", ...}. Seuls les champs présents dans la ligne
@@ -1302,10 +1529,12 @@ def enregistrer_evaluations(academic_year, filiere, niveau, semestre, teaching_u
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     mode = _mode_saisie(type_dexamen)
     if mode == "rattrapage":
-        return enregistrer_rattrapage(academic_year, filiere, niveau, semestre, teaching_unit, rows)
+        return enregistrer_rattrapage(
+            academic_year, filiere, niveau, semestre, teaching_unit, rows, session_examen=session_examen
+        )
     rows = _valider_lignes(rows)
     _verifier_programmation_requise(args["academic_year"], args["teaching_unit"])
-    session = _get_or_create_session(args, TYPE_NORMALE)
+    session = _get_or_create_session(args, TYPE_NORMALE, args.get("session_examen"))
     _verifier_non_publiee(session)
     if type_dexamen and mode == "examen":
         _verifier_codes_anonymes(rows, args)
@@ -1351,10 +1580,10 @@ def enregistrer_tp(academic_year, filiere, niveau, semestre, teaching_unit, rows
 
 
 @frappe.whitelist()
-def enregistrer_rattrapage(academic_year, filiere, niveau, semestre, teaching_unit, rows):
+def enregistrer_rattrapage(academic_year, filiere, niveau, semestre, teaching_unit, rows, session_examen=None):
     """Enregistre les notes de rattrapage."""
     _verifier_acces_enseignant(teaching_unit)
-    args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
+    args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit, "session_examen": session_examen}
     n = _sauvegarder_rattrapage(args, rows)
     return {"saved": n}
 
@@ -1437,14 +1666,28 @@ def publier_session(session):
     if not doc.date_publication:
         doc.db_set("date_publication", today())
 
-    _declencher_calcul_resultats_post_publication(doc)
+    echecs = _declencher_calcul_resultats_post_publication(doc)
     _declencher_notification_publication(doc)
+
+    if echecs:
+        # La publication reste valide (les notes sont visibles au babillard),
+        # mais le coordinateur doit voir que les résultats aval n'ont pas été
+        # produits : sans ce retour, l'échec ne se lisait que dans l'Error Log.
+        frappe.msgprint(
+            _("Session publiée, mais le calcul des résultats a échoué pour {0} cas. "
+              "Relancez « Calculer les résultats » une fois la cause corrigée.").format(
+                len(echecs)
+            ),
+            title=_("Résultats incomplets"),
+            indicator="orange",
+        )
 
     return {
         "name": doc.name,
         "statut": doc.statut,
         "date_publication": doc.date_publication,
         "publied": len(notes),
+        "echecs_resultats": echecs,
     }
 
 
@@ -1474,8 +1717,12 @@ def _declencher_calcul_resultats_post_publication(session_doc):
     pour les étudiants dont les notes viennent d'être publiées.
 
     Chaque student × session_normale du semestre est traité séparément.
-    En cas d'erreur sur un étudiant, il est ignoré (les résultats
-    restent recalculables manuellement via « Calculer les résultats »).
+    Un échec est journalisé **et renvoyé** : l'appelant peut ainsi prévenir
+    l'utilisateur au lieu de laisser une session « Publiée » dont les
+    résultats n'existent pas.
+
+    Returns:
+        list[dict]: une entrée par échec {student, session, message}
     """
     from udshed.api.resultat_academique import calculer_resultat_session
 
@@ -1488,7 +1735,7 @@ def _declencher_calcul_resultats_post_publication(session_doc):
         session_doc.name,
     )
     if not students:
-        return
+        return []
 
     sessions_normales = frappe.get_all(
         "Session Examen",
@@ -1500,6 +1747,7 @@ def _declencher_calcul_resultats_post_publication(session_doc):
         pluck="name",
     )
 
+    echecs = []
     for student in students:
         for sess in sessions_normales:
             if not frappe.db.exists(
@@ -1509,11 +1757,16 @@ def _declencher_calcul_resultats_post_publication(session_doc):
                 continue
             try:
                 calculer_resultat_session(student, sess)
-            except Exception:
+            except Exception as exc:
                 frappe.log_error(
                     frappe.get_traceback(),
                     "udshed: calcul résultat post-publication",
                 )
+                echecs.append({
+                    "student": student,
+                    "session": sess,
+                    "message": str(exc),
+                })
         # Persiste le Resultat Semestre (MPS / MPC) : c'est lui qui alimente
         # le relevé de notes et les résultats académiques du semestre.
         try:
@@ -1522,11 +1775,18 @@ def _declencher_calcul_resultats_post_publication(session_doc):
             calculer_et_sauvegarder_mps_mpc(
                 student, session_doc.semestre, session_doc.academic_year
             )
-        except Exception:
+        except Exception as exc:
             frappe.log_error(
                 frappe.get_traceback(),
                 "udshed: sauvegarde Resultat Semestre post-publication",
             )
+            echecs.append({
+                "student": student,
+                "session": session_doc.name,
+                "message": _("Resultat Semestre non enregistré — {0}").format(exc),
+            })
+
+    return echecs
 
 
 def _colonnes_cc(cc_columns):
@@ -2067,7 +2327,7 @@ def _html_pv_matiere_pdf(
 
 
 @frappe.whitelist()
-def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
+def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit, session_examen=None, type_dexamen=None):
     """Génère le procès-verbal de la matière au format PDF à partir des données enregistrées.
 
     Le PV présente, pour chaque étudiant inscrit : les composantes saisies
@@ -2091,11 +2351,7 @@ def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
     ue_info = _get_ue_info(teaching_unit, filiere, niveau)
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
 
-    sessions = {
-        "cc": _get_or_create_session(args, TYPE_CC),
-        "normale": _get_or_create_session(args, TYPE_NORMALE),
-        "rattrapage": _get_or_create_session(args, TYPE_RATTRAPAGE),
-    }
+    sessions = _sessions_avec_choix(args, session_examen, type_dexamen)
     notes = _charger_notes(students, teaching_unit, sessions)
 
     # Lignes unifiées (CC, CCTP, EXAMTP, EXAM + résultat) — même source que la page.
@@ -2186,7 +2442,7 @@ def generer_pdf(academic_year, filiere, niveau, semestre, teaching_unit):
 
 
 @frappe.whitelist()
-def generer_pdf_cc(academic_year, filiere, niveau, semestre, teaching_unit):
+def generer_pdf_cc(academic_year, filiere, niveau, semestre, teaching_unit, session_examen=None, type_dexamen=None):
     """Génère la feuille des notes de contrôle continu (CC uniquement).
 
     Document de travail présentant, pour chaque étudiant inscrit, uniquement
@@ -2209,11 +2465,7 @@ def generer_pdf_cc(academic_year, filiere, niveau, semestre, teaching_unit):
         "teaching_unit": teaching_unit,
     }
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
-    sessions = {
-        "cc": _get_or_create_session(args, TYPE_CC),
-        "normale": _get_or_create_session(args, TYPE_NORMALE),
-        "rattrapage": _get_or_create_session(args, TYPE_RATTRAPAGE),
-    }
+    sessions = _sessions_avec_choix(args, session_examen, type_dexamen)
     notes = _charger_notes(students, teaching_unit, sessions)
     lignes = _lignes_unifiees(students, notes, teaching_unit)
     credit = _credits_ue(teaching_unit, filiere, niveau)
@@ -2326,8 +2578,11 @@ def export_modele_pdf(
         students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
         credit = _credits_ue(teaching_unit, filiere, niveau)
 
-    codes = _generer_codes_anonymes(
-        students, _contexte_anonyme(teaching_unit, type_dexamen)
+    codes = _exiger_codes_anonymes(
+        students,
+        teaching_unit,
+        type_dexamen,
+        libelle=_("la feuille de saisie"),
     )
     lignes = []
     for s in students:
@@ -2389,7 +2644,7 @@ def export_modele_pdf(
 
 
 @frappe.whitelist()
-def download_fiche_report_pdf(academic_year, filiere, niveau, semestre, teaching_unit, type_dexamen=None):
+def download_fiche_report_pdf(academic_year, filiere, niveau, semestre, teaching_unit, type_dexamen=None, session_examen=None):
     """Fiche de report vierge (Examen ou Rattrapage) avec les codes d'anonymat.
 
     Fiche que l'enseignant imprime pour relever les notes au moment de la
@@ -2425,8 +2680,11 @@ def download_fiche_report_pdf(academic_year, filiere, niveau, semestre, teaching
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
     if not students:
         frappe.throw(_("Aucun étudiant inscrit pour générer la fiche de report."))
-    codes = _generer_codes_anonymes(
-        students, _contexte_anonyme(teaching_unit, type_reel)
+    codes = _exiger_codes_anonymes(
+        students,
+        teaching_unit,
+        type_reel,
+        libelle=_("la fiche de report"),
     )
 
     ue_info = _get_ue_info(teaching_unit, filiere, niveau)
@@ -2434,7 +2692,10 @@ def download_fiche_report_pdf(academic_year, filiere, niveau, semestre, teaching
     intitule = ue_info.get("intitule") or teaching_unit
     matiere = "{0} — {1}".format(code, intitule) if code and code != intitule else intitule
 
-    session_name = _chercher_session(args, type_reel)
+    # La session choisie au sélecteur prime sur la résolution automatique.
+    session_name = _valider_session_cible(args, session_examen, type_reel) or _chercher_session(
+        args, type_reel
+    )
     if session_name:
         session_doc = frappe.get_doc("Session Examen", session_name)
     else:
@@ -2482,24 +2743,25 @@ def download_fiche_report_pdf(academic_year, filiere, niveau, semestre, teaching
 
 
 @frappe.whitelist()
-def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_dexamen, cc_columns=None, anonyme=None):
+def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_dexamen, cc_columns=None, anonyme=None, session_examen=None):
     """Exporte les notes déjà saisies au format Excel.
 
     ``anonyme`` (0/1) : les identités sont remplacées par les codes anonymes
-    propres à la matière et au type d'examen (AN001…) ; l'import relit
-    ensuite indifféremment matricules ou codes anonymes.
+    de la fiche d'anonymat (AN0001…) ; l'import relit ensuite indifféremment
+    matricules ou codes anonymes.
     """
     cc_columns = _colonnes_cc(cc_columns)
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
     anonymes = bool(anonyme)
-    codes = _generer_codes_anonymes(students, _contexte_anonyme(teaching_unit, type_dexamen))
+    if anonymes:
+        codes = _exiger_codes_anonymes(
+            students, teaching_unit, type_dexamen, libelle=_("l'export anonyme")
+        )
+    else:
+        codes = {}
 
-    sessions = {
-        "cc": _get_or_create_session(args, TYPE_CC),
-        "normale": _get_or_create_session(args, TYPE_NORMALE),
-        "rattrapage": _get_or_create_session(args, TYPE_RATTRAPAGE),
-    }
+    sessions = _sessions_avec_choix(args, session_examen, type_dexamen)
     notes = _charger_notes(students, teaching_unit, sessions)
     lignes_unifiees = _lignes_unifiees(students, notes, teaching_unit)
     credit = _credits_ue(teaching_unit, filiere, niveau)
@@ -2511,13 +2773,16 @@ def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_d
         nom = s["student"]
         identite = _identite_export(s, anonymes, codes)
         if type_dexamen == "CC":
+            # Le contrôle continu (CC) est **toujours nominatif** : il ne fait pas
+            # partie de l'anonymat d'examen. On ignore le drapeau 'anonyme'.
+            identite_cc = [s["matricule"], s["nom"], s["prenom"]]
             harmonise = next((l for l in lignes_unifiees if l["student"] == nom), {})
             valeur_cc = harmonise.get("cc")
             if valeur_cc is None:
                 # Repli sur la session CC historique (saisie indépendante).
                 valeur_cc = notes["CC"].get(nom, {}).get("note_cc_moyenne")
             lignes.append(
-                identite + [credit] + [valeur_cc for _ in cc_columns] + [valeur_cc]
+                identite_cc + [credit] + [valeur_cc for _ in cc_columns] + [valeur_cc]
             )
         elif type_dexamen == "Examen":
             ex = notes["Examen"].get(nom, {})
@@ -2539,40 +2804,58 @@ def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_d
 
 
 @frappe.whitelist()
-def export_evaluations(academic_year, filiere, niveau, semestre, teaching_unit, anonyme=None):
+def export_evaluations(academic_year, filiere, niveau, semestre, teaching_unit, anonyme=None, session_examen=None, type_dexamen=None):
     """Exporte la saisie unifiée (CC, CCTP, EXAMTP, EXAM) au format Excel.
 
     ``anonyme`` (0/1) : les identités sont remplacées par les codes anonymes
-    propres à la matière (AN001…) ; les cellules Nom / Prénom sont vidées.
+    propres à la matière (AN0001…) ; les cellules Nom / Prénom sont vidées.
+    **En mode anonyme, seules les colonnes d'examen (EXAM) sont exportées :**
+    le CC, CCTP et EXAMTP sont des évaluations nominatives (contrôle continu)
+    et ne font pas partie de l'anonymat d'examen.
     L'import relit indifféremment matricules ou codes anonymes.
     """
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
-    sessions = {
-        "cc": _get_or_create_session(args, TYPE_CC),
-        "normale": _get_or_create_session(args, TYPE_NORMALE),
-        "rattrapage": _get_or_create_session(args, TYPE_RATTRAPAGE),
-    }
+    sessions = _sessions_avec_choix(args, session_examen, type_dexamen)
     notes = _charger_notes(students, teaching_unit, sessions)
     credit = _credits_ue(teaching_unit, filiere, niveau)
 
-    lignes = [["Matricule", "Nom", "Prénoms", "Crédits", "CC", "CCTP", "EXAMTP", "EXAM", "MOY", "GRD", "PTS"]]
     anonymes = bool(anonyme)
-    for ligne in _lignes_unifiees(students, notes, teaching_unit):
-        lignes.append(
-            [
-                ligne["code_anonyme"] if anonymes else ligne["matricule"],
-                "" if anonymes else ligne["nom"],
-                "" if anonymes else ligne["prenom"],
-                credit,
-                ligne.get("cc"),
-                ligne.get("cctp"),
-                ligne.get("examtp"),
-                ligne.get("examen"),
-                ligne.get("note_finale"),
-                ligne.get("grade"),
-                ligne.get("point"),
-            ]
-        )
+    if anonymes:
+        # En mode anonyme : on n'exporte que l'examen anonyme (EXAM).
+        # CC, CCTP, EXAMTP sont nominatifs (contrôle continu) -> exclus.
+        lignes = [["Matricule", "Nom", "Prénoms", "Crédits", "EXAM", "MOY", "GRD", "PTS"]]
+        for ligne in _lignes_unifiees(students, notes, teaching_unit):
+            lignes.append(
+                [
+                    ligne["code_anonyme"],
+                    "",
+                    "",
+                    credit,
+                    ligne.get("examen"),
+                    ligne.get("note_finale"),
+                    ligne.get("grade"),
+                    ligne.get("point"),
+                ]
+            )
+    else:
+        # Mode nominatif : toutes les colonnes.
+        lignes = [["Matricule", "Nom", "Prénoms", "Crédits", "CC", "CCTP", "EXAMTP", "EXAM", "MOY", "GRD", "PTS"]]
+        for ligne in _lignes_unifiees(students, notes, teaching_unit):
+            lignes.append(
+                [
+                    ligne["matricule"],
+                    ligne["nom"],
+                    ligne["prenom"],
+                    credit,
+                    ligne.get("cc"),
+                    ligne.get("cctp"),
+                    ligne.get("examtp"),
+                    ligne.get("examen"),
+                    ligne.get("note_finale"),
+                    ligne.get("grade"),
+                    ligne.get("point"),
+                ]
+            )
 
     _repondre_xlsx(lignes, "notes_{0}_evaluations.xlsx".format(teaching_unit.replace("/", "-")))

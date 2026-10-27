@@ -8,6 +8,7 @@ Couvrent :
 - le grade / point repris de la grille officielle ;
 - le déclenchement automatique dès la saisie, sans passer par « Publié » ;
 - la meilleure note entre session normale et session de rattrapage ;
+- la note retrouvée même si la session n'est pas du semestre demandé ;
 - l'absence de calcul partiel quand une matière manque ;
 - l'idempotence, la re-saisie et le statut non modifiable à la main ;
 - la cohérence des statistiques du PV d'UE.
@@ -279,6 +280,38 @@ class TestResultatUE(IntegrationTestCase):
         stats = self._pv()["statistiques"]
         self.assertEqual(stats["en_attente"], 0)
         self.assertEqual(stats["echecs"], 1)
+
+    # ------------------------------------------------------------------ #
+    #  Semestre de la session vs semestre de la matière
+    # ------------------------------------------------------------------ #
+    def test_note_retrouvee_meme_si_la_session_est_dun_autre_semestre(self):
+        """Une UE ne se vide plus parce que la session n'est pas au même semestre.
+
+        `Session Examen.semestre` et `Teaching Unit.semestre` sont deux champs
+        indépendants. Exiger leur coïncidence faisait disparaître du PV des notes
+        pourtant saisies et publiées — le filtre du rapport et celui de la session
+        d'examen n'ont pas à se concorder.
+        """
+        self._saisir(self.tu1, 10.2)
+        self._saisir(self.tu2, 13.5)
+        self._saisir(self.tu3, 11.0)
+
+        # Les notes vivent dans des sessions de « Semestre 1 » ; le PV est demandé
+        # sur « Semestre 2 », comme pour une UE de S2 dont les matières (et leurs
+        # sessions) ont été saisies en S1.
+        pv = get_pv_ue_data(
+            self.academic_year.name, self.fos.name, "BTS 1", "Semestre 2", self.ue.name
+        )
+
+        self.assertEqual(len(pv["etudiants"]), 1)
+        ligne = pv["etudiants"][0]
+        self.assertEqual(ligne["note_ue_pct"], 57.83)
+        self.assertEqual(ligne["grade"], "C+")
+        self.assertEqual(ligne["statut"], "Validé")
+        notes = {v["code"]: v["note_pct"] for v in ligne["notes"].values()}
+        self.assertEqual(notes[self.code_ang], 51.0)
+        self.assertEqual(notes[self.code_eco], 67.5)
+        self.assertEqual(notes[self.code_ges], 55.0)
 
     # ------------------------------------------------------------------ #
     #  Déclenchement à la saisie, sans publication

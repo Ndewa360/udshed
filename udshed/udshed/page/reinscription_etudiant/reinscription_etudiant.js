@@ -355,14 +355,14 @@ frappe.pages['reinscription_etudiant'].on_page_load = function(wrapper) {
 				wizard_data.preview = r.message || null;
 				$('#wz-preview').html(render_preview_card(wizard_data.preview));
 				update_fiche_dynamic(wizard_data.preview);
-$('#wizard-master-level').off('change').on('change', function() {
-				wizard_data.master_niveau = $(this).val();
-				$('#wz-niveau-auto').text($(this).val());
-				var session = $('#wizard-session').val();
-				var semestre = $('#wizard-semestre').val();
-				if (session && semestre) load_grid(session, semestre);
-				update_grid_state();
-			});
+				$('#wizard-master-level').off('change').on('change', function() {
+					wizard_data.master_niveau = $(this).val();
+					$('#wz-niveau-auto').text($(this).val());
+					var session = $('#wizard-session').val();
+					var semestre = $('#wizard-semestre').val();
+					if (session && semestre) load_grid(session, semestre);
+					update_grid_state();
+				});
 				var semestre = $('#wizard-semestre').val();
 				$('#wizard-next-1').prop('disabled', !(semestre && wizard_data.preview));
 				load_grid(session, semestre);
@@ -1030,7 +1030,7 @@ $('#wizard-master-level').off('change').on('change', function() {
 		var html = '<div class="wz-footer">';
 		buttons.forEach(function(btn) {
 			var disabled = btn.disabled ? 'disabled' : '';
-			html += '<button id="' + btn.id + '" class="btn ' + btn.class + ' ' + disabled + '" ' + disabled + '>' + btn.label + '</button>';
+			html += '<button id="' + btn.id + '" class="btn ' + btn.class + '" ' + disabled + '>' + btn.label + '</button>';
 		});
 		html += '</div>';
 		return html;

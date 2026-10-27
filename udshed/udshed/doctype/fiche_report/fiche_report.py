@@ -21,6 +21,8 @@ class FicheReport(Document):
         if self.note_reportee < 0 or self.note_reportee > 20:
             frappe.throw(_("La note reportée doit être comprise entre 0 et 20."))
 
+        self.synchroniser_code_anonymat()
+
         doublon = frappe.db.exists(
             "Fiche Report",
             {
@@ -35,6 +37,21 @@ class FicheReport(Document):
                 _("Une fiche de report existe déjà pour cet étudiant, cette matière "
                   "et cette session d'examen ({0}).").format(doublon)
             )
+
+    def synchroniser_code_anonymat(self):
+        """Recopie le code depuis la fiche d'anonymat liée.
+
+        Le code d'anonymat est unique dans l'application : il est porté par la
+        fiche d'anonymat, puisque c'est lui qui est écrit sur les copies. La
+        fiche de report le recopie donc, au lieu d'en porter un propre, sous
+        peine d'afficher un numéro différent de celui des copies pour un même
+        étudiant.
+        """
+        if not self.examen_anonymat:
+            return
+        code = frappe.db.get_value("Examen Anonymat", self.examen_anonymat, "code_anonymat")
+        if code:
+            self.code_anonymat = code
 
     def before_insert(self):
         self.synchroniser_identite_etudiant()

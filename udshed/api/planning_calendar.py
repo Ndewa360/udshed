@@ -1,5 +1,6 @@
 import frappe
 import json
+from frappe import _
 from datetime import date
 import udshed.api.course as course
 from frappe.query_builder import DocType
@@ -265,10 +266,31 @@ def delete_planning(planning_name):
         frappe.throw(_("Erreur lors de la suppression du planning."))
     return True
 
+def _date_debut(valeur):
+    """Date demandee, qu'elle arrive en chaine, en `date` ou en `datetime`.
+
+    Le filtre `week_start` vient de l'ecran en « AAAA-MM-JJ », mais un
+    `datetime` arrivait aussi (export, appel programmatique) et faisait
+    echouer `strptime` sur « unconverted data remains: T00:00:00 ».
+    """
+    if isinstance(valeur, datetime):
+        return valeur.date()
+    if isinstance(valeur, date):
+        return valeur
+    if isinstance(valeur, str) and "T" in valeur:
+        return datetime.fromisoformat(valeur).date()
+    return datetime.strptime(str(valeur).strip(), "%Y-%m-%d").date()
+
+
 @frappe.whitelist()
 def get_planning_type(field_of_study_level,week_start,academic_year):
     try:
-        week_start_date = datetime.strptime(week_start, "%Y-%m-%d")
+        # Aucun niveau sélectionné (planning « toutes classes ») : on ne peut
+        # pas rattacher la semaine à une session d'examen, on reste en « Cours ».
+        if not field_of_study_level:
+            return "Cours"
+
+        week_start_date = _date_debut(week_start)
 
         session_exam = frappe.get_all("Session Examen", filters=[
                 ["academic_year", "=", academic_year], 

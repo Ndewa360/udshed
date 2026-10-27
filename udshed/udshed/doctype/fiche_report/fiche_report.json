@@ -52,7 +52,8 @@
    "fieldname": "code_anonymat",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Code Anonymat"
+   "label": "Code Anonymat",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_identite",

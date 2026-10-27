@@ -35,6 +35,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			semestre: "Semestre 1",
 			cours: null,
 			session: "Examen normal",
+			session_examen: null,
 		},
 		ctx: null,
 		enseignant: null,
@@ -134,24 +135,23 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		return TYPE_EXAMEN;
 	}
 
-	function has_composante(code) {
-		const comps = (state.data && state.data.formule && state.data.formule.composantes) || [];
-		return comps.some((c) => c.composante === code);
-	}
-
 	function mode_fields(mode) {
+		// CC -> CC + CCTP ; Examen -> EXAM + EXAMTP. Les composantes TP sont
+		// toujours affichées : les masquer quand la Grade Formula en cours ne
+		// les mentionne pas rendait la saisie impossible, alors que le moteur
+		// les accepte et les stocke (Session Examen Note.note_cctp /
+		// note_examtp). Une formule peut être complétée après coup ; le champ
+		// doit donc exister à l'écran.
 		if (mode === "cc") {
-			const fields = [{ field: "cc", label: "CC" }];
-			if (has_composante("Controle Continu Travaux Pratiques(CCTP)")) {
-				fields.push({ field: "cctp", label: "CCTP" });
-			}
-			return fields;
+			return [
+				{ field: "cc", label: "CC" },
+				{ field: "cctp", label: "CCTP" },
+			];
 		}
-		const fields = [{ field: "examen", label: "EXAM" }];
-		if (has_composante("Examen Travaux Pratiques(EXAMTP)")) {
-			fields.push({ field: "examtp", label: "EXAMTP" });
-		}
-		return fields;
+		return [
+			{ field: "examen", label: "EXAM" },
+			{ field: "examtp", label: "EXAMTP" },
+		];
 	}
 
 	// ------------------------------------------------------------------
@@ -353,6 +353,23 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	fld.semestre.set_input("Semestre 1");
 	fld.session.set_input(TYPE_EXAMEN_EVAL);
 
+	// Sélecteur de session d'examen. Une UE peut avoir plusieurs sessions
+	// (rattrapages successifs, sessions crées à des dates différentes) : sans
+	// ce sélecteur, la page n'affichait que la dernière session résolue
+	// automatiquement et les notes des autres devenaient inaccessibles.
+	fld.session_cible = page.add_field({
+		fieldname: "session_cible",
+		label: __("Session d'examen"),
+		fieldtype: "Select",
+		options: [""],
+		reqd: 0,
+		depends_on: "eval:doc.cours",
+		change: () => {
+			read_filters();
+			load_data();
+		},
+	});
+
 	function read_filters() {
 		const vals = page.get_form_values();
 		state.filters.academic_year = vals.academic_year || null;
@@ -362,6 +379,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		state.filters.semestre = vals.semestre || null;
 		state.filters.cours = vals.cours || null;
 		state.filters.session = vals.session || TYPE_EXAMEN_EVAL;
+		state.filters.session_examen = vals.session_cible || null;
 	}
 
 	const FIELD_ORDER = ["academic_year", "faculty", "filiere", "niveau", "semestre", "cours"];
@@ -408,6 +426,14 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		state.snap = {};
 		state.rt_cur = {};
 		state.rt_snap = {};
+		// Le sélecteur dépend de la classe et du cours affichés : il doit
+		// repartir vide pour ne pas proposer une session hors contexte.
+		if (fld.session_cible) {
+			fld.session_cible.set_input("");
+			fld.session_cible.refresh();
+			$(fld.session_cible.$wrapper[0]).toggle(false);
+		}
+		state.filters.session_examen = null;
 		state.preview = {};
 		preview_dirty = {};
 		clearTimeout(preview_timer);
@@ -599,6 +625,8 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				niveau: state.filters.niveau,
 				semestre: state.filters.semestre,
 				teaching_unit: state.filters.cours,
+				type_dexamen: state.filters.session,
+				session_examen: state.filters.session_examen || null,
 			},
 			freeze: true,
 			freeze_message: __("Chargement des notes..."),
@@ -608,6 +636,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				load_state();
 				state.preview = {};
 				preview_dirty = {};
+				remplir_selecteur_session();
 				render();
 			},
 			error: (e) => {
@@ -617,6 +646,56 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				show_banner(error_message(e));
 			},
 		});
+	}
+
+	// Le sélecteur n'est utile qu'à partir de 2 sessions : masqué sinon, pour
+	// ne pas encombrer l'écran dans le cas courant d'une session unique.
+	function session_cle_courante() {
+		const mode = selected_mode();
+		if (mode === "cc") return "cc";
+		if (mode === "rattrapage") return "rattrapage";
+		return "normale";
+	}
+
+	function sessions_disponibles() {
+		const cle = session_cle_courante();
+		const data = state.data || {};
+		if (data.sessions_liste && data.sessions_liste[cle]) return data.sessions_liste[cle];
+		// Repli : reconstruire la liste depuis la session résolue par le backend.
+		const s = (data.sessions || {})[cle];
+		return s && s.name ? [{ name: s.name, statut: s.statut, nb_notes: null, nb_ues: null }] : [];
+	}
+
+	// Session à transmettre au backend : celle choisie si le sélecteur est
+	// visible, sinon null pour laisser la résolution automatique historique.
+	function session_cible() {
+		const liste = sessions_disponibles();
+		if (liste.length < 2) return null;
+		return state.filters.session_examen || (liste[0] && liste[0].name) || null;
+	}
+
+	function libelle_session(s) {
+		const bits = [s.name];
+		if (s.statut) bits.push(s.statut);
+		if (s.nb_notes != null) {
+			bits.push(__("{0} note(s)", [s.nb_notes]));
+		}
+		if (s.nb_ues != null) bits.push(__("{0} UE", [s.nb_ues]));
+		return bits.join(" — ");
+	}
+
+	function remplir_selecteur_session() {
+		if (!fld.session_cible) return;
+		const liste = sessions_disponibles();
+		const options = [""].concat(liste.map((s) => ({ value: s.name, label: libelle_session(s) })));
+		fld.session_cible.df.options = options;
+		const active = (state.data && state.data.sessions || {})[session_cle_courante()];
+		const courante = (active && active.name) || "";
+		fld.session_cible.set_input(courante);
+		fld.session_cible.refresh();
+		fld.session_cible.df.depends_on = "eval:doc.cours";
+		$(fld.session_cible.$wrapper[0]).toggle(liste.length > 1);
+		state.filters.session_examen = liste.length > 1 ? courante : null;
 	}
 
 	function load_state() {
@@ -833,9 +912,6 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 						__("Publier") +
 						"</button>"
 					: '') +
-				(is_rt ? "" : '<span class="sn-session-label">' +
-					(session ? esc(session.statut || "Brouillon") : "") +
-					"</span>") +
 				(pdf_disabled && pdf_msg ? '<span class="sn-pdf-msg">' + esc(pdf_msg) + "</span>" : "")
 		);
 	}
@@ -871,8 +947,6 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			: '<span class="sn-anonbar-lock">&#128274; ' + __("Réservé au responsable des examens.") + "</span>";
 		const actions = etat.responsable
 			? '<span class="sn-anonbar-actions">' +
-				'<button type="button" class="btn btn-default btn-sm sn-btn sn-anon-generer">' + __("Générer les codes") + "</button>" +
-				'<button type="button" class="btn btn-default btn-sm sn-btn sn-anon-fiche">&#128196; ' + __("Fiche d'anonymat (PDF)") + "</button>" +
 				'<button type="button" class="btn btn-default btn-sm sn-btn sn-anon-report">&#128196; ' + __("Fiche de report (PDF)") + "</button>" +
 				"</span>"
 			: '<a class="btn btn-default btn-sm sn-btn" href="/app/correction-copies">' + __("Corriger les copies") + "</a>";
@@ -896,14 +970,17 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	// ------------------------------------------------------------------
 	function render_ev(mode) {
 		const is_cc = mode === "cc";
-		const anon = state.anonyme;
+		// Cellules en lecture seule quand la session affichée est publiée.
+		// Le code d'anonymat ne doit apparaître QUE lorsque le mode anonyme est
+		// réellement actif. Le CC reste toujours nominatif (pas de bouton
+		// « mode anonyme » dans ce mode), donc `state.anonyme` est forcé à faux
+		// ici pour éviter qu'un mode anonyme laissé actif depuis l'Examen ne
+		// fasse fuiter des codes dans le CC.
+		const anon = !is_cc && state.anonyme;
 		const fields = mode_fields(mode);
 		const headers =
 			"<th>" + __("N°") + "</th>" +
-			(is_cc
-				? "<th>" + __(anon ? "Code" : "Matricule") + "</th>"
-				: "<th>" + __("Code") + "</th>" +
-				  (!anon ? "<th>" + __("Matricule") + "</th>" : "")) +
+			"<th>" + __(anon ? "Code" : "Matricule") + "</th>" +
 			"<th>" + __(anon ? "Étudiant (anonyme)" : "Nom et Prénoms") + "</th>" +
 			fields.map((e) => '<th class="sn-ev-head">' + esc(e.label) + "</th>").join("") +
 			"<th>" + __("MOY (%)") + "</th><th>" + __("GRD") + "</th><th>" + __("PTS") + "</th>";
@@ -926,10 +1003,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				return (
 					"<tr>" +
 					'<td class="sn-num">' + (idx + 1) + "</td>" +
-					(is_cc
-						? '<td class="sn-mono">' + esc(anon ? ligne.code_anonyme : ligne.matricule) + "</td>"
-						: '<td class="sn-mono">' + esc(ligne.code_anonyme) + "</td>" +
-						  (!anon ? '<td class="sn-mono">' + esc(ligne.matricule) + "</td>" : "")) +
+					'<td class="sn-mono">' + esc(anon ? ligne.code_anonyme : ligne.matricule) + "</td>" +
 					"<td" + (anon ? ' class="sn-anon"' : "") + ">" + esc(anon ? "Anonyme" : lbl_nom(ligne)) + "</td>" +
 					inputs +
 					'<td class="sn-num sn-strong" data-pv-student="' + esc(ligne.student) + '" data-pv="note_pct" data-pv-saved="' +
@@ -970,6 +1044,8 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		const notes_cc = (state.data.notes && state.data.notes.CC) || {};
 		const notes_rt = (state.data.notes && state.data.notes.Rattrapage) || {};
 		const anon = state.anonyme;
+		// Cellules en lecture seule quand la session affichée est publiée.
+
 
 		const headers = [__(anon ? "Code" : "Matricule"), __(anon ? "Étudiant (anonyme)" : "Étudiant"), __("Moy. CC"), __("Session examen"), __("Session rattrapage"), __("Note retenue"), __("Note finale"), __("%"), __("Grade"), __("Points")];
 		const headerHtml = headers.map((h) => "<th>" + esc(h) + "</th>").join("");
@@ -1245,6 +1321,10 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 					niveau: state.filters.niveau,
 					semestre: state.filters.semestre,
 					teaching_unit: state.filters.cours,
+					// Écrit dans la session affichée, et non dans celle que le
+					// backend déduirait : sans cela, un sélecteur de session
+					//porterait à l'écran et l'enregistrement irait ailleurs.
+					session_examen: session_cible(),
 					rows: rows,
 				},
 				extra
@@ -1282,6 +1362,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			niveau: state.filters.niveau,
 			semestre: state.filters.semestre,
 			teaching_unit: state.filters.cours,
+			session_examen: session_cible(),
 			anonyme: state.anonyme ? 1 : 0,
 		});
 	}
@@ -1295,6 +1376,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			niveau: state.filters.niveau,
 			semestre: state.filters.semestre,
 			teaching_unit: state.filters.cours,
+			session_examen: session_cible(),
 			anonyme: state.anonyme ? 1 : 0,
 		});
 	}
@@ -1349,6 +1431,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			niveau: state.filters.niveau,
 			semestre: state.filters.semestre,
 			teaching_unit: state.filters.cours,
+			session_examen: session_cible(),
 		});
 	});
 	toolbar.on("click", ".sn-btn-valider", () => {
@@ -1393,36 +1476,6 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	// ------------------------------------------------------------------
 	// anonymat des copies : actions du panneau
 	// ------------------------------------------------------------------
-	anonBar.on("click", ".sn-anon-generer", () => {
-		const session = active_session_info();
-		if (!session || !session.name) return;
-		frappe.confirm(
-			__("Générer les codes d'anonymat pour toute la session ? Les codes déjà attribués aux copies déposées seront conservés."),
-			() => {
-				frappe.call({
-					method: API_ANON + "generer_codes",
-					args: { session: session.name },
-					freeze: true,
-					freeze_message: __("Génération des codes d'anonymat..."),
-					callback: () => {
-						toast(__("Codes d'anonymat générés."), "green");
-						render_anonymat();
-					},
-					error: (e) => msg_error(error_message(e)),
-				});
-			}
-		);
-	});
-
-	anonBar.on("click", ".sn-anon-fiche", () => {
-		const session = active_session_info();
-		if (!session || !session.name) return;
-		api_download(API_ANON + "download_fiche_anonymat_pdf", {
-			session: session.name,
-			teaching_unit: state.filters.cours || null,
-		});
-	});
-
 	anonBar.on("click", ".sn-anon-report", () => {
 		if (!state.filters.cours) return;
 		api_download(API + "download_fiche_report_pdf", {
@@ -1432,6 +1485,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			semestre: state.filters.semestre,
 			teaching_unit: state.filters.cours,
 			type_dexamen: is_rattrapage_view() ? TYPE_RATTRAPAGE_EVAL : TYPE_EXAMEN_EVAL,
+			session_examen: session_cible(),
 		});
 	});
 
@@ -1452,15 +1506,20 @@ const STYLES =
 	".sn-ue-students{font-size:12px;font-weight:600;color:#4858b4;margin-top:6px;}" +
 	".sn-info-right{display:flex;gap:14px;flex-wrap:wrap;}" +
 	".sn-session{font-size:12px;color:#1d273b;background:#f7f9fc;border:1px solid #e2e6f0;border-radius:6px;padding:4px 9px;display:inline-flex;align-items:center;gap:6px;}" +
-	".sn-session-label{font-weight:600;}" +
 	".sn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;}" +
 	".sn-dot.gray{background:#a9b2c1;}.sn-dot.green{background:#4caf50;}.sn-dot.blue{background:#4858b4;}.sn-dot.orange{background:#f59e0b;}" +
 	".sn-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 10px;}" +
 	".sn-btn{display:inline-flex;align-items:center;gap:5px;}" +
 	".sn-toolbar-hint{font-size:12px;color:#8a93a3;margin-left:8px;}" +
 	".sn-toolbar-sep{display:inline-block;width:1px;height:22px;background:#e2e6f0;margin:0 6px;}" +
-	".sn-toolbar .sn-session-label{font-size:11px;color:#687178;background:#f7f9fc;border:1px solid #e2e6f0;border-radius:5px;padding:3px 8px;text-transform:capitalize;}" +
 	".sn-formule-bar{margin:10px 0 0;}" +
+	".sn-table-wrap{overflow-x:auto;background:#fff;border:1px solid #e2e6f0;border-radius:8px;}" +
+	".sn-table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px;}" +
+	".sn-table th{background:#f7f9fc;color:#475069;font-weight:600;font-size:12px;padding:9px 10px;border-bottom:1px solid #e2e6f0;text-align:left;white-space:nowrap;position:sticky;top:0;}" +
+	".sn-table td{padding:6px 10px;border-bottom:1px solid #eef1f7;vertical-align:middle;}" +
+	".sn-table tr:nth-child(even) td{background:#fafbfd;}" +
+	".sn-table tr:hover td{background:#f2f6ff;}" +
+	".sn-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:#687178;white-space:nowrap;}" +
 	".sn-anonbar{margin:10px 0 0;background:#fff;border:1px solid #e2e6f0;border-radius:8px;padding:10px 14px;}" +
 	".sn-anonbar-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}" +
 	".sn-anonbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;}" +
@@ -1472,13 +1531,6 @@ const STYLES =
 	".sn-anonbar-stat-strong{font-weight:600;color:#3a478e;}" +
 	".sn-anonbar-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto;}" +
 	".sn-anonbar-load{font-size:12px;color:#8a93a3;padding:4px 0;}" +
-	".sn-table-wrap{overflow-x:auto;background:#fff;border:1px solid #e2e6f0;border-radius:8px;}" +
-	".sn-table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px;}" +
-	".sn-table th{background:#f7f9fc;color:#475069;font-weight:600;font-size:12px;padding:9px 10px;border-bottom:1px solid #e2e6f0;text-align:left;white-space:nowrap;position:sticky;top:0;}" +
-	".sn-table td{padding:6px 10px;border-bottom:1px solid #eef1f7;vertical-align:middle;}" +
-	".sn-table tr:nth-child(even) td{background:#fafbfd;}" +
-	".sn-table tr:hover td{background:#f2f6ff;}" +
-	".sn-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:#687178;white-space:nowrap;}" +
 	".sn-anon{color:#8a93a3;font-style:italic;}" +
 	".sn-toolbar .sn-btn-anonyme{white-space:nowrap;}" +
 	".sn-num{text-align:right;}" +
