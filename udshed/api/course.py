@@ -166,6 +166,7 @@ def get_teaching_unit_by_year(academic_year,faculty=None,field_of_study=None,lev
 	data = query.run(as_dict = True)
 	process_data = {}
 
+
 	#Pour regrouper les enseignants et les niveau en fonction du cours
 	for d in data:
 		niveau_key = f"{d.filiere}-{d.niveau}"
