@@ -21,7 +21,7 @@
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "folder-normal",
+   "icon": "folder",
    "indent": 0,
    "keep_closed": 0,
    "label": "Facult\u00e9s",
@@ -33,7 +33,7 @@
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "project-2",
+   "icon": "layout-grid",
    "indent": 0,
    "keep_closed": 0,
    "label": "Filieres",
@@ -45,7 +45,7 @@
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "small-file",
+   "icon": "file",
    "indent": 0,
    "keep_closed": 0,
    "label": "Cours",
@@ -81,7 +81,7 @@
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "setting-gear",
+   "icon": "settings",
    "indent": 0,
    "keep_closed": 0,
    "label": "Configuration",

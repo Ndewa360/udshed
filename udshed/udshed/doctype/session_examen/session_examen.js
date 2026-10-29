@@ -1,6 +1,53 @@
 // Copyright (c) 2026, Cédric Nguendap Bedjama and contributors
 // For license information, please see license.txt
 
+frappe.ui.form.on("Session Examen", {
+	validate(frm) {
+		if (frm.doc.date_debut && frm.doc.date_de_fin) {
+			if (frm.doc.date_debut > frm.doc.date_de_fin) {
+				frappe.throw(__("La date initiale de la session doit être antérieure ou égale à la date finale."));
+			}
+		}
+	},
+	refresh(frm) {
+		if (frm.is_new() || frm.doc.statut !== "Brouillon") {
+			return;
+		}
+		frm.add_custom_button(__("Valider les notes"), function() {
+			frappe.confirm(
+				__("Valider toutes les notes de la session {0} ? Elles seront ensuite publiables.", [frm.doc.name]),
+				() => {
+					frappe.call("udshed.api.saisie_notes.valider_notes", {
+						session: frm.doc.name
+					}).then(r => {
+						frappe.show_alert({
+							message: __("Notes validées ({0}).", [r.message.validated]),
+							indicator: "green"
+						});
+						frm.reload_doc();
+					});
+				}
+			);
+		});
+		frm.add_custom_button(__("Publier"), function() {
+			frappe.confirm(
+				__("Publier la session {0} ? Les notes seront verrouillées.", [frm.doc.name]),
+				() => {
+					frappe.call("udshed.api.saisie_notes.publier_session", {
+						session: frm.doc.name
+					}).then(r => {
+						frappe.show_alert({
+							message: __("Session publiée."),
+							indicator: "green"
+						});
+						frm.reload_doc();
+					});
+				}
+			);
+		}).addClass("btn-danger");
+	}
+});
+
 frappe.ui.form.on("Session Examen Field of study Level", {
 	filiere(frm, cdt, cdn){
         console.log("Filiere changed:", frm.doc.filiere);

@@ -6,17 +6,19 @@
  "creation": "2026-02-06 05:49:13.671088",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": [
-  "nouveau_cours_section",
-  "course",
-  "intitule_cours",
-  "unite_de_valeur",
-  "column_break_askz",
-  "academic_year",
-  "mode",
-  "semestre",
-  "section_break_mvno",
-  "nombre_dheure_cm",
+  "field_order": [
+   "nouveau_cours_section",
+   "course",
+   "intitule_cours",
+   "unite_de_valeur",
+   "column_break_askz",
+   "academic_year",
+   "mode",
+   "semestre",
+    "credits",
+    "type_ue",
+    "section_break_mvno",
+   "nombre_dheure_cm",
   "nombre_dheure_td",
   "column_break_wada",
   "nombre_dheure_tp",
@@ -92,17 +94,34 @@
    "label": "Unit\u00e9 de valeur",
    "options": "Teaching Unit Value"
   },
-  {
-   "default": "Semestre 1",
-   "fetch_from": "course.semestre",
-   "fieldname": "semestre",
-   "fieldtype": "Select",
-   "label": "Semestre",
-   "options": "Semestre 1\nSemestre 2",
-   "reqd": 1
-  },
-  {
-   "fieldname": "section_break_mvno",
+   {
+    "default": "Semestre 1",
+    "fetch_from": "course.semestre",
+    "fieldname": "semestre",
+    "fieldtype": "Select",
+    "label": "Semestre",
+    "options": "Semestre 1\nSemestre 2",
+    "reqd": 1
+   },
+   {
+    "fieldname": "credits",
+    "fieldtype": "Int",
+    "in_list_view": 1,
+    "label": "Crédits",
+    "non_negative": 1,
+    "reqd": 1
+   },
+   {
+    "default": "Sans TP",
+    "fieldname": "type_ue",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "label": "Type UE",
+    "options": "Sans TP\nAvec TP\nStage SMSB",
+    "reqd": 1
+   },
+   {
+    "fieldname": "section_break_mvno",
    "fieldtype": "Section Break"
   },
   {
@@ -172,11 +191,20 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Teacher",
-   "select": 1,
-   "share": 1
-  }
- ],
+"role": "Teacher",
+    "select": 1,
+    "share": 1
+   },
+   {
+    "email": 1,
+    "export": 1,
+    "print": 1,
+    "read": 1,
+    "report": 1,
+    "role": "student",
+    "share": 1
+   }
+  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "search_fields": "intitule_cours",

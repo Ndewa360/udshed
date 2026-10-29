@@ -28,12 +28,13 @@
    "label": "Ann\u00e9e",
    "reqd": 1
   },
-  {
-   "fieldname": "place_of_acquisition",
-   "fieldtype": "Data",
-   "label": "Lieu d'obtention / Place of acquisition",
-   "reqd": 1
-  },
+   {
+    "fieldname": "place_of_acquisition",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Lieu d'obtention / Place of acquisition",
+    "reqd": 1
+   },
   {
    "fieldname": "mention",
    "fieldtype": "Select",

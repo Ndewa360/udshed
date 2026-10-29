@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+	@page { size: A4; margin: 14mm 14mm 16mm 14mm; }
+
+	* { box-sizing: border-box; }
+
+	body {
+		font-family: "Segoe UI", Calibri, Arial, sans-serif;
+		margin: 0;
+		color: #1f2937;
+		font-size: 12px;
+		position: relative;
+	}
+
+	/* Filigrane : logo de l'application en transparence */
+	.watermark {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%) rotate(-28deg);
+		opacity: 0.06;
+		z-index: 0;
+	}
+	.watermark img { width: 150mm; }
+
+	.sheet { position: relative; z-index: 1; }
+
+	/* En-tête avec logo */
+	.header {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		border-bottom: 3px solid #1E40AF;
+		padding-bottom: 12px;
+	}
+	.header .logo {
+		height: 62px;
+		width: 62px;
+		object-fit: contain;
+		flex-shrink: 0;
+	}
+	.header .titles { flex: 1; text-align: center; }
+	.header h1 {
+		font-size: 18px;
+		margin: 0;
+		color: #1E40AF;
+		letter-spacing: .5px;
+	}
+	.header h2 {
+		font-size: 13px;
+		margin: 3px 0 0;
+		text-transform: uppercase;
+		letter-spacing: 1.5px;
+		color: #C0392B;
+		font-weight: 700;
+	}
+	.header .meta { font-size: 10px; color: #64748B; margin-top: 4px; }
+	.header .spacer { width: 62px; flex-shrink: 0; }
+
+	h3 {
+		font-size: 12px;
+		color: #1E40AF;
+		margin: 18px 0 6px;
+		text-transform: uppercase;
+		letter-spacing: .5px;
+		border-bottom: 1px solid #CBD5E1;
+		padding-bottom: 4px;
+	}
+
+	.info-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+	.info-table td { padding: 5px 6px; font-size: 11.5px; border-bottom: 1px solid #F1F5F9; }
+	.info-table td.label { width: 200px; font-weight: 600; color: #334155; }
+
+	.info-two-col { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 11.5px; }
+	.info-two-col td { padding: 4px 6px; width: 50%; border-bottom: 1px solid #F1F5F9; }
+	.info-two-col td.lbl { font-weight: 600; width: 180px; color: #334155; }
+
+	table.data { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 11.5px; }
+	table.data th, table.data td { border: 1px solid #CBD5E1; padding: 6px; text-align: left; }
+	table.data th {
+		background: #1E40AF;
+		color: #fff;
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: .4px;
+	}
+	table.data tbody tr:nth-child(even) td { background: #F8FAFC; }
+
+	.badge-valid { color: #059669; font-weight: 700; }
+	.badge-dette { color: #DC2626; font-weight: 700; }
+	.statut { font-weight: 700; color: #059669; }
+
+	.footer { margin-top: 36px; display: flex; justify-content: space-between; }
+	.sig { text-align: center; font-size: 11.5px; width: 45%; }
+	.sig .line { margin-top: 46px; border-top: 1px solid #374151; padding-top: 5px; color: #334155; }
+</style>
+</head>
+<body>
+	{% if logo %}<div class="watermark"><img src="{{ logo }}" alt=""></div>{% endif %}
+	<div class="sheet">
+		<div class="header">
+			{% if logo %}<img class="logo" src="{{ logo }}" alt="Logo">{% else %}<div class="spacer"></div>{% endif %}
+			<div class="titles">
+				<h1>{{ school_name or "UDSHED" }}</h1>
+				<h2>Fiche de r&eacute;inscription</h2>
+				<div class="meta">Ann&eacute;e acad&eacute;mique {{ doc.academic_year }} &middot; R&eacute;f. {{ doc.name }}</div>
+			</div>
+			<div class="spacer"></div>
+		</div>
+
+		<h3>Informations de l&rsquo;&eacute;tudiant</h3>
+		<table class="info-table">
+			<tr><td class="label">N&deg; fiche</td><td>{{ doc.name }}</td></tr>
+			<tr><td class="label">&Eacute;tudiant</td><td>{{ student.nom }} {{ student.prenom }} ({{ student.matricule }})</td></tr>
+			<tr><td class="label">Email</td><td>{{ student.email or "—" }}</td></tr>
+			<tr><td class="label">Date de naissance</td><td>{{ student.date_naissance or "—" }}</td></tr>
+			<tr><td class="label">Lieu de naissance</td><td>{{ student.lieu_naissance or "—" }}</td></tr>
+			<tr><td class="label">T&eacute;l&eacute;phone</td><td>{{ student.telephone or "—" }}</td></tr>
+		</table>
+
+		<h3>Inscription</h3>
+		<table class="info-table">
+			<tr><td class="label">Fili&egrave;re</td><td>{{ doc.filiere_label }}</td></tr>
+			<tr><td class="label">Niveau</td><td>{{ doc.niveau }}</td></tr>
+			<tr><td class="label">Semestre</td><td>{{ doc.semestre }}</td></tr>
+			<tr><td class="label">Ann&eacute;e acad&eacute;mique</td><td>{{ doc.academic_year }}</td></tr>
+			<tr><td class="label">Session de r&eacute;inscription</td><td>{{ doc.reinscription_session }}</td></tr>
+			<tr><td class="label">Statut</td><td class="statut">{{ doc.statut }}</td></tr>
+		</table>
+
+		{% if doc.dernier_etablissement or doc.diplome_entree %}
+		<h3>&Eacute;tudes ant&eacute;rieures</h3>
+		<table class="info-table">
+			{% if doc.dernier_etablissement %}<tr><td class="label">Dernier &eacute;tablissement</td><td>{{ doc.dernier_etablissement }}</td></tr>{% endif %}
+			{% if doc.diplome_entree %}<tr><td class="label">Dipl&ocirc;me d&rsquo;entr&eacute;e</td><td>{{ doc.diplome_entree }}</td></tr>{% endif %}
+			{% if doc.matricule_diplome %}<tr><td class="label">Matricule du dipl&ocirc;me</td><td>{{ doc.matricule_diplome }}</td></tr>{% endif %}
+		</table>
+		{% endif %}
+
+		{% if doc.nom_prenom_pere or doc.nom_prenom_mere %}
+		<h3>Famille</h3>
+		<table class="info-two-col">
+			{% if doc.nom_prenom_pere %}
+			<tr>
+				<td class="lbl">P&egrave;re :</td><td>{{ doc.nom_prenom_pere }}</td>
+				<td class="lbl">T&eacute;l. :</td><td>{{ doc.pere_telephone or "—" }}</td>
+			</tr>
+			<tr>
+				<td class="lbl">Profession :</td><td>{{ doc.pere_profession or "—" }}</td>
+				<td class="lbl">Ville :</td><td>{{ doc.pere_ville or "—" }}</td>
+			</tr>
+			{% endif %}
+			{% if doc.nom_prenom_mere %}
+			<tr>
+				<td class="lbl">M&egrave;re :</td><td>{{ doc.nom_prenom_mere }}</td>
+				<td class="lbl">T&eacute;l. :</td><td>{{ doc.telephone_mere or "—" }}</td>
+			</tr>
+			<tr>
+				<td class="lbl">Profession :</td><td>{{ doc.profession_mere or "—" }}</td>
+				<td class="lbl">Ville :</td><td>{{ doc.mere_ville or "—" }}</td>
+			</tr>
+			{% endif %}
+			{% if doc.nom_prenom_sponsor %}
+			<tr>
+				<td class="lbl">Sponsor :</td><td>{{ doc.nom_prenom_sponsor }}</td>
+				<td class="lbl">T&eacute;l. :</td><td>{{ doc.telephone_sponsor or "—" }}</td>
+			</tr>
+			<tr>
+				<td class="lbl">Profession :</td><td>{{ doc.profession_sponsor or "—" }}</td>
+				<td class="lbl">Ville :</td><td>{{ doc.sponsor_ville or "—" }}</td>
+			</tr>
+			{% endif %}
+		</table>
+		{% endif %}
+
+		{% if doc.activites_sportives or doc.activites_associatives or doc.activites_culturelles or doc.connaissances_informatiques %}
+		<h3>Activit&eacute;s compl&eacute;mentaires</h3>
+		<table class="info-table">
+			{% if doc.activites_sportives %}<tr><td class="label">Sportives</td><td>{{ doc.activites_sportives }}</td></tr>{% endif %}
+			{% if doc.activites_associatives %}<tr><td class="label">Associatives</td><td>{{ doc.activites_associatives }}</td></tr>{% endif %}
+			{% if doc.activites_culturelles %}<tr><td class="label">Culturelles</td><td>{{ doc.activites_culturelles }}</td></tr>{% endif %}
+			{% if doc.connaissances_informatiques %}<tr><td class="label">Info.</td><td>{{ doc.connaissances_informatiques }}</td></tr>{% endif %}
+		</table>
+		{% endif %}
+
+		<h3>Mati&egrave;res inscrites</h3>
+		{% if cours_inscrits %}
+		<table class="data">
+			<thead><tr><th>#</th><th>Mati&egrave;re</th><th>Semestre</th><th>Statut</th></tr></thead>
+			<tbody>
+			{% for m in cours_inscrits %}
+				<tr><td>{{ loop.index }}</td><td>{{ m.intitule or m.teaching_unit }}</td><td>{{ m.semestre }}</td><td>{{ m.statut or "—" }}</td></tr>
+			{% endfor %}
+			</tbody>
+		</table>
+		{% else %}
+		<p>Aucune mati&egrave;re enregistr&eacute;e.</p>
+		{% endif %}
+
+		<h3>R&eacute;sultats de l'ann&eacute;e pr&eacute;c&eacute;dente</h3>
+		{% if resultats_precedents %}
+		<table class="data">
+			<thead><tr><th>#</th><th>Mati&egrave;re</th><th>Semestre</th><th>Note /20</th><th>Statut</th></tr></thead>
+			<tbody>
+			{% for r in resultats_precedents %}
+				<tr>
+					<td>{{ loop.index }}</td>
+					<td>{{ r.intitule or r.teaching_unit }}</td>
+					<td>{{ r.semestre }}</td>
+					<td>{{ r.note }}</td>
+					<td class="{% if r.valide %}badge-valid{% elif r.est_dette %}badge-dette{% endif %}">{{ "Valid&eacute;" if r.valide else ("Dette" if r.est_dette else "—") }}</td>
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+		{% else %}
+		<p>Aucun r&eacute;sultat enregistr&eacute;.</p>
+		{% endif %}
+
+		<div class="footer">
+			<div class="sig"><div class="line">L'&eacute;tudiant</div></div>
+			<div class="sig"><div class="line">Le coordonnateur{% if coordonnateur %}: {{ coordonnateur }}{% endif %}</div></div>
+		</div>
+	</div>
+</body>
+</html>

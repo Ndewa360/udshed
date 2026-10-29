@@ -7,19 +7,35 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "level",
-  "column_break_kmxi",
-  "coordonateur",
-  "calendrier",
-  "gestionnaire_de_planning"
- ],
+   "level",
+   "cycle",
+   "order",
+   "column_break_kmxi",
+   "coordonateur",
+   "calendrier",
+   "gestionnaire_de_planning"
+  ],
  "fields": [
   {
    "fieldname": "level",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Niveau",
-   "options": "Licence 1\nLicence 2\nLicence 3\nBTS 1\nBTS 2\nMaster 1\nMaster 2",
+    "options": "Licence 1\nLicence 2\nLicence 3\nBTS 1\nBTS 2\nMaster 1\nMaster 2\nDoctorat 1\nDoctorat 2\nDoctorat 3\nDoctorat 4\nDoctorat 5\nDoctorat 6\nDoctorat 7",
+    "reqd": 1
+   },
+   {
+    "fieldname": "cycle",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "label": "Cycle",
+    "options": "Licence\nMaster\nBTS\nDoctorat\nAutre"
+   },
+   {
+   "default": "1",
+   "fieldname": "order",
+   "fieldtype": "Int",
+   "label": "order",
    "reqd": 1
   },
   {
@@ -58,7 +74,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-19 09:54:11.744931",
+ "modified": "2026-07-28 10:45:53.761081",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Field of study Level",

@@ -1,0 +1,110 @@
+{
+ "app": "udshed",
+ "charts": [],
+ "content": "[{\"id\":\"gn_header\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Gestion des Notes</span>\",\"col\":12}},{\"id\":\"gn_intro\",\"type\":\"paragraph\",\"data\":{\"text\":\"Saisie, validation et publication des notes d'examens, r\u00e9sultats semestriels et proc\u00e8s-verbaux.\",\"col\":12}},{\"id\":\"gn_card_saisie\",\"type\":\"card\",\"data\":{\"card_name\":\"Saisie & Sessions\",\"col\":6}},{\"id\":\"gn_card_resultats\",\"type\":\"card\",\"data\":{\"card_name\":\"R\u00e9sultats & Analyses\",\"col\":6}},{\"id\":\"gn_card_referentiel\",\"type\":\"card\",\"data\":{\"card_name\":\"R\u00e9f\u00e9rentiel Acad\u00e9mique\",\"col\":6}},{\"id\":\"gn_card_parametrage\",\"type\":\"card\",\"data\":{\"card_name\":\"Param\u00e9trage\",\"col\":6}},{\"id\":\"gn_spacer1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"gn_chart_sessions\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Sessions Examen par Statut\",\"col\":5}}]",
+ "creation": "2026-07-24 17:00:00",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "clipboard-list",
+ "idx": 0,
+ "indicator_color": "orange",
+ "is_hidden": 0,
+ "label": "Gestion des Notes",
+ "link_type": "DocType",
+ "links": [
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "R\u00e9sultat Semestre",
+   "link_count": 0,
+   "link_to": "Resultat Semestre",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-09-12 09:13:42.687117",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Gestion des Notes",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Coordonateur"
+  },
+  {
+   "role": "Teacher"
+  }
+ ],
+ "sequence_id": 30.0,
+ "shortcuts": [
+  {
+   "doc_view": "",
+   "label": "Session d'examen",
+   "link_to": "Session Examen",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Saisie des Notes",
+   "link_to": "note-udshed",
+   "type": "Page"
+  },
+  {
+   "doc_view": "",
+   "label": "R\u00e9sultats acad\u00e9miques",
+   "link_to": "resultats-academiques",
+   "type": "Page"
+  },
+  {
+   "doc_view": "",
+   "label": "Etudiants",
+   "link_to": "Student",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Configuration Notes",
+   "link_to": "Udshed Setting",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Fiche de report",
+   "link_to": "Fiche Report",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Examen Anonymat",
+   "link_to": "Examen Anonymat",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "label": "Correction des copies",
+   "link_to": "correction-copies",
+   "type": "Page"
+  },
+  {
+   "doc_view": "",
+   "label": "Proc\u00e8s-Verbal r\u00e9capitulatif",
+   "link_to": "Proces Verbal Recapitulatif",
+   "report_ref_doctype": "Resultat Academique",
+   "type": "Report"
+  }
+ ],
+ "title": "Gestion des Notes",
+ "type": "Workspace"
+}

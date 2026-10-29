@@ -1,16 +1,133 @@
 import frappe
+from frappe import _
 import pandas as pd
 import os
+import unicodedata
 from frappe.query_builder import DocType
 from frappe.utils import get_site_path
 import udshed.utils.file_utils as file_utils
 import udshed.api.course as cours_api
+
+
+def _cle_alphabetique(texte):
+    """Clé de tri : insensible à la casse et aux accents (ordinal alphabétique)."""
+    norm = unicodedata.normalize("NFD", str(texte or "")).encode("ascii", "ignore").decode()
+    return norm.lower()
+
+
+def _cell_texte(valeur):
+    """Normalise une cellule Excel en texte propre.
+
+    Pandas livre les cellules numériques en float : un code cours purement
+    numerique (« 101 ») arrive en 101.0 et une cellule vide en NaN. Sans cette
+    conversion, les codes partent avec « .0 » dans la base et les cellules
+    vides passent le test de vérité.
+    """
+    if valeur is None:
+        return ""
+    if isinstance(valeur, float):
+        if valeur != valeur:  # NaN
+            return ""
+        if valeur.is_integer():
+            return str(int(valeur))
+        return str(valeur)
+    return str(valeur).strip()
+
+
+def _cell_entier(valeur, defaut=0):
+    """Entier tolérant aux cellules Excel vides ou décimales (« 25 », 25.0)."""
+    texte = _cell_texte(valeur).replace(",", ".")
+    if not texte:
+        return defaut
+    try:
+        return int(float(texte))
+    except ValueError:
+        return defaut
+
+
+def _colonnes_emails(data):
+    """Index des colonnes emails (CM, TD, TP) selon le format du fichier.
+
+    Le template d'import a 12 colonnes (emails en 9-11) ; l'export de grille
+    ajoute une colonne « Total » en 9, ce qui décale les enseignants en 10-12.
+    Lire toujours en 9-11 faisait tomber sur la colonne Total (un float) et
+    plantait l'import avec « 'float' object has no attribute 'split' ».
+    """
+    if len(data) >= 13:
+        total = _cell_texte(data[9])
+        suite = [_cell_texte(c) for c in data[10:13]]
+        if any("@" in c for c in suite) and "@" not in total:
+            return [10, 11, 12]
+        if not total and any(suite):
+            return [10, 11, 12]
+        if isinstance(data[9], (int, float)) and data[9] == data[9]:
+            return [10, 11, 12]
+    return [9, 10, 11]
+
+
+def _emails_par_type(data):
+    """Adresses par type de cours : [(type CM, cellule), (type TD, …), (type TP, …)].
+
+    Les cellules vides gardent leur position : un email en colonne TD ne sera
+    jamais attribué au CM parce que la colonne CM était vide.
+    """
+    types = ("Cours Magistral (CM)", "Travaux Dirigés (TD)", "Travaux Pratique (TP)")
+    return [
+        (types[i], _cell_texte(data[col]))
+        for i, col in enumerate(_colonnes_emails(data))
+        if col < len(data)
+    ]
+
+
+def _enseignant_depuis_cellule(entree):
+    """Résout une cellule enseignant et retourne le nom du doc Teacher.
+
+    Le template attend une adresse email (User + Teacher) ; l'export de grille
+    écrit quant à lui le NOM du Teacher. On accepte les deux formes pour qu'un
+    export puisse être réimporté tel quel.
+    """
+    if "@" in entree:
+        if not frappe.db.exists({"doctype": "User", "email": entree}):
+            frappe.throw(
+                f"Erreur l'ors de l'importation. \n\n L'enseignant {entree} introuvable. "
+                "Renseignez l'addresse email correspondat et réessayez"
+            )
+        teacher = frappe.db.get_value("Teacher", {"email": entree}, "name")
+        if not teacher:
+            frappe.throw(
+                f"Erreur l'ors de l'importation. \n\n L'enseignant {entree} introuvable. "
+                "Renseignez l'addresse email correspondat et réessayez"
+            )
+        return teacher
+
+    teacher = frappe.db.exists("Teacher", entree) or frappe.db.get_value(
+        "Teacher", {"full_name": entree}, "name"
+    )
+    if not teacher:
+        frappe.throw(
+            f"Erreur l'ors de l'importation. \n\n L'enseignant {entree} introuvable. "
+            "Renseignez son adresse email ou son nom exact et réessayez"
+        )
+    return teacher
 
 #Todo 
 # 1 - Rétirer les teaching units non utilisé d'une année  
 
 @frappe.whitelist()
 def get_academic_teaching_unit(academic_year,faculty,filiere,niveau,semestre):
+    try:
+        return _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semestre)
+    except Exception:
+        frappe.log_error(" teaching_grid get_academic_teaching_unit")
+        frappe.throw(_("Erreur lors du chargement de la grille pédagogique."))
+
+
+def _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semestre):
+    if not (academic_year and filiere and niveau and semestre):
+        return {
+            "stats": {"ue_count": 0, "course_count": 0, "total_credits": 0, "total_hours": 0},
+            "grid": [],
+        }
     TeachingUnit = DocType("Teaching Unit")
     TeachingUnitValue = DocType("Teaching Unit Value")
     Course = DocType("Course")
@@ -103,15 +220,15 @@ def get_academic_teaching_unit(academic_year,faculty,filiere,niveau,semestre):
                         "teacher":doc.enseignant,
                         "type_cours":doc.type_de_cours
                     })
-                result[ue_code]["ue_credits"] += int(doc.course_poid) 
+                result[ue_code]["ue_credits"] += float(doc.course_poid) 
                 stat_result["course_count"] +=1
-                stat_result["total_credits"] +=int(doc.course_poid) 
+                stat_result["total_credits"] +=float(doc.course_poid) 
                 stat_result["total_hours"] +=int(doc.nombre_dheure_cm) + int(doc.nombre_dheure_td) + int(doc.nombre_dheure_tp) + int(doc.nombre_dheure_tpe)
         else:
             result[doc.ue_code] = {
                 "ue_code":doc.ue_code,
                 "ue_title":doc.ue_intitule,
-                "ue_credits":int(doc.course_poid),
+                "ue_credits":float(doc.course_poid),
                 "courses":[
                     {
                         "code":doc.course_name,
@@ -140,12 +257,14 @@ def get_academic_teaching_unit(academic_year,faculty,filiere,niveau,semestre):
                 })
             stat_result["ue_count"] +=1
             stat_result["course_count"] +=1
-            stat_result["total_credits"] +=int(doc.course_poid) 
+            stat_result["total_credits"] +=float(doc.course_poid) 
             stat_result["total_hours"] +=int(doc.nombre_dheure_cm) + int(doc.nombre_dheure_td) + int(doc.nombre_dheure_tp) + int(doc.nombre_dheure_tpe)
 
     
     for ue in result.keys():
-        result[ue]["courses"] = sorted(result[ue]["courses"],key = lambda course: course["code"])
+        result[ue]["courses"] = sorted(
+            result[ue]["courses"], key=lambda course: (_cle_alphabetique(course["title"]), course["code"])
+        )
 
     return {"stats":stat_result,"grid":dict(sorted(result.items())).values()}
 
@@ -203,24 +322,56 @@ def import_grid(file_url,academic_year,faculty,filiere,niveau,semestre):
         proceed_ens = []
         filiere_doc = frappe.get_doc("Field of study",filiere)
 
+        worked_ue = None
         if not filiere_doc.has_uv_in_grid:
-            if not frappe.db.exists("Teaching Unit Value","UNKNOW"):
+            # UE générique : réutilisée pour l'année académique en cours uniquement
+            # (un même code peut exister sur plusieurs années académiques).
+            unknow_ue = frappe.db.exists(
+                "Teaching Unit Value", {"code": "UNKNOW", "academic_year": academic_year_obj.name}
+            )
+            if unknow_ue:
+                worked_ue = frappe.get_doc("Teaching Unit Value", unknow_ue)
+            else:
                 worked_ue = frappe.get_doc({
                     "doctype":"Teaching Unit Value",
                     "code":"UNKNOW",
                     "semestre":semestre,
                     "academic_year":academic_year_obj.name
                 })
-                proceed_ue.append("UNKNOW")
-        else:
-            worked_ue = None
-        for data in data_grid:
-            if data[0] and data[4]=="UE":
-                proceed_ue.append(data[0])
-                if frappe.db.exists({ 'doctype': 'Teaching Unit Value', 'code': data[0],"academic_year":academic_year}):
+                worked_ue.insert(ignore_permissions=True)
+            proceed_ue.append("UNKNOW")
+        for row_index, data in enumerate(data_grid):
+            cellules = [_cell_texte(c) for c in data]
+            # Lignes vides (séparateurs) et lignes de synthèse de l'export
+            # (« Total UE », « Total Crédits »…) : ni UE ni cours.
+            if not any(cellules):
+                continue
+            code_ue = cellules[0]
+            code_cours = cellules[1] if len(cellules) > 1 else ""
+            type_ligne = cellules[4] if len(cellules) > 4 else ""
+            if code_ue.lower().startswith("total"):
+                continue
+            if len(cellules) < 9:
+                frappe.throw(
+                    _("Ligne de données {0}: au moins 9 colonnes sont attendues "
+                      "(Code UE, Code Cours, Intitulés, Crédits, TYPE, CM, TD, TP, TPE).").format(
+                        row_index + 1
+                    )
+                )
+            # Une ligne est une UE dès qu'un code figure en colonne A et
+            # qu'aucun code cours n'est en colonne B. Le TYPE (« UE ») est
+            # souvent oublié dans les grilles préparées à la main : s'y fier
+            # seule faisait perdre l'UE et bloquait l'import des cours suivants.
+            est_ue = bool(code_ue) and (type_ligne.upper() == "UE" or not code_cours)
+            if est_ue:
+                proceed_ue.append(code_ue)
+                existing_ue = frappe.db.exists(
+                    "Teaching Unit Value", {"code": code_ue, "academic_year": academic_year}
+                )
+                if existing_ue:
                     #si UE existe (module) on le met juste à jour
-                    worked_ue = frappe.get_doc("Teaching Unit Value",{"code":data[0]})
-                    worked_ue.intitule=data[2]
+                    worked_ue = frappe.get_doc("Teaching Unit Value", existing_ue)
+                    worked_ue.intitule=cellules[2]
                     worked_ue.semestre=semestre
                     worked_ue.academic_year=academic_year_obj.name
                     worked_ue.save()
@@ -228,106 +379,87 @@ def import_grid(file_url,academic_year,faculty,filiere,niveau,semestre):
                 else:
                     worked_ue=frappe.get_doc({
                         "doctype":"Teaching Unit Value",
-                        "code":data[0],
-                        "intitule":data[2],
+                        "code":code_ue,
+                        "intitule":cellules[2],
                         "semestre":semestre,
                         "academic_year":academic_year_obj.name
                     })
                     record_stat["ues_created"] +=1
                     worked_ue.insert( ignore_permissions=True)
-            else:
+            elif code_cours:
                 if not worked_ue:
-                    frappe.throw("Veuillez d'abord spécifier une UE")                    
-                proceed_ens.append(data[1])
-                if frappe.db.exists({'doctype':"Teaching Unit","course":data[1],"academic_year":academic_year}):
+                    frappe.throw(
+                        _("Ligne Excel {0} : le cours {1} n'a aucune UE au-dessus de lui. "
+                          "Ajoutez une ligne UE (code en colonne A) avant ce cours.").format(
+                            row_index + 2, code_cours
+                        )
+                    )
+                proceed_ens.append(code_cours)
+                if frappe.db.exists({'doctype':"Teaching Unit","course":code_cours,"academic_year":academic_year}):
                     #si le cours existe deja on le met à jour
-                    teachingUnit = frappe.get_doc("Teaching Unit",{"course":data[1],"academic_year":academic_year})
-                    teachingUnit.intitule_cours=data[2]
+                    teachingUnit = frappe.get_doc("Teaching Unit",{"course":code_cours,"academic_year":academic_year})
+                    teachingUnit.intitule_cours=cellules[2]
                     teachingUnit.unite_de_valeur=worked_ue.name
                     teachingUnit.semestre = semestre
-                    teachingUnit.nombre_dheure_cm=int(data[5])
-                    teachingUnit.nombre_dheure_td=int(data[6])
-                    teachingUnit.nombre_dheure_tp=int(data[7])
-                    teachingUnit.nombre_dheure_tpe=int(data[8])
+                    teachingUnit.credits=_cell_entier(data[3])
+                    teachingUnit.nombre_dheure_cm=_cell_entier(data[5])
+                    teachingUnit.nombre_dheure_td=_cell_entier(data[6])
+                    teachingUnit.nombre_dheure_tp=_cell_entier(data[7])
+                    teachingUnit.nombre_dheure_tpe=_cell_entier(data[8])
                     #les enseignants
                     #On supprime d'abord ce qui etait présent
                     frappe.db.delete("Course Teacher Item",filters={"parent":teachingUnit.name})
                     record_stat["courses_updated"] +=1
-                    is_new=False                
+                    is_new=False
                 else:
-                    if not frappe.db.exists("Course",data[1]):
+                    if not frappe.db.exists("Course",code_cours):
                         course = frappe.get_doc({
                             "doctype":"Course",
-                            "code":data[1],
-                            "intitule":data[2],
+                            "code":code_cours,
+                            "intitule":cellules[2],
                             "semestre":semestre,
-                            "nombre_dheure_cm":int(data[5]),
-                            "nombre_dheure_td":int(data[6]),
-                            "nombre_dheure_tp":int(data[7]),
-                            "nombre_dheure_tpe":int(data[8]),
+                            "nombre_dheure_cm":_cell_entier(data[5]),
+                            "nombre_dheure_td":_cell_entier(data[6]),
+                            "nombre_dheure_tp":_cell_entier(data[7]),
+                            "nombre_dheure_tpe":_cell_entier(data[8]),
                         })
                         course.insert(ignore_permissions=True)
                     else:
-                        course = frappe.get_doc("Course", data[1])
+                        course = frappe.get_doc("Course", code_cours)
 
                     teachingUnit = frappe.get_doc({
                         "doctype":"Teaching Unit",
                         "course":course.name,
-                        "intitule_cours":data[2],
+                        "intitule_cours":cellules[2],
                         "unite_de_valeur":worked_ue.name,
                         "semestre":semestre,
                         "academic_year":academic_year_obj.name,
-                        "nombre_dheure_cm":int(data[5]),
-                        "nombre_dheure_td":int(data[6]),
-                        "nombre_dheure_tp":int(data[7]),
-                        "nombre_dheure_tpe":int(data[8]),
+                        "credits":_cell_entier(data[3]),
+                        "nombre_dheure_cm":_cell_entier(data[5]),
+                        "nombre_dheure_td":_cell_entier(data[6]),
+                        "nombre_dheure_tp":_cell_entier(data[7]),
+                        "nombre_dheure_tpe":_cell_entier(data[8]),
                         "table_enseignant":[],
                         "field_of_study":[]
                     })
                     record_stat["courses_created"] +=1
                     is_new = True
-                    
-                print("Teachers ",data[9],data)
-                
-                #les enseignants
-                if len(data)>=10 and data[9]:
-                    teachers_email = data[9].split(",")
-                    for teacher_email in teachers_email:
-                        if not frappe.db.exists({"doctype":"User", "email":teacher_email}):
-                            print("Enseigant innexistant")
-                            frappe.throw(f"Erreur l'ors de l'importation. \n\n L'enseignant {teacher_email} introuvable. Renseignez l'addresse email correspondat et réessayez")
-                        teacher = frappe.get_doc("Teacher", {"email":teacher_email})
+
+                #les enseignants (colonnes CM/TD/TP, adaptées au format du fichier)
+                for type_cours, cellule_email in _emails_par_type(data):
+                    for entree in [e.strip() for e in cellule_email.split(",") if e.strip()]:
+                        teacher_name = _enseignant_depuis_cellule(entree)
                         teachingUnit.append("table_enseignant", {
-                            "enseignant":teacher.name,
-                            "type_de_cours":"Cours Magistral (CM)"
-                        })
-                if len(data)>=11 and data[10]:
-                    teachers_email = data[10].split(",")
-                    for teacher_email in teachers_email:
-                        if not frappe.db.exists({"doctype":"User", "email":teacher_email}):
-                            frappe.throw(f"Erreur l'ors de l'importation. \n\n L'enseignant {teacher_email} introuvable. Renseignez l'addresse email correspondat et réessayez")
-                        teacher = frappe.get_doc("Teacher", {"email":teacher_email})
-                        teachingUnit.append("table_enseignant", {
-                            "enseignant":teacher.name,
-                            "type_de_cours":"Travaux Dirigés (TD)"
-                        })
-                if len(data)>=12 and data[11]:
-                    teachers_email = data[11].split(",")
-                    for teacher_email in teachers_email:
-                        if not frappe.db.exists({"doctype":"User", "email":teacher_email}):
-                            frappe.throw(f"Erreur l'ors de l'importation. \n\n L'enseignant {teacher_email} introuvable. Renseignez l'addresse email correspondat et réessayez")
-                        teacher = frappe.get_doc("Teacher", {"email":teacher_email})
-                        teachingUnit.append("table_enseignant", {
-                            "enseignant":teacher.name,
-                            "type_de_cours":"Travaux Pratique (TP)"
+                            "enseignant":teacher_name,
+                            "type_de_cours":type_cours
                         })
 
                 #Pour la classe,(faculté, filiere et niveau) on ajoute
                 teachingUnit.append("course_levels", {
                     "filiere":filiere,
                     "niveau":niveau,
-                    "course_poid":int(data[3])
-                })            
+                    "course_poid":float(_cell_entier(data[3]))
+                })
                 teaching_unit_in_grid.append(teachingUnit.name)
 
                 if is_new:

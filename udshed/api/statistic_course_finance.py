@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from datetime import datetime,timedelta
 import udshed.api.course as course
 import udshed.api.statistic_course as statistic_course
@@ -8,6 +9,14 @@ from functools import reduce
 @frappe.whitelist()
 def statistic_year(academic_year, semestre=None):
     """Statistique global des finances de l'année"""
+    try:
+        return _statistic_year_impl(academic_year, semestre)
+    except Exception:
+        frappe.log_error(" statistic_course_finance statistic_year")
+        frappe.throw(_("Erreur lors du calcul des statistiques financières."))
+
+
+def _statistic_year_impl(academic_year, semestre=None):
     teaching_units = course.get_teaching_unit_by_year(academic_year=academic_year,semestre=None)
     teaching_units_key = teaching_units.keys()
     planning_items = planning.get_all_planning_item_by_filter(academic_year,semestre=semestre)
@@ -87,6 +96,14 @@ def statistic_year(academic_year, semestre=None):
 @frappe.whitelist()
 def statistic_cours_faculte(academic_year,faculty,course_type=None,semestre=None):
     """ Statistique de la faculté pour une année"""
+    try:
+        return _statistic_cours_faculte_impl(academic_year,faculty,course_type,semestre)
+    except Exception:
+        frappe.log_error(" statistic_course_finance statistic_cours_faculte")
+        frappe.throw(_("Erreur lors du calcul des statistiques financières faculté."))
+
+
+def _statistic_cours_faculte_impl(academic_year,faculty,course_type=None,semestre=None):
     teaching_units = course.get_teaching_unit_by_year(academic_year=academic_year,faculty=faculty,semestre=None)
     teaching_units_key = teaching_units.keys()
     planning_items = planning.get_all_planning_item_by_filter(academic_year=academic_year,faculty=faculty,semestre=semestre)
@@ -184,6 +201,14 @@ def statistic_cours_faculte(academic_year,faculty,course_type=None,semestre=None
 @frappe.whitelist()
 def statistic_fieldofstudy(academic_year,faculty,filiere,semestre=None,course_type=None):
     """Statistic progression financier pour filiére"""
+    try:
+        return _statistic_fieldofstudy_impl(academic_year,faculty,filiere,semestre,course_type)
+    except Exception:
+        frappe.log_error(" statistic_course_finance statistic_fieldofstudy")
+        frappe.throw(_("Erreur lors du calcul des statistiques financières filière."))
+
+
+def _statistic_fieldofstudy_impl(academic_year,faculty,filiere,semestre=None,course_type=None):
     teaching_units = course.get_teaching_unit_by_year(academic_year=academic_year,faculty=faculty,field_of_study=filiere,semestre=semestre)
     teaching_units_key = teaching_units.keys()
     planning_items = planning.get_all_planning_item_by_filter(academic_year=academic_year,faculty=faculty,field_of_study=filiere,semestre=semestre ,course_type=course_type)
@@ -278,6 +303,14 @@ def statistic_fieldofstudy(academic_year,faculty,filiere,semestre=None,course_ty
 
 @frappe.whitelist()
 def statistic_level(academic_year,faculty,filiere,niveau,semestre=None,course_type=None):
+    try:
+        return _statistic_level_impl(academic_year,faculty,filiere,niveau,semestre,course_type)
+    except Exception:
+        frappe.log_error(" statistic_course_finance statistic_level")
+        frappe.throw(_("Erreur lors du calcul des statistiques financières niveau."))
+
+
+def _statistic_level_impl(academic_year,faculty,filiere,niveau,semestre=None,course_type=None):
     teaching_units = course.get_teaching_unit_by_year(academic_year=academic_year,faculty=faculty,field_of_study=filiere,level=niveau,semestre=semestre)
     teaching_units_key = teaching_units.keys()
     planning_items = planning.get_all_planning_item_by_filter(academic_year=academic_year,faculty=faculty,field_of_study=filiere,level=niveau,semestre=semestre ,course_type=course_type)
@@ -378,6 +411,14 @@ def statistic_level(academic_year,faculty,filiere,niveau,semestre=None,course_ty
 @frappe.whitelist()
 def statistic_teacher(academic_year,teacher, faculty=None,filiere=None,niveau=None, semestre=None ):
     """Statistic finace for teacher"""
+    try:
+        return _statistic_teacher_impl(academic_year,teacher,faculty,filiere,niveau,semestre)
+    except Exception:
+        frappe.log_error(" statistic_course_finance statistic_teacher")
+        frappe.throw(_("Erreur lors du calcul des statistiques financières enseignant."))
+
+
+def _statistic_teacher_impl(academic_year,teacher, faculty=None,filiere=None,niveau=None, semestre=None ):
     planning_items = planning.get_all_planning_item_by_filter(academic_year=academic_year,faculty=faculty,field_of_study=filiere,level=niveau,semestre=semestre ,teacher=teacher)
     teaching_units = course.get_teaching_unit_by_year(academic_year=academic_year,faculty=faculty,field_of_study=filiere,level=niveau,semestre=semestre,teacher=teacher)
     teaching_units_key = teaching_units.keys()

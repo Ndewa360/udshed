@@ -60,10 +60,7 @@ window.Udshed.UI = {
                         <select id="week-select" class="form-control input-sm"></select>
                     </div>
                 </div>
-                <div class="planning-grid">
-
-                    //Place to be
-                </div>
+                <div class="planning-grid"></div>
             </div>
         `
 

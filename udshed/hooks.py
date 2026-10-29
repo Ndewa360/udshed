@@ -5,6 +5,9 @@ app_description = "Outils de planification des cours"
 app_email = "c.nguendap@ndewa-360.com"
 app_license = "mit"
 
+# App logo for login page and navbar
+app_logo_url = ["/assets/udshed/images/logo1.png"]
+
 # Apps
 # ------------------
 
@@ -14,13 +17,30 @@ app_license = "mit"
 add_to_apps_screen = [
 	{
 		"name": "udshed",
-		"logo": "/assets/udshed/images/logo.png",
+		"logo": "/assets/udshed/images/logo1.png",
 		"title": "Udshed",
-		"route": "/desk/planning-academique",
-		"has_permission": "udshed.api.permission.has_app_permission"
+		"route": "/app/gestion-des-notes",
+		"has_permission": "udshed.api.permission.has_app_permission",
+		"role_home_page": {
+			"All": "desk"
+		}
+
 	}
 ]
 
+role_home_page = {
+	"System Manager": "/desk",
+	"Workspace Manager": "/desk",
+	"Script Manager": "/desk",
+	"Coordinator": "/desk",
+	"Teacher": "/desk",
+	"Planning Manager": "/desk",
+	"Registration Manager": "/desk",
+	"Udshed Financial Admin": "/desk",
+	"Comptable": "/desk",
+	"Agent de scolarité": "/desk",
+	"Correcteur": "/desk",
+}
 
 
 #Fixutres
@@ -29,10 +49,24 @@ fixtures = [
     {
         "dt" : "Role",
         "filters": [
-            ["name","in",["Teacher","Coordonateur","Udshed Financial Admin", "Planning Manager"]]
+            ["name","in",["Teacher","Coordonateur","Udshed Financial Admin", "Planning Manager", "Registration Manager", "Agent de scolarité", "Comptable", "Correcteur"]]
         ]
     },
-    
+    {
+        "dt": "Web Page",
+    },
+    {
+        "dt": "Desktop Icon",
+        "filters": [
+            ["name","in",["Inscription - Reinscription","Gestion Des Notes","Insight","Planning Académique","Configuration"]]
+        ]
+    },
+    {
+        "dt": "Page",
+        "filters": [
+            ["name", "in", ["gestion-des-niveaux"]]
+        ]
+    },
 ]
 
 
@@ -40,12 +74,15 @@ fixtures = [
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/udshed/css/udshed.css"
-# app_include_js = "/assets/udshed/js/udshed.js"
+app_include_css = "/assets/udshed/css/gestion_des_niveaux.v3.css"
+app_include_js = [
+	"https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js",
+	"/assets/udshed/js/udshed.js"
+]
 
 # include js, css files in header of web template
-# web_include_css = "/assets/udshed/css/udshed.css"
-# web_include_js = "/assets/udshed/js/udshed.js"
+web_include_css = "/assets/udshed/css/reinscription.css"
+web_include_js = "/assets/udshed/js/udshed.js"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "udshed/public/scss/website"
@@ -72,7 +109,7 @@ fixtures = [
 # ----------
 
 # application home page (will override Website Settings)
-# home_page = "login"
+home_page = "index"
 
 # website user home page (by Role)
 # role_home_page = {
@@ -88,14 +125,21 @@ fixtures = [
 # automatically load and sync documents of this doctype from downstream apps
 # importable_doctypes = [doctype_1]
 
+# Print Format Data
+# ----------
+# Injects the `data` context (from get_transcript_data) into the
+# "Releve Notes" print format before HTML rendering. Frappe calls the
+# last registered `pdf_body_html` hook (see frappe/www/printview.py).
+pdf_body_html = "udshed.api.transcript.pdf_body_html"
+
 # Jinja
 # ----------
 
 # add methods and filters to jinja environment
-# jinja = {
-# 	"methods": "udshed.utils.jinja_methods",
-# 	"filters": "udshed.utils.jinja_filters"
-# }
+jinja = {
+	"methods": "udshed.utils.jinja_methods",
+}
+# jinja_filters = "udshed.utils.jinja_filters"
 
 # Installation
 # ------------
@@ -111,30 +155,20 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Integration Setup
 # ------------------
-# To set up dependencies/integrations with other apps
-# Name of the app being installed is passed as an argument
-
 # before_app_install = "udshed.utils.before_app_install"
 # after_app_install = "udshed.utils.after_app_install"
 
 # Integration Cleanup
 # -------------------
-# To clean up dependencies/integrations with other apps
-# Name of the app being uninstalled is passed as an argument
-
 # before_app_uninstall = "udshed.utils.before_app_uninstall"
 # after_app_uninstall = "udshed.utils.after_app_uninstall"
 
 # Desk Notifications
 # ------------------
-# See frappe.core.notifications.get_notification_config
-
 # notification_config = "udshed.notifications.get_notification_config"
 
 # Permissions
 # -----------
-# Permissions evaluated in scripted ways
-
 # permission_query_conditions = {
 # 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
 # }
@@ -145,8 +179,6 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Document Events
 # ---------------
-# Hook on document methods and events
-
 # doc_events = {
 # 	"*": {
 # 		"on_update": "method",
@@ -158,23 +190,11 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"udshed.tasks.all"
-# 	],
-# 	"daily": [
-# 		"udshed.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"udshed.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"udshed.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"udshed.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"udshed.udshed.tasks.daily"
+	],
+}
 
 # Testing
 # -------
@@ -183,32 +203,20 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Extend DocType Class
 # ------------------------------
-#
-# Specify custom mixins to extend the standard doctype controller.
 # extend_doctype_class = {
 # 	"Task": "udshed.custom.task.CustomTaskMixin"
 # }
 
 # Overriding Methods
 # ------------------------------
-#
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "udshed.event.get_events"
 # }
-#
-# each overriding function accepts a `data` argument;
-# generated from the base implementation of the doctype dashboard,
-# along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
 # 	"Task": "udshed.task.get_dashboard_data"
 # }
 
-# exempt linked doctypes from being automatically cancelled
-#
 # auto_cancel_exempted_doctypes = ["Auto Repeat"]
-
-# Ignore links to specified DocTypes when deleting documents
-# -----------------------------------------------------------
 
 # ignore_links_on_delete = ["Communication", "ToDo"]
 
@@ -253,8 +261,13 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # 	"udshed.auth.validate"
 # ]
 
-# Automatically update python controller files with type annotations for this app.
 # export_python_type_annotations = True
+
+# Website redirects
+# -----------------
+# /login → Frappe login (desk / personnel administratif).
+# /connexion-etudiant → portail de connexion par matricule pour les étudiants.
+# Aucune redirection automatique entre les deux.
 
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
@@ -264,4 +277,3 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

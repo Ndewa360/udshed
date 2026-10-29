@@ -305,8 +305,12 @@ frappe.pages['planning-academique'].on_page_load = function(wrapper) {
 			const halfLibelle = $(this).data("half-libelle");
 			const courseData = $(this).data("course");
 
-			// console.log("User Context ",userContext)
 			if (courseData) {
+				// Un clic ouvre systematiquement la fiche du creneau programme
+				// (modifier salle / batiment / mode). Ouvrir directement la
+				// saisie des notes depuis le planning a ete retire : la saisie
+				// se fait dans la page « Saisie des notes », ou via la page
+				// « Corriger les copies » pour les copies anonymisees.
 				Udshed.Dialogs.openEditPlanningDialog(filters,currentDay,half,halfLibelle,courseData,userContext,() => {
 					loadPlanning(weekSelect,monthPicker,filters,calendar_zone,periods)
 				});

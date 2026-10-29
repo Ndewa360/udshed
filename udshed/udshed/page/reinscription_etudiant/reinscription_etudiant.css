@@ -1,0 +1,471 @@
+/* ============================================================
+   UDSHED — Page Desk « Réinscription Étudiant »
+   Styles scoped sous .reinscription-wizard (ne touche pas au desk)
+   ============================================================ */
+
+.reinscription-wizard {
+  --rw-blue: #1E40AF;
+  --rw-blue-light: #3B82F6;
+  --rw-emerald: #059669;
+  --rw-gold: #D97706;
+  --rw-red: #DC2626;
+  --rw-bg-card: #FFFFFF;
+  --rw-bg-header: #F1F5F9;
+  --rw-border: #E2E8F0;
+  --rw-text-primary: #0F172A;
+  --rw-text-secondary: #475569;
+  --rw-text-muted: #64748B;
+  --rw-radius: 12px;
+  --rw-radius-lg: 16px;
+}
+
+/* ---------- Titres ---------- */
+.reinscription-wizard .wz-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--rw-text-primary);
+  margin: 0 0 4px;
+}
+
+.reinscription-wizard .wz-subtitle-text {
+  color: var(--rw-text-secondary);
+  margin: 0;
+}
+
+/* ---------- Barre de progression ---------- */
+.reinscription-wizard .wz-progress {
+  background: var(--rw-bg-card);
+  border: 1px solid var(--rw-border);
+  border-radius: var(--rw-radius);
+  padding: 16px 20px 18px;
+}
+
+.reinscription-wizard .wz-step-count {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--rw-text-muted);
+  margin-bottom: 10px;
+}
+
+.reinscription-wizard .wz-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.reinscription-wizard .wz-progress-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rw-text-muted);
+}
+
+.reinscription-wizard .wz-progress-label.active {
+  color: var(--rw-blue);
+}
+
+.reinscription-wizard .wz-progress-label.completed {
+  color: var(--rw-emerald);
+}
+
+.reinscription-wizard .wz-progress-steps {
+  display: flex;
+  gap: 4px;
+}
+
+.reinscription-wizard .wz-progress-step {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: #E2E8F0;
+  transition: background .25s ease;
+}
+
+.reinscription-wizard .wz-progress-step.active {
+  background: linear-gradient(90deg, var(--rw-blue) 0%, var(--rw-blue-light) 100%);
+}
+
+.reinscription-wizard .wz-progress-step.completed {
+  background: var(--rw-emerald);
+}
+
+/* ---------- Cards ---------- */
+.reinscription-wizard .wz-card {
+  background: var(--rw-bg-card);
+  border: 1px solid var(--rw-border);
+  border-radius: var(--rw-radius-lg);
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+}
+
+.reinscription-wizard .wz-card-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--rw-border);
+  background: var(--rw-bg-header);
+}
+
+.reinscription-wizard .wz-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--rw-text-primary);
+  display: flex;
+  align-items: center;
+}
+
+.reinscription-wizard .wz-card-icon {
+  color: var(--rw-blue);
+  margin-right: 10px;
+}
+
+.reinscription-wizard .wz-card-body {
+  padding: 24px;
+}
+
+/* ---------- Table des notes ---------- */
+.reinscription-wizard .wz-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.reinscription-wizard .wz-table thead th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--rw-text-muted);
+  background: var(--rw-bg-header);
+  border-bottom: 1px solid var(--rw-border);
+}
+
+.reinscription-wizard .wz-table tbody td {
+  padding: 12px 16px;
+  color: var(--rw-text-secondary);
+  border-bottom: 1px solid var(--rw-border);
+}
+
+.reinscription-wizard .wz-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.reinscription-wizard .wz-strong {
+  font-weight: 500;
+  color: var(--rw-text-primary);
+}
+
+.reinscription-wizard .wz-note-ok {
+  color: var(--rw-emerald);
+  font-weight: 600;
+}
+
+.reinscription-wizard .wz-note-bad {
+  color: var(--rw-red);
+  font-weight: 600;
+}
+
+/* ---------- Badges ---------- */
+.reinscription-wizard .wz-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.reinscription-wizard .wz-badge-ok {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.reinscription-wizard .wz-badge-warn {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.reinscription-wizard .wz-badge-bad {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.reinscription-wizard .wz-badge-neutral {
+  background: #F1F5F9;
+  color: #475569;
+}
+
+/* ---------- Décision annuelle ---------- */
+.reinscription-wizard .wz-decision {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  border-left: 4px solid transparent;
+}
+
+.reinscription-wizard .wz-decision-admis {
+  background: #ECFDF5;
+  border-color: var(--rw-emerald);
+  color: #065F46;
+}
+
+.reinscription-wizard .wz-decision-ajourne {
+  background: #FEF2F2;
+  border-color: var(--rw-red);
+  color: #991B1B;
+}
+
+.reinscription-wizard .wz-decision-attente {
+  background: #FFFBEB;
+  border-color: var(--rw-gold);
+  color: #92400E;
+}
+
+/* ---------- Matières à reprendre ---------- */
+.reinscription-wizard .wz-subtitle {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--rw-text-primary);
+}
+
+.reinscription-wizard .wz-reprendre {
+  margin-top: 28px;
+  border-top: 1px dashed var(--rw-border);
+  padding-top: 20px;
+}
+
+.reinscription-wizard .wz-list-reprendre {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.reinscription-wizard .wz-list-reprendre li {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--rw-border);
+  color: var(--rw-text-secondary);
+  font-size: 14px;
+}
+
+.reinscription-wizard .wz-list-reprendre li:last-child {
+  border-bottom: none;
+}
+
+.reinscription-wizard .wz-list-reprendre li i {
+  color: var(--rw-gold);
+  margin-right: 10px;
+}
+
+.reinscription-wizard .wz-success-line {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #ECFDF5;
+  color: #065F46;
+  font-size: 14px;
+}
+
+.reinscription-wizard .wz-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--rw-text-muted);
+}
+
+.reinscription-wizard .wz-empty i {
+  font-size: 32px;
+  margin-bottom: 12px;
+  display: block;
+  color: #CBD5E1;
+}
+
+.reinscription-wizard .wz-info {
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #EFF6FF;
+  color: #1E40AF;
+  font-size: 14px;
+}
+
+.reinscription-wizard .wz-loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--rw-text-muted);
+  font-size: 14px;
+}
+
+.reinscription-wizard .wz-alert-info {
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border-left: 4px solid var(--rw-blue);
+  background: #EFF6FF;
+  color: #1E3A8A;
+  font-size: 14px;
+}
+
+/* ---------- Checkbox ---------- */
+.reinscription-wizard .wz-checkbox-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--rw-border);
+  border-radius: var(--rw-radius);
+  background: var(--rw-bg-card);
+}
+
+.reinscription-wizard .wz-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.reinscription-wizard .wz-checkbox-group label {
+  flex: 1;
+  cursor: pointer;
+  color: var(--rw-text-secondary);
+  font-size: 14px;
+}
+
+/* ---------- Footer du wizard ---------- */
+.reinscription-wizard .wz-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rw-border);
+}
+
+/* ---------- Écran de succès ---------- */
+.reinscription-wizard .wz-success-icon {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #D1FAE5;
+  color: var(--rw-emerald);
+  box-shadow: 0 10px 24px -8px rgba(5, 150, 105, .35);
+}
+
+.reinscription-wizard .wz-next-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.reinscription-wizard .wz-next-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--rw-border);
+  color: var(--rw-text-secondary);
+  font-size: 14px;
+}
+
+.reinscription-wizard .wz-next-steps li:last-child {
+  border-bottom: none;
+}
+
+.reinscription-wizard .wz-next-steps li i {
+  color: var(--rw-blue);
+  margin-top: 2px;
+  width: 16px;
+  text-align: center;
+}
+
+.reinscription-wizard .wz-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* ---------- Fiche de réinscription (grille de formulaires) ---------- */
+.reinscription-wizard .wz-fiche-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px 32px;
+}
+
+@media (max-width: 768px) {
+  .reinscription-wizard .wz-fiche-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.reinscription-wizard .wz-fiche-field {
+  min-width: 0;
+}
+
+.reinscription-wizard .wz-fiche-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--rw-text-muted);
+  margin-bottom: 4px;
+}
+
+.reinscription-wizard .wz-fiche-value {
+  font-size: 14px;
+  color: var(--rw-text-primary);
+  word-break: break-word;
+}
+
+.reinscription-wizard .wz-fiche-value .form-control {
+  font-size: 14px;
+  color: var(--rw-text-primary);
+}
+
+/* ---------- Grille interactive ---------- */
+.reinscription-wizard .wz-course-check {
+	width: 18px;
+	height: 18px;
+	margin: 0;
+	cursor: pointer;
+}
+
+.reinscription-wizard .wz-course-check:disabled {
+	cursor: not-allowed;
+}
+
+.reinscription-wizard .wz-row-dette td {
+	background: #FEF3C7;
+}
+
+.reinscription-wizard .wz-row-locked td {
+	background: #F1F5F9;
+}
+
+.reinscription-wizard .wz-credit-badges {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin: 0 0 10px;
+}
+
+.reinscription-wizard .wz-alert-danger {
+	margin: 12px 0 0;
+	padding: 12px 16px;
+	border-radius: 10px;
+	border-left: 4px solid var(--rw-red);
+	background: #FEF2F2;
+	color: #991B1B;
+	font-size: 14px;
+}
+
+.reinscription-wizard .wz-info i {
+	flex-shrink: 0;
+	margin-top: 2px;
+}

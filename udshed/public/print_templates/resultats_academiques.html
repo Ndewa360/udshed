@@ -1,0 +1,221 @@
+{% set ctx = data.contexte %}
+{% set lignes = data.lignes %}
+{% set etudiants = data.etudiants %}
+{% set stats = data.statistiques %}
+{% set logo_url = ctx.school_logo %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+    @page {
+        size: A4 landscape;
+        margin: 6mm 6mm 13mm 6mm;
+        @bottom-center {
+            content: "Résultats Académiques — {{ ctx.classe_label }} — Page " counter(page) " / " counter(pages);
+            font-size: 6pt;
+            color: #7f8c8d;
+        }
+        @bottom-right {
+            content: "{{ frappe.utils.formatdate(frappe.utils.today(), 'dd/MM/yyyy') }}";
+            font-size: 6pt;
+            color: #7f8c8d;
+        }
+    }
+
+    body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: #1c2333;
+        margin: 0;
+        padding: 0;
+    }
+
+    .watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-28deg);
+        opacity: 0.05;
+        z-index: 0;
+        pointer-events: none;
+    }
+    .watermark img { width: 240mm; }
+
+    .content { position: relative; z-index: 1; }
+
+    .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 2px solid #1a5276;
+        padding-bottom: 3px;
+        margin-bottom: 5px;
+    }
+    .header .logo-box { width: 20mm; }
+    .header .logo-box img { width: 18mm; max-height: 18mm; }
+    .header .school { flex: 1; text-align: center; }
+    .header .school .name { font-size: 11pt; font-weight: 700; color: #1a5276; text-transform: uppercase; }
+    .header .school .title { font-size: 13pt; font-weight: 800; letter-spacing: 1px; margin-top: 1px; }
+    .header .school .subtitle { font-size: 7.5pt; color: #5d6d7e; margin-top: 1px; }
+    .header .meta-box { width: 20mm; }
+
+    .contexte {
+        display: flex;
+        gap: 4mm;
+        margin-bottom: 4px;
+        font-size: 7.5pt;
+    }
+    .contexte .item {
+        border: 1px solid #d5dbdb;
+        border-radius: 2px;
+        padding: 2px 6px;
+        background: #f8f9fa;
+    }
+    .contexte .item .k { color: #7f8c8d; text-transform: uppercase; font-size: 6pt; }
+    .contexte .item .v { font-weight: 700; }
+
+    .stats {
+        display: flex;
+        gap: 3mm;
+        margin-bottom: 5px;
+    }
+    .stats .card {
+        flex: 1;
+        border: 1px solid #d5dbdb;
+        border-radius: 3px;
+        padding: 3px 6px;
+        text-align: center;
+        background: #fff;
+    }
+    .stats .card .value { font-size: 11pt; font-weight: 800; color: #1a5276; }
+    .stats .card.admis .value { color: #1e8449; }
+    .stats .card.echecs .value { color: #c0392b; }
+    .stats .card .label { font-size: 6.5pt; color: #5d6d7e; text-transform: uppercase; }
+
+    table.resultats {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 7pt;
+    }
+    table.resultats thead th {
+        background: #1a5276;
+        color: #fff;
+        font-size: 6.5pt;
+        text-transform: uppercase;
+        padding: 3px 4px;
+        border: 1px solid #1a5276;
+        text-align: left;
+    }
+    table.resultats td {
+        border: 1px solid #d5dbdb;
+        padding: 2.5px 4px;
+        vertical-align: middle;
+    }
+    table.resultats tr.first-of-student td { border-top: 1.4px solid #85929e; }
+    .num { text-align: center; }
+    .note { text-align: center; font-variant-numeric: tabular-nums; }
+    .rang { text-align: center; font-weight: 700; color: #1a5276; }
+    .etudiant { font-weight: 600; }
+    .matricule { font-family: "Courier New", monospace; font-size: 6.5pt; color: #34495e; }
+
+    .badge {
+        display: inline-block;
+        border-radius: 8px;
+        padding: 1px 6px;
+        font-size: 6pt;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .badge.valide { background: #e8f8f0; color: #1e8449; border: 1px solid #a9dfbf; }
+    .badge.echec { background: #fdedec; color: #c0392b; border: 1px solid #f5b7b1; }
+    .badge.attente { background: #f4f6f7; color: #7f8c8d; border: 1px solid #d5dbdb; }
+
+    .signatures {
+        margin-top: 8mm;
+        display: flex;
+        justify-content: space-between;
+        font-size: 7.5pt;
+    }
+    .signatures .bloc { text-align: center; width: 60mm; }
+    .signatures .ligne { border-bottom: 1px solid #85929e; height: 10mm; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+{% if logo_url %}
+<div class="watermark">
+    <img src="{{ frappe.utils.get_url(logo_url) }}" alt="">
+</div>
+{% endif %}
+<div class="content">
+
+    <div class="header">
+        <div class="logo-box">
+            {% if logo_url %}
+            <img src="{{ frappe.utils.get_url(logo_url) }}" alt="Logo">
+            {% endif %}
+        </div>
+        <div class="school">
+            <div class="name">{{ ctx.school_name }}</div>
+            <div class="title">RÉSULTATS ACADÉMIQUES</div>
+            <div class="subtitle">Consultation et analyse des résultats des étudiants</div>
+        </div>
+        <div class="meta-box"></div>
+    </div>
+
+    <div class="contexte">
+        <div class="item"><span class="k">Classe</span><br><span class="v">{{ ctx.classe_label or "Toutes les classes" }}</span></div>
+        <div class="item"><span class="k">Année académique</span><br><span class="v">{{ ctx.year_label }}</span></div>
+        {% if ctx.semestre %}
+        <div class="item"><span class="k">Semestre</span><br><span class="v">{{ ctx.semestre }}</span></div>
+        {% endif %}
+        <div class="item"><span class="k">Session</span><br><span class="v">{{ {"session_normale": "Session normale", "rattrapage": "Session de rattrapage", "toutes_sessions": "Toutes les sessions"}[session_libelle] }}</span></div>
+        <div class="item"><span class="k">Émis le</span><br><span class="v">{{ frappe.utils.formatdate(frappe.utils.today(), 'dd/MM/yyyy') }}</span></div>
+    </div>
+
+    <div class="stats">
+        <div class="card"><div class="value">{{ stats.total_etudiants }}</div><div class="label">Total étudiants</div></div>
+        <div class="card admis"><div class="value">{{ stats.admis }}</div><div class="label">Admis</div></div>
+        <div class="card echecs"><div class="value">{{ stats.echecs }}</div><div class="label">Échecs</div></div>
+        <div class="card"><div class="value">{{ stats.moyenne_classe }} / 20</div><div class="label">Moyenne classe</div></div>
+        <div class="card"><div class="value">{{ stats.taux_reussite }} %</div><div class="label">Taux de réussite</div></div>
+    </div>
+
+    <table class="resultats">
+        <thead>
+            <tr>
+                <th style="width:9mm;" class="num">Rang</th>
+                <th style="width:22mm;">Matricule</th>
+                <th>Étudiant</th>
+                <th>Cours</th>
+                <th style="width:14mm;" class="num">Moy. CC</th>
+                <th style="width:14mm;" class="num">Examen</th>
+                <th style="width:15mm;" class="num">Moy. Finale</th>
+                <th style="width:20mm;">Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in lignes %}
+            {% set badge = "valide" if ligne.statut_ue == "Validé" else ("echec" if ligne.note_finale is not none else "attente") %}
+            <tr class="{{ 'first-of-student' if loop.index == 1 or lignes[loop.index0 - 1].student != ligne.student else '' }}">
+                <td class="rang">{{ ligne.rang }}</td>
+                <td class="matricule">{{ ligne.matricule }}</td>
+                <td class="etudiant">{{ ligne.nom_complet }}</td>
+                <td>{{ ligne.cours_code }} — {{ ligne.cours_intitule }}</td>
+                <td class="note">{{ "%.2f"|format(ligne.note_cc) if ligne.note_cc is not none else "—" }}</td>
+                <td class="note">{{ "%.2f"|format(ligne.note_examen) if ligne.note_examen is not none else "—" }}</td>
+                <td class="note"><b>{{ "%.2f"|format(ligne.note_finale) if ligne.note_finale is not none else "—" }}</b></td>
+                <td><span class="badge {{ badge }}">{{ ligne.statut_ue }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="signatures">
+        <div class="bloc"><div class="ligne"></div>Enseignant responsable</div>
+        <div class="bloc"><div class="ligne"></div>Responsable pédagogique</div>
+        <div class="bloc"><div class="ligne"></div>Cachet &amp; Date</div>
+    </div>
+
+</div>
+</body>
+</html>

@@ -15,7 +15,7 @@ frappe.ui.form.on("Course", {
             frm.refresh_field('course_levels');
             return;
         }
-
+ 
         // frappe.call({
         //     method: 'frappe.client.get_list',
         //     args: {

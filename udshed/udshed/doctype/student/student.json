@@ -1,0 +1,198 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "format:{matricule}",
+ "creation": "2026-07-10 14:13:47.941675",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student_section",
+  "matricule",
+  "nom",
+  "prenom",
+  "cycle",
+  "niveau_actuel",
+  "email",
+  "utilisateur",
+  "sexe",
+  "section_break_zydq",
+  "phone",
+  "column_break_rbb6",
+  "parent_phone",
+  "email_parent",
+  "section_break_wffz",
+  "birth_date",
+  "birth_place",
+  "column_break_sp3i",
+  "photo",
+  "section_break_qezh",
+  "filiere"
+ ],
+ "fields": [
+  {
+   "fieldname": "student_section",
+   "fieldtype": "Section Break",
+   "label": "Student"
+  },
+   {
+    "fetch_if_empty": 1,
+    "fieldname": "matricule",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Matricule",
+    "read_only": 1
+   },
+   {
+    "fieldname": "nom",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Nom",
+    "reqd": 1
+   },
+   {
+    "fetch_if_empty": 1,
+    "fieldname": "prenom",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Pr\u00e9nom",
+    "reqd": 1
+   },
+   {
+    "default": "Licence",
+    "fieldname": "cycle",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "label": "Cycle",
+    "options": "Licence\nBTS\nMaster",
+    "reqd": 1
+   },
+   {
+    "fetch_if_empty": 1,
+    "fieldname": "email",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Email",
+    "options": "Email",
+    "reqd": 1
+   },
+   {
+    "fieldname": "utilisateur",
+    "fieldtype": "Link",
+    "label": "Utilisateur",
+    "options": "User"
+   },
+   {
+    "fieldname": "sexe",
+    "fieldtype": "Select",
+    "label": "sexe",
+    "options": "Homme\nFemme",
+    "reqd": 1
+   },
+   {
+    "fieldname": "section_break_zydq",
+    "fieldtype": "Section Break"
+   },
+   {
+    "fieldname": "phone",
+    "fieldtype": "Phone",
+    "label": "phone",
+    "reqd": 1
+   },
+   {
+    "fieldname": "column_break_rbb6",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "parent_phone",
+    "fieldtype": "Phone",
+    "label": "T\u00e9l\u00e9phone parent"
+   },
+   {
+    "fieldname": "email_parent",
+    "fieldtype": "Data",
+    "label": "Email parent",
+    "options": "Email"
+   },
+   {
+    "fieldname": "section_break_wffz",
+    "fieldtype": "Section Break"
+   },
+   {
+    "fieldname": "birth_date",
+    "fieldtype": "Date",
+    "label": "birthdate",
+    "reqd": 1
+   },
+   {
+    "fieldname": "birth_place",
+    "fieldtype": "Data",
+    "label": "lieu de naissance",
+    "reqd": 1
+   },
+   {
+    "fieldname": "column_break_sp3i",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fieldname": "photo",
+    "fieldtype": "Attach Image",
+    "label": "photo"
+   },
+   {
+    "fieldname": "section_break_qezh",
+    "fieldtype": "Section Break"
+   },
+   {
+    "fieldname": "filiere",
+    "fieldtype": "Link",
+    "label": "fili\u00e8re",
+    "options": "Field of study",
+    "reqd": 1
+   },
+   {
+    "description": "Mis \u00e0 jour automatiquement apr\u00e8s chaque r\u00e9inscription",
+    "fieldname": "niveau_actuel",
+    "fieldtype": "Data",
+    "label": "Niveau actuel",
+    "read_only": 1
+   }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-22 13:49:31.347521",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Student",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+"role": "System Manager",
+    "share": 1,
+    "write": 1
+   },
+   {
+    "email": 1,
+    "export": 1,
+    "print": 1,
+    "read": 1,
+    "report": 1,
+    "role": "student",
+    "share": 1
+   }
+  ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

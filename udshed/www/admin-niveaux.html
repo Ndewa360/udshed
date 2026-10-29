@@ -1,0 +1,190 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Gestion des niveaux{% endblock %}
+
+{% block page_content %}
+<link rel="stylesheet" href="/assets/udshed/css/reinscription.css">
+
+<div class="layout">
+  <!-- Sidebar Admin -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">Udshed</div>
+    <ul class="sidebar-menu">
+      <li><a href="/app"><span class="icon">📊</span> Tableau de bord</a></li>
+      <li><a href="/app/student"><span class="icon">👨‍🎓</span> Gestion des étudiants</a></li>
+      <li><a href="/admin-niveaux" class="active"><span class="icon">📚</span> Gestion des niveaux</a></li>
+      <li><a href="/app/course"><span class="icon">📖</span> Gestion des matières</a></li>
+      <li><a href="/app/academic-reregistration"><span class="icon">📝</span> Gestion des inscriptions</a></li>
+    </ul>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Header -->
+    <header class="header">
+      <h1 class="header-title">Gestion des niveaux</h1>
+      <button class="btn btn-primary" onclick="openModal()">+ Ajouter</button>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+      {% for filiere in levels_data %}
+      <div class="card" style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <h2 class="card-title">{{ filiere.label or filiere.name }}</h2>
+        </div>
+
+        {% if filiere.levels %}
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Ordre</th>
+                <th>Code</th>
+                <th>Nom</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for level in filiere.levels %}
+              <tr>
+                <td>{{ level.order }}</td>
+                <td>{{ level.cycle or '-' }}</td>
+                <td>{{ level.level }}</td>
+                <td>
+                  <div class="actions-row">
+                    <button class="icon-btn" title="Modifier" onclick="editLevel('{{ filiere.name }}', '{{ level.name }}')">
+                      ✏️
+                    </button>
+                    <button class="icon-btn" title="Supprimer" onclick="deleteLevel('{{ filiere.name }}', '{{ level.name }}')">
+                      🗑️
+                    </button>
+                    {% if not loop.first %}
+                    <button class="icon-btn" title="Monter" onclick="moveLevel('{{ filiere.name }}', '{{ level.name }}', 'up')">↑</button>
+                    {% endif %}
+                    {% if not loop.last %}
+                    <button class="icon-btn" title="Descendre" onclick="moveLevel('{{ filiere.name }}', '{{ level.name }}', 'down')">↓</button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p style="color: var(--text-secondary);">Aucun niveau configuré</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ajouter -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Ajouter un niveau</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Filière</label>
+        <select class="form-control" id="modal-filiere">
+          <option value="">Sélectionner une filière</option>
+          {% for filiere in levels_data %}
+          <option value="{{ filiere.name }}">{{ filiere.label or filiere.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Code (Cycle)</label>
+        <input type="text" class="form-control" id="modal-cycle" placeholder="Ex: L1, L2, M1">
+      </div>
+      <div class="form-group">
+        <label>Nom</label>
+        <input type="text" class="form-control" id="modal-level" placeholder="Ex: Licence 1">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">ANNULER</button>
+      <button class="btn btn-primary" onclick="saveLevel()">ENREGISTRER</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openModal() {
+  document.getElementById('add-modal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('add-modal').classList.remove('active');
+}
+
+function saveLevel() {
+  const filiere = document.getElementById('modal-filiere').value;
+  const cycle = document.getElementById('modal-cycle').value;
+  const level = document.getElementById('modal-level').value;
+
+  if (!filiere || !level) {
+    frappe.msgprint('Veuillez remplir tous les champs');
+    return;
+  }
+
+  frappe.call({
+    method: 'udshed.api.reregistration.add_level',
+    args: { filiere, level, cycle },
+    callback: function(r) {
+      if (r.message && r.message.status) {
+        window.location.reload();
+      }
+    }
+  });
+}
+
+function deleteLevel(filiere, level_name) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer ce niveau ?')) return;
+
+  frappe.call({
+    method: 'udshed.api.reregistration.delete_level',
+    args: { filiere, level_name },
+    callback: function(r) {
+      if (r.message && r.message.status) {
+        window.location.reload();
+      }
+    }
+  });
+}
+
+function moveLevel(filiere, level_name, direction) {
+  // Récupérer l'ordre actuel et réordonner
+  frappe.call({
+    method: 'udshed.api.reregistration.get_all_levels',
+    args: { filiere },
+    callback: function(r) {
+      if (!r.message || !r.message.filieres || !r.message.filieres.length) return;
+      const levels = r.message.filieres[0].levels;
+      const idx = levels.findIndex(l => l.name === level_name);
+      if (idx === -1) return;
+
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= levels.length) return;
+
+      const temp = levels[idx];
+      levels[idx] = levels[swapIdx];
+      levels[swapIdx] = temp;
+
+      frappe.call({
+        method: 'udshed.api.reregistration.reorder_levels',
+        args: { filiere, level_names: levels.map(l => l.name) },
+        callback: function() {
+          window.location.reload();
+        }
+      });
+    }
+  });
+}
+</script>
+{% endblock %}

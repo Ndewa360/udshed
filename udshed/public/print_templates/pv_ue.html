@@ -1,0 +1,372 @@
+{# Procès-verbal récapitulatif d'une UE.
+   Colonnes = matières de l'UE (grille d'enseignement), pondérées par leurs
+   crédits. Mise en page A4 paysage ; WeasyPrint ne gérant pas `display:flex`
+   de façon fiable, la mise en page repose sur des tables imbriquées. #}
+{% set ctx = data.context %}
+{% set ue = data.ue %}
+{% set matieres = data.matieres %}
+{% set etudiants = data.etudiants %}
+{% set stats = data.statistiques %}
+{% set logo_file = ctx.logo_file %}
+{% set w_num = 10 %}
+{% set w_matricule = 26 %}
+{% set w_nom = 78 %}
+{% set w_matiere = 30 %}
+{% set w_std = 20 %}
+{% set w_large = 404 %}
+{% set n_mat = (matieres | length) %}
+{% set largeur_matieres = (n_mat * w_matiere) %}
+{% set w_reste = ((w_large - w_num - w_matricule - w_nom - largeur_matieres - (2 * w_std)) / 2) %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+    @page {
+        size: A4 landscape;
+        margin: 10mm 12mm;
+        @bottom-center {
+            content: "{{ ctx.school_name or 'UNIVERSITY' }} — {{ _('Procès-verbal d\'UE') }} — {{ ctx.reference_no }} — Page " counter(page) " / " counter(pages);
+            font-size: 7pt;
+            color: #7f8c8d;
+        }
+        @bottom-right {
+            content: "{{ frappe.utils.formatdate(ctx.date_emission, 'dd/mm/yyyy') }}";
+            font-size: 7pt;
+            color: #7f8c8d;
+        }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        color: #111;
+        margin: 0;
+        padding: 0;
+    }
+
+    .content { position: relative; z-index: 1; }
+
+    /* ---------- Filigrane ---------- */
+    .watermark {
+        position: fixed;
+        top: 55%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-28deg);
+        z-index: 0;
+    }
+    .watermark img { width: 300mm; opacity: 0.05; }
+
+    /* ---------- En-tête ---------- */
+    table.info-header {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+    table.info-header td {
+        border: 1px solid #999;
+        background: #e6e6e6;
+        text-align: center;
+        padding: 8px 4px;
+        font-weight: bold;
+        font-size: 13pt;
+    }
+    table.info-header td.annee { font-size: 12pt; line-height: 1.25; }
+    table.info-header td.annee span { display: block; font-size: 13pt; margin-top: 2px; }
+
+    div.ue-title {
+        border: 1px solid #999;
+        border-top: none;
+        background: #f5f5f5;
+        text-align: center;
+        font-weight: bold;
+        font-size: 11pt;
+        padding: 6px;
+    }
+
+    /* ---------- Zone statistiques ---------- */
+    table.stats-zone {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 12px 0;
+        margin: 4px -12px 6px -12px;
+    }
+    table.stats-zone td {
+        vertical-align: top;
+        padding: 0;
+    }
+    table.stats-zone td.zone-credits { width: 52%; }
+    table.stats-zone td.zone-cours { width: 48%; }
+
+    div.credits-title {
+        width: 130px;
+        border: 1px solid #999;
+        background: #f0f0f0;
+        color: red;
+        font-weight: bold;
+        text-align: center;
+        font-size: 9pt;
+        padding: 2px 0;
+        margin-bottom: -1px;
+    }
+
+    table.credits-table {
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+    }
+    table.credits-table th,
+    table.credits-table td {
+        border: 1px solid #999;
+        text-align: center;
+        padding: 3px 2px;
+        font-size: 9pt;
+    }
+    table.credits-table th {
+        background: #dbe9f5;
+        color: #1a3fa0;
+        font-weight: bold;
+    }
+
+    table.cours-table {
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+    }
+    table.cours-table th,
+    table.cours-table td {
+        border: 1px solid #999;
+        text-align: center;
+        padding: 2px 2px;
+        font-size: 8pt;
+    }
+    table.cours-table th {
+        background: #dbe9f5;
+        color: #1a3fa0;
+        font-weight: bold;
+    }
+    table.cours-table td.titre {
+        background: #dbe9f5;
+        color: #1a3fa0;
+        font-weight: bold;
+    }
+
+    /* ---------- Tableau principal ---------- */
+    table.notes-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+    table.notes-table th,
+    table.notes-table td {
+        border: 1px solid #999;
+        text-align: center;
+        padding: 3px 2px;
+        font-size: 9pt;
+    }
+    table.notes-table thead th {
+        background: #dbe9f5;
+        color: #1a3fa0;
+        font-weight: bold;
+        font-size: 8.5pt;
+    }
+    table.notes-table thead th.ue-note { background: #cfe0f2; }
+    table.notes-table tbody td { height: 18px; }
+    table.notes-table tbody td.nom {
+        text-align: left;
+        padding-left: 5px;
+    }
+    table.notes-table tbody tr.encours td { background: #fafafa; }
+    table.notes-table tbody td.non-valide {
+        background: #fdecea;
+        color: #b3261e;
+        font-weight: bold;
+    }
+    table.notes-table tbody td.rattrapage { color: #7b1fa2; }
+    table.notes-table tbody td.vide { color: #bbb; }
+
+    /* ---------- Signatures ---------- */
+    div.signatures-title {
+        text-align: center;
+        font-size: 8pt;
+        font-weight: bold;
+        color: #1a5276;
+        letter-spacing: 0.5px;
+        margin: 8mm 0 6mm 0;
+        border-bottom: 1px solid #1a5276;
+        padding-bottom: 1mm;
+    }
+    table.signatures {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 6px 0;
+        table-layout: fixed;
+    }
+    table.signatures td {
+        border: 1px solid #999;
+        background: #f0f0f0;
+        text-align: center;
+        font-weight: bold;
+        font-size: 9pt;
+        padding: 8px 2px;
+    }
+</style>
+</head>
+<body>
+    {% if logo_file %}
+    <div class="watermark"><img src="{{ logo_file }}" alt=""></div>
+    {% endif %}
+
+    <div class="content">
+
+        {# ---------------- EN-TÊTE ---------------- #}
+        <table class="info-header">
+            <tr>
+                <td class="den">{{ ctx.filiere_code }}</td>
+                <td class="annee">
+                    {{ _("Année Académique") }}
+                    <span>{{ ctx.year_label or ctx.academic_year }}</span>
+                </td>
+                <td class="semestre">{{ _("SEM") }}{{ ctx.semestre_numero }}</td>
+            </tr>
+        </table>
+
+        <div class="ue-title">
+            {{ _("PROCES VERBAL DE L'UE :") }}
+            {{ ue.intitule }}{% if ue.code %} ({{ ue.code }}){% endif %}
+        </div>
+
+        {# ---------------- STATISTIQUES ---------------- #}
+        <table class="stats-zone">
+            <tr>
+                <td class="zone-credits">
+                    <div class="credits-title">{{ _("Crédits:") }} {{ ue.credits }}</div>
+                    <table class="credits-table">
+                        <tr>
+                            <th>{{ _("Inscrits") }}</th>
+                            <th>{{ _("Admis") }}</th>
+                            <th>{{ _("Echecs") }}</th>
+                            <th>{{ _("En attente") }}</th>
+                            <th>{{ _("Taux de réussite") }}</th>
+                        </tr>
+                        <tr>
+                            <td>{{ stats.inscrits }}</td>
+                            <td>{{ stats.admis }}</td>
+                            <td>{{ stats.echecs }}</td>
+                            <td>{{ stats.en_attente }}</td>
+                            <td>{% if stats.taux_reussite is number %}{{ "%.2f" | format(stats.taux_reussite) }}%{% endif %}</td>
+                        </tr>
+                    </table>
+                </td>
+                <td class="zone-cours">
+                    <table class="cours-table">
+                        <tr>
+                            <td colspan="4" class="titre">{{ _("Matières de l'UE (grille d'enseignement) :") }}</td>
+                        </tr>
+                        <tr>
+                            <th style="width: 18%">{{ _("Code") }}</th>
+                            <th style="width: 52%">{{ _("Matière") }}</th>
+                            <th style="width: 15%">{{ _("Crédits") }}</th>
+                            <th style="width: 15%">{{ _("Poids") }}</th>
+                        </tr>
+                        {% for m in matieres %}
+                        <tr>
+                            <td>{{ m.code }}</td>
+                            <td style="text-align: left; padding-left: 4px;">{{ m.intitule }}</td>
+                            <td>{% if m.credits is number %}{{ "%g" | format(m.credits) }}{% endif %}</td>
+                            <td>
+                                {% if m.credits is number and ue and ue.credits is number and ue.credits %}
+                                {{ "%.1f" | format((m.credits / ue.credits) * 100) }}%
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        {# ---------------- TABLEAU DES NOTES ---------------- #}
+        <table class="notes-table">
+            <colgroup>
+                <col style="width: {{ w_num }}mm;">
+                <col style="width: {{ w_matricule }}mm;">
+                <col style="width: {{ w_nom }}mm;">
+                {% for m in matieres %}<col style="width: {{ w_matiere }}mm;">{% endfor %}
+                <col style="width: {{ w_reste }}mm;">
+                <col style="width: {{ w_std }}mm;">
+                <col style="width: {{ w_std }}mm;">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th rowspan="2">N°</th>
+                    <th rowspan="2">{{ _("Matricule") }}</th>
+                    <th rowspan="2">{{ _("Nom et Prénoms") }}</th>
+                    {% for m in matieres %}
+                    <th>{{ m.code or m.teaching_unit }}</th>
+                    {% endfor %}
+                    <th rowspan="2" class="ue-note">{{ _("Note UE") }}</th>
+                    <th rowspan="2">{{ _("Grade") }}</th>
+                    <th rowspan="2">{{ _("Points") }}</th>
+                </tr>
+                <tr>
+                    {% for m in matieres %}
+                    <th class="ue-note">{% if m.credits is number %}{{ "%g" | format(m.credits) }}{% endif %} Cr</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for et in etudiants %}
+                <tr{% if et.note_ue_pct is none %} class="encours"{% endif %}>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ et.matricule }}</td>
+                    <td class="nom">{{ (et.nom or '').upper() }} {{ et.prenom or '' }}</td>
+                    {% for m in matieres %}
+                        {% set n = et.notes.get(m.teaching_unit) %}
+                        <td{% if n and n.note_pct is not none and not n.valide %} class="non-valide"{% elif n and n.note_pct is none %} class="vide"{% endif %}>
+                            {%- if n and n.note_pct is number -%}
+                                {{ "%.2f" | format(n.note_pct) }}{% if n.est_rattrapage %}<sup>R</sup>{% endif %}
+                            {%- endif -%}
+                        </td>
+                    {% endfor %}
+                    <td class="ue-note">
+                        {%- if et.note_ue_pct is number -%}{{ "%.2f" | format(et.note_ue_pct) }}{%- endif -%}
+                    </td>
+                    <td>{{ et.grade or '' }}</td>
+                    <td>{% if et.point is number %}{{ "%.2f" | format(et.point) }}{% endif %}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="{{ 6 + (matieres | length) }}">{{ _("Aucun étudiant inscrit dans cette UE.") }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {# ---------------- SIGNATURES ---------------- #}
+        <div class="signatures-title">{{ _("Espace Signature") }}</div>
+        <table class="signatures">
+            <tr>
+                <td>{{ _("VICE DOYEN") }}</td>
+                <td>{{ _("COORDONATEUR") }}</td>
+                <td>{{ _("RESP ACADEMIQUE") }}</td>
+                <td>{{ _("CHEF UNITE") }}</td>
+            </tr>
+        </table>
+
+        <div style="margin-top: 4mm; font-size: 7pt; color: #7f8c8d; text-align: center;">
+            {{ _("Moyenne de l'UE pondérée par les crédits des matières") }} &mdash;
+            {% if stats.seuils %}
+                {{ _("seuil de validation") }} :
+                {% for s in stats.seuils %}{% if s is number %}{{ "%.0f" | format(s) }}%{{ " / " if not loop.last }}{% endif %}{% endfor %}
+            {% else %}
+                {{ _("seuil de validation") }} : {{ _("défini dans Udshed Setting") }}
+            {% endif %}
+            &mdash; {{ _("la meilleure note entre session normale et rattrapage est retenue") }}
+            &mdash; {{ _("R") }} = {{ _("note obtenue en rattrapage") }}
+        </div>
+
+    </div>
+</body>
+</html>

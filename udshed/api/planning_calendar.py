@@ -1,5 +1,6 @@
 import frappe
 import json
+from frappe import _
 from datetime import date
 import udshed.api.course as course
 from frappe.query_builder import DocType
@@ -9,6 +10,14 @@ import udshed.utils.time_utils as time_utils
 
 @frappe.whitelist()
 def get_week_planning(academic_year,week_start,filiere=None, niveau=None,teacher=None):
+    try:
+        return _get_week_planning_impl(academic_year,week_start,filiere,niveau,teacher)
+    except Exception:
+        frappe.log_error(" planning_calendar get_week_planning")
+        frappe.throw(_("Erreur lors du chargement du planning."))
+
+
+def _get_week_planning_impl(academic_year,week_start,filiere=None, niveau=None,teacher=None):
     PlanningItem = DocType("Planning Item")
     TeachingUnit = DocType("Teaching Unit")
     CourseNiveauFiliere = DocType("Course Field of study level item")
@@ -51,30 +60,61 @@ def get_week_planning(academic_year,week_start,filiere=None, niveau=None,teacher
     if teacher:
         query = query.where(CourseEnseignant.enseignant == teacher)
 
-    data =  query.run(as_dict=True)
-    # data = [item for item in data if item.date >= date_week_start and item.date <= frappe.utils.add_days(date_week_start, 7)]
+    data = query.run(as_dict=True)
+
+    # Déduplication : le JOIN avec les deux tables enfants (CourseNiveauFiliere
+    # et CourseEnseignant) crée un produit cartésien. On regroupe par Planning
+    # Item et on collecte les enseignants uniques.
+    seen = {}
+    for row in data:
+        pid = row.name
+        if pid not in seen:
+            row._teachers = [row.enseignant] if row.enseignant else []
+            seen[pid] = row
+        else:
+            if row.enseignant and row.enseignant not in seen[pid]._teachers:
+                seen[pid]._teachers.append(row.enseignant)
+
+    data = list(seen.values())
+
+    teacher_cache = {}
+    def _format_teacher(t_name):
+        if not t_name:
+            return ""
+        if t_name not in teacher_cache:
+            try:
+                t_doc = frappe.get_doc("Teacher", {"name": t_name})
+                teacher_cache[t_name] = (
+                    f"{t_doc.grade} {t_doc.first_name} {t_doc.last_name}"
+                )
+            except Exception:
+                teacher_cache[t_name] = t_name
+        return teacher_cache[t_name]
+
     teacher_doc = None
     if teacher:
-        teacher_doc = frappe.get_doc("Teacher",{"name":teacher})
+        teacher_doc = frappe.get_doc("Teacher", {"name": teacher})
+        teacher_cache[teacher] = (
+            f"{teacher_doc.grade} {teacher_doc.first_name} {teacher_doc.last_name}"
+        )
 
     for doc in data:
-        if not teacher:
-            teacher_doc = frappe.get_doc("Teacher", {"name":doc.enseignant})
-        doc["enseignant"] = f"{teacher_doc.grade} {teacher_doc.first_name} {teacher_doc.last_name}"
+        doc["teachers"] = [_format_teacher(t) for t in (doc._teachers or [])]
+        doc["enseignant"] = doc["teachers"][0] if doc["teachers"] else ""
+        del doc["_teachers"]
 
-        cours  = frappe.get_doc("Course",doc.course)
+        cours = frappe.get_doc("Course", doc.course)
         doc["cours_label"] = cours.intitule
 
-        niveau_doc = frappe.get_doc("Field of study Level",doc.niveau)
+        niveau_doc = frappe.get_doc("Field of study Level", doc.niveau)
         doc["niveau_label"] = niveau_doc.level
 
-        # doc["period"] = frappe.get_doc("Planning Period",doc.period)
         if doc.salle:
-            doc["salle"] = (frappe.get_doc("Room",doc.salle)).code
+            doc["salle"] = (frappe.get_doc("Room", doc.salle)).code
         if doc.batiment:
             doc["batiment"] = (frappe.get_doc("Building", doc.batiment)).code
 
-    return  data
+    return data
 
 
 @frappe.whitelist()
@@ -218,24 +258,54 @@ def update_planning(planning_item_name,academic_year,cours,course_type, day_of_w
 
 @frappe.whitelist()
 def delete_planning(planning_name):
-    frappe.delete_doc("Planning Item",planning_name)
+    try:
+        frappe.delete_doc("Planning Item",planning_name)
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(" planning_calendar delete_planning")
+        frappe.throw(_("Erreur lors de la suppression du planning."))
     return True
+
+def _date_debut(valeur):
+    """Date demandee, qu'elle arrive en chaine, en `date` ou en `datetime`.
+
+    Le filtre `week_start` vient de l'ecran en « AAAA-MM-JJ », mais un
+    `datetime` arrivait aussi (export, appel programmatique) et faisait
+    echouer `strptime` sur « unconverted data remains: T00:00:00 ».
+    """
+    if isinstance(valeur, datetime):
+        return valeur.date()
+    if isinstance(valeur, date):
+        return valeur
+    if isinstance(valeur, str) and "T" in valeur:
+        return datetime.fromisoformat(valeur).date()
+    return datetime.strptime(str(valeur).strip(), "%Y-%m-%d").date()
+
 
 @frappe.whitelist()
 def get_planning_type(field_of_study_level,week_start,academic_year):
-    week_start_date = datetime.strptime(week_start, "%Y-%m-%d")
+    try:
+        # Aucun niveau sélectionné (planning « toutes classes ») : on ne peut
+        # pas rattacher la semaine à une session d'examen, on reste en « Cours ».
+        if not field_of_study_level:
+            return "Cours"
 
-    session_exam = frappe.get_all("Session Examen", filters=[
-            ["academic_year", "=", academic_year], 
-            ["date_debut", "<=",    week_start_date], 
-            ["date_de_fin", ">=", week_start_date],
-            ["Session Examen Field of study Level", "niveau", "=", field_of_study_level]
-        ],
-        fields = ["name", "calendar"],
-        distinct = True,
-    )
+        week_start_date = _date_debut(week_start)
 
-    if len(session_exam) > 0:
-        return "Examen"
-    return "Cours"
+        session_exam = frappe.get_all("Session Examen", filters=[
+                ["academic_year", "=", academic_year], 
+                ["date_debut", "<=",    week_start_date], 
+                ["date_de_fin", ">=", week_start_date],
+                ["Session Examen Field of study Level", "niveau", "=", field_of_study_level]
+            ],
+            fields = ["name", "calendar"],
+            distinct = True,
+        )
+
+        if len(session_exam) > 0:
+            return "Examen"
+        return "Cours"
+    except Exception:
+        frappe.log_error(" planning_calendar get_planning_type")
+        frappe.throw(_("Erreur lors de la détermination du type de planning."))
 

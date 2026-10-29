@@ -1,0 +1,33 @@
+{
+ "content": null,
+ "creation": "2026-09-13 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "pen-to-square",
+ "idx": 0,
+ "modified": "2026-09-13 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "correction-copies",
+ "owner": "Administrator",
+ "page_name": "correction-copies",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Coordonateur"
+  },
+  {
+   "role": "Correcteur"
+  },
+  {
+   "role": "Teacher"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Correction des copies"
+}

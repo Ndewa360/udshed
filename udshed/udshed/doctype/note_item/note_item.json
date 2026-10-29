@@ -1,0 +1,92 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-07-11 07:25:50.744505",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "note_item_section",
+  "composante",
+  "pourcentage",
+  "note_obtenue",
+  "note_sur",
+  "contribution_",
+  "teacher_unit"
+ ],
+ "fields": [
+  {
+   "fieldname": "composante",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Composante",
+   "options": "Controle continu (CC)\nExamen\nTravail pratique (TP)\nRapport\nComp\u00e9tences",
+   "reqd": 1
+  },
+  {
+   "fieldname": "pourcentage",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Pourcentage",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "note_obtenue",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Note obtenue",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fetch_if_empty": 1,
+   "fieldname": "note_sur",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Note sur",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fetch_if_empty": 1,
+   "fieldname": "contribution_",
+   "fieldtype": "Percent",
+   "label": "Contribution (%)",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "note_item_section",
+   "fieldtype": "Section Break",
+   "label": "Note item"
+  },
+  {
+   "fieldname": "teacher_unit",
+   "fieldtype": "Link",
+   "label": "teacher unit",
+   "options": "Teaching Unit",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-14 09:10:14.940792",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Note item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

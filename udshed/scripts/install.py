@@ -68,6 +68,10 @@ def load_workspace():
     )
     load_json("Workspace", path)
 
+def create_releve_notes_pf():
+    from udshed.scripts.create_print_format import create_releve_notes_print_format
+    create_releve_notes_print_format()
+
 def load_sidebar():
     path = os.path.join(
         frappe.get_app_path("udshed"),
@@ -77,5 +81,6 @@ def load_sidebar():
     
 def after_install():
     create_default_data()
+    create_releve_notes_pf()
     # load_workspace()
     # load_sidebar()

@@ -7,13 +7,13 @@ def get_data():
             "type": "module",
             "label": _("UDShed"),
             "color": "blue",
-            "icon": "calendar",
+            "icon": "octicon octicon-calendar",
             "items": [
                 {
                     "type": "page",
                     "name": "planning-academique",
                     "label": _("Planning académique"),
-                    "icon": "calendar",
+                    "icon": "octicon octicon-calendar",
                     "description": _("Gestion du planning académique")
                 }
             ]

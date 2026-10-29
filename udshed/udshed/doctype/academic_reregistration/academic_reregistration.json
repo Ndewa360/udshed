@@ -1,0 +1,448 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "RER-.####",
+ "creation": "2026-07-16 12:55:57.808962",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_identite",
+  "student",
+  "dossier_origine",
+  "column_break_id1",
+  "nom_prenom",
+  "email",
+  "date_naissance",
+  "lieu_naissance",
+  "telephone",
+  "section_inscription",
+  "reinscription_session",
+  "academic_year",
+  "statut",
+  "column_break_insc1",
+  "filiere",
+  "niveau",
+  "semestre",
+  "section_etudes",
+  "dernier_etablissement",
+  "diplome_entree",
+  "column_break_et1",
+  "matricule_diplome",
+  "section_academique",
+  "niveau_precedent",
+  "decision_notes",
+  "column_break_ac1",
+  "admission_master_accordee",
+  "section_pere",
+  "nom_prenom_pere",
+  "pere_telephone",
+  "column_break_pr1",
+  "pere_profession",
+  "pere_ville",
+  "section_mere",
+  "nom_prenom_mere",
+  "telephone_mere",
+  "column_break_mr1",
+  "profession_mere",
+  "mere_ville",
+  "section_sponsor",
+  "nom_prenom_sponsor",
+  "telephone_sponsor",
+  "column_break_sp1",
+  "profession_sponsor",
+  "sponsor_ville",
+  "section_activites",
+  "activites_sportives",
+  "activites_associatives",
+  "column_break_act1",
+  "activites_culturelles",
+  "connaissances_informatiques",
+  "matieres_inscrites_section",
+  "cours_inscrits",
+  "resultats_annee_precedente_section",
+  "resultats_precedents",
+  "fiche_telechargee"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_identite",
+   "fieldtype": "Section Break",
+   "label": "Identit\u00e9 de l\u2019\u00e9tudiant"
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u00c9tudiant",
+   "options": "Student",
+   "reqd": 1
+  },
+  {
+   "fieldname": "dossier_origine",
+   "fieldtype": "Link",
+   "label": "Dossier d\u2019origine",
+   "options": "Session Inscription Candidate",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_id1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "nom_prenom",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nom et Pr\u00e9nom",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "date_naissance",
+   "fieldtype": "Date",
+   "label": "Date de naissance",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lieu_naissance",
+   "fieldtype": "Data",
+   "label": "Lieu de naissance",
+   "read_only": 1
+  },
+  {
+   "fieldname": "telephone",
+   "fieldtype": "Phone",
+   "label": "T\u00e9l\u00e9phone",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_inscription",
+   "fieldtype": "Section Break",
+   "label": "Inscription"
+  },
+  {
+   "fieldname": "reinscription_session",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Session de r\u00e9inscription",
+   "options": "Session Reinscription",
+   "reqd": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Ann\u00e9e acad\u00e9mique",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "default": "Valid\u00e9e",
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Statut",
+   "options": "Valid\u00e9e",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_insc1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Fili\u00e8re",
+   "options": "Field of study",
+   "reqd": 1
+  },
+  {
+   "fieldname": "niveau",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Niveau actuel",
+   "reqd": 1
+  },
+  {
+   "fieldname": "semestre",
+   "fieldtype": "Select",
+   "label": "Semestre",
+   "options": "Semestre 1\nSemestre 2\nLes deux",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_etudes",
+   "fieldtype": "Section Break",
+   "label": "\u00c9tudes ant\u00e9rieures"
+  },
+  {
+   "fieldname": "dernier_etablissement",
+   "fieldtype": "Data",
+   "label": "Dernier \u00e9tablissement fr\u00e9quent\u00e9"
+  },
+  {
+   "fieldname": "diplome_entree",
+   "fieldtype": "Select",
+   "label": "Dipl\u00f4me d\u2019entr\u00e9e",
+   "options": "\nBaccalaur\u00e9at\nBTS\nLicense\nMaster\nGCE\nAutre"
+  },
+  {
+   "fieldname": "column_break_et1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "matricule_diplome",
+   "fieldtype": "Data",
+   "label": "Matricule du dipl\u00f4me"
+  },
+  {
+   "fieldname": "section_academique",
+   "fieldtype": "Section Break",
+   "label": "Informations acad\u00e9miques"
+  },
+  {
+   "description": "Rempli automatiquement selon l\u2019ordre des niveaux",
+   "fieldname": "niveau_precedent",
+   "fieldtype": "Data",
+   "label": "Niveau pr\u00e9c\u00e9dent",
+   "read_only": 1
+  },
+  {
+   "description": "D\u00e9cision du module de gestion de notes (Admis / Ajourn\u00e9 / En attente)",
+   "fieldname": "decision_notes",
+   "fieldtype": "Data",
+   "label": "D\u00e9cision des r\u00e9sultats",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ac1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "L\u2019entr\u00e9e en Master n\u00e9cessite la validation de la Licence ET l\u2019accord du coordinateur",
+   "fieldname": "admission_master_accordee",
+   "fieldtype": "Check",
+   "label": "Admission en Master accord\u00e9e"
+  },
+  {
+   "fieldname": "section_pere",
+   "fieldtype": "Section Break",
+   "label": "Identification du P\u00e8re"
+  },
+  {
+   "fieldname": "nom_prenom_pere",
+   "fieldtype": "Data",
+   "label": "Nom et pr\u00e9nom du p\u00e8re"
+  },
+  {
+   "fieldname": "pere_telephone",
+   "fieldtype": "Phone",
+   "label": "T\u00e9l\u00e9phone du p\u00e8re"
+  },
+  {
+   "fieldname": "column_break_pr1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pere_profession",
+   "fieldtype": "Data",
+   "label": "Profession du p\u00e8re"
+  },
+  {
+   "fieldname": "pere_ville",
+   "fieldtype": "Data",
+   "label": "Ville du p\u00e8re"
+  },
+  {
+   "fieldname": "section_mere",
+   "fieldtype": "Section Break",
+   "label": "Identification de la M\u00e8re"
+  },
+  {
+   "fieldname": "nom_prenom_mere",
+   "fieldtype": "Data",
+   "label": "Nom et pr\u00e9nom de la m\u00e8re"
+  },
+  {
+   "fieldname": "telephone_mere",
+   "fieldtype": "Phone",
+   "label": "T\u00e9l\u00e9phone de la m\u00e8re"
+  },
+  {
+   "fieldname": "column_break_mr1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "profession_mere",
+   "fieldtype": "Data",
+   "label": "Profession de la m\u00e8re"
+  },
+  {
+   "fieldname": "mere_ville",
+   "fieldtype": "Data",
+   "label": "Ville de la m\u00e8re"
+  },
+  {
+   "fieldname": "section_sponsor",
+   "fieldtype": "Section Break",
+   "label": "Identification du Sponsor"
+  },
+  {
+   "fieldname": "nom_prenom_sponsor",
+   "fieldtype": "Data",
+   "label": "Nom et pr\u00e9nom du sponsor"
+  },
+  {
+   "fieldname": "telephone_sponsor",
+   "fieldtype": "Phone",
+   "label": "T\u00e9l\u00e9phone du sponsor"
+  },
+  {
+   "fieldname": "column_break_sp1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "profession_sponsor",
+   "fieldtype": "Data",
+   "label": "Profession du sponsor"
+  },
+  {
+   "fieldname": "sponsor_ville",
+   "fieldtype": "Data",
+   "label": "Ville du sponsor"
+  },
+  {
+   "fieldname": "section_activites",
+   "fieldtype": "Section Break",
+   "label": "Informations compl\u00e9mentaires"
+  },
+  {
+   "fieldname": "activites_sportives",
+   "fieldtype": "Small Text",
+   "label": "Activit\u00e9s sportives"
+  },
+  {
+   "fieldname": "activites_associatives",
+   "fieldtype": "Small Text",
+   "label": "Activit\u00e9s associatives"
+  },
+  {
+   "fieldname": "column_break_act1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "activites_culturelles",
+   "fieldtype": "Small Text",
+   "label": "Activit\u00e9s culturelles"
+  },
+  {
+   "fieldname": "connaissances_informatiques",
+   "fieldtype": "Small Text",
+   "label": "Connaissances informatiques"
+  },
+  {
+   "fieldname": "matieres_inscrites_section",
+   "fieldtype": "Section Break",
+   "label": "Mati\u00e8res inscrites"
+  },
+  {
+   "fieldname": "cours_inscrits",
+   "fieldtype": "Table",
+   "label": "Mati\u00e8res inscrites",
+   "options": "Reregistration Course Item"
+  },
+  {
+   "fieldname": "resultats_annee_precedente_section",
+   "fieldtype": "Section Break",
+   "label": "R\u00e9sultats ann\u00e9e pr\u00e9c\u00e9dente"
+  },
+  {
+   "fieldname": "resultats_precedents",
+   "fieldtype": "Table",
+   "label": "R\u00e9sultats pr\u00e9c\u00e9dents",
+   "options": "Reregistration Previous Result"
+  },
+  {
+   "default": "0",
+   "description": "Passe \u00e0 1 apr\u00e8s le t\u00e9l\u00e9chargement unique de la fiche par l\u2019\u00e9tudiant",
+   "fieldname": "fiche_telechargee",
+   "fieldtype": "Check",
+   "label": "Fiche t\u00e9l\u00e9charg\u00e9e",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-09 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Academic Reregistration",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonnateur",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Agent de scolarit\u00e9",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+"role": "Comptable",
+    "share": 1
+   },
+{
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "role": "student"
+  }
+  ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

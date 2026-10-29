@@ -32,6 +32,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Niveau",
+   "link_filters": "[[\"Field of study Level\",\"parent\",\"=\",\"eval:doc.filiere\"]]",
    "options": "Field of study Level",
    "reqd": 1
   }
@@ -40,7 +41,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-15 09:45:33.753048",
+ "modified": "2026-08-03 16:07:32.428616",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "ChildTable Choise Formation Inscription Candidat",

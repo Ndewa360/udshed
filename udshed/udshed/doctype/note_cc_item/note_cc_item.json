@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-07-24 18:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "cc_label",
+  "cc_weight",
+  "note_cc",
+  "date_saisie",
+  "commentaire"
+ ],
+ "fields": [
+   {
+    "fieldname": "cc_label",
+    "fieldtype": "Data",
+    "in_list_view": 1,
+    "label": "Libellé",
+    "description": "Ex : CC1, CC2, CC3"
+   },
+   {
+    "default": "1",
+    "fieldname": "cc_weight",
+    "fieldtype": "Float",
+    "in_list_view": 1,
+    "label": "Coefficient",
+    "non_negative": 1,
+    "precision": "2"
+   },
+   {
+    "fieldname": "note_cc",
+    "fieldtype": "Float",
+    "in_list_view": 1,
+    "label": "Note CC (/20)",
+    "non_negative": 1,
+    "precision": "2"
+   },
+  {
+   "fieldname": "date_saisie",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date de saisie"
+  },
+  {
+   "fieldname": "commentaire",
+   "fieldtype": "Small Text",
+   "label": "Commentaire"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-24 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Note CC Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
