@@ -1667,6 +1667,7 @@ def publier_session(session):
         doc.db_set("date_publication", today())
 
     echecs = _declencher_calcul_resultats_post_publication(doc)
+    progressions = _declencher_progression_post_publication(doc)
     _declencher_notification_publication(doc)
 
     if echecs:
@@ -1688,7 +1689,27 @@ def publier_session(session):
         "date_publication": doc.date_publication,
         "publied": len(notes),
         "echecs_resultats": echecs,
+        "progressions": progressions,
     }
+
+
+def _declencher_progression_post_publication(session_doc):
+    """Calcule la progression académique des étudiants publiés.
+
+    Exécuté uniquement ici, à la publication officielle : ni la saisie ni le
+    calcul des moyennes ne font progresser un étudiant. Un échec est
+    journalisé sans annuler la publication.
+    """
+    try:
+        from udshed.api.progression import progression_apres_publication
+
+        return progression_apres_publication(session_doc)
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "udshed: progression post-publication {}".format(session_doc.name),
+        )
+        return {"par_statut": {}, "echecs": []}
 
 
 def _declencher_notification_publication(session_doc):

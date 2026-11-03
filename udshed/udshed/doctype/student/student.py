@@ -43,6 +43,41 @@ def get_current_student_profile():
 	}
 
 
+@frappe.whitelist()
+def etudiants_par_annee(academic_year=None, niveau=None):
+	"""Matricules des étudiants inscrits une année donnée, et/ou à un niveau donné.
+
+	Filtre « Année académique / Niveau » de la liste Student : le dossier
+	Student ne porte pas d'année. On lit l'inscription de l'année (réinscription
+	en priorité, sinon inscription initiale) et le niveau de CETTE année.
+	Sans année, le niveau est celui de la dernière inscription de l'étudiant.
+	"""
+	frappe.has_permission("Student", "read", throw=True)
+
+	niveaux = {}  # matricule -> niveau retenu
+	rer_filters = {"academic_year": academic_year} if academic_year else {}
+	ia_filters = {"matricule": ["is", "set"]}
+	if academic_year:
+		ia_filters["annee_academique"] = academic_year
+
+	# Inscriptions initiales d'abord, réinscriptions ensuite : la plus récente
+	# l'emporte (tri par date de création).
+	lignes = [
+		(r.creation, r.matricule, r.classe)
+		for r in frappe.get_all("Inscription Academique", filters=ia_filters,
+								fields=["matricule", "classe", "creation"])
+	] + [
+		(r.creation, r.student, r.niveau)
+		for r in frappe.get_all("Academic Reregistration", filters=rer_filters,
+								fields=["student", "niveau", "creation"])
+	]
+	for _creation, matricule, niv in sorted(lignes, key=lambda x: x[0]):
+		if matricule:
+			niveaux[matricule] = niv
+
+	return sorted(m for m, niv in niveaux.items() if not niveau or niv == niveau)
+
+
 class Student(Document):
 
 	def validate(self):

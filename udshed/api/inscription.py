@@ -1099,7 +1099,7 @@ def get_inscription_report(filiere=None, candidature_status=None):
 
 
 @frappe.whitelist()
-def get_liste_inscriptions(filiere=None, annee_academique=None, niveau=None, statut=None):
+def get_liste_inscriptions(filiere=None, annee_academique=None, niveau=None, statut=None, origine=None, cycle=None):
     """Liste des inscrits (page « Liste des inscriptions »).
 
     Construite à partir des Inscription Academique (candidatures ET
@@ -1109,7 +1109,8 @@ def get_liste_inscriptions(filiere=None, annee_academique=None, niveau=None, sta
     from udshed.api.inscription_import_export import lister_inscriptions
 
     return lister_inscriptions(
-        filiere=filiere, annee_academique=annee_academique, niveau=niveau, statut=statut
+        filiere=filiere, annee_academique=annee_academique, niveau=niveau, statut=statut,
+        origine=origine, cycle=cycle,
     )
 
 

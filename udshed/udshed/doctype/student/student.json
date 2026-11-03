@@ -63,6 +63,7 @@
     "fieldname": "cycle",
     "fieldtype": "Select",
     "in_list_view": 1,
+    "in_standard_filter": 1,
     "label": "Cycle",
     "options": "Licence\nBTS\nMaster",
     "reqd": 1
@@ -146,6 +147,8 @@
    {
     "fieldname": "filiere",
     "fieldtype": "Link",
+    "in_list_view": 1,
+    "in_standard_filter": 1,
     "label": "fili\u00e8re",
     "options": "Field of study",
     "reqd": 1
@@ -154,6 +157,7 @@
     "description": "Mis \u00e0 jour automatiquement apr\u00e8s chaque r\u00e9inscription",
     "fieldname": "niveau_actuel",
     "fieldtype": "Data",
+    "in_list_view": 1,
     "label": "Niveau actuel",
     "read_only": 1
    }
@@ -161,7 +165,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-22 13:49:31.347521",
+ "modified": "2026-11-02 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Student",

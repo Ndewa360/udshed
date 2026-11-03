@@ -325,10 +325,23 @@ def _session_reinscription_ouverte(academic_year_name):
     doc = frappe.new_doc("Session Reinscription")
     doc.academic_year = academic_year_name
     doc.statut = "Ouverte"
-    doc.date_ouverture = "2026-09-01"
-    doc.date_cloture = "2026-12-31"
-    doc.note_minimale = 0
-    doc.note_maximale = 20
+    # Période encadrant la date du jour : la réinscription vérifie les dates.
+    doc.date_ouverture = frappe.utils.add_days(frappe.utils.nowdate(), -30)
+    doc.date_cloture = frappe.utils.add_days(frappe.utils.nowdate(), 90)
+    doc.insert(ignore_permissions=True)
+    return doc
+
+
+def make_progression(student, annee_source, filiere, niveau_label, statut="Admis au niveau supérieur"):
+    """Progression Academique calculée (comme après publication) autorisant la réinscription."""
+    doc = frappe.new_doc("Progression Academique")
+    doc.student = student.name if hasattr(student, "name") else student
+    doc.annee_source = annee_source
+    doc.statut = statut
+    doc.filiere_cible = filiere
+    doc.niveau_cible = niveau_label
+    doc.flags.calcul_automatique = True
+    doc.flags.ignore_links = True
     doc.insert(ignore_permissions=True)
     return doc
 
@@ -393,6 +406,8 @@ def make_academic_reregistration(
         ancrage.semestre = semestre
         ancrage.flags.ignore_validate = True
         ancrage.insert(ignore_permissions=True)
+        # La réinscription exige la progression calculée à la publication.
+        make_progression(student, annee_precedente, fos.name, niveau_label, statut="Redoublement")
 
     doc = frappe.new_doc("Academic Reregistration")
     doc.student = student.name

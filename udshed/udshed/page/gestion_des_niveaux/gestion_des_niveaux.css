@@ -1,6 +1,7 @@
 /* ============================================================
    GESTION DES NIVEAUX — page stylesheet
-   The full styling is served via public/css/gestion_des_niveaux.v2.css
-   (loaded globally through app_include_css). This file is intentionally
-   kept empty to avoid double-loading / conflicting rules.
+   The full styling is served via public/css/gestion_des_niveaux.v4.css
+   (loaded globally through app_include_css, scoped to this route).
+   This file is intentionally kept empty to avoid double-loading /
+   conflicting rules.
    ============================================================ */

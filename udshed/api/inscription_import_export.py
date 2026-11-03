@@ -111,13 +111,17 @@ PARENTS_CANDIDATURE_VERS_IA = {
 # ====================================================================== #
 #  Liste des inscriptions (page) et export
 # ====================================================================== #
-def lister_inscriptions(filiere=None, annee_academique=None, niveau=None, statut=None):
-    """Inscrits visibles par l'utilisateur courant (frappe.get_list)."""
+def lister_inscriptions(filiere=None, annee_academique=None, niveau=None, statut=None, origine=None, cycle=None):
+    """Inscrits visibles par l'utilisateur courant (frappe.get_list).
+
+    `origine` : ORIGINE_CANDIDATURE ou ORIGINE_HORS_CANDIDATURE (inscrits en
+    cours d'année / import) ; vide = toutes.
+    """
     rows = []
     if frappe.has_permission("Inscription Academique", "read"):
-        rows = _lignes_inscriptions(filiere, annee_academique, niveau, statut)
-    if not annee_academique and statut in (None, "", STATUT_SANS_FICHE):
-        rows += _lignes_candidatures_sans_fiche(filiere, niveau, {r["dossier_origine"] for r in rows})
+        rows = _lignes_inscriptions(filiere, annee_academique, niveau, statut, origine, cycle)
+    if not annee_academique and statut in (None, "", STATUT_SANS_FICHE) and origine != ORIGINE_HORS_CANDIDATURE:
+        rows += _lignes_candidatures_sans_fiche(filiere, niveau, cycle, {r["dossier_origine"] for r in rows})
 
     par_filiere, par_niveau, par_statut = {}, {}, {}
     for row in rows:
@@ -137,14 +141,20 @@ def lister_inscriptions(filiere=None, annee_academique=None, niveau=None, statut
     }
 
 
-def _lignes_inscriptions(filiere, annee_academique, niveau, statut):
+def _lignes_inscriptions(filiere, annee_academique, niveau, statut, origine=None, cycle=None):
     filtres = {}
+    if origine == ORIGINE_HORS_CANDIDATURE:
+        filtres["dossier_origine"] = ["is", "not set"]
+    elif origine == ORIGINE_CANDIDATURE:
+        filtres["dossier_origine"] = ["is", "set"]
     if filiere:
         filtres["filiere"] = filiere
     if annee_academique:
         filtres["annee_academique"] = annee_academique
     if niveau:
         filtres["classe"] = niveau
+    elif cycle:
+        filtres["classe"] = ["like", f"{cycle}%"]
     if statut == STATUT_INSCRIT:
         filtres["matricule"] = ["is", "set"]
     elif statut == STATUT_EN_ATTENTE:
@@ -209,7 +219,7 @@ def _lignes_inscriptions(filiere, annee_academique, niveau, statut):
     return rows
 
 
-def _lignes_candidatures_sans_fiche(filiere, niveau, dossiers_avec_fiche):
+def _lignes_candidatures_sans_fiche(filiere, niveau, cycle, dossiers_avec_fiche):
     """Candidatures « Inscrit » sans Inscription Academique (cas anormal,
     conservé pour ne rien masquer de l'ancienne liste)."""
     if not frappe.has_permission("Session Inscription Candidate", "read"):
@@ -219,6 +229,8 @@ def _lignes_candidatures_sans_fiche(filiere, niveau, dossiers_avec_fiche):
         filtres["filiere"] = filiere
     if niveau:
         filtres["niveau"] = niveau
+    elif cycle:
+        filtres["niveau"] = ["like", f"{cycle}%"]
     candidats = [
         c for c in frappe.get_list(
             "Session Inscription Candidate",
@@ -291,13 +303,14 @@ COLONNES_EXPORT = [
 
 @frappe.whitelist()
 def exporter_inscriptions(
-    format="xlsx", filiere=None, annee_academique=None, niveau=None, statut=None, recherche=None
+    format="xlsx", filiere=None, annee_academique=None, niveau=None, statut=None, recherche=None,
+    origine=None, cycle=None,
 ):
     """Exporte (Excel ou CSV) les inscriptions affichées sur la page, filtres
     et recherche compris. Lecture seule : aucune donnée n'est créée ni modifiée."""
     frappe.has_permission("Inscription Academique", "export", throw=True)
 
-    rows = lister_inscriptions(filiere, annee_academique, niveau, statut)["rows"]
+    rows = lister_inscriptions(filiere, annee_academique, niveau, statut, origine, cycle)["rows"]
     rows = [r for r in rows if _correspond_recherche(r, recherche)]
 
     data = [[libelle for _cle, libelle in COLONNES_EXPORT]]

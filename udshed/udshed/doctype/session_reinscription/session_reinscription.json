@@ -15,7 +15,9 @@
   "date_ouverture",
   "column_break_bmef",
   "date_cloture",
-  "column_break_yhpf"
+  "column_break_yhpf",
+  "ciblage_section",
+  "cibles"
  ],
  "fields": [
   {
@@ -35,11 +37,13 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "Planifi\u00e9e",
+   "description": "Planifi\u00e9e : ouverte automatiquement \u00e0 la date d'ouverture. Ouverte : ferm\u00e9e automatiquement apr\u00e8s la date de cl\u00f4ture.",
    "fieldname": "statut",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Statut",
-   "options": "Ouverte\nFerm\u00e9e\nArchiv\u00e9e",
+   "options": "Planifi\u00e9e\nOuverte\nFerm\u00e9e\nArchiv\u00e9e",
    "reqd": 1
   },
   {
@@ -68,12 +72,24 @@
   {
    "fieldname": "column_break_yhpf",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ciblage_section",
+   "fieldtype": "Section Break",
+   "label": "Ciblage (facultatif)"
+  },
+  {
+   "description": "Laisser vide pour une session générale (tous les étudiants). Sinon, seuls les étudiants correspondant à au moins une ligne peuvent se réinscrire.",
+   "fieldname": "cibles",
+   "fieldtype": "Table",
+   "label": "Filières / niveaux concernés",
+   "options": "Session Reinscription Cible"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-03 08:55:24.017415",
+ "modified": "2026-10-27 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Reinscription",
@@ -127,7 +143,7 @@
     "print": 1,
     "read": 1,
     "report": 1,
-    "role": "student",
+    "role": "Student",
     "share": 1
    }
   ],

@@ -54,6 +54,22 @@
     "type": "Link",
     "url": null
    },
+   {
+    "child": 1,
+    "collapsible": 1,
+    "filters": null,
+    "icon": "users",
+    "indent": 1,
+    "keep_closed": 0,
+    "label": "Liste des inscriptions",
+    "link_to": "liste-des-inscriptions",
+    "link_type": "Page",
+    "navigate_to_tab": null,
+    "route_options": null,
+    "show_arrow": 0,
+    "type": "Link",
+    "url": null
+   },
     {
      "child": 1,
      "collapsible": 0,
@@ -152,7 +168,7 @@
     "url": null
    }
   ],
-  "modified": "2026-08-24 14:43:51.163863",
+  "modified": "2026-11-02 10:00:00.000000",
   "module": "Udshed",
   "module_onboarding": null,
   "name": "Inscription - Reinscription",

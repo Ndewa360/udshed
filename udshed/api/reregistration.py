@@ -2,7 +2,6 @@ import json
 import os
 
 import frappe
-from frappe.utils.pdf import get_pdf
 from frappe.query_builder import DocType
 
 from udshed.utils.niveaux import (
@@ -12,7 +11,29 @@ from udshed.utils.niveaux import (
 )
 from udshed.api.school_setting import get_logo_data_uri
 
-STAFF_ROLES = {"System Manager", "Coordonateur", "Agent de scolarité", "Comptable"}
+STAFF_ROLES = {"System Manager", "Coordonateur", "Agent de scolarité", "Comptable", "Registration Manager"}
+
+# Champs du dossier repris de la dernière inscription / réinscription.
+CHAMPS_DOSSIER = (
+	"dossier_origine", "telephone",
+	"dernier_etablissement", "diplome_entree", "matricule_diplome",
+	"nom_prenom_pere", "pere_telephone", "pere_profession", "pere_ville",
+	"nom_prenom_mere", "telephone_mere", "profession_mere", "mere_ville",
+	"nom_prenom_sponsor", "telephone_sponsor", "profession_sponsor", "sponsor_ville",
+	"activites_sportives", "activites_associatives", "activites_culturelles",
+	"connaissances_informatiques",
+)
+
+# Seuls champs que l'étudiant peut modifier lors de sa réinscription.
+# Identité, email, études antérieures, filière et niveau restent verrouillés.
+CHAMPS_MODIFIABLES = (
+	"telephone",
+	"nom_prenom_pere", "pere_telephone", "pere_profession", "pere_ville",
+	"nom_prenom_mere", "telephone_mere", "profession_mere", "mere_ville",
+	"nom_prenom_sponsor", "telephone_sponsor", "profession_sponsor", "sponsor_ville",
+	"activites_sportives", "activites_associatives", "activites_culturelles",
+	"connaissances_informatiques",
+)
 
 
 def _autorise_etudiant(student):
@@ -78,12 +99,58 @@ def get_notes_decision(student, academic_year):
 
 @frappe.whitelist()
 def get_open_sessions():
-	"""Retourne toutes les sessions de réinscription ouvertes"""
-	return frappe.get_all(
-		"Session Reinscription",
-		filters={"statut": "Ouverte"},
-		fields=["name", "academic_year", "date_ouverture", "date_cloture", "note_minimale"]
+	"""Sessions de réinscription ouvertes, dans leur période.
+
+	Pour un étudiant, seules les sessions qui ciblent sa filière et le niveau
+	qu'il vient de suivre sont retournées.
+	"""
+	from udshed.udshed.doctype.session_reinscription.session_reinscription import sessions_utilisables
+
+	filiere = niveau = None
+	if not (set(frappe.get_roles()) & STAFF_ROLES) and frappe.session.user != "Administrator":
+		student = frappe.db.get_value("Student", {"utilisateur": frappe.session.user}, ["name", "filiere"], as_dict=True)
+		if not student:
+			return []
+		filiere, niveau = student.filiere, _derniere_classe_etudiant(student.name)
+
+	return [
+		{"name": s.name, "academic_year": s.academic_year,
+		 "date_ouverture": s.date_ouverture, "date_cloture": s.date_cloture}
+		for s in sessions_utilisables(filiere, niveau)
+	]
+
+
+def _donnees_derniere_inscription(student_doc):
+	"""Informations du dossier issues des inscriptions précédentes (lecture seule).
+
+	Chaque champ prend la valeur la plus récente non vide parmi les
+	réinscriptions puis l'inscription initiale ; le téléphone retombe sur
+	celui du dossier Student. Les anciennes fiches ne sont jamais modifiées.
+	"""
+	champs = ["creation", *CHAMPS_DOSSIER]
+	fiches = frappe.get_all(
+		"Academic Reregistration", filters={"student": student_doc.name}, fields=champs
+	) + frappe.get_all(
+		"Inscription Academique", filters={"matricule": student_doc.name}, fields=champs
 	)
+	fiches.sort(key=lambda f: f.creation, reverse=True)
+	data = {f: next((x.get(f) for x in fiches if x.get(f)), None) for f in CHAMPS_DOSSIER}
+	data["telephone"] = data["telephone"] or student_doc.phone
+	return data
+
+
+def _valider_infos_modifiees(infos):
+	"""Filtre les modifications envoyées par le formulaire (liste blanche serveur)."""
+	infos = frappe.parse_json(infos) if infos else {}
+	if not isinstance(infos, dict):
+		frappe.throw("Format des informations modifiées invalide.")
+	interdits = sorted(k for k in infos if k not in CHAMPS_MODIFIABLES)
+	if interdits:
+		frappe.throw(
+			"Ces informations ne peuvent pas être modifiées lors de la réinscription : {0}. "
+			"Adressez-vous à la scolarité.".format(", ".join(interdits))
+		)
+	return {k: (str(v).strip() if v is not None else None) or None for k, v in infos.items()}
 
 
 @frappe.whitelist()
@@ -113,21 +180,10 @@ def get_student_by_matricule(matricule=None):
 
 	student = frappe.get_doc("Student", student_name)
 
-	# Récupérer la dernière Inscription Academique pour les données complémentaires
-	inscription = frappe.get_all(
-		"Inscription Academique",
-		filters={"matricule": student.name},
-		fields=["name", "classe", "dossier_origine", "dernier_etablissement", "diplome_entree",
-				"matricule_diplome", "nom_prenom_pere", "pere_telephone",
-				"pere_profession", "pere_ville", "nom_prenom_mere", "telephone_mere",
-				"profession_mere", "mere_ville", "nom_prenom_sponsor", "telephone_sponsor",
-				"profession_sponsor", "sponsor_ville", "activites_sportives",
-				"activites_associatives", "activites_culturelles",
-				"connaissances_informatiques"],
-		order_by="creation desc",
-		limit_page_length=1,
-	)
-	insc = inscription[0] if inscription else {}
+	# Informations des inscriptions précédentes (réinscription la plus récente,
+	# sinon inscription initiale) : préremplissage du formulaire.
+	insc = _donnees_derniere_inscription(student)
+	insc["classe"] = _derniere_classe_etudiant(student.name)
 
 	return {
 		"name": student.name,
@@ -143,7 +199,8 @@ def get_student_by_matricule(matricule=None):
 		# Données depuis Student
 		"date_naissance": student.birth_date,
 		"lieu_naissance": student.birth_place,
-		"telephone": student.phone,
+		"telephone": insc.get("telephone"),
+		"champs_modifiables": list(CHAMPS_MODIFIABLES),
 		# Données depuis Inscription Academique
 		"dernier_classe": insc.get("classe"),
 		"dossier_origine": insc.get("dossier_origine"),
@@ -1047,7 +1104,7 @@ def telecharger_fiche_reinscription(reregistration_name):
 
 	roles = frappe.get_roles()
 	is_student = student.utilisateur == frappe.session.user
-	is_staff = bool(set(roles) & {"System Manager", "Coordonateur", "Agent de scolarité", "Comptable"})
+	is_staff = frappe.session.user == "Administrator" or bool(set(roles) & STAFF_ROLES)
 	if not (is_student or is_staff):
 		frappe.throw("Vous n'avez pas accès à cette fiche de réinscription.")
 
@@ -1118,9 +1175,13 @@ def telecharger_fiche_reinscription(reregistration_name):
 		})
 
 	try:
-		pdf = get_pdf(html)
+		# weasyprint, comme les autres documents de l'application (wkhtmltopdf,
+		# utilisé par frappe get_pdf, n'est pas une dépendance du projet).
+		from weasyprint import HTML
+
+		pdf = HTML(string=html, base_url=frappe.utils.get_url()).write_pdf()
 	except Exception:
-		frappe.log_error("reregistration telecharger_fiche_reinscription get_pdf")
+		frappe.log_error("reregistration telecharger_fiche_reinscription pdf")
 		frappe.throw("Erreur lors de la génération du PDF. Veuillez réessayer.")
 
 	frappe.local.response.filename = f"Fiche_Reinscription_{doc.name}.pdf"
@@ -1143,37 +1204,70 @@ def _get_coordonnateur(filiere, niveau_label):
 
 
 @frappe.whitelist()
-def submit_reinscription(matricule, reinscription_session, semestre, niveau=None, cours=None):
+def submit_reinscription(matricule, reinscription_session, semestre, niveau=None, cours=None, infos=None):
 	"""Crée une réinscription (Academic Reregistration) pour l'étudiant connecté.
 
 	L'appelant doit être soit l'étudiant lui-même, soit un membre du personnel
-	autorisé (Coordonateur / Agent de scolarité / Comptable / System Manager).
+	autorisé (STAFF_ROLES).
 
 	RÈGLE MÉTIER : Un étudiant ne peut se réinscrire que pour l'année académique
 	SUIVANTE sa dernière inscription (ex: inscrit/réinscrit en 2025-2026 -> réinscription 2026-2027).
 	Il ne peut jamais se réinscrire pour une année antérieure à la sienne.
 
+	Le niveau et la filière sont ceux de la Progression Academique calculée à
+	la publication des résultats ; ils ne peuvent pas être choisis ici.
+
 	Args:
 		matricule: name/ID de l'étudiant (Student)
 		reinscription_session: name/ID de la Session Reinscription
 		semestre: "Semestre 1", "Semestre 2" ou "Les deux"
+		niveau: optionnel ; refusé s'il diffère du niveau calculé
+		cours: matières cochées [{teaching_unit, inscrire}]
+		infos: champs modifiés par l'étudiant (CHAMPS_MODIFIABLES uniquement)
 
 	Returns:
 		dict: {"status": bool, "message": str, "name": str|None}
 	"""
+	from udshed.api.progression import exiger_progression
+	from udshed.udshed.doctype.session_reinscription.session_reinscription import verifier_session_utilisable
+
 	if not matricule or not frappe.db.exists("Student", matricule):
 		frappe.throw("Étudiant introuvable.")
-
-	if not frappe.db.exists("Session Reinscription", reinscription_session):
-		frappe.throw("Session de réinscription invalide.")
 
 	# Vérification d'accès : l'étudiant connecté ou un membre du personnel
 	student = frappe.get_doc("Student", matricule)
 	if not _autorise_etudiant(matricule):
-		frappe.throw("Vous n'êtes pas autorisé à soumettre cette réinscription.")
+		frappe.throw("Vous n'êtes pas autorisé à soumettre cette réinscription.", frappe.PermissionError)
+
+	modifications = _valider_infos_modifiees(infos)
+
+	# Verrou sur le dossier : deux soumissions simultanées du même étudiant
+	# sont sérialisées, la seconde voit la première et est refusée.
+	frappe.db.get_value("Student", matricule, "name", for_update=True)
+
+	session = verifier_session_utilisable(
+		reinscription_session, student.filiere, _derniere_classe_etudiant(matricule)
+	)
 
 	# RÈGLE : Vérifier que la session correspond à l'année SUIVANTE la dernière inscription
-	annee_session = frappe.db.get_value("Session Reinscription", reinscription_session, "academic_year")
+	annee_session = session.academic_year
+
+	# Empêcher les doublons (réinscription déjà validée cette année)
+	exists = frappe.db.get_all(
+		"Academic Reregistration",
+		filters={"student": matricule, "academic_year": annee_session},
+		fields=["name"],
+		limit_page_length=1,
+	)
+	if exists:
+		return {
+			"status": False,
+			"message": "Vous êtes déjà réinscrit(e) pour l'année académique {0} ({1}).".format(
+				annee_session, exists[0].name
+			),
+			"name": exists[0].name,
+		}
+
 	annee_base = get_student_derniere_annee_academique(matricule)
 
 	if not annee_base:
@@ -1189,49 +1283,21 @@ def submit_reinscription(matricule, reinscription_session, semestre, niveau=None
 			.format(annee_attendue, annee_base, annee_session)
 		)
 
-	# Empêcher les doublons (réinscription déjà validée cette année)
-	exists = frappe.db.get_all(
-		"Academic Reregistration",
-		filters={"student": matricule, "academic_year": annee_session},
-		fields=["name"],
-		limit_page_length=1,
-	)
-	if exists:
-		return {"status": False, "message": "Vous êtes déjà réinscrit(e) pour cette année académique."}
-
-	# Niveau de réinscription calculé automatiquement via la règle d'admission
-	# par crédits (progression / redoublement / fin de cycle-Master).
-	info = _determiner_reinscription(student, annee_session, niveau=niveau)
-	niveau_final = info["niveau"]
-
-	if info.get("master") and not niveau:
-		# Fin de cycle admis : l'étudiant doit préciser son niveau Master
+	# Niveau et filière imposés par la progression calculée à la publication
+	# des résultats (bloque si non publiés, fin de parcours ou cas à traiter).
+	progression = exiger_progression(matricule, annee_session, annee_base)
+	if niveau and niveau != progression.niveau_cible:
 		frappe.throw(
-			"Fin de cycle : précisez votre niveau de Master. "
-			"La demande reste soumise à l'accord du coordinateur."
+			"Le niveau de réinscription est fixé par le système ({0}) et ne peut pas être modifié."
+			.format(progression.niveau_cible),
+			frappe.PermissionError,
 		)
 
-	if not niveau_final:
-		frappe.throw(
-			"Impossible de déterminer automatiquement le niveau de réinscription "
-			"(fin de cycle). Précisez le niveau."
-		)
+	# Dossier repris des inscriptions précédentes + modifications autorisées.
+	dossier = _donnees_derniere_inscription(student)
+	dossier.update(modifications)
 
-	# Récupérer les données de la dernière Inscription Academique
-	inscription = frappe.get_all(
-		"Inscription Academique",
-		filters={"matricule": matricule},
-		fields=["name", "dossier_origine", "dernier_etablissement", "diplome_entree",
-				"matricule_diplome", "nom_prenom_pere", "pere_telephone",
-				"pere_profession", "pere_ville", "nom_prenom_mere", "telephone_mere",
-				"profession_mere", "mere_ville", "nom_prenom_sponsor", "telephone_sponsor",
-				"profession_sponsor", "sponsor_ville", "activites_sportives",
-				"activites_associatives", "activites_culturelles",
-				"connaissances_informatiques"],
-		order_by="creation desc",
-		limit_page_length=1,
-	)
-	insc = inscription[0] if inscription else {}
+	cours = frappe.parse_json(cours) if isinstance(cours, str) else cours
 
 	# Construire le document ; le validate() du doctype calcule automatiquement
 	# le niveau précédent, la décision, les résultats et les cours inscrits.
@@ -1240,38 +1306,16 @@ def submit_reinscription(matricule, reinscription_session, semestre, niveau=None
 		"student": matricule,
 		"reinscription_session": reinscription_session,
 		"academic_year": annee_session,
-		"filiere": student.filiere,
-		"niveau": niveau_final,
+		"filiere": progression.filiere_cible,
+		"niveau": progression.niveau_cible,
 		"semestre": semestre,
 		# Identité (depuis Student)
 		"nom_prenom": f"{student.nom or ''} {student.prenom or ''}".strip(),
 		"email": student.email,
 		"date_naissance": student.birth_date,
 		"lieu_naissance": student.birth_place,
-		"telephone": student.phone,
-		# Inscription (depuis Inscription Academique)
-		"dossier_origine": insc.get("dossier_origine"),
-		"dernier_etablissement": insc.get("dernier_etablissement"),
-		"diplome_entree": insc.get("diplome_entree"),
-		"matricule_diplome": insc.get("matricule_diplome"),
-		# Famille
-		"nom_prenom_pere": insc.get("nom_prenom_pere"),
-		"pere_telephone": insc.get("pere_telephone"),
-		"pere_profession": insc.get("pere_profession"),
-		"pere_ville": insc.get("pere_ville"),
-		"nom_prenom_mere": insc.get("nom_prenom_mere"),
-		"telephone_mere": insc.get("telephone_mere"),
-		"profession_mere": insc.get("profession_mere"),
-		"mere_ville": insc.get("mere_ville"),
-		"nom_prenom_sponsor": insc.get("nom_prenom_sponsor"),
-		"telephone_sponsor": insc.get("telephone_sponsor"),
-		"profession_sponsor": insc.get("profession_sponsor"),
-		"sponsor_ville": insc.get("sponsor_ville"),
-		# Activités
-		"activites_sportives": insc.get("activites_sportives"),
-		"activites_associatives": insc.get("activites_associatives"),
-		"activites_culturelles": insc.get("activites_culturelles"),
-		"connaissances_informatiques": insc.get("connaissances_informatiques"),
+		# Dossier : téléphone, études antérieures, famille, activités
+		**dossier,
 		# Matières cochées par l'étudiant (les dettes verrouillées sont reprises
 		# automatiquement ; le validate() recalcule la grille en conservant ces choix).
 		"cours_inscrits": [
@@ -1282,7 +1326,14 @@ def submit_reinscription(matricule, reinscription_session, semestre, niveau=None
 	doc.insert(ignore_permissions=True)
 	frappe.db.commit()
 
-	return {"status": True, "message": "Réinscription soumise avec succès.", "name": doc.name}
+	return {
+		"status": True,
+		"message": "Réinscription soumise avec succès.",
+		"name": doc.name,
+		"academic_year": doc.academic_year,
+		"filiere": doc.filiere,
+		"niveau": doc.niveau,
+	}
 
 
 def get_student_premiere_inscription(student):
@@ -1351,38 +1402,94 @@ def get_reregistration_preview(matricule, reinscription_session, semestre=None):
 	- decision : Admis / Ajourné / En attente (module de notes) ;
 	- niveau : niveau de réinscription calculé automatiquement ;
 	- niveau_precedent : niveau dont les résultats conditionnent l'accès ;
-	- master : True si le prochain niveau n'existe pas (fin de Licence) ;
-	- master_levels : niveaux Master présents dans la filière (si master).
+	- master / master_levels : conservés pour compatibilité (toujours vides :
+	  l'entrée en Master est fixée par la scolarité dans la progression) ;
+	- bloque / message : réinscription impossible et motif explicite.
+
+	Le niveau et la filière proviennent de la Progression Academique calculée
+	à la publication officielle des résultats.
 	"""
+	from udshed.api.progression import (
+		STATUT_ADMIS,
+		STATUT_REDOUBLEMENT,
+		message_blocage,
+		progression_pour_annee,
+	)
+	from udshed.udshed.doctype.session_reinscription.session_reinscription import verifier_session_utilisable
+
 	student = frappe.get_doc("Student", matricule)
 
 	if not _autorise_etudiant(matricule):
-		frappe.throw("Vous n'êtes pas autorisé à consulter cet étudiant.")
+		frappe.throw("Vous n'êtes pas autorisé à consulter cet étudiant.", frappe.PermissionError)
 
-	session = frappe.db.get_value(
-		"Session Reinscription",
-		reinscription_session,
-		["academic_year", "statut"],
-	)
-	if not session:
-		frappe.throw("Session de réinscription invalide.")
-	academic_year, statut = session[0], session[1]
-	if statut != "Ouverte":
-		frappe.throw("La session de réinscription sélectionnée n'est pas ouverte.")
+	dernier_classe = _derniere_classe_etudiant(matricule)
+	session = verifier_session_utilisable(reinscription_session, student.filiere, dernier_classe)
+	academic_year = session.academic_year
 
-	info = _determiner_reinscription(student, academic_year)
-
-	return {
+	apercu = {
 		"academic_year": academic_year,
 		"filiere": student.filiere,
-		"dernier_classe": _derniere_classe_etudiant(matricule),
-		"decision": (info["admission"] or {}).get("decision") or "En attente",
-		"admission": info["admission"],
-		"niveau": info["niveau"],
-		"niveau_precedent": info["niveau_precedent"],
-		"master": info["master"],
-		"master_levels": info["master_levels"],
+		"dernier_classe": dernier_classe,
+		"decision": "En attente",
+		"admission": None,
+		"niveau": None,
+		"niveau_precedent": None,
+		"master": False,
+		"master_levels": [],
+		"redoublement": False,
+		"bloque": True,
+		"message": None,
+		"statut_progression": None,
+		"progression": None,
 	}
+
+	deja = frappe.db.get_value(
+		"Academic Reregistration", {"student": matricule, "academic_year": academic_year}, "name"
+	)
+	if deja:
+		apercu["message"] = "Vous êtes déjà réinscrit(e) pour l'année académique {0} ({1}).".format(
+			academic_year, deja)
+		return apercu
+
+	annee_base = get_student_derniere_annee_academique(matricule)
+	annee_attendue = get_next_academic_year(annee_base) if annee_base else None
+	if academic_year != annee_attendue:
+		apercu["message"] = (
+			"Cette session concerne l'année {0} : vous ne pouvez vous réinscrire que pour l'année {1}."
+			.format(academic_year, annee_attendue or "—")
+		)
+		return apercu
+
+	progression = progression_pour_annee(matricule, academic_year)
+	if progression:
+		apercu.update(
+			decision=progression.decision_notes or "En attente",
+			statut_progression=progression.statut,
+			progression=progression.name,
+		)
+	message = message_blocage(progression, academic_year, annee_base)
+	if message:
+		apercu["message"] = message
+		return apercu
+
+	redoublement = progression.statut == STATUT_REDOUBLEMENT
+	apercu.update(
+		bloque=False,
+		filiere=progression.filiere_cible,
+		niveau=progression.niveau_cible,
+		redoublement=redoublement,
+		niveau_precedent=progression.niveau_source if redoublement
+		else (niveau_precedent(progression.filiere_cible, progression.niveau_cible) or progression.niveau_source),
+		admission={
+			"admissible": progression.statut == STATUT_ADMIS,
+			"decision": progression.decision_notes,
+			"motif": progression.motif,
+			"credits_validated": progression.credits_valides,
+			"total_credits": progression.credits_total,
+			"debt_credits": progression.credits_dette,
+		},
+	)
+	return apercu
 
 
 @frappe.whitelist()
@@ -1400,29 +1507,35 @@ def get_reregistration_grid(matricule, reinscription_session, semestre=None, niv
 		matricule: name/ID de l'étudiant (Student)
 		reinscription_session: name/ID de la Session Reinscription
 		semestre: "Semestre 1", "Semestre 2" ou "Les deux"
-		niveau: niveau explicite (cas entrée en Master, sinon None)
+		niveau: optionnel ; refusé s'il diffère du niveau de la progression
 	"""
+	from udshed.api.progression import STATUT_REDOUBLEMENT, exiger_progression
+	from udshed.udshed.doctype.session_reinscription.session_reinscription import verifier_session_utilisable
+
 	student = frappe.get_doc("Student", matricule)
 
 	if not _autorise_etudiant(matricule):
-		frappe.throw("Vous n'êtes pas autorisé à consulter cet étudiant.")
+		frappe.throw("Vous n'êtes pas autorisé à consulter cet étudiant.", frappe.PermissionError)
 
-	session = frappe.db.get_value(
-		"Session Reinscription",
-		reinscription_session,
-		["academic_year", "statut"],
+	session = verifier_session_utilisable(
+		reinscription_session, student.filiere, _derniere_classe_etudiant(matricule)
 	)
-	if not session:
-		frappe.throw("Session de réinscription invalide.")
-	academic_year, statut = session[0], session[1]
-	if statut != "Ouverte":
-		frappe.throw("La session de réinscription sélectionnée n'est pas ouverte.")
+	academic_year = session.academic_year
 
-	info = _determiner_reinscription(student, academic_year, niveau=niveau)
-	niveau_final = niveau or info["niveau"]
-	niveau_prec_label = info["niveau_precedent"]
-	admission = info["admission"]
-	redoublement = info.get("redoublement", False)
+	# Niveau imposé par la progression (publication officielle des résultats).
+	progression = exiger_progression(matricule, academic_year)
+	if niveau and niveau != progression.niveau_cible:
+		frappe.throw(
+			"Le niveau de réinscription est fixé par le système ({0}) et ne peut pas être modifié."
+			.format(progression.niveau_cible),
+			frappe.PermissionError,
+		)
+	niveau_final = progression.niveau_cible
+	redoublement = progression.statut == STATUT_REDOUBLEMENT
+
+	info = _determiner_reinscription(student, academic_year, niveau=niveau_final)
+	niveau_prec_label = niveau_final if redoublement else info["niveau_precedent"]
+	admission = info["admission"] or {}
 
 	if not niveau_final:
 		return {"niveau": None, "admission": admission, "resultats_precedents": [],
@@ -1567,6 +1680,17 @@ def get_student_derniere_annee_academique(student):
 	if rer:
 		return rer[0].academic_year
 	return get_student_premiere_inscription(student)
+
+
+@frappe.whitelist()
+def annee_precedente(academic_year):
+	"""Année académique précédente ('2026-2027' -> '2025-2026'), si elle existe."""
+	try:
+		start, end = (academic_year or "").split("-")
+		precedente = f"{int(start) - 1}-{int(end) - 1}"
+	except ValueError:
+		return None
+	return precedente if frappe.db.exists("Academic Year", precedente) else None
 
 
 def get_next_academic_year(current_year):

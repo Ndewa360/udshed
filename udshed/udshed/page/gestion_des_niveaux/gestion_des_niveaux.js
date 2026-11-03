@@ -1,21 +1,5 @@
+// Styles : public/css/gestion_des_niveaux.v4.css (app_include_css, limité à cette route).
 frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
-	// Inject inline styles (avoids needing a production build for CSS changes)
-	if (!document.getElementById("gn-inline-overrides")) {
-		let s = document.createElement("style");
-		s.id = "gn-inline-overrides";
-		s.textContent = `
-			body[data-route="gestion-des-niveaux"] .page-container { padding-left: 0 !important; margin-left: 0 !important; }
-			body[data-route="gestion-des-niveaux"] .page-body { padding-left: 0 !important; margin-left: 0 !important; }
-			body[data-route="gestion-des-niveaux"] .layout-main-section { padding: 0 !important; margin: 0 !important; }
-			body[data-route="gestion-des-niveaux"] .layout-main { padding: 0 !important; margin: 0 !important; }
-			body[data-route="gestion-des-niveaux"] .layout-main-section-wrapper { padding: 0 !important; margin: 0 !important; }
-			body[data-route="gestion-des-niveaux"] .page-head { padding-left: 0 !important; }
-			body[data-route="gestion-des-niveaux"] .page-head .container { padding-left: 0 !important; margin-left: 0 !important; }
-			body[data-route="gestion-des-niveaux"] .page-head .title-text { padding-left: 0 !important; }
-		`;
-		document.head.appendChild(s);
-	}
-
 	let page = frappe.ui.make_app_page({
 		parent: wrapper,
 		title: __("Gestion des Niveaux"),
@@ -192,7 +176,7 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 			html += `
 				<div class="gn-cycle-dropdown" data-cycle="${c}">
 					<div class="gn-cycle-tag" data-cycle="${c}">
-						${__(c)}
+						<span class="gn-cycle-dot gn-c-${cycle_css(c)}"></span>${__(c)}
 						<svg class="gn-cycle-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
 					</div>
 					<div class="gn-cycle-levels">${levels_html}</div>
@@ -323,12 +307,15 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 					cycle_groups[c].push(l);
 				});
 
+				let tags = Object.keys(cycle_groups)
+					.map((c) => `<span class="gn-tag gn-c-${cycle_css(c)}">${esc(__(c))}</span>`).join("");
 				html += `
 					<div class="gn-sb-filiere${fil_active}" data-filiere="${esc(fil.name)}">
-						<div class="gn-sb-fil-row">
+						<div class="gn-sb-fil-row" title="${esc(fil.label)}">
 							<svg class="gn-sb-chevron-sm" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
-							<span>${esc(fil.label)}</span>
+							<span class="gn-sb-fil-nom">${esc(fil.label)}</span>
 							<span class="gn-sb-count-sm">${fil.total_levels}</span>
+							${tags ? `<span class="gn-sb-tags">${tags}</span>` : ""}
 						</div>
 						<div class="gn-sb-cycles">`;
 
@@ -421,9 +408,11 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 			let total_filieres = filtered_data.filter(f => f.filiere_name !== null).length;
 			$mn.html(`
 				<div class="gn-empty-state">
-					<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.2">
-						<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-					</svg>
+					<div class="gn-empty-icon">
+						<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+							<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+						</svg>
+					</div>
 					<h3>${__("Gestion des Niveaux")}</h3>
 					<p>${__("Sélectionnez une filière dans l'arborescence pour gérer ses niveaux.")}</p>
 					<div class="gn-empty-stats">
@@ -495,6 +484,9 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 			let lvls = cycle_groups[cycle] || [];
 			let collapsed = collapsed_main_cycles[cycle] || false;
 			let chevron_style = collapsed ? "transform:rotate(-90deg);" : "";
+			// Niveaux de référence du cycle absents de la filière (Doctorat : parcours ouvert)
+			let manquants = cycle === "Doctorat" ? [] : (cycle_levels_map[cycle] || [])
+				.filter((lv) => !(fos.levels || []).some((l) => l.level === lv));
 
 			html += `
 				<div class="gn-cycle-section" data-cycle="${esc(cycle)}">
@@ -502,21 +494,23 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 						<svg class="gn-cycle-toggle-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="${chevron_style}"><path d="m6 9 6 6 6-6"/></svg>
 						${cycle_badge(cycle)}
 						<strong>${__(cycle)}</strong>
-						<span class="gn-cycle-count">${lvls.length}</span>
+						<span class="gn-cycle-count">${__("{0} niveau(x)", [lvls.length])}</span>
+						${manquants.length ? `<span class="gn-manquant">${__("manquant : {0}", [manquants.map(esc).join(", ")])}</span>` : ""}
 					</div>`;
 
 			if (!collapsed) {
 				html += `
-					<table class="table table-hover gn-table">
+					<div class="gn-table-wrap">
+					<table class="gn-table">
 						<thead>
 							<tr>
-								<th style="width:36px;" class="text-center"></th>
-								<th style="width:36px;" class="text-center">#</th>
+								<th class="gn-col-handle"></th>
+								<th class="gn-col-num">#</th>
 								<th>${__("Niveau")}</th>
-								<th>${__("Cycle")}</th>
-								<th>${__("Coordonateur")}</th>
+								<th>${__("Coordonnateur")}</th>
 								<th>${__("Calendrier")}</th>
-								<th style="width:120px;" class="text-center">${__("Actions")}</th>
+								<th>${__("Gest. planning")}</th>
+								<th class="gn-col-actions">${__("Actions")}</th>
 							</tr>
 						</thead>
 						<tbody>`;
@@ -529,25 +523,19 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 							<td class="gn-drag-handle text-center" title="${__("Glisser pour réordonner")}">
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
 							</td>
-							<td class="text-center" style="color:#a0a8b4;font-size:11px;font-weight:600;">${idx + 1}</td>
-							<td><strong style="color:#1a202c;">${esc(short_label(l.level))}</strong></td>
-							<td>${cycle_badge(cycle)}</td>
-							<td>${esc(l.coordonateur || "—")}</td>
+							<td class="gn-col-num">${idx + 1}</td>
+							<td><strong>${esc(short_label(l.level))}</strong></td>
+							<td>${l.coordonateur ? esc(l.coordonateur) : `<span class="gn-a-designer">${__("À désigner")}</span>`}</td>
 							<td>${esc(l.calendrier || "—")}</td>
-							<td class="text-center">
-								<div class="btn-group btn-group-sm">
-									<button class="btn btn-light gn-btn-edit" data-level-name="${esc(l.name)}" data-filiere="${esc(fos.filiere_name)}" title="${__("Modifier ce niveau")}">
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-									</button>
-									<button class="btn btn-light text-danger gn-btn-delete" data-level-name="${esc(l.name)}" data-level-label="${esc(short_label(l.level))}" data-filiere="${esc(fos.filiere_name)}" title="${__("Supprimer ce niveau")}">
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14"/></svg>
-									</button>
-								</div>
+							<td>${esc(l.gestionnaire_de_planning || "—")}</td>
+							<td class="gn-col-actions">
+								<button class="gn-op gn-btn-edit" data-level-name="${esc(l.name)}" data-filiere="${esc(fos.filiere_name)}" title="${__("Modifier ce niveau")}">${__("Modifier")}</button>
+								<button class="gn-op gn-op-danger gn-btn-delete" data-level-name="${esc(l.name)}" data-level-label="${esc(short_label(l.level))}" data-filiere="${esc(fos.filiere_name)}" title="${__("Supprimer ce niveau")}">${__("Supprimer")}</button>
 							</td>
 						</tr>`;
 				});
 
-				html += `</tbody></table>`;
+				html += `</tbody></table></div>`;
 			}
 
 			html += `</div>`;
@@ -625,17 +613,19 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 
 		html += `<div class="gn-ap-section gn-ap-info">`;
 
+		// Ligne libellé / valeur (valeur déjà échappée ou HTML de badge)
+		let row = (label, value) => `<div class="gn-ap-info-row"><span>${label}</span><strong>${value}</strong></div>`;
+
 		if (selected_level) {
 			let info = get_level_info(selected_level);
 			if (info) {
-				html += `
-					<div class="gn-ap-info-title">${__("Niveau sélectionné")}</div>
-					<div class="gn-ap-info-row"><span class="text-muted">${__("Niveau")}:</span> <strong>${esc(short_label(info.level))}</strong></div>
-					<div class="gn-ap-info-row"><span class="text-muted">${__("Cycle")}:</span> ${cycle_badge(info.cycle)} ${esc(info.cycle || "—")}</div>
-					<div class="gn-ap-info-row"><span class="text-muted">${__("Filière")}:</span> ${esc(info.filiere_label || "")}</div>
-					<div class="gn-ap-info-row"><span class="text-muted">${__("Coordonateur")}:</span> ${esc(info.coordonateur || "—")}</div>
-					<div class="gn-ap-info-row"><span class="text-muted">${__("Calendrier")}:</span> ${esc(info.calendrier || "—")}</div>
-					<div class="gn-ap-info-row"><span class="text-muted">${__("Gest. planning")}:</span> ${esc(info.gestionnaire_de_planning || "—")}</div>`;
+				html += `<div class="gn-ap-info-title">${__("Niveau sélectionné")}</div>`
+					+ row(__("Niveau"), esc(short_label(info.level)))
+					+ row(__("Cycle"), cycle_badge(info.cycle))
+					+ row(__("Filière"), esc(info.filiere_label || ""))
+					+ row(__("Coordonnateur"), esc(info.coordonateur || "—"))
+					+ row(__("Calendrier"), esc(info.calendrier || "—"))
+					+ row(__("Gest. planning"), esc(info.gestionnaire_de_planning || "—"));
 			}
 		} else if (selected_filiere) {
 			let fos = all_data.find((f) => f.filiere_name === selected_filiere);
@@ -646,24 +636,21 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 					if (!cycles[c]) cycles[c] = 0;
 					cycles[c]++;
 				});
-				html += `
-					<div class="gn-ap-info-title">${__("Filière sélectionnée")}</div>
-					<div class="gn-ap-info-row"><span class="text-muted">${__("Nom")}:</span> <strong>${esc(fos.filiere_label)}</strong></div>
-					<div class="gn-ap-info-row"><span class="text-muted">${__("Code")}:</span> ${esc(fos.filiere_name)}</div>
-					<div class="gn-ap-info-row"><span class="text-muted">${__("Faculté")}:</span> ${esc(fos.faculte || "—")}</div>
-					<div class="gn-ap-info-row"><span class="text-muted">${__("Total niveaux")}:</span> <strong>${(fos.levels || []).length}</strong></div>`;
+				html += `<div class="gn-ap-info-title">${__("Filière sélectionnée")}</div>`
+					+ row(__("Code"), esc(fos.filiere_name))
+					+ row(__("Faculté"), esc(fos.faculte || "—"))
+					+ row(__("Total niveaux"), (fos.levels || []).length);
 				for (let [c, count] of Object.entries(cycles)) {
-					html += `<div class="gn-ap-info-row"><span class="text-muted">${cycle_badge(c)} ${__(c)}:</span> ${count}</div>`;
+					html += row(cycle_badge(c), count);
 				}
 			}
 		} else {
 			let total_levels = all_data.reduce((s, f) => s + (f.levels || []).length, 0);
 			let total_fac = new Set(all_data.map(f => f.faculte)).size;
-			html += `
-				<div class="gn-ap-info-title">${__("Vue d'ensemble")}</div>
-				<div class="gn-ap-info-row"><span class="text-muted">${__("Facultés")}:</span> <strong>${total_fac}</strong></div>
-				<div class="gn-ap-info-row"><span class="text-muted">${__("Filières")}:</span> <strong>${all_data.filter(f => f.filiere_name !== null).length}</strong></div>
-				<div class="gn-ap-info-row"><span class="text-muted">${__("Niveaux")}:</span> <strong>${total_levels}</strong></div>`;
+			html += `<div class="gn-ap-info-title">${__("Vue d'ensemble")}</div>`
+				+ row(__("Facultés"), total_fac)
+				+ row(__("Filières"), all_data.filter(f => f.filiere_name !== null).length)
+				+ row(__("Niveaux"), total_levels);
 		}
 
 		html += `</div>`;
@@ -969,9 +956,13 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 		return m ? "D" + m[1] : level;
 	}
 
+	// Classe de couleur d'un cycle (BTS orange, Licence bleu, Master vert, Doctorat violet)
+	function cycle_css(cycle) {
+		return { BTS: "bts", Licence: "licence", Master: "master", Doctorat: "doctorat" }[cycle] || "autre";
+	}
+
 	function cycle_badge(cycle) {
-		let map = { Licence: "blue", Master: "green", BTS: "orange", Doctorat: "purple" };
-		return `<span class="indicator-pill ${map[cycle] || "gray"}">${esc(cycle || "")}</span>`;
+		return `<span class="gn-tag gn-c-${cycle_css(cycle)}">${esc(__(cycle || "Autre"))}</span>`;
 	}
 
 	function esc(s) {

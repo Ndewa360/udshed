@@ -1,0 +1,30 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/assets/udshed/css/reinscription_wizard.css">
+{% endblock %}
+
+{% block page_content %}
+<div class="rw-portail">
+	<div class="rw-portail-topbar">
+		<a class="btn btn-outline-secondary btn-sm" href="/espace-etudiant">&larr; Espace étudiant</a>
+		<a class="btn btn-outline-secondary btn-sm" href="/api/method/logout">Déconnexion</a>
+	</div>
+	<div id="rw-main"></div>
+</div>
+
+<style>
+	.rw-portail { max-width: 1100px; margin: 0 auto; padding: 24px 0 48px; }
+	.rw-portail-topbar { display: flex; justify-content: space-between; margin-bottom: 20px; }
+</style>
+
+<script src="/assets/udshed/js/reinscription_wizard.js"></script>
+<script>
+	frappe.ready(function () {
+		window.udshed_reinscription({ main: document.getElementById("rw-main"), desk: false });
+	});
+</script>
+{% endblock %}

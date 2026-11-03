@@ -74,7 +74,7 @@ fixtures = [
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/udshed/css/gestion_des_niveaux.v3.css"
+app_include_css = "/assets/udshed/css/gestion_des_niveaux.v4.css"
 app_include_js = [
 	"https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js",
 	"/assets/udshed/js/udshed.js"
@@ -169,13 +169,15 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Permissions
 # -----------
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+	"Academic Reregistration": "udshed.api.permission.academic_reregistration_query",
+	"Progression Academique": "udshed.api.permission.progression_query",
+}
+
+has_permission = {
+	"Academic Reregistration": "udshed.api.permission.academic_reregistration_has_permission",
+	"Progression Academique": "udshed.api.permission.progression_has_permission",
+}
 
 # Document Events
 # ---------------

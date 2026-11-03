@@ -5,6 +5,14 @@ from frappe.utils import getdate, nowdate
 def daily():
 	"""Daily scheduled task to update session statuses based on dates."""
 	update_session_statuses()
+	update_reinscription_session_statuses()
+
+
+def update_reinscription_session_statuses():
+	"""Ouvre / ferme les Session Reinscription selon leurs dates."""
+	from udshed.udshed.doctype.session_reinscription.session_reinscription import mettre_a_jour_statuts
+
+	mettre_a_jour_statuts()
 
 
 def update_session_statuses():

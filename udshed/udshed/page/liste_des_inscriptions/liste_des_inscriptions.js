@@ -1,3 +1,5 @@
+// Liste unique de tous les inscrits : inscriptions de début d'année
+// (candidature) et inscriptions en cours d'année (hors candidature, 25Z…).
 frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 	let page = frappe.ui.make_app_page({
 		parent: wrapper,
@@ -5,8 +7,16 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
+	const ORIGINE_HORS_CANDIDATURE = "Hors candidature";
 	const API = "udshed.api.inscription_import_export";
-	let filters = { filiere: null, annee_academique: null, niveau: null, statut: null };
+	let filters = { filiere: null, annee_academique: null, cycle: null, niveau: null, statut: null, origine: null };
+	// Niveaux par cycle (même référence que udshed/utils/niveaux.py)
+	const NIVEAUX_PAR_CYCLE = {
+		"Licence": ["Licence 1", "Licence 2", "Licence 3"],
+		"BTS": ["BTS 1", "BTS 2"],
+		"Master": ["Master 1", "Master 2"],
+		"Doctorat": ["Doctorat 1", "Doctorat 2", "Doctorat 3", "Doctorat 4", "Doctorat 5", "Doctorat 6", "Doctorat 7"],
+	};
 	let current_query = "";
 	let report_data = null;
 	let actions_ready = false;
@@ -21,46 +31,66 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 		}[c]));
 	}
 
+	// Barre de filtres titrée (construite une fois) au-dessus du contenu
+	// (indicateurs, tableau, panneau) qui est redessiné à chaque chargement.
+	const $filtres = $(`<section class="li-filtres" aria-label="${__("Filtres")}"></section>`).appendTo(page.main);
+	const $contenu = $(`<div></div>`).appendTo(page.main);
+	const champs = {};
+	const TOUS_NIVEAUX = [].concat(...Object.values(NIVEAUX_PAR_CYCLE));
+
+	function champ_filtre(df, apres_changement) {
+		const $wrap = $(`<div class="li-filtre"></div>`).appendTo($filtres);
+		const ctrl = frappe.ui.form.make_control({
+			parent: $wrap,
+			df: {
+				...df,
+				onchange() {
+					const valeur = ctrl.get_value() || null;
+					if (valeur === filters[df.fieldname]) return;
+					filters[df.fieldname] = valeur;
+					if (apres_changement) apres_changement(valeur);
+					load_data();
+				},
+			},
+			render_input: true,
+		});
+		ctrl.refresh();
+		champs[df.fieldname] = ctrl;
+		return ctrl;
+	}
+
 	function setup_filters() {
-		page.add_field({
-			fieldtype: "Link",
-			label: "Filière",
-			fieldname: "filiere",
-			options: "Field of study",
-			change() {
-				filters.filiere = this.get_value();
-				load_data();
+		champ_filtre({ fieldtype: "Link", fieldname: "annee_academique", label: __("Année académique"), options: "Academic Year" });
+		champ_filtre({ fieldtype: "Link", fieldname: "filiere", label: __("Filière"), options: "Field of study" });
+		champ_filtre(
+			{ fieldtype: "Select", fieldname: "cycle", label: __("Cycle"), options: ["", ...Object.keys(NIVEAUX_PAR_CYCLE)] },
+			(cycle) => {
+				// Les niveaux proposés suivent le cycle choisi
+				const niveaux = cycle ? NIVEAUX_PAR_CYCLE[cycle] : TOUS_NIVEAUX;
+				champs.niveau.df.options = ["", ...niveaux];
+				champs.niveau.refresh();
+				if (filters.niveau && !niveaux.includes(filters.niveau)) {
+					filters.niveau = null;
+					champs.niveau.set_value("");
+				}
 			}
-		});
-		page.add_field({
-			fieldtype: "Link",
-			label: "Année académique",
-			fieldname: "annee_academique",
-			options: "Academic Year",
-			change() {
-				filters.annee_academique = this.get_value();
-				load_data();
-			}
-		});
-		page.add_field({
-			fieldtype: "Data",
-			label: "Niveau",
-			fieldname: "niveau",
-			change() {
-				filters.niveau = this.get_value();
-				load_data();
-			}
-		});
-		page.add_field({
-			fieldtype: "Select",
-			label: "Statut",
-			fieldname: "statut",
+		);
+		champ_filtre({ fieldtype: "Select", fieldname: "niveau", label: __("Niveau"), options: ["", ...TOUS_NIVEAUX] });
+		champ_filtre({
+			fieldtype: "Select", fieldname: "statut", label: __("Statut"),
 			options: ["", "Inscrit", "En attente de matricule", "Sans inscription académique"],
-			change() {
-				filters.statut = this.get_value();
-				load_data();
-			}
 		});
+		champ_filtre({
+			fieldtype: "Select", fieldname: "origine", label: __("Origine"),
+			options: [
+				{ value: "", label: "" },
+				{ value: "Candidature", label: __("Début d'année (candidature)") },
+				{ value: ORIGINE_HORS_CANDIDATURE, label: __("En cours d'année") },
+			],
+		});
+		$(`<button type="button" class="btn btn-link btn-sm li-reinit">${__("Réinitialiser")}</button>`)
+			.appendTo($filtres)
+			.on("click", reinitialiser_filtres);
 	}
 
 	function setup_actions() {
@@ -81,7 +111,23 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 		}
 	}
 
+	let reinitialisation = false;
+	function reinitialiser_filtres() {
+		reinitialisation = true;
+		Promise.all(Object.keys(filters).map(cle => {
+			filters[cle] = null;
+			return champs[cle] ? champs[cle].set_value("") : null;
+		})).then(() => {
+			champs.niveau.df.options = ["", ...TOUS_NIVEAUX];
+			champs.niveau.refresh();
+			reinitialisation = false;
+			current_query = "";
+			load_data();
+		});
+	}
+
 	function load_data() {
+		if (reinitialisation) return; // un seul rechargement après remise à zéro
 		frappe.call({
 			method: "udshed.api.inscription.get_liste_inscriptions",
 			args: filters,
@@ -94,20 +140,24 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 		});
 	}
 
-	function render() {
-		page.main.empty();
-		if (!report_data) return;
-		render_section();
-	}
+	// ------------------------------------------------------------------ //
+	//  Affichage : indicateurs, tableau paginé et panneau de détail
+	// ------------------------------------------------------------------ //
+	const PAR_PAGE = 20;
+	const COLONNES = [
+		{ cle: "matricule", label: "Matricule" },
+		{ cle: "nom_complet", label: "Étudiant" },
+		{ cle: "filiere_label", label: "Filière" },
+		{ cle: "niveau", label: "Niveau" },
+		{ cle: "origine", label: "Origine" },
+		{ cle: "statut", label: "Statut" },
+	];
+	let page_courante = 1;
+	let tri = { cle: "creation", sens: -1 };
+	let selection = null; // row.name de la ligne affichée dans le panneau
+	let $vue = null;
 
-	function section_header(title, count) {
-		return `<div class="bureau-section-header">
-			<span class="bureau-section-dot"></span>
-			<h5>${esc(title)}</h5>
-			<span class="bureau-count-badge">${count}</span>
-		</div>`;
-	}
-
+	// Encore utilisé par le bilan d'importation
 	function stat_card(label, value, icon) {
 		return `<div class="bureau-stat-card">
 			<div class="bureau-stat-icon">${frappe.utils.icon(icon || "list", "md")}</div>
@@ -118,163 +168,199 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 		</div>`;
 	}
 
-	function matches_search(row, q, keys) {
+	function matches_search(row, q) {
 		if (!q) return true;
 		q = q.toLowerCase();
-		return keys.some(k => String(row[k] || "").toLowerCase().includes(q));
+		return SEARCH_KEYS.some(k => String(row[k] || "").toLowerCase().includes(q));
 	}
 
-	function search_box(placeholder) {
-		return `<div class="bureau-search-wrap">
-			<svg class="bureau-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<circle cx="11" cy="11" r="7"></circle>
-				<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-			</svg>
-			<input type="text" class="bureau-search-input form-control" placeholder="${esc(placeholder)}">
-			<div class="bureau-search-results"></div>
-		</div>`;
+	function lignes_visibles() {
+		let rows = (report_data.rows || []).filter(r => matches_search(r, current_query));
+		return rows.sort((a, b) => tri.sens * String(a[tri.cle] || "").localeCompare(
+			String(b[tri.cle] || ""), "fr", { numeric: true, sensitivity: "base" }
+		));
 	}
 
-	function render_section() {
-		let rows = report_data.rows || [];
-		let container = $(`<div class="bureau-section" data-section="inscriptions"></div>`);
-		container.append(section_header("Inscrits", rows.length));
-		page.main.append(container);
-		refresh_stats(container, rows);
-		container.append(search_box("Rechercher un inscrit (matricule, nom, email, filière, niveau)…"));
-		let $input = container.find(".bureau-search-input");
-		$input.val(current_query);
-		$input.on("input", function () {
-			update_results(container, rows, this.value);
+	function initiales(nom) {
+		return (nom || "?").trim().split(/\s+/).slice(0, 2).map(x => x[0]).join("").toUpperCase();
+	}
+
+	function pill_statut(statut) {
+		const couleur = { "Inscrit": "green", "En attente de matricule": "orange" }[statut] || "gray";
+		return `<span class="indicator-pill ${couleur}">${esc(statut)}</span>`;
+	}
+
+	function pill_origine(origine) {
+		return origine === ORIGINE_HORS_CANDIDATURE
+			? `<span class="indicator-pill blue">En cours d'année</span>`
+			: `<span class="indicator-pill gray">Début d'année</span>`;
+	}
+
+	function render() {
+		$contenu.empty();
+		if (!report_data) return;
+		$vue = $(`<div class="li-vue">
+			<div class="li-sous-titre"></div>
+			<div class="li-kpis"></div>
+			<div class="li-main">
+				<section class="li-card">
+					<div class="li-toolbar">
+						<div class="li-search">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+							<input type="search" class="li-search-input" placeholder="${__("Rechercher : matricule, nom, email, téléphone, parent…")}" aria-label="${__("Rechercher un inscrit")}">
+						</div>
+						<span class="li-count"></span>
+					</div>
+					<div class="li-table-wrap"><table class="li-table"><thead></thead><tbody></tbody></table></div>
+					<div class="li-foot"><span class="li-pager-info"></span><span class="li-pager"></span></div>
+				</section>
+				<aside class="li-card li-detail" aria-live="polite"></aside>
+			</div>
+		</div>`).appendTo($contenu);
+
+		$vue.find(".li-search-input").val(current_query).on("input", function () {
+			current_query = this.value;
+			page_courante = 1;
+			rafraichir();
 		});
-		$input.on("focus", function () {
-			update_results(container, rows, this.value);
-		});
-		if (current_query) refresh_stats(container, rows.filter(r => matches_search(r, current_query, SEARCH_KEYS)));
+		rafraichir();
 	}
 
-	function refresh_stats($sec, filtered) {
-		let par_filiere = {};
-		let par_niveau = {};
-		filtered.forEach(r => {
-			par_filiere[r.filiere_label] = (par_filiere[r.filiere_label] || 0) + 1;
-			par_niveau[r.niveau] = (par_niveau[r.niveau] || 0) + 1;
-		});
-		let en_attente = filtered.filter(r => r.statut === "En attente de matricule").length;
-		let cards = `<div class="bureau-stats-row">
-			${stat_card("Total inscrits", filtered.length, "users")}
-			${en_attente ? stat_card("En attente de matricule", en_attente, "clock") : ""}
-			${Object.entries(par_filiere).map(([k, v]) => stat_card(`${k}`, v, "layers")).join("")}
-		</div>
-		<div class="bureau-stats-row">
-			${Object.entries(par_niveau).map(([k, v]) => stat_card(`Niveau ${k}`, v, "graduation-cap")).join("")}
-		</div>`;
-		$sec.find(".bureau-stats-widget").remove();
-		$sec.find(".bureau-search-wrap").before(`<div class="bureau-stats-widget">${cards}</div>`);
+	function rafraichir() {
+		const rows = lignes_visibles();
+		const pages = Math.max(1, Math.ceil(rows.length / PAR_PAGE));
+		page_courante = Math.min(page_courante, pages);
+		if (!rows.some(r => r.name === selection)) selection = rows.length ? rows[0].name : null;
+
+		$vue.find(".li-sous-titre").text(
+			(filters.annee_academique ? __("Année académique {0}", [filters.annee_academique]) : __("Toutes les années"))
+			+ " · " + __("inscriptions de début d'année et en cours d'année")
+		);
+		render_kpis(rows);
+		render_tableau(rows, pages);
+		render_detail(rows.find(r => r.name === selection));
 	}
 
-	function update_results($sec, allRows, q) {
-		current_query = q || "";
-		let filtered = allRows.filter(r => matches_search(r, q, SEARCH_KEYS));
-		refresh_stats($sec, filtered);
-		let $results = $sec.find(".bureau-search-results");
-		$results.empty();
-		let items = filtered.slice(0, 50).map((r, i) => `
-			<div class="bureau-search-result" data-idx="${i}">
-				<span class="bureau-result-name">${esc(r.matricule) || esc(r.nom_complet)} — ${esc(r.nom_complet)}</span>
-				<span class="bureau-result-meta">${esc(r.filiere_label)} · ${esc(r.niveau)}${r.statut !== "Inscrit" ? " · " + esc(r.statut) : ""}</span>
-			</div>`).join("");
-		if (!q) {
-			$results.hide();
-		} else if (!filtered.length) {
-			$results.html(`<div class="bureau-search-empty">Aucun inscrit trouvé</div>`).show();
-		} else {
-			$results.html(items).show();
+	function render_kpis(rows) {
+		const total = rows.length;
+		const en_cours = rows.filter(r => r.origine === ORIGINE_HORS_CANDIDATURE).length;
+		const debut = total - en_cours;
+		const attente = rows.filter(r => r.statut !== "Inscrit").length;
+		const pct = x => (total ? (x / total) * 100 : 0);
+		$vue.find(".li-kpis").html(`
+			<div class="li-kpi">
+				<span class="li-kpi-v">${total}</span><span class="li-kpi-l">${__("Inscrits")}</span>
+				<div class="li-bar" title="${__("Début d'année / en cours d'année")}">
+					<span class="li-bar-debut" style="width:${pct(debut)}%"></span><span class="li-bar-cours" style="width:${pct(en_cours)}%"></span>
+				</div>
+			</div>
+			<div class="li-kpi"><span class="li-kpi-v">${debut}</span><span class="li-kpi-l">${__("Début d'année (candidature)")}</span></div>
+			<div class="li-kpi"><span class="li-kpi-v">${en_cours}</span><span class="li-kpi-l">${__("En cours d'année (25Z…)")}</span></div>
+			<div class="li-kpi ${attente ? "li-kpi-alerte" : ""}"><span class="li-kpi-v">${attente}</span><span class="li-kpi-l">${__("En attente de matricule")}</span></div>`);
+	}
+
+	function render_tableau(rows, pages) {
+		const debut = (page_courante - 1) * PAR_PAGE;
+		const visibles = rows.slice(debut, debut + PAR_PAGE);
+
+		$vue.find(".li-count").text(__("{0} inscrit(s)", [rows.length]));
+		$vue.find(".li-table thead").html(`<tr>${COLONNES.map(c => `
+			<th data-cle="${c.cle}" class="${tri.cle === c.cle ? "li-trie" : ""}" tabindex="0">
+				${esc(c.label)} <span class="li-tri">${tri.cle === c.cle ? (tri.sens > 0 ? "▲" : "▼") : "↕"}</span>
+			</th>`).join("")}</tr>`);
+
+		$vue.find(".li-table tbody").html(visibles.length ? visibles.map(r => `
+			<tr data-name="${esc(r.name)}" tabindex="0" class="${r.name === selection ? "li-sel" : ""}">
+				<td>${r.matricule ? `<span class="li-mat">${esc(r.matricule)}</span>` : `<span class="li-mat li-mat-vide">${__("à générer")}</span>`}</td>
+				<td><div class="li-qui"><span class="li-av">${esc(initiales(r.nom_complet))}</span>
+					<span>${esc(r.nom_complet)}<small>${esc(r.email)}</small></span></div></td>
+				<td>${esc(r.filiere_label)}</td>
+				<td>${esc(r.niveau)}</td>
+				<td>${pill_origine(r.origine)}</td>
+				<td>${pill_statut(r.statut)}</td>
+			</tr>`).join("")
+			: `<tr><td colspan="${COLONNES.length}" class="li-vide">${__("Aucun inscrit ne correspond à ces filtres.")}</td></tr>`);
+
+		$vue.find(".li-pager-info").text(rows.length
+			? __("{0}–{1} sur {2}", [debut + 1, debut + visibles.length, rows.length]) : "");
+		$vue.find(".li-pager").html(pages > 1 ? `
+			<button class="btn btn-xs btn-default li-prec" ${page_courante === 1 ? "disabled" : ""}>‹</button>
+			<span>${page_courante} / ${pages}</span>
+			<button class="btn btn-xs btn-default li-suiv" ${page_courante === pages ? "disabled" : ""}>›</button>` : "");
+
+		$vue.find(".li-table th").on("click keydown", function (e) {
+			if (e.type === "keydown" && e.key !== "Enter") return;
+			const cle = $(this).attr("data-cle");
+			tri = { cle, sens: tri.cle === cle ? -tri.sens : 1 };
+			rafraichir();
+		});
+		$vue.find(".li-table tbody tr[data-name]").on("click keydown", function (e) {
+			if (e.type === "keydown" && e.key !== "Enter") return;
+			selection = $(this).attr("data-name");
+			rafraichir();
+		});
+		$vue.find(".li-prec").on("click", () => { page_courante -= 1; rafraichir(); });
+		$vue.find(".li-suiv").on("click", () => { page_courante += 1; rafraichir(); });
+	}
+
+	function ligne_dl(label, value) {
+		return value ? `<dt>${esc(label)}</dt><dd>${esc(value)}</dd>` : "";
+	}
+
+	function render_detail(r) {
+		const $d = $vue.find(".li-detail");
+		if (!r) {
+			$d.html(`<p class="li-vide">${__("Sélectionnez un inscrit pour voir sa fiche.")}</p>`);
+			return;
 		}
-		$results.find(".bureau-search-result").on("click", function () {
-			show_detail(filtered[parseInt($(this).attr("data-idx"), 10)]);
-			$results.empty().hide();
-		});
-	}
+		const parents = [
+			["Père", r.father_name, r.father_phone, r.father_profession],
+			["Mère", r.mother_name, r.mother_phone, r.mother_profession],
+			["Sponsor", r.sponsor_name, r.sponsor_phone, r.sponsor_profession],
+		].filter(p => p[1]).map(p => ligne_dl(p[0], [p[1], p[2], p[3]].filter(Boolean).join(" · "))).join("");
 
-	function detail_item(label, value) {
-		return `<div class="bureau-detail-item">
-			<div class="bureau-detail-label">${esc(label)}</div>
-			<div class="bureau-detail-value">${value == null || value === "" ? "—" : esc(value)}</div>
-		</div>`;
-	}
-
-	function show_detail(r) {
-		if (!r) return;
-		let dialog = new frappe.ui.Dialog({
-			title: r.nom_complet || r.matricule,
-			size: "large",
-		});
-		let actions = [];
-		if (r.dossier_origine) {
-			actions.push(`<button class="btn btn-default btn-sm bureau-open-dossier">Ouvrir le dossier candidat</button>`);
-		}
+		const actions = [];
 		if (r.inscription) {
-			actions.push(`<button class="btn btn-default btn-sm bureau-open-inscription">Ouvrir l'inscription</button>`);
 			if (r.matricule) {
-				actions.push(`<button class="btn btn-primary btn-sm bureau-fiche">Télécharger la fiche</button>`);
+				actions.push(`<button class="btn btn-primary btn-sm li-fiche">${__("Télécharger la fiche")}</button>`);
 			} else if (!r.dossier_origine && report_data.peut_gerer) {
-				actions.push(`<button class="btn btn-primary btn-sm bureau-generer">Générer le matricule et la fiche</button>`);
+				actions.push(`<button class="btn btn-primary btn-sm li-generer">${__("Générer le matricule et la fiche")}</button>`);
 			}
+			actions.push(`<button class="btn btn-default btn-sm li-inscription">${__("Ouvrir l'inscription")}</button>`);
 		}
-		dialog.$body.append(`
-			<div class="bureau-detail-section">
-				<h6>Inscription</h6>
-				<div class="bureau-detail-grid">
-					${detail_item("Matricule", r.matricule)}
-					${detail_item("Statut", r.statut)}
-					${detail_item("Année académique", r.annee_academique)}
-					${detail_item("Nom complet", r.nom_complet)}
-					${detail_item("Email", r.email)}
-					${detail_item("Téléphone", r.phone)}
-					${detail_item("Filière", r.filiere_label)}
-					${detail_item("Niveau", r.niveau)}
-					${detail_item("Origine", r.origine)}
-					${detail_item("Centre d'examen", r.examination_centre)}
-					${detail_item("Numéro de dossier", r.dossier_origine)}
-				</div>
+		if (r.dossier_origine) {
+			actions.push(`<button class="btn btn-default btn-sm li-dossier">${__("Ouvrir le dossier candidat")}</button>`);
+		}
+
+		$d.html(`
+			<div class="li-qui li-detail-tete">
+				<span class="li-av li-av-grand">${esc(initiales(r.nom_complet))}</span>
+				<div><h4>${esc(r.nom_complet)}</h4>
+					<div class="li-meta">${r.matricule ? esc(r.matricule) : __("Matricule à générer")} · ${pill_statut(r.statut)}</div></div>
 			</div>
-			<div class="bureau-detail-section">
-				<h6>Parents / Tuteur</h6>
-				<div class="bureau-detail-grid">
-					${detail_item("Père — Nom", r.father_name)}
-					${detail_item("Père — Téléphone", r.father_phone)}
-					${detail_item("Père — Profession", r.father_profession)}
-					${detail_item("Père — Email", r.father_email)}
-					${detail_item("Père — Ville", r.father_city)}
-					${detail_item("Père — Pays", r.father_country)}
-					${detail_item("Mère — Nom", r.mother_name)}
-					${detail_item("Mère — Téléphone", r.mother_phone)}
-					${detail_item("Mère — Profession", r.mother_profession)}
-					${detail_item("Mère — Email", r.mother_email)}
-					${detail_item("Mère — Ville", r.mother_city)}
-					${detail_item("Mère — Pays", r.mother_country)}
-					${detail_item("Sponsor — Nom", r.sponsor_name)}
-					${detail_item("Sponsor — Téléphone", r.sponsor_phone)}
-					${detail_item("Sponsor — Profession", r.sponsor_profession)}
-					${detail_item("Sponsor — Email", r.sponsor_email)}
-					${detail_item("Sponsor — Ville", r.sponsor_city)}
-					${detail_item("Sponsor — Pays", r.sponsor_country)}
-					${detail_item("Contact parent", r.parent_phone)}
-					${detail_item("Email parent", r.email_parent)}
-				</div>
-			</div>
-			<div class="bureau-detail-actions">${actions.join(" ")}</div>`);
-		dialog.$body.find(".bureau-open-dossier").on("click", function () {
-			frappe.set_route("Form", "Session Inscription Candidate", r.dossier_origine);
-		});
-		dialog.$body.find(".bureau-open-inscription").on("click", function () {
-			frappe.set_route("Form", "Inscription Academique", r.inscription);
-		});
-		dialog.$body.find(".bureau-fiche").on("click", function () {
-			window.open(fiche_url(r.inscription), "_blank");
-		});
-		dialog.$body.find(".bureau-generer").on("click", function () {
+			<h6>${__("Inscription")}</h6>
+			<dl class="li-dl">
+				${ligne_dl(__("Année"), r.annee_academique)}
+				${ligne_dl(__("Filière"), r.filiere_label)}
+				${ligne_dl(__("Niveau"), r.niveau)}
+				<dt>${__("Origine")}</dt><dd>${pill_origine(r.origine)}</dd>
+				${ligne_dl(__("N° dossier"), r.dossier_origine)}
+				${ligne_dl(__("Centre d'examen"), r.examination_centre !== "Non défini" ? r.examination_centre : "")}
+			</dl>
+			<h6>${__("Contact")}</h6>
+			<dl class="li-dl">
+				${ligne_dl(__("Email"), r.email)}
+				${ligne_dl(__("Téléphone"), r.phone)}
+				${ligne_dl(__("Sexe"), r.sexe)}
+				${ligne_dl(__("Naissance"), [r.date_naissance, r.lieu_naissance].filter(Boolean).join(" · "))}
+			</dl>
+			${parents ? `<h6>${__("Parents / tuteur")}</h6><dl class="li-dl">${parents}</dl>` : ""}
+			<div class="li-actions">${actions.join("")}</div>`);
+
+		$d.find(".li-dossier").on("click", () => frappe.set_route("Form", "Session Inscription Candidate", r.dossier_origine));
+		$d.find(".li-inscription").on("click", () => frappe.set_route("Form", "Inscription Academique", r.inscription));
+		$d.find(".li-fiche").on("click", () => window.open(fiche_url(r.inscription), "_blank"));
+		$d.find(".li-generer").on("click", () => {
 			frappe.call({
 				method: `${API}.generer_matricule_et_fiche`,
 				args: { inscription: r.inscription },
@@ -286,13 +372,11 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 						message: __("Matricule attribué : {0}", [res.message.matricule]),
 						indicator: "green",
 					});
-					dialog.hide();
 					window.open(res.message.pdf_url, "_blank");
 					load_data();
 				},
 			});
 		});
-		dialog.show();
 	}
 
 	function fiche_url(inscription) {
@@ -459,12 +543,6 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 
 		d.show();
 	}
-
-	$(document).on("click.listeInscriptions", function (e) {
-		if (!$(e.target).closest(".bureau-search-wrap").length) {
-			$(".bureau-search-results").empty().hide();
-		}
-	});
 
 	setup_filters();
 	load_data();

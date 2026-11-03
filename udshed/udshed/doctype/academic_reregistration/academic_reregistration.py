@@ -4,7 +4,9 @@ from frappe.model.document import Document
 from udshed.utils.niveaux import niveau_precedent, cycle_niveau
 
 from udshed.api.reregistration import (
+	STAFF_ROLES,
 	_admission_decision,
+	_autorise_etudiant,
 	_decision_annee_etudiant,
 	_dettes_with_credits,
 	_derniere_classe_etudiant,
@@ -21,15 +23,40 @@ class AcademicReregistration(Document):
 
 	def validate(self):
 		self.statut = "Validée"
+		if self.is_new():
+			self.verifier_autorisation()
+			self.imposer_identite()
 		self.verifier_session_ouverte()
 		self.verifier_annee_suivante()
 		self.verifier_doublon()
+		self.verifier_niveau_progression()
 		self.calculer_niveau_precedent()
 		self._evaluer_admission()
 		self.verifier_progression()
 		self.charger_resultats_precedents()
 		self.calculer_cours_inscrits()
 		self._verifier_limite_credits()
+
+	def verifier_autorisation(self):
+		"""Seuls l'étudiant lui-même et le personnel autorisé créent une réinscription.
+
+		Couvre toutes les entrées (page, Desk, API, ancien Web Form public).
+		"""
+		if not _autorise_etudiant(self.student):
+			frappe.throw(
+				"Vous n'êtes pas autorisé à créer une réinscription pour cet étudiant.",
+				frappe.PermissionError,
+			)
+
+	def imposer_identite(self):
+		"""L'identité vient du dossier Student : un étudiant ne peut pas la modifier."""
+		if frappe.session.user == "Administrator" or set(frappe.get_roles()) & STAFF_ROLES:
+			return
+		student = frappe.get_doc("Student", self.student)
+		self.nom_prenom = f"{student.nom or ''} {student.prenom or ''}".strip()
+		self.email = student.email
+		self.date_naissance = student.birth_date
+		self.lieu_naissance = student.birth_place
 
 	def verifier_session_ouverte(self):
 		session = frappe.db.exists("Session Reinscription", {
@@ -39,15 +66,76 @@ class AcademicReregistration(Document):
 		if not session:
 			frappe.throw("La session de réinscription sélectionnée n'est pas ouverte.")
 
+		if self.is_new():
+			# Dates de la période et ciblage filière / niveau suivi
+			from udshed.udshed.doctype.session_reinscription.session_reinscription import (
+				verifier_session_utilisable,
+			)
+			verifier_session_utilisable(
+				self.reinscription_session,
+				frappe.db.get_value("Student", self.student, "filiere"),
+				_derniere_classe_etudiant(self.student),
+			)
+
 	def verifier_doublon(self):
-		existant = frappe.db.exists("Academic Reregistration", {
+		if self.is_new():
+			# Verrou sur le dossier étudiant : sérialise les créations concurrentes.
+			frappe.db.get_value("Student", self.student, "name", for_update=True)
+		existant = frappe.db.get_value("Academic Reregistration", {
 			"student": self.student,
 			"academic_year": self.academic_year,
-			"niveau": self.niveau,
 			"name": ["!=", self.name]
-		})
+		}, "name")
 		if existant:
-			frappe.throw("Cet étudiant est déjà réinscrit pour cette année et ce niveau.")
+			frappe.throw(
+				"Cet étudiant est déjà réinscrit pour l'année académique {0} ({1}).".format(
+					self.academic_year, existant
+				)
+			)
+
+	def verifier_niveau_progression(self):
+		"""Niveau et filière doivent être ceux de la Progression Academique.
+
+		Contrôle serveur : un niveau envoyé par le navigateur ou l'API est
+		refusé s'il diffère. La scolarité corrige la progression (motif +
+		historique), jamais le niveau directement ici.
+		"""
+		from udshed.api.progression import exiger_progression, progression_pour_annee
+
+		if self.is_new():
+			progression = exiger_progression(self.student, self.academic_year)
+		elif self.has_value_changed("niveau") or self.has_value_changed("filiere"):
+			progression = progression_pour_annee(self.student, self.academic_year)
+			if not progression:
+				return
+		else:
+			return
+
+		if self.niveau != progression.niveau_cible or self.filiere != progression.filiere_cible:
+			frappe.throw(
+				"Le niveau et la filière de réinscription sont fixés par la progression académique {0} "
+				"({1} — {2}). Seule la scolarité peut corriger cette progression, avec un motif.".format(
+					progression.name, progression.filiere_cible, progression.niveau_cible
+				),
+				frappe.PermissionError,
+			)
+
+	def after_insert(self):
+		"""Rattache la réinscription à la progression qui l'a autorisée."""
+		progression = frappe.db.get_value(
+			"Progression Academique",
+			{"student": self.student, "annee_cible": self.academic_year, "reinscription": ["is", "not set"]},
+			"name",
+		)
+		if progression:
+			frappe.db.set_value("Progression Academique", progression, "reinscription", self.name,
+								update_modified=False)
+
+	def on_trash(self):
+		frappe.db.set_value(
+			"Progression Academique", {"reinscription": self.name}, "reinscription", None,
+			update_modified=False,
+		)
 
 	def verifier_annee_suivante(self):
 		if not self.is_new():
