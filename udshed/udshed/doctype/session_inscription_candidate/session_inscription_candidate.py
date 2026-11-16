@@ -5,6 +5,15 @@ import frappe
 from frappe.model.document import Document
 from frappe import _
 from udshed.api.candidature import _nettoyer_telephone, get_school_logo_url
+from udshed.udshed.doctype.concours.concours import concours_pour_formation
+from udshed.api.concours import (
+	STATUT_AUTORISE,
+	envoyer_convocation,
+	inscrire_candidat,
+	retirer_candidat,
+	verifier_autorisation,
+	verifier_retrait,
+)
 
 
 class SessionInscriptionCandidate(Document):
@@ -46,7 +55,9 @@ class SessionInscriptionCandidate(Document):
 			if valeur:
 				setattr(self, champ, _nettoyer_telephone(valeur))
 		self._deduire_filiere_niveau_des_choix()
+		self._rattacher_concours()
 		self._proteger_statut_accepte()
+		self._controler_statut_concours()
 		if self.candidature_status == "Refusé" and not (self.status_comment or "").strip():
 			frappe.throw(_("Le motif du rejet est obligatoire pour un statut « Refusé »."))
 
@@ -69,6 +80,46 @@ class SessionInscriptionCandidate(Document):
 				"Field of study Level", niveau_name, "level"
 			)
 			self.niveau = niveau_label or niveau_name
+
+	def _rattacher_concours(self):
+		"""Mode d'admission : « Concours » dès qu'une des formations demandées
+		(1er, 2e ou 3e choix) est au programme d'un concours de la campagne,
+		sinon « Dossier ». Recalculé tant que le dossier n'est pas tranché."""
+		if not self.is_new() and self.candidature_status not in ("En attente", "Dossier en cours d'examen"):
+			return
+		concours = None
+		for row in self.get("choix_de_formation") or []:
+			concours = concours_pour_formation(self.session_inscription, row.get("filiere"), row.get("niveau"))
+			if concours:
+				break
+		self.concours = concours
+		self.mode_admission = "Concours" if concours else "Dossier"
+
+	def _controler_statut_concours(self):
+		"""Règles du circuit concours :
+		- « Autorisé à concourir » : seulement pour un dossier rattaché à un concours ouvert ;
+		- « Accepté » : pour un candidat au concours, seule la délibération du jury
+		  le prononce (frappe.flags.admission_par_jury) ;
+		- quitter « Autorisé à concourir » retire le candidat du concours, tant
+		  qu'aucune note n'est saisie."""
+		if self.is_new():
+			return
+		avant = self.get_doc_before_save()
+		ancien = avant.candidature_status if avant else None
+		nouveau = self.candidature_status
+		if ancien == nouveau:
+			return
+		if nouveau == STATUT_AUTORISE:
+			verifier_autorisation(self)
+		if frappe.flags.admission_par_jury:
+			return
+		if nouveau == "Accepté" and self.mode_admission == "Concours":
+			frappe.throw(
+				_("Ce candidat passe par le concours {0} : son admission sera prononcée par la "
+				  "délibération du jury, pas manuellement.").format(self.concours)
+			)
+		if ancien == STATUT_AUTORISE:
+			verifier_retrait(self)
 
 	def _session_inscription_courante(self):
 		"""Retourne la session d'inscription ouverte, sinon la plus récente."""
@@ -100,6 +151,12 @@ class SessionInscriptionCandidate(Document):
 			frappe.utils.now_datetime(),
 			update_modified=False,
 		)
+		if self.candidature_status == STATUT_AUTORISE:
+			fiche = inscrire_candidat(self)
+			envoyer_convocation(fiche.name)
+		elif old_doc.candidature_status == STATUT_AUTORISE and not frappe.flags.admission_par_jury:
+			retirer_candidat(self)
+
 		if self.candidature_status == "Accepté":
 			_send_confirmation_email(self)
 		elif self.candidature_status == "Refusé":
@@ -331,6 +388,7 @@ def get_candidate_dashboard_stats(
 		("total", None),
 		("en_attente", "En attente"),
 		("en_cours", "Dossier en cours d'examen"),
+		("autorise", "Autorisé à concourir"),
 		("accepte", "Accepté"),
 		("refuse", "Refusé"),
 		("inscrit", "Inscrit"),
@@ -429,6 +487,8 @@ def get_candidate_detail(name):
 		"id_photo": doc.id_photo or "",
 		"remittance_receipt": doc.remittance_receipt or "",
 		"candidature_status": doc.candidature_status or "En attente",
+		"mode_admission": doc.mode_admission or "Dossier",
+		"concours": doc.concours or "",
 		"status_updated_on": (
 			frappe.utils.format_datetime(doc.status_updated_on, "dd/MM/yyyy HH:mm")
 			if doc.status_updated_on else ""

@@ -6,6 +6,7 @@ frappe.listview_settings["Session Inscription Candidate"] = {
 		const colors = {
 			"En attente": "orange",
 			"Dossier en cours d'examen": "blue",
+			"Autorisé à concourir": "purple",
 			"Accepté": "green",
 			"Refusé": "red",
 			"Inscrit": "purple",
@@ -37,6 +38,7 @@ function change_status(listview) {
 	const STATUSES = [
 		"En attente",
 		"Dossier en cours d'examen",
+		"Autorisé à concourir",
 		"Accepté",
 		"Refusé",
 		"Inscrit",

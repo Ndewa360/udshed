@@ -1,0 +1,183 @@
+{
+ "actions": [],
+ "autoname": "CCAND-.YYYY.-.#####",
+ "creation": "2026-11-09 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "candidat_section",
+  "concours",
+  "candidature",
+  "nom_complet",
+  "column_break_candidat",
+  "centre_examen",
+  "numero_table",
+  "code_anonymat",
+  "notes_section",
+  "notes",
+  "resultats_section",
+  "resultats",
+  "decision_section",
+  "decision",
+  "observation_jury",
+  "column_break_decision",
+  "filiere_admise",
+  "niveau_admis"
+ ],
+ "fields": [
+  {
+   "fieldname": "candidat_section",
+   "fieldtype": "Section Break",
+   "label": "Candidat"
+  },
+  {
+   "fieldname": "concours",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Concours",
+   "options": "Concours",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "candidature",
+   "fieldtype": "Link",
+   "label": "Candidature",
+   "options": "Session Inscription Candidate",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fetch_from": "candidature.full_name",
+   "fieldname": "nom_complet",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nom complet",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_candidat",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "candidature.examination_centre",
+   "fieldname": "centre_examen",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Centre d'examen",
+   "read_only": 1
+  },
+  {
+   "fieldname": "numero_table",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Numéro de table",
+   "read_only": 1
+  },
+  {
+   "fieldname": "code_anonymat",
+   "fieldtype": "Data",
+   "label": "Code d'anonymat",
+   "read_only": 1
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Table",
+   "label": "Notes",
+   "options": "Candidat Concours Note"
+  },
+  {
+   "fieldname": "resultats_section",
+   "fieldtype": "Section Break",
+   "label": "Résultats par filière demandée"
+  },
+  {
+   "fieldname": "resultats",
+   "fieldtype": "Table",
+   "label": "Résultats",
+   "options": "Candidat Concours Resultat"
+  },
+  {
+   "fieldname": "decision_section",
+   "fieldtype": "Section Break",
+   "label": "Décision du jury"
+  },
+  {
+   "fieldname": "decision",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Décision",
+   "options": "\nAdmis\nListe d'attente\nNon admis\nAbsent"
+  },
+  {
+   "fieldname": "observation_jury",
+   "fieldtype": "Small Text",
+   "label": "Observation du jury"
+  },
+  {
+   "fieldname": "column_break_decision",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "filiere_admise",
+   "fieldtype": "Link",
+   "label": "Filière d'admission",
+   "options": "Field of study"
+  },
+  {
+   "fieldname": "niveau_admis",
+   "fieldtype": "Link",
+   "label": "Niveau d'admission",
+   "options": "Field of study Level"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-09 11:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Candidat Concours",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Registration Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "nom_complet"
+}

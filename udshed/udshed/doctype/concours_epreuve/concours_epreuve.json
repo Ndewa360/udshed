@@ -1,0 +1,101 @@
+{
+ "actions": [],
+ "creation": "2026-11-09 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "matiere",
+  "filiere",
+  "coefficient",
+  "note_eliminatoire",
+  "date_epreuve",
+  "correcteur",
+  "notes_validees",
+  "validees_le"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "matiere",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Matière",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "description": "Laisser vide pour une épreuve commune à toutes les filières du concours.",
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Filière",
+   "options": "Field of study"
+  },
+  {
+   "columns": 1,
+   "default": "1",
+   "fieldname": "coefficient",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Coefficient",
+   "non_negative": 1,
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "description": "Une note strictement inférieure élimine le candidat pour la filière.",
+   "fieldname": "note_eliminatoire",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Note éliminatoire",
+   "precision": "2"
+  },
+  {
+   "columns": 2,
+   "fieldname": "date_epreuve",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Date de l'épreuve"
+  },
+  {
+   "columns": 1,
+   "description": "Utilisateur chargé de saisir les notes de cette épreuve. Vide : tout correcteur peut saisir.",
+   "fieldname": "correcteur",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Correcteur",
+   "options": "User"
+  },
+  {
+   "columns": 1,
+   "fieldname": "notes_validees",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Notes validées",
+   "read_only": 1
+  },
+  {
+   "fieldname": "validees_le",
+   "fieldtype": "Datetime",
+   "label": "Validées le",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-16 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Concours Epreuve",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -147,6 +147,41 @@ frappe.ready(function() {
 			color: #003B6F !important;
 			color-scheme: light !important;
 			transition: all 0.2s ease;
+			/* Le thème du portail fixe la hauteur à 42px : avec ces marges, le texte
+			   des listes déroulantes était coupé. La hauteur suit donc le contenu. */
+			height: auto !important;
+			min-height: 52px;
+			line-height: 1.4 !important;
+		}
+		/* Cellules des tableaux : champs compacts, à la hauteur de la ligne */
+		.web-form .grid-body .editable-row .form-control {
+			min-height: 0;
+			padding: 6px 10px !important;
+			font-size: 14px !important;
+		}
+		/* Champs en lecture seule (Nom Complet) : même case que les champs de saisie */
+		.web-form .like-disabled-input {
+			display: flex;
+			align-items: center;
+			min-height: 52px;
+			padding: 14px 16px;
+			background-color: #EAF1F8;
+			border: 1px solid #cbd9e8;
+			border-radius: 10px;
+			font-size: 15px;
+			font-weight: 400;
+			line-height: 1.4;
+			color: #003B6F;
+		}
+		/* Flèche des listes : centrée quelle que soit la hauteur du champ */
+		.web-form .frappe-control .select-icon {
+			top: 50% !important;
+			transform: translateY(-50%);
+		}
+		/* Téléphone : le drapeau et l'indicatif sont posés sur le champ. Frappe leur
+		   réserve la place en marge gauche, que le padding !important ci-dessus annulait. */
+		.web-form .frappe-control[data-fieldtype="Phone"] input.form-control {
+			padding-left: 96px !important;
 		}
 		.web-form .form-control::placeholder {
 			color: #94a3b8;

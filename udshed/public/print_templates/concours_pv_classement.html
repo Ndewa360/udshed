@@ -1,0 +1,112 @@
+{# PV de classement provisoire d'un concours : une section (saut de page) par filière. #}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+    @page {
+        size: A4 landscape;
+        margin: 12mm 10mm 14mm;
+        @bottom-center {
+            content: "{{ school_name }} — PV de classement provisoire — {{ concours.name }} — Page " counter(page) " / " counter(pages);
+            font-size: 7pt;
+            color: #7f8c8d;
+        }
+        @bottom-right {
+            content: "Édité le {{ date_emission }}";
+            font-size: 7pt;
+            color: #7f8c8d;
+        }
+    }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #222; margin: 0; font-size: 8.5pt; }
+    .section { page-break-after: always; }
+    .section:last-child { page-break-after: auto; }
+    .entete { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #003B6F; padding-bottom: 6px; margin-bottom: 8px; }
+    .entete img { height: 46px; }
+    .entete .ecole { font-size: 11pt; font-weight: bold; color: #003B6F; }
+    .entete .sous { font-size: 9pt; color: #555; }
+    h1 { font-size: 13pt; text-align: center; margin: 4px 0 2px; letter-spacing: 0.04em; }
+    .provisoire { text-align: center; color: #b03a2e; font-weight: bold; font-size: 8.5pt; margin-bottom: 6px; }
+    .infos { text-align: center; font-size: 9.5pt; margin-bottom: 8px; }
+    .infos strong { color: #003B6F; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #777; padding: 3px 4px; vertical-align: middle; }
+    th { background: #e8eef5; font-size: 7.5pt; text-transform: uppercase; }
+    th small { text-transform: none; font-weight: normal; }
+    td.c { text-align: center; }
+    td.nom { white-space: nowrap; }
+    td.motif { font-size: 7.5pt; color: #555; }
+    tr.admis td.decision { color: #1e8449; font-weight: bold; }
+    tr.attente td.decision { color: #b9770e; font-weight: bold; }
+    tr.non td.decision { color: #b03a2e; }
+    tr.admis { background: #f3faf5; }
+    .eq { color: #b03a2e; font-weight: bold; }
+    .bilan { margin-top: 6px; font-size: 9pt; }
+    table.pied { margin-top: 14px; font-size: 9pt; }
+    table.pied td { border: none; width: 33%; padding: 0 12px 0 0; vertical-align: top; }
+    table.pied .ligne { border-bottom: 1px dotted #555; height: 14mm; }
+</style>
+</head>
+<body>
+{% for s in sections %}
+<div class="section">
+    <div class="entete">
+        {% if logo_file %}<img src="{{ logo_file }}" alt="">{% endif %}
+        <div>
+            <div class="ecole">{{ school_name }}</div>
+            <div class="sous">{{ concours.titre }} — Année académique {{ concours.academic_year }}</div>
+        </div>
+    </div>
+
+    <h1>PROCÈS-VERBAL DE CLASSEMENT PROVISOIRE</h1>
+    <div class="provisoire">Document provisoire, soumis à la délibération du jury — classement calculé le {{ calcule_le }}</div>
+    <div class="infos">
+        Filière : <strong>{{ s.libelle }}</strong> — Niveau : <strong>{{ s.niveau }}</strong>
+        — Places : <strong>{{ s.places }}</strong> — Moyenne minimale : <strong>{{ s.seuil }}/20</strong>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Rang</th>
+                <th>N° de table</th>
+                <th>Nom et prénom</th>
+                <th>Choix</th>
+                {% for e in s.epreuves %}<th>{{ e.matiere }}<br><small>coef. {{ '%g' % (e.coefficient | float) }}</small></th>{% endfor %}
+                <th>Moyenne /20</th>
+                <th>Proposition</th>
+                <th>Observation</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in s.lignes %}
+            <tr class="{% if l.proposition == 'Admis' %}admis{% elif l.proposition == "Liste d'attente" %}attente{% elif l.proposition == 'Non admis' %}non{% endif %}">
+                <td class="c">{% if l.rang %}{{ l.rang }}{% if l.ex_aequo %} <span class="eq">*</span>{% endif %}{% else %}—{% endif %}</td>
+                <td class="c">{{ l.numero_table }}</td>
+                <td class="nom">{{ l.nom_complet }}</td>
+                <td class="c">{{ l.choix }}</td>
+                {% for n in l.notes %}<td class="c">{{ n }}</td>{% endfor %}
+                <td class="c"><strong>{{ "%.2f" | format(l.moyenne or 0) }}</strong></td>
+                <td class="c decision">{{ l.proposition or "—" }}</td>
+                <td class="motif">{{ l.motif or "" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="bilan">
+        Candidats : <strong>{{ s.lignes | length }}</strong> — Proposés admis : <strong>{{ s.admis }}</strong>
+        — Liste d'attente : <strong>{{ s.attente }}</strong>
+        {% if s.ex_aequo %} — <span class="eq">* {{ s.ex_aequo }} candidat(s) ex æquo à départager par le jury</span>{% endif %}
+    </div>
+
+    <table class="pied"><tr>
+        <td>Le président du jury<div class="ligne"></div></td>
+        <td>Les membres du jury<div class="ligne"></div></td>
+        <td>Le secrétaire<div class="ligne"></div></td>
+    </tr></table>
+</div>
+{% endfor %}
+</body>
+</html>

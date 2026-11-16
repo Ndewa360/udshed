@@ -1,0 +1,225 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "CONC-.YYYY.-.###",
+ "creation": "2026-11-09 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "informations_section",
+  "titre",
+  "academic_year",
+  "session_inscription",
+  "column_break_info",
+  "statut",
+  "date_debut_epreuves",
+  "date_fin_epreuves",
+  "date_publication_resultats",
+  "regles_section",
+  "moyenne_minimale",
+  "column_break_regles",
+  "regle_departage",
+  "filieres_section",
+  "filieres",
+  "epreuves_section",
+  "epreuves",
+  "classement_section",
+  "anonymat_leve",
+  "anonymat_leve_le",
+  "anonymat_leve_par",
+  "column_break_classement",
+  "classement_calcule_le"
+ ],
+ "fields": [
+  {
+   "fieldname": "informations_section",
+   "fieldtype": "Section Break",
+   "label": "Informations"
+  },
+  {
+   "fieldname": "titre",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Intitulé",
+   "reqd": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Année académique",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "description": "Les candidatures de cette campagne sont rattachées au concours selon la filière choisie.",
+   "fieldname": "session_inscription",
+   "fieldtype": "Link",
+   "label": "Campagne d'inscription",
+   "options": "Session Inscription",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_info",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Brouillon",
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Statut",
+   "options": "Brouillon\nCandidatures ouvertes\nÉpreuves\nDélibération\nRésultats publiés\nClôturé",
+   "reqd": 1
+  },
+  {
+   "fieldname": "date_debut_epreuves",
+   "fieldtype": "Date",
+   "label": "Début des épreuves"
+  },
+  {
+   "fieldname": "date_fin_epreuves",
+   "fieldtype": "Date",
+   "label": "Fin des épreuves"
+  },
+  {
+   "fieldname": "date_publication_resultats",
+   "fieldtype": "Date",
+   "label": "Publication des résultats"
+  },
+  {
+   "fieldname": "regles_section",
+   "fieldtype": "Section Break",
+   "label": "Règles d'admission"
+  },
+  {
+   "default": "10",
+   "description": "Moyenne générale à atteindre pour être admis, dans la limite des places de la filière.",
+   "fieldname": "moyenne_minimale",
+   "fieldtype": "Float",
+   "label": "Moyenne minimale (/20)",
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_regles",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Décision du jury",
+   "fieldname": "regle_departage",
+   "fieldtype": "Select",
+   "label": "Départage des ex æquo",
+   "options": "Décision du jury\nMeilleure note à l'épreuve de plus fort coefficient\nCandidat le plus jeune"
+  },
+  {
+   "description": "Les filières absentes de ce tableau restent en admission sur dossier.",
+   "fieldname": "filieres_section",
+   "fieldtype": "Section Break",
+   "label": "Filières et places"
+  },
+  {
+   "fieldname": "filieres",
+   "fieldtype": "Table",
+   "label": "Filières",
+   "options": "Concours Filiere"
+  },
+  {
+   "description": "Une matière commune (filière vide) ou saisie pour plusieurs filières n'est composée et notée qu'une fois par candidat.",
+   "fieldname": "epreuves_section",
+   "fieldtype": "Section Break",
+   "label": "Épreuves"
+  },
+  {
+   "fieldname": "epreuves",
+   "fieldtype": "Table",
+   "label": "Épreuves",
+   "options": "Concours Epreuve"
+  },
+  {
+   "fieldname": "classement_section",
+   "fieldtype": "Section Break",
+   "label": "Anonymat et classement"
+  },
+  {
+   "fieldname": "anonymat_leve",
+   "fieldtype": "Check",
+   "label": "Anonymat levé",
+   "read_only": 1
+  },
+  {
+   "depends_on": "anonymat_leve",
+   "fieldname": "anonymat_leve_le",
+   "fieldtype": "Datetime",
+   "label": "Anonymat levé le",
+   "read_only": 1
+  },
+  {
+   "depends_on": "anonymat_leve",
+   "fieldname": "anonymat_leve_par",
+   "fieldtype": "Link",
+   "label": "Anonymat levé par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_classement",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "classement_calcule_le",
+   "fieldtype": "Datetime",
+   "label": "Classement calculé le",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "link_doctype": "Candidat Concours",
+   "link_fieldname": "concours"
+  }
+ ],
+ "modified": "2026-11-16 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Concours",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Registration Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "titre"
+}
