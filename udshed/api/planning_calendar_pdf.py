@@ -55,10 +55,10 @@ def _pdf(html):
 			{
 				"orientation": "Landscape",
 				"page-size": "A4",
-				"margin-top": "10mm",
-				"margin-bottom": "10mm",
-				"margin-left": "12mm",
-				"margin-right": "12mm",
+				"margin-top": "8mm",
+				"margin-bottom": "8mm",
+				"margin-left": "8mm",
+				"margin-right": "8mm",
 			},
 		)
 	except Exception:

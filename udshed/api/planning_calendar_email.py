@@ -88,7 +88,7 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 		if teacher:
 			entry = dict(teacher)
 			entry["label"] = _teacher_label(teacher)
-			add_recipient(entry, {"teacher": teacher.name, "faculty": None, "filiere": None, "niveau": None})
+			add_recipient(entry, {"teacher": teacher.name})
 
 	if to_all_teacher:
 		ids = {name for item in items for name in (item.get("teacher_ids") or [])}
@@ -99,7 +99,7 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 			if teacher:
 				entry = dict(teacher)
 				entry["label"] = _teacher_label(teacher)
-				add_recipient(entry, {"teacher": teacher.name, "faculty": None, "filiere": None, "niveau": None})
+				add_recipient(entry, {"teacher": teacher.name})
 
 	if to_me:
 		teacher_name = planning_permission._teacher_name(frappe.session.user)
@@ -108,7 +108,7 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 			if teacher:
 				entry = dict(teacher)
 				entry["label"] = _teacher_label(teacher)
-				add_recipient(entry, {"teacher": teacher.name, "faculty": None, "filiere": None, "niveau": None})
+				add_recipient(entry, {"teacher": teacher.name})
 		else:
 			add_recipient(_recipient_from_user(frappe.session.user), {})
 

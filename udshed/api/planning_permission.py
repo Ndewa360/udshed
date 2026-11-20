@@ -125,6 +125,7 @@ def get_scope(user=None):
 		"niveaux": [],
 		"level_labels": [],
 		"teaching_units": [],
+		"teachers": [],
 		"filters": {},
 	}
 
@@ -169,6 +170,13 @@ def get_scope(user=None):
 					distinct=True,
 				):
 					_add_unique(scope["academic_years"], year)
+				for name in frappe.get_all(
+					"Course Teacher Item",
+					filters={"parent": ["in", scope["teaching_units"]]},
+					pluck="enseignant",
+					distinct=True,
+				):
+					_add_unique(scope["teachers"], name)
 		if not scope["academic_years"]:
 			_add_unique(scope["academic_years"], _current_academic_year())
 		return scope
@@ -181,6 +189,7 @@ def get_scope(user=None):
 			distinct=True,
 		)
 		scope["teaching_units"] = units
+		scope["teachers"] = [teacher_name]
 		if units:
 			for unit in frappe.get_all("Teaching Unit", filters={"name": ["in", units]}, fields=["academic_year"]):
 				_add_unique(scope["academic_years"], unit.academic_year)
@@ -239,15 +248,12 @@ def _normalize_filters(scope, academic_year, faculty, filiere, niveau, teacher, 
 			frappe.throw(_("Accès refusé : vous ne pouvez consulter que votre propre planning."), frappe.PermissionError)
 		if not filters["teacher"] and scope["teacher"]:
 			filters["teacher"] = scope["teacher"]
+	elif filters["teacher"] and scope["teachers"]:
+		_check_value(_("Enseignant"), filters["teacher"], scope["teachers"])
 
 	if require_filters:
 		if not filters["academic_year"]:
 			frappe.throw(_("Une année académique est requise pour consulter le planning."), frappe.ValidationError)
-		if filters["teacher"] and (filters["filiere"] or filters["niveau"]):
-			frappe.throw(
-				_("Le filtre enseignant et le filtre filière/niveau ne peuvent pas être combinés."),
-				frappe.ValidationError,
-			)
 		if not (filters["teacher"] or (filters["filiere"] and filters["niveau"])):
 			frappe.throw(
 				_("Sélectionnez une filière et un niveau, ou un enseignant, pour consulter le planning."),

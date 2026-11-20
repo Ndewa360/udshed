@@ -48,9 +48,7 @@ window.Udshed.Utils = {
     isValidFecthDataFilter(filter)
     {
         if (!filter || !filter.academic_year) return false;
-        const byTeacher = Boolean(filter.teacher);
-        const byClass = Boolean(filter.filiere && filter.niveau);
-        return byTeacher !== byClass;
+        return Boolean(filter.teacher || (filter.filiere && filter.niveau));
     },
     
     is_valide_filter(filter)

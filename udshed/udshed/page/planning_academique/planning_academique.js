@@ -46,41 +46,11 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
         const monthPicker = grid_wrapper.find("#month-picker")[0];
         const weekSelect = grid_wrapper.find("#week-select")[0];
 
-        function set_control_value(name, value) {
-            const control = page.fields_dict[name];
-            if (!control) return;
-            filters[name] = value || null;
-            if (control.get_value && control.get_value() !== filters[name]) control.set_value(filters[name]);
-        }
-
         function clear_control_options(name) {
             const control = page.fields_dict[name];
             if (!control || !control.df) return;
             control.df.options = [];
             if (control.refresh) control.refresh();
-        }
-
-        function clear_class_filters() {
-            const previous = page._planning_filter_sync;
-            page._planning_filter_sync = true;
-            try {
-                set_control_value("filiere", null);
-                set_control_value("niveau", null);
-                clear_control_options("niveau");
-                levelMap = {};
-            } finally {
-                page._planning_filter_sync = previous;
-            }
-        }
-
-        function clear_teacher_filter() {
-            const previous = page._planning_filter_sync;
-            page._planning_filter_sync = true;
-            try {
-                set_control_value("teacher", null);
-            } finally {
-                page._planning_filter_sync = previous;
-            }
         }
 
         function apply_level_options(levels) {
@@ -142,7 +112,7 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
                 return;
             }
             const message = canPlan
-                ? "Sélectionnez une filière et un niveau, ou un enseignant, pour afficher le planning."
+                ? "Sélectionnez un enseignant, ou une filière et un niveau, pour afficher le planning."
                 : "Sélectionnez un enseignant pour afficher votre planning.";
             filterHint.html(`<div class="planning-filter-hint-text">${message}</div>`);
         }
@@ -253,7 +223,6 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
                 if (page._planning_filter_sync) return;
                 filters.filiere = this.get_value() || null;
                 Udshed.Utils.refresh_filter(filters, "filiere", page, levelMap);
-                clear_teacher_filter();
                 if (!filters.filiere) {
                     apply_level_options([]);
                     refreshAll();
@@ -272,7 +241,6 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             change() {
                 if (page._planning_filter_sync) return;
                 filters.niveau = this.get_value() || null;
-                if (filters.niveau) clear_teacher_filter();
                 refreshAll();
             }
         });
@@ -286,7 +254,6 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             change() {
                 if (page._planning_filter_sync) return;
                 filters.teacher = this.get_value() || null;
-                if (filters.teacher) clear_class_filters();
                 refreshAll();
             }
         });
