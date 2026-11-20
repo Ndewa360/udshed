@@ -66,11 +66,6 @@ def _pdf(html):
 		return _pdf_weasyprint(html)
 
 
-def get_valid_period(periods, items):
-	used = {item.get("period") for item in items}
-	return [period for period in periods if period.get("name") in used]
-
-
 @frappe.whitelist(allow_guest=False)
 def generate_planning_pdf(filters):
 	if isinstance(filters, str):
@@ -82,16 +77,17 @@ def generate_planning_pdf(filters):
 	if not academic_year or not week_start:
 		frappe.throw(_("Année académique et semaine sont requises."), frappe.ValidationError)
 
-	filiere_filter = filters.get("filiere") or None
-	niveau_filter = filters.get("niveau") or None
-	teacher_filter = filters.get("teacher") or None
-	faculty_filter = filters.get("faculty") or None
-	if filiere_filter and not faculty_filter:
-		faculty_filter = frappe.db.get_value("Field of study", filiere_filter, "faculte")
-
-	planning_permission.assert_can_view_planning(
-		academic_year, faculty_filter, filiere_filter, niveau_filter, teacher_filter
+	scope = planning_permission.assert_can_view_planning(
+		academic_year,
+		filters.get("faculty"),
+		filters.get("filiere"),
+		filters.get("niveau"),
+		filters.get("teacher"),
 	)
+	resolved = scope["filters"]
+	filiere_filter = resolved["filiere"]
+	niveau_filter = resolved["niveau"]
+	teacher_filter = resolved["teacher"]
 
 	items = planning_calendar.get_week_planning(
 		academic_year=academic_year,
@@ -99,7 +95,7 @@ def generate_planning_pdf(filters):
 		filiere=filiere_filter,
 		niveau=niveau_filter,
 		teacher=teacher_filter,
-		faculty=faculty_filter,
+		faculty=resolved["faculty"],
 	)
 
 	filiere = frappe.db.get_value(
@@ -112,19 +108,15 @@ def generate_planning_pdf(filters):
 		"Teacher", teacher_filter, ["name", "grade", "first_name", "last_name", "email"], as_dict=True
 	) if teacher_filter else None
 
+	period = []
 	if niveau_filiere:
 		try:
-			periodes_niveau = planning_period.get_period(niveau_filiere.name, week_start, academic_year)
+			period = planning_period.get_period(niveau_filiere.name, week_start, academic_year) or []
 		except Exception:
-			periodes_niveau = []
-		period = get_valid_period(periodes_niveau, items) or periodes_niveau or get_valid_period(
-			planning_period.get_all_periods(), items
-		)
-	else:
-		period = get_valid_period(planning_period.get_all_periods(), items)
+			period = []
 	if not period:
 		try:
-			period = planning_period.get_default_period()
+			period = planning_period.get_default_period() or []
 		except Exception:
 			period = []
 
@@ -170,7 +162,7 @@ def generate_planning_pdf(filters):
 		})
 
 	start = _date_debut(week_start)
-	end = add_days(start, 6)
+	end = add_days(start, 5)
 	max_items_per_cell = max(
 		(len(cell_items) for day in grid.values() for cell_items in day.values()),
 		default=0,
@@ -184,7 +176,7 @@ def generate_planning_pdf(filters):
 	data_to_print = {
 		"grid": grid,
 		"density": density,
-		"filters": filters,
+		"filters": {**filters, **resolved},
 		"week_start": start.strftime("%d %B %Y"),
 		"week_end": end.strftime("%d %B %Y"),
 		"school_name": school_name,

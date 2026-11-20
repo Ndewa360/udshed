@@ -107,7 +107,7 @@ frappe.pages['insight-academique'].on_page_load = function(wrapper) {
 						acc[curr.level] = curr.name;
 						return acc;
 					}, {}) : {};
-					niveau_field.df.options = levels ? levels.map((value)=>({value:value.level,name:value.name})) || [] : [];
+					niveau_field.df.options = levels ? levels.map((value)=>({value:value.name,label:value.level})) || [] : [];
 					niveau_field.refresh();
 				});
 				// periods = [...defaultPeriods]
@@ -123,7 +123,7 @@ frappe.pages['insight-academique'].on_page_load = function(wrapper) {
 			label: 'Niveau',
 			fieldname: 'niveau',
 			change() {
-				filters.niveau = levelMap[this.get_value()];
+				filters.niveau = this.get_value() || null;
 				if(!this.get_value()) return
 				// periods = this.get_value()==null ? [...defaultPeriods]: await Udshed.Queries.loadCoursePeriod(filters.niveau)
 				show_dashboard(page,filters,{container:content})

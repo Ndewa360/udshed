@@ -11,10 +11,8 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
     ]).then(async () => {
         const rawUserContext = await Udshed.UtilsQueries.get_data_of_user();
         const userContext = Udshed.Perms.normalizeUserContext(rawUserContext);
-        const canPlan = Udshed.Perms.user_can_edit_planning_cell(
-            { academic_year: null, faculty: null, filiere: null, niveau: null },
-            userContext
-        );
+        const canPlan = Udshed.Perms.user_can_plan(userContext);
+        const defaultScope = Udshed.Perms.default_planning_scope(userContext);
 
         let currentWeekStart = Udshed.DateUtils.getMonday(new Date());
         const page = frappe.ui.make_app_page({
@@ -24,26 +22,85 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
         });
 
         let filters = {
-            academic_year: userContext.default_academic_year || null,
-            faculty: userContext.faculty.length === 1 ? userContext.faculty[0] : null,
-            filiere: userContext.filiere.length === 1 ? userContext.filiere[0] : null,
-            niveau: userContext.niveau.length === 1 ? userContext.niveau[0] : null,
-            teacher: null
+            academic_year: defaultScope.academic_year || null,
+            faculty: defaultScope.faculty || null,
+            filiere: defaultScope.filiere || null,
+            niveau: defaultScope.niveau || null,
+            teacher: defaultScope.teacher || null
         };
-        if (!canPlan && userContext.teacher) filters.teacher = userContext.teacher;
+        if (!canPlan && !filters.teacher && userContext.teacher) filters.teacher = userContext.teacher;
 
         let levelMap = {};
         let initializing = true;
+        let filterRequest = 0;
         const defaultPeriods = await Udshed.PlanningQueries.loadCourseDefaultPeriod();
         let periods = [...defaultPeriods];
-        let loading = false;
 
         const grid_wrapper = $('<div id="planning-grid-wrapper"></div>');
         $(wrapper).append(grid_wrapper);
         grid_wrapper.html(Udshed.UI.show_calendar_hearder());
+        $('<div id="planning-filter-hint" class="planning-filter-hint"></div>').prependTo(grid_wrapper);
+        const filterHint = grid_wrapper.find("#planning-filter-hint");
         const calendar_zone = grid_wrapper.find("#planning_calendar .planning-grid");
         const monthPicker = grid_wrapper.find("#month-picker")[0];
         const weekSelect = grid_wrapper.find("#week-select")[0];
+
+        function set_control_value(name, value) {
+            const control = page.fields_dict[name];
+            if (!control) return;
+            filters[name] = value || null;
+            if (control.get_value && control.get_value() !== filters[name]) control.set_value(filters[name]);
+        }
+
+        function clear_control_options(name) {
+            const control = page.fields_dict[name];
+            if (!control || !control.df) return;
+            control.df.options = [];
+            if (control.refresh) control.refresh();
+        }
+
+        function clear_class_filters() {
+            const previous = page._planning_filter_sync;
+            page._planning_filter_sync = true;
+            try {
+                set_control_value("filiere", null);
+                set_control_value("niveau", null);
+                clear_control_options("niveau");
+                levelMap = {};
+            } finally {
+                page._planning_filter_sync = previous;
+            }
+        }
+
+        function clear_teacher_filter() {
+            const previous = page._planning_filter_sync;
+            page._planning_filter_sync = true;
+            try {
+                set_control_value("teacher", null);
+            } finally {
+                page._planning_filter_sync = previous;
+            }
+        }
+
+        function apply_level_options(levels) {
+            const allowed = canPlan
+                ? Udshed.Perms.allowed_levels_for_filiere(userContext, filters.filiere)
+                : userContext.niveau;
+            const visible = allowed.length
+                ? (levels || []).filter((level) => allowed.includes(String(level.name)))
+                : (levels || []);
+            levelMap = visible.reduce((acc, curr) => {
+                acc[curr.level] = curr.name;
+                return acc;
+            }, {});
+            clear_control_options("niveau");
+            page.fields_dict.niveau.df.options = visible.map((level) => ({ value: level.name, label: level.level }));
+            if (filters.niveau && !visible.some((level) => String(level.name) === String(filters.niveau))) {
+                filters.niveau = null;
+            }
+            page.fields_dict.niveau.refresh();
+            if (filters.niveau) page.fields_dict.niveau.set_value(filters.niveau);
+        }
 
         async function resolvePeriods() {
             if (filters.niveau && filters.academic_year) {
@@ -55,22 +112,17 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             return [...defaultPeriods];
         }
 
-        async function loadPlanning() {
-            if (loading) return;
-            loading = true;
-            try {
-                periods = await resolvePeriods();
-                Udshed.DateUtils.updateWeekLabel(currentWeekStart);
-                Udshed.DateUtils.syncSelectors(weekSelect, monthPicker, currentWeekStart);
-                const items = await Udshed.PlanningQueries.fetchPlanningItems(filters, currentWeekStart);
-                const grid = Udshed.UI.get_grid_calendar_item(items, filters, periods);
-                Udshed.UI.show_calendar(calendar_zone, grid, periods, Boolean(filters.teacher), filters, userContext);
-            } finally {
-                loading = false;
-            }
+        async function loadPlanning(request) {
+            periods = await resolvePeriods();
+            if (request !== filterRequest) return;
+            Udshed.DateUtils.updateWeekLabel(currentWeekStart);
+            Udshed.DateUtils.syncSelectors(weekSelect, monthPicker, currentWeekStart);
+            const items = await Udshed.PlanningQueries.fetchPlanningItems(filters, currentWeekStart);
+            if (request !== filterRequest) return;
+            Udshed.UI.show_calendar(calendar_zone, Udshed.UI.get_grid_calendar_item(items, filters, periods), periods, Boolean(filters.teacher), filters, userContext);
         }
 
-        async function updateExamLabel() {
+        async function updateExamLabel(request) {
             if (!filters.niveau || !filters.academic_year) {
                 page.clear_indicator();
                 return;
@@ -78,37 +130,49 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             const planningType = await Udshed.PlanningQueries.getPlanningType(
                 filters.niveau, currentWeekStart, filters.academic_year
             );
+            if (request !== filterRequest) return;
             if (planningType === "Examen") page.set_indicator("Session d'examen", "orange");
             else page.clear_indicator();
         }
 
+        function updateFilterHint() {
+            if (Udshed.Utils.isValidFecthDataFilter(filters)) {
+                filterHint.empty();
+                return;
+            }
+            const message = canPlan
+                ? "Sélectionnez une filière et un niveau, ou un enseignant, pour afficher le planning."
+                : "Sélectionnez un enseignant pour afficher votre planning.";
+            filterHint.html(`<div class="planning-filter-hint-text">${message}</div>`);
+        }
+
         async function refreshAll() {
             if (initializing) return;
+            const request = ++filterRequest;
+            updateFilterHint();
             Udshed.UI.update_page_actions(filters, btnExportPDF, btnEnvoiMail);
-            await loadPlanning();
-            await updateExamLabel();
+            await loadPlanning(request);
+            await updateExamLabel(request);
         }
 
         function applyUserRestrictions() {
             if (Udshed.Perms.is_admin(userContext)) return;
-            if (userContext.academic_year.length) {
-                page.fields_dict.academic_year.get_query = () => ({ filters: { name: ["in", userContext.academic_year] } });
-            }
-            if (userContext.faculty.length) {
-                page.fields_dict.faculty.get_query = () => ({ filters: { name: ["in", userContext.faculty] } });
-            }
-            if (userContext.filiere.length) {
-                page.fields_dict.filiere.get_query = () => ({ filters: { name: ["in", userContext.filiere] } });
-            }
-            if (userContext.teacher && !canPlan) {
-                page.fields_dict.teacher.set_value(userContext.teacher);
-                page.fields_dict.teacher.$input.prop("disabled", true);
-            }
-            if (canPlan) {
-                ["academic_year", "faculty", "filiere", "niveau"].forEach((name) => {
-                    if (filters[name]) page.fields_dict[name].$input.prop("disabled", true);
-                });
-            }
+            const academicYearQuery = userContext.academic_year.length
+                ? () => ({ filters: { name: ["in", userContext.academic_year] } })
+                : undefined;
+            const facultyQuery = userContext.faculty.length
+                ? () => ({ filters: { name: ["in", userContext.faculty] } })
+                : undefined;
+            const filiereQuery = () => {
+                const scoped = { name: ["in", userContext.filiere] };
+                const faculty = faculty_field.get_value();
+                if (faculty) scoped.faculte = faculty;
+                return { filters: scoped };
+            };
+            page.fields_dict.academic_year.get_query = Udshed.Perms.combine_get_query(page.fields_dict.academic_year.get_query, academicYearQuery);
+            page.fields_dict.faculty.get_query = Udshed.Perms.combine_get_query(page.fields_dict.faculty.get_query, facultyQuery);
+            page.fields_dict.filiere.get_query = Udshed.Perms.combine_get_query(page.fields_dict.filiere.get_query, filiereQuery);
+            if (!canPlan && userContext.teacher) page.fields_dict.teacher.$input.prop("disabled", true);
         }
 
         let btnExportPDF = page.set_primary_action("Exporter en PDF", () => {
@@ -121,6 +185,7 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
         });
 
         let btnEnvoiMail = page.set_secondary_action("Envoyer par mail", () => {
+            if (!Udshed.Utils.isValidFecthDataFilter(filters)) return;
             Udshed.Dialogs.openSendPlanningDialog(
                 { ...filters, week_start: frappe.datetime.obj_to_str(currentWeekStart) },
                 userContext,
@@ -135,11 +200,9 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             options: "Academic Year",
             default: filters.academic_year,
             change() {
-                filters.academic_year = this.get_value();
+                if (page._planning_filter_sync) return;
+                filters.academic_year = this.get_value() || null;
                 Udshed.Utils.refresh_filter(filters, "academic_year", page, levelMap);
-                filters.faculty = null;
-                filters.filiere = null;
-                filters.niveau = null;
                 refreshAll();
             }
         });
@@ -151,10 +214,9 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             options: "Faculty",
             default: filters.faculty,
             change() {
-                filters.faculty = this.get_value();
+                if (page._planning_filter_sync) return;
+                filters.faculty = this.get_value() || null;
                 Udshed.Utils.refresh_filter(filters, "faculty", page, levelMap);
-                filters.filiere = null;
-                filters.niveau = null;
                 refreshAll();
             }
         });
@@ -170,16 +232,17 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
                 return { filters: { faculte: faculty_field.get_value() } };
             },
             async change() {
-                filters.filiere = this.get_value();
+                if (page._planning_filter_sync) return;
+                filters.filiere = this.get_value() || null;
                 Udshed.Utils.refresh_filter(filters, "filiere", page, levelMap);
-                filters.niveau = null;
+                clear_teacher_filter();
+                if (!filters.filiere) {
+                    apply_level_options([]);
+                    refreshAll();
+                    return;
+                }
                 const levels = await Udshed.UtilsQueries.loadLevels(filters.filiere, niveau_field);
-                levelMap = (levels || []).reduce((acc, curr) => {
-                    acc[curr.level] = curr.name;
-                    return acc;
-                }, {});
-                niveau_field.df.options = (levels || []).map((level) => ({ value: level.name, name: level.level }));
-                niveau_field.refresh();
+                apply_level_options(levels);
                 refreshAll();
             }
         });
@@ -188,8 +251,10 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             fieldtype: "Select",
             label: "Niveau",
             fieldname: "niveau",
-            async change() {
+            change() {
+                if (page._planning_filter_sync) return;
                 filters.niveau = this.get_value() || null;
+                if (filters.niveau) clear_teacher_filter();
                 refreshAll();
             }
         });
@@ -201,20 +266,18 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             options: "Teacher",
             default: filters.teacher,
             change() {
+                if (page._planning_filter_sync) return;
                 filters.teacher = this.get_value() || null;
+                if (filters.teacher) clear_class_filters();
                 refreshAll();
             }
         });
 
         if (filters.filiere) {
             const levels = await Udshed.UtilsQueries.loadLevels(filters.filiere, niveau_field);
-            levelMap = (levels || []).reduce((acc, curr) => {
-                acc[curr.level] = curr.name;
-                return acc;
-            }, {});
-            niveau_field.df.options = (levels || []).map((level) => ({ value: level.name, name: level.level }));
-            if (filters.niveau) niveau_field.set_value(filters.niveau);
-            niveau_field.refresh();
+            apply_level_options(levels);
+        } else {
+            apply_level_options([]);
         }
 
         applyUserRestrictions();

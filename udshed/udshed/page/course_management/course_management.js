@@ -60,7 +60,7 @@ function loadLevels(filiere,niveau_field) {
 				acc[curr.level] = curr.name;
 				return acc;
 			}, {});
-			niveau_field.df.options = r.message.map((value)=>({value:value.level,name:value.name})) || [];
+			niveau_field.df.options = r.message.map((value)=>({value:value.name,label:value.level})) || [];
 			niveau_field.refresh();
 		}
 	});
@@ -251,7 +251,7 @@ frappe.pages['course-management'].on_page_load = function(wrapper) {
 		fieldtype: 'Select',
 		fieldname: 'niveau',
 		change() {
-			filters.niveau = levelMap[this.get_value()];
+			filters.niveau = this.get_value() || null;
 			refresh($cards_container,$empty_state,filters);
 		}
 	});

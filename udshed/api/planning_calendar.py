@@ -243,7 +243,13 @@ def _attach_progress(rows):
 @frappe.whitelist()
 def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teacher=None, faculty=None):
 	try:
-		planning_permission.assert_can_view_planning(academic_year, faculty, filiere, niveau, teacher)
+		scope = planning_permission.assert_can_view_planning(academic_year, faculty, filiere, niveau, teacher)
+		filters = scope["filters"]
+		academic_year = filters["academic_year"]
+		faculty = filters["faculty"]
+		filiere = filters["filiere"]
+		niveau = filters["niveau"]
+		teacher = filters["teacher"]
 		PlanningItem = DocType("Planning Item")
 		TeachingUnit = DocType("Teaching Unit")
 		Course = DocType("Course")
@@ -256,11 +262,11 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 			frappe.qb.from_(PlanningItem)
 			.join(TeachingUnit)
 			.on(PlanningItem.cours == TeachingUnit.name)
-			.join(Course)
+			.left_join(Course)
 			.on(TeachingUnit.course == Course.name)
-			.join(CourseNiveauFiliere)
+			.left_join(CourseNiveauFiliere)
 			.on(CourseNiveauFiliere.parent == TeachingUnit.name)
-			.join(FieldOfStudy)
+			.left_join(FieldOfStudy)
 			.on(FieldOfStudy.name == CourseNiveauFiliere.filiere)
 			.left_join(CourseEnseignant)
 			.on(CourseEnseignant.parent == TeachingUnit.name)
@@ -285,7 +291,7 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 			.where(
 				(PlanningItem.academic_year == academic_year)
 				& (PlanningItem.date >= date_week_start)
-				& (PlanningItem.date < frappe.utils.add_days(date_week_start, 7))
+				& (PlanningItem.date < frappe.utils.add_days(date_week_start, 6))
 			)
 			.distinct()
 		)
@@ -474,7 +480,9 @@ def get_planning_type(field_of_study_level, week_start, academic_year):
 			if field_of_study_level else None
 		)
 		faculty = frappe.db.get_value("Field of study", filiere, "faculte") if filiere else None
-		planning_permission.assert_can_view_planning(academic_year, faculty, filiere, field_of_study_level or None)
+		planning_permission.assert_can_view_planning(
+			academic_year, faculty, filiere, field_of_study_level or None, require_filters=False
+		)
 		if not field_of_study_level:
 			return "Cours"
 		week_start_date = parse_date(week_start)

@@ -13,13 +13,20 @@ def get_all_planning_item_by_filter(academic_year, faculty=None, field_of_study=
 			or frappe.db.get_value("Field of study", {"field_of_study_code": field_of_study}, "name")
 			or field_of_study
 		)
-	planning_permission.assert_can_view_planning(
+	scope = planning_permission.assert_can_view_planning(
 		academic_year=academic_year,
 		faculty=faculty,
 		filiere=field_of_study,
 		niveau=level,
 		teacher=teacher,
 	)
+	filters = scope["filters"]
+	academic_year = filters["academic_year"]
+	faculty = filters["faculty"]
+	field_of_study = filters["filiere"]
+	field_code = filters["filiere"]
+	level = filters["niveau"]
+	teacher = filters["teacher"]
 	PlanningItem = DocType("Planning Item")
 	TeachingUnit = DocType("Teaching Unit")
 	CourseTeacherItem = DocType("Course Teacher Item")
@@ -31,11 +38,11 @@ def get_all_planning_item_by_filter(academic_year, faculty=None, field_of_study=
 		frappe.qb.from_(PlanningItem)
 		.join(TeachingUnit)
 		.on(PlanningItem.cours == TeachingUnit.name)
-		.join(Course)
+		.left_join(Course)
 		.on(TeachingUnit.course == Course.name)
-		.join(CourseFieldOfStudyLevelItem)
+		.left_join(CourseFieldOfStudyLevelItem)
 		.on(CourseFieldOfStudyLevelItem.parent == TeachingUnit.name)
-		.join(FieldOfStudy)
+		.left_join(FieldOfStudy)
 		.on(FieldOfStudy.name == CourseFieldOfStudyLevelItem.filiere)
 		.left_join(CourseTeacherItem)
 		.on(CourseTeacherItem.parent == TeachingUnit.name)
@@ -73,7 +80,7 @@ def get_all_planning_item_by_filter(academic_year, faculty=None, field_of_study=
 	if course_type:
 		query = query.where(PlanningItem.type == course_type)
 	if field_code:
-		query = query.where(FieldOfStudy.field_of_study_code == field_code)
+		query = query.where(FieldOfStudy.name == field_code)
 	if level:
 		query = query.where(CourseFieldOfStudyLevelItem.niveau == level)
 	if semestre:

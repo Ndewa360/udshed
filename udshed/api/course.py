@@ -23,7 +23,12 @@ def get_teaching_units(
 	if not academic_year or not faculty:
 		frappe.throw("Année académique et faculté requises")
 
-	planning_permission.assert_can_view_planning(academic_year, faculty, filiere, niveau)
+	scope = planning_permission.assert_can_view_planning(academic_year, faculty, filiere, niveau, require_filters=False)
+	filters = scope["filters"]
+	academic_year = filters["academic_year"] or academic_year
+	faculty = filters["faculty"]
+	filiere = filters["filiere"]
+	niveau = filters["niveau"]
 
 	# =========================
 	# Récupération Teaching Units
@@ -117,13 +122,18 @@ def get_teaching_units(
 
 @frappe.whitelist()
 def get_teaching_unit_by_year(academic_year,faculty=None,field_of_study=None,level=None,teacher=None,semestre=None):
-	field_code = field_of_study
 	field_name = (
 		frappe.db.get_value("Field of study", field_of_study, "name")
 		or frappe.db.get_value("Field of study", {"field_of_study_code": field_of_study}, "name")
 		if field_of_study else None
 	)
-	planning_permission.assert_can_view_planning(academic_year, faculty, field_name, level, teacher)
+	scope = planning_permission.assert_can_view_planning(academic_year, faculty, field_name, level, teacher, require_filters=False)
+	filters = scope["filters"]
+	academic_year = filters["academic_year"] or academic_year
+	faculty = filters["faculty"]
+	field_name = filters["filiere"]
+	level = filters["niveau"]
+	teacher = filters["teacher"]
 	TeachingUnit = DocType("Teaching Unit")
 	Course = DocType("Course")
 	CourseTeacherItem = DocType("Course Teacher Item")
@@ -162,8 +172,8 @@ def get_teaching_unit_by_year(academic_year,faculty=None,field_of_study=None,lev
 	if faculty:
 		query = query.where(CourseFieldOfStudy.faculte == faculty)
 
-	if field_code:
-		query = query.where(CourseFieldOfStudy.field_of_study_code==field_code)
+	if field_name:
+		query = query.where(CourseFieldOfStudy.name == field_name)
 	
 	if level:
 		query = query.where(CourseFieldOfStudyLevelItem.niveau==level)
@@ -224,7 +234,7 @@ def get_single_teaching_unit(cours,academic_year):
 
 @frappe.whitelist()
 def get_levels_for_field(field_of_study):
-	planning_permission.assert_can_view_planning(filiere=field_of_study)
+	planning_permission.assert_can_view_planning(filiere=field_of_study, require_filters=False)
 	doc = frappe.get_doc("Field of study", field_of_study)
 	return [{"level":row.level,"name":row.name} for row in doc.field_of_study_level]
 
@@ -234,6 +244,7 @@ def get_levels(doctype, txt, searchfield, start, page_len, filters):
     filiere = filters.get("parent")
     if not filiere:
         return []
+    planning_permission.assert_can_view_planning(filiere=filiere, require_filters=False)
 
     # On utilise frappe.db.sql pour cibler la child table
     # 'name' est l'ID unique de la ligne dans la table enfant
@@ -256,6 +267,7 @@ def get_teaching_unit_by_level(doctype, txt, searchfield, start, page_len, filte
 		filters.get("faculty"),
 		filters.get("filiere"),
 		filters.get("niveau"),
+		require_filters=False,
 	)
 	TeachingUnit = DocType("Teaching Unit")
 	CourseNiveauFiliere = DocType("Course Field of study level item")

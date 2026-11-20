@@ -53,7 +53,7 @@ window.Udshed.PlanningFilterBar = {
                     }, {}) : {};
 
                     niveau_field.df.options = levels
-                        ? levels.map((value) => ({ value: value.level, name: value.name }))
+                        ? levels.map((value) => ({ value: value.name, label: value.level }))
                         : [];
                     niveau_field.refresh();
                 });
@@ -67,7 +67,7 @@ window.Udshed.PlanningFilterBar = {
             label: 'Niveau',
             fieldname: 'niveau',
             change() {
-                filters.niveau = levelMap[this.get_value()];
+                filters.niveau = this.get_value() || null;
                 Udshed.Utils.refresh_filter(filters, 'niveau', page, levelMap);
                 on_filter_change(filters);
             }

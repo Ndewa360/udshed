@@ -243,6 +243,10 @@ window.Udshed.Dialogs = {
     },
 
     openSendPlanningDialog(filter, userContext, callback) {
+        if (!Udshed.Utils.isValidFecthDataFilter(filter)) {
+            frappe.show_alert({ message: __("Sélectionnez une filière et un niveau, ou un enseignant, avant l'envoi."), indicator: "orange" });
+            return;
+        }
         const dialog = new frappe.ui.Dialog({
             title: __("Envoi du planning par mail"),
             fields: [

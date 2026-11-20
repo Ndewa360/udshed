@@ -115,7 +115,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
                         acc[curr.level] = curr.name;
                         return acc;
                     }, {}) : {};
-                    niveau_field.df.options = levels ? levels.map((value)=>({value:value.level,name:value.name})) || [] : [];
+                    niveau_field.df.options = levels ? levels.map((value)=>({value:value.name,label:value.level})) || [] : [];
                     niveau_field.refresh();
                 });
                 Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter, btnImporter, canManageGrid);
@@ -133,7 +133,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
             label: 'Niveau',
             fieldname: 'niveau',
             change() {
-                filters.niveau = levelMap[this.get_value()] || this.get_value() || null;
+                filters.niveau = this.get_value() || null;
                 Udshed.Utils.refresh_filter(filters,"niveau",page,levelMap);
                 if(!this.get_value())
                 {
@@ -163,9 +163,9 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
                 acc[curr.level] = curr.name;
                 return acc;
             }, {});
-            niveau_field.df.options = (levels || []).map((value) => ({ value: value.level, name: value.name }));
+            niveau_field.df.options = (levels || []).map((value) => ({ value: value.name, label: value.level }));
             const initialLevel = (levels || []).find((level) => level.name === filters.niveau);
-            if (initialLevel) niveau_field.set_value(initialLevel.level);
+            if (initialLevel) niveau_field.set_value(initialLevel.name);
             niveau_field.refresh();
         }
 

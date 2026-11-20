@@ -2,6 +2,8 @@ from datetime import datetime, date, timedelta
 import frappe
 from frappe import _
 
+import udshed.api.planning_permission as planning_permission
+
 def get_unique_sorted_period(periods):
     set_period = {}
     unique = []
@@ -24,6 +26,11 @@ def get_unique_sorted_period(periods):
 @frappe.whitelist()
 def get_period(field_of_study_level,week_start,academic_year):
     try:
+        filiere = frappe.db.get_value("Field of study Level", field_of_study_level, "parent") if field_of_study_level else None
+        faculty = frappe.db.get_value("Field of study", filiere, "faculte") if filiere else None
+        planning_permission.assert_can_view_planning(
+            academic_year, faculty, filiere, field_of_study_level, require_filters=False
+        )
         return _get_period_impl(field_of_study_level,week_start,academic_year)
     except Exception:
         frappe.log_error(" planning_period get_period")
@@ -123,6 +130,7 @@ def _get_period_impl(field_of_study_level,week_start,academic_year):
 @frappe.whitelist()
 def get_all_periods():
     try:
+        planning_permission.assert_can_view_planning(require_filters=False)
         periods = frappe.db.get_all(
             "Planning Period",
             fields=["name", "parent", "libelle", "heure_de_debut", "heure_de_fin"],
@@ -161,6 +169,7 @@ def get_all_periods():
 @frappe.whitelist()
 def get_default_period():
     try:
+        planning_permission.assert_can_view_planning(require_filters=False)
         periods = []
         fuseau = None
         # Repli identique a `_calendriers_candidats` : si « Defaut » a été

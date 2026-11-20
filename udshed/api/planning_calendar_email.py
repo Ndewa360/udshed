@@ -52,18 +52,20 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 	week_start = filters.get("week_start")
 	if not academic_year or not week_start:
 		frappe.throw(_("Année académique et semaine sont requises."), frappe.ValidationError)
-	planning_permission.assert_can_view_planning(
+	scope = planning_permission.assert_can_view_planning(
 		academic_year,
 		filters.get("faculty"),
 		filters.get("filiere"),
 		filters.get("niveau"),
 		filters.get("teacher"),
 	)
+	resolved = scope["filters"]
+	filters = {**filters, **resolved}
 
 	school_name, school_logo = school_setting.get_school_data()
 	_, _, items, _, _ = planning_calendar_pdf.generate_planning_pdf(filters)
 	start_date = planning_calendar.parse_date(week_start)
-	end_date = frappe.utils.add_days(start_date, 6)
+	end_date = frappe.utils.add_days(start_date, 5)
 
 	recipients = {}
 
@@ -86,7 +88,7 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 		if teacher:
 			entry = dict(teacher)
 			entry["label"] = _teacher_label(teacher)
-			add_recipient(entry, {"teacher": teacher.name})
+			add_recipient(entry, {"teacher": teacher.name, "faculty": None, "filiere": None, "niveau": None})
 
 	if to_all_teacher:
 		ids = {name for item in items for name in (item.get("teacher_ids") or [])}
@@ -97,7 +99,7 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 			if teacher:
 				entry = dict(teacher)
 				entry["label"] = _teacher_label(teacher)
-				add_recipient(entry, {"teacher": teacher.name})
+				add_recipient(entry, {"teacher": teacher.name, "faculty": None, "filiere": None, "niveau": None})
 
 	if to_me:
 		teacher_name = planning_permission._teacher_name(frappe.session.user)
@@ -106,7 +108,7 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 			if teacher:
 				entry = dict(teacher)
 				entry["label"] = _teacher_label(teacher)
-				add_recipient(entry, {"teacher": teacher.name})
+				add_recipient(entry, {"teacher": teacher.name, "faculty": None, "filiere": None, "niveau": None})
 		else:
 			add_recipient(_recipient_from_user(frappe.session.user), {})
 

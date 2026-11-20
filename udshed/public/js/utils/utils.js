@@ -1,56 +1,41 @@
 window.Udshed = window.Udshed || {};
 window.Udshed.Utils = {
-    refresh_filter(filters, field,page,levelMap)
+    refresh_filter(filters, field, page, levelMap)
     {
-        if(field === "academic_year") {
-            filters.faculty = null;
-            filters.filiere = null;
-            filters.niveau = null;
-
-            page.fields_dict.faculty.set_value(null);
-            page.fields_dict.filiere.set_value(null);
-            page.fields_dict.niveau.set_value(null);
-            if(page.fields_dict.semestre) {
-                filters.semestre=null
-                page.fields_dict.semestre.set_value(null)
+        const clear_field = (name) => {
+            const control = page && page.fields_dict && page.fields_dict[name];
+            if (!control) return;
+            filters[name] = null;
+            if (control.get_value && control.get_value()) control.set_value(null);
+            if (control.df && control.df.fieldtype === "Select") control.df.options = [];
+            if (control.refresh) control.refresh();
+        };
+        const clear_level_map = () => {
+            if (levelMap && typeof levelMap === "object") Object.keys(levelMap).forEach((key) => delete levelMap[key]);
+        };
+        const previous_sync = page && page._planning_filter_sync;
+        if (page) page._planning_filter_sync = true;
+        try {
+            if (field === "academic_year") {
+                clear_field("faculty");
+                clear_field("filiere");
+                clear_field("niveau");
+                clear_field("semestre");
+                clear_level_map();
+            } else if (field === "faculty") {
+                clear_field("filiere");
+                clear_field("niveau");
+                clear_field("semestre");
+                clear_level_map();
+            } else if (field === "filiere") {
+                clear_field("niveau");
+                clear_field("semestre");
+                clear_level_map();
             }
-			if (levelMap && typeof levelMap === 'object') {
-				Object.keys(levelMap).forEach((key) => delete levelMap[key]);
-			}
-			return;
-		}
-
-		if(field === "faculty") {
-			filters.filiere = null;
-			filters.niveau = null;
-
-			page.fields_dict.filiere.set_value(null);
-			page.fields_dict.niveau.set_value(null);
-
-			if(page.fields_dict.semestre) {
-				filters.semestre=null
-				page.fields_dict.semestre.set_value(null)
-			}
-			if (levelMap && typeof levelMap === 'object') {
-				Object.keys(levelMap).forEach((key) => delete levelMap[key]);
-			}
-            return;
+        } finally {
+            if (page) page._planning_filter_sync = previous_sync;
         }
-
-        if(field === "filiere") {
-			filters.niveau = null;
-			page.fields_dict.niveau.set_value(null);
-			if(page.fields_dict.semestre) {
-				filters.semestre=null
-				page.fields_dict.semestre.set_value(null)
-			}
-			if (levelMap && typeof levelMap === 'object') {
-				Object.keys(levelMap).forEach((key) => delete levelMap[key]);
-			}
-            return;
-        }
-
-        },
+    },
 
     mergeDataByKey(arr1,arr2,key)
     {
@@ -62,7 +47,10 @@ window.Udshed.Utils = {
     },
     isValidFecthDataFilter(filter)
     {
-        return ((filter.academic_year && filter.teacher) || (filter.academic_year && filter.filiere && filter.niveau))
+        if (!filter || !filter.academic_year) return false;
+        const byTeacher = Boolean(filter.teacher);
+        const byClass = Boolean(filter.filiere && filter.niveau);
+        return byTeacher !== byClass;
     },
     
     is_valide_filter(filter)

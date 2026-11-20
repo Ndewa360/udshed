@@ -67,7 +67,7 @@ window.Udshed.DateUtils = {
     getFirstWeekInsideMonth(weeks, year, month) {
         const found = (weeks || []).find((weekStart) => {
             const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 6);
+            weekEnd.setDate(weekStart.getDate() + 5);
             return weekStart.getMonth() === month || weekEnd.getMonth() === month;
         });
         return found || (weeks && weeks.length ? weeks[0] : Udshed.DateUtils.createLocalDate(year, month, 1));

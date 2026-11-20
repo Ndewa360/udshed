@@ -3,6 +3,21 @@
   padding: 12px;
 }
 
+.planning-filter-hint {
+  padding: 0 12px;
+}
+
+.planning-filter-hint-text {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--orange, #f4b400);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text-muted, #6c757d);
+  font-size: 12px;
+}
+
 #note-udshed-planning,
 .planning-calendar-wrapper {
   position: sticky;

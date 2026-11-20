@@ -19,6 +19,10 @@ def _add_unique(target, value):
 		target.append(value)
 
 
+def _current_academic_year():
+	return frappe.db.get_single_value("Udshed Setting", "current_year")
+
+
 def _coordinator_user(niveau):
 	if not niveau:
 		return None
@@ -107,7 +111,7 @@ def get_scope(user=None):
 	user = user or frappe.session.user
 	roles = set(frappe.get_roles(user))
 	teacher_name = _teacher_name(user)
-	academic_years = frappe.get_all("Academic Year", pluck="name")
+	academic_years = frappe.get_all("Academic Year", pluck="name") if user == "Administrator" or roles & ADMIN_ROLES else []
 	scope = {
 		"user": user,
 		"roles": sorted(roles),
@@ -121,6 +125,7 @@ def get_scope(user=None):
 		"niveaux": [],
 		"level_labels": [],
 		"teaching_units": [],
+		"filters": {},
 	}
 
 	if scope["is_admin"]:
@@ -147,6 +152,25 @@ def get_scope(user=None):
 			_add_unique(scope["filieres"], row.filiere)
 			_add_unique(scope["niveaux"], row.niveau)
 			_add_unique(scope["level_labels"], row.level_label)
+		if scope["filieres"] and scope["niveaux"]:
+			parents = frappe.get_all(
+				"Course Field of study level item",
+				filters={"filiere": ["in", scope["filieres"]], "niveau": ["in", scope["niveaux"]]},
+				pluck="parent",
+				distinct=True,
+			)
+			for unit in parents:
+				_add_unique(scope["teaching_units"], unit)
+			if scope["teaching_units"]:
+				for year in frappe.get_all(
+					"Teaching Unit",
+					filters={"name": ["in", scope["teaching_units"]]},
+					pluck="academic_year",
+					distinct=True,
+				):
+					_add_unique(scope["academic_years"], year)
+		if not scope["academic_years"]:
+			_add_unique(scope["academic_years"], _current_academic_year())
 		return scope
 
 	if teacher_name:
@@ -172,68 +196,119 @@ def get_scope(user=None):
 				_add_unique(scope["faculties"], faculty)
 				level_label = frappe.db.get_value("Field of study Level", row.niveau, "level")
 				_add_unique(scope["level_labels"], level_label)
+		if not scope["academic_years"]:
+			_add_unique(scope["academic_years"], _current_academic_year())
 		return scope
 
 	return scope
 
 
 def _check_value(label, value, allowed):
-	if value is None or value == "" or not allowed:
+	if value is None or value == "":
 		return
-	if str(value) not in {str(item) for item in allowed}:
+	if not allowed or str(value) not in {str(item) for item in allowed}:
 		frappe.throw(
 			_("Accès refusé : {0} « {1} » n'est pas dans votre périmètre.").format(label, value),
 			frappe.PermissionError,
 		)
 
 
-def assert_can_view_planning(academic_year=None, faculty=None, filiere=None, niveau=None, teacher=None, user=None):
-	scope = get_scope(user)
+def _normalize_filters(scope, academic_year, faculty, filiere, niveau, teacher, require_filters=True):
+	filters = {
+		"academic_year": academic_year or None,
+		"faculty": faculty or None,
+		"filiere": filiere or None,
+		"niveau": niveau or None,
+		"teacher": teacher or None,
+	}
 	if scope["is_admin"]:
+		scope["filters"] = filters
 		return scope
-	if not (scope["can_plan"] or scope["teacher"]):
-		frappe.throw(_("Accès refusé : vous n'avez pas accès au planning."), frappe.PermissionError)
-	_check_value(_("Année académique"), academic_year, scope["academic_years"])
-	_check_value(_("Faculté"), faculty, scope["faculties"])
-	_check_value(_("Filière"), filiere, scope["filieres"])
-	_check_value(_("Niveau"), niveau, scope["niveaux"])
-	if teacher and teacher != scope["teacher"] and not scope["can_plan"]:
-		frappe.throw(_("Accès refusé : vous ne pouvez consulter que votre propre planning."), frappe.PermissionError)
+
+	if filters["niveau"] and not filters["filiere"]:
+		filters["filiere"] = frappe.db.get_value("Field of study Level", filters["niveau"], "parent")
+	if filters["filiere"] and not filters["faculty"]:
+		filters["faculty"] = frappe.db.get_value("Field of study", filters["filiere"], "faculte")
+	if filters["filiere"] and filters["niveau"]:
+		parent = frappe.db.get_value("Field of study Level", filters["niveau"], "parent")
+		if parent and str(parent) != str(filters["filiere"]):
+			frappe.throw(_("Accès refusé : ce niveau n'appartient pas à la filière sélectionnée."), frappe.PermissionError)
+
+	if not scope["can_plan"]:
+		if filters["teacher"] and filters["teacher"] != scope["teacher"]:
+			frappe.throw(_("Accès refusé : vous ne pouvez consulter que votre propre planning."), frappe.PermissionError)
+		if not filters["teacher"] and scope["teacher"]:
+			filters["teacher"] = scope["teacher"]
+
+	if require_filters:
+		if not filters["academic_year"]:
+			frappe.throw(_("Une année académique est requise pour consulter le planning."), frappe.ValidationError)
+		if filters["teacher"] and (filters["filiere"] or filters["niveau"]):
+			frappe.throw(
+				_("Le filtre enseignant et le filtre filière/niveau ne peuvent pas être combinés."),
+				frappe.ValidationError,
+			)
+		if not (filters["teacher"] or (filters["filiere"] and filters["niveau"])):
+			frappe.throw(
+				_("Sélectionnez une filière et un niveau, ou un enseignant, pour consulter le planning."),
+				frappe.ValidationError,
+			)
+
+	_check_value(_("Année académique"), filters["academic_year"], scope["academic_years"])
+	_check_value(_("Faculté"), filters["faculty"], scope["faculties"])
+	_check_value(_("Filière"), filters["filiere"], scope["filieres"])
+	_check_value(_("Niveau"), filters["niveau"], scope["niveaux"])
+	scope["filters"] = filters
 	return scope
 
 
-def assert_can_plan(academic_year=None, faculty=None, filiere=None, niveau=None, teaching_unit=None, user=None):
+def assert_can_view_planning(academic_year=None, faculty=None, filiere=None, niveau=None, teacher=None, user=None, require_filters=True):
+	scope = get_scope(user)
+	if scope["is_admin"]:
+		return _normalize_filters(scope, academic_year, faculty, filiere, niveau, teacher, require_filters)
+	if not (scope["can_plan"] or scope["teacher"]):
+		frappe.throw(_("Accès refusé : vous n'avez pas accès au planning."), frappe.PermissionError)
+	return _normalize_filters(scope, academic_year, faculty, filiere, niveau, teacher, require_filters)
+
+
+def assert_can_plan(academic_year=None, faculty=None, filiere=None, niveau=None, teaching_unit=None, user=None, require_filters=True):
 	scope = get_scope(user)
 	if not scope["can_plan"]:
 		frappe.throw(
 			_("Accès refusé : seuls les coordinateurs et gestionnaires de planning peuvent modifier le planning."),
 			frappe.PermissionError,
 		)
-	scope["acting_user"] = scope["user"]
 	if scope["is_admin"]:
-		return scope
-	_check_value(_("Année académique"), academic_year, scope["academic_years"])
-	_check_value(_("Faculté"), faculty, scope["faculties"])
-	_check_value(_("Filière"), filiere, scope["filieres"])
-	_check_value(_("Niveau"), niveau, scope["niveaux"])
+		scope["acting_user"] = scope["user"]
+		return _normalize_filters(scope, academic_year, faculty, filiere, niveau, None, require_filters)
+
 	if teaching_unit:
-		unit = frappe.db.get_value("Teaching Unit", teaching_unit, "name")
+		unit = frappe.db.get_value("Teaching Unit", teaching_unit, ["name", "academic_year"], as_dict=True)
 		if not unit:
 			frappe.throw(_("Unité d'enseignement introuvable."), frappe.ValidationError)
-		if unit not in scope["teaching_units"]:
-			levels = frappe.get_all(
-				"Course Field of study level item",
-				filters={"parent": unit},
-				fields=["filiere", "niveau"],
-			)
-			if not levels or any(
-				str(row.filiere) not in {str(value) for value in scope["filieres"]}
-				or str(row.niveau) not in {str(value) for value in scope["niveaux"]}
-				for row in levels
-			):
-				frappe.throw(_("Accès refusé : cette unité d'enseignement est hors de votre périmètre."), frappe.PermissionError)
-	if niveau:
-		scope["acting_user"] = _coordinator_user(niveau) or scope["user"]
+		if teaching_unit not in scope["teaching_units"]:
+			frappe.throw(_("Accès refusé : cette unité d'enseignement est hors de votre périmètre."), frappe.PermissionError)
+		levels = frappe.get_all(
+			"Course Field of study level item",
+			filters={"parent": teaching_unit},
+			fields=["filiere", "niveau"],
+		)
+		if not levels:
+			frappe.throw(_("Accès refusé : cette unité d'enseignement n'est rattachée à aucun niveau."), frappe.PermissionError)
+		academic_year = academic_year or unit.academic_year
+		filiere = filiere or levels[0].filiere
+		niveau = niveau or levels[0].niveau
+		if any(
+			str(row.filiere) not in {str(value) for value in scope["filieres"]}
+			or str(row.niveau) not in {str(value) for value in scope["niveaux"]}
+			for row in levels
+		):
+			frappe.throw(_("Accès refusé : cette unité d'enseignement est hors de votre périmètre."), frappe.PermissionError)
+
+	_normalize_filters(scope, academic_year, faculty, filiere, niveau, None, require_filters)
+	scope["acting_user"] = scope["user"]
+	if scope["filters"]["niveau"]:
+		scope["acting_user"] = _coordinator_user(scope["filters"]["niveau"]) or scope["user"]
 	return scope
 
 

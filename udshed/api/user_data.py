@@ -2,11 +2,17 @@ import frappe
 
 from frappe.query_builder import DocType
 
+import udshed.api.planning_permission as planning_permission
+
 @frappe.whitelist()
 def get_user_context():
 	user = frappe.session.user
 	default_academic_year = frappe.db.get_single_value('Udshed Setting', 'current_year')
-	academic_year_list = frappe.get_all('Academic Year')
+	scope = planning_permission.get_scope(user)
+	academic_year_list = frappe.get_all(
+		'Academic Year',
+		filters={'name': ['in', scope['academic_years']]} if scope['academic_years'] else None,
+	)
 	roles = frappe.get_roles(user)
 	data_result = []
 
