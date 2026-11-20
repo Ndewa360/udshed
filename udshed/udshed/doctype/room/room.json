@@ -39,7 +39,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Type de salle",
-   "options": "Salle de cours\nLaboratoire",
+   "options": "Salle de cours\nLaboratoire Informatique\nLaboratoire M\u00e9dical",
    "reqd": 1
   }
  ],
@@ -47,8 +47,8 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-18 09:57:23.718767",
- "modified_by": "Administrator",
+ "modified": "2026-11-20 03:01:42.591475",
+ "modified_by": "admin@udshed.com",
  "module": "Udshed",
  "name": "Room",
  "naming_rule": "By fieldname",

@@ -326,14 +326,15 @@ def clean_course_and_ue_by_acaemic_year(academic_year, faculty, filiere, niveau,
 def update_teacher_unit(teaching_unit_code, grid_teacher):
 	if isinstance(grid_teacher, str):
 		grid_teacher = frappe.parse_json(grid_teacher)
-	planning_permission.assert_can_plan(teaching_unit=teaching_unit_code)
-	teaching_unit = frappe.get_doc("Teaching Unit", teaching_unit_code)
-	teaching_unit.set("table_enseignant", [])
-	for teacher in grid_teacher or []:
-		teaching_unit.append("table_enseignant", {
-			"enseignant": teacher.get("enseignant"),
-			"type_de_cours": teacher.get("type_de_cours"),
-		})
-	teaching_unit.save(ignore_permissions=True)
+	scope = planning_permission.assert_can_plan(teaching_unit=teaching_unit_code)
+	with planning_permission.as_coordinator(scope):
+		teaching_unit = frappe.get_doc("Teaching Unit", teaching_unit_code)
+		teaching_unit.set("table_enseignant", [])
+		for teacher in grid_teacher or []:
+			teaching_unit.append("table_enseignant", {
+				"enseignant": teacher.get("enseignant"),
+				"type_de_cours": teacher.get("type_de_cours"),
+			})
+		teaching_unit.save(ignore_permissions=True)
 	return True
 

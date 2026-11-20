@@ -1,9 +1,12 @@
+from contextlib import contextmanager
+
 import frappe
 from frappe import _
 
 ADMIN_ROLES = {"Administrator", "System Manager"}
 PLANNING_ROLES = {"Planning Manager", "Coordonateur", "Coordinateur"}
 TEACHER_ROLES = {"Teacher", "Enseignant"}
+DOCTYPES_WITH_PLANNING_PERMISSION = ("Planning Item", "Teaching Unit")
 
 
 def _teacher_name(user):
@@ -11,8 +14,93 @@ def _teacher_name(user):
 
 
 def _add_unique(target, value):
+	value = str(value) if value is not None else None
 	if value and value not in target:
 		target.append(value)
+
+
+def _coordinator_user(niveau):
+	if not niveau:
+		return None
+	teacher_name = frappe.db.get_value("Field of study Level", niveau, "coordonateur")
+	if not teacher_name:
+		return None
+	email = frappe.db.get_value("Teacher", teacher_name, "email")
+	if not email:
+		return None
+	user = frappe.db.get_value("User", {"email": email}, "name")
+	if not user or not frappe.db.get_value("User", user, "enabled"):
+		return None
+	return user
+
+
+@contextmanager
+def as_coordinator(scope):
+	acting_user = (scope or {}).get("acting_user")
+	if not acting_user or acting_user == frappe.session.user:
+		yield
+		return
+	previous_user = frappe.session.user
+	try:
+		frappe.set_user(acting_user)
+		yield
+	finally:
+		frappe.set_user(previous_user)
+
+
+def ensure_planning_manager_role(teacher_name):
+	if not teacher_name:
+		return False
+	email = frappe.db.get_value("Teacher", teacher_name, "email")
+	if not email:
+		return False
+	user = frappe.db.get_value("User", {"email": email}, "name")
+	if not user:
+		return False
+	user_doc = frappe.get_doc("User", user)
+	if any(row.role == "Planning Manager" for row in user_doc.roles):
+		return False
+	user_doc.append("roles", {"role": "Planning Manager"})
+	user_doc.save(ignore_permissions=True)
+	return True
+
+
+def sync_role_permissions():
+	added = []
+	for doctype_name in DOCTYPES_WITH_PLANNING_PERMISSION:
+		doc = frappe.get_doc("DocType", doctype_name)
+		if any(row.role == "Planning Manager" for row in doc.permissions):
+			continue
+		template = next((row for row in doc.permissions if row.role == "Coordonateur"), None)
+		if not template:
+			continue
+		new_row = doc.append("permissions", {
+			"role": "Planning Manager",
+			"read": template.read,
+			"write": template.write,
+			"create": template.create,
+			"delete": template.delete,
+			"submit": template.submit,
+			"cancel": template.cancel,
+			"amend": template.amend,
+			"email": template.email,
+			"export": template.export,
+			"print": template.print,
+			"report": template.report,
+			"share": template.share,
+			"permlevel": template.permlevel or 0,
+		})
+		doc.save(ignore_permissions=True)
+		added.append("{0}:{1}".format(doctype_name, new_row.name))
+	for teacher_name in frappe.get_all(
+		"Field of study Level",
+		filters={"gestionnaire_de_planning": ["is", "set"]},
+		pluck="gestionnaire_de_planning",
+		distinct=True,
+	):
+		if ensure_planning_manager_role(teacher_name):
+			added.append("role:{0}".format(teacher_name))
+	return added
 
 
 def get_scope(user=None):
@@ -38,7 +126,10 @@ def get_scope(user=None):
 	if scope["is_admin"]:
 		return scope
 
-	if roles & PLANNING_ROLES and teacher_name:
+	if roles & PLANNING_ROLES:
+		if not teacher_name:
+			scope["can_plan"] = False
+			return scope
 		rows = frappe.db.sql(
 			"""
 			select fs.name as filiere, fs.faculte as faculty, fsl.name as niveau, fsl.level as level_label
@@ -49,6 +140,8 @@ def get_scope(user=None):
 			{"teacher": teacher_name},
 			as_dict=True,
 		)
+		if not rows:
+			scope["can_plan"] = False
 		for row in rows:
 			_add_unique(scope["faculties"], row.faculty)
 			_add_unique(scope["filieres"], row.filiere)
@@ -85,7 +178,9 @@ def get_scope(user=None):
 
 
 def _check_value(label, value, allowed):
-	if value and allowed and value not in allowed:
+	if value is None or value == "" or not allowed:
+		return
+	if str(value) not in {str(item) for item in allowed}:
 		frappe.throw(
 			_("Accès refusé : {0} « {1} » n'est pas dans votre périmètre.").format(label, value),
 			frappe.PermissionError,
@@ -114,6 +209,7 @@ def assert_can_plan(academic_year=None, faculty=None, filiere=None, niveau=None,
 			_("Accès refusé : seuls les coordinateurs et gestionnaires de planning peuvent modifier le planning."),
 			frappe.PermissionError,
 		)
+	scope["acting_user"] = scope["user"]
 	if scope["is_admin"]:
 		return scope
 	_check_value(_("Année académique"), academic_year, scope["academic_years"])
@@ -131,10 +227,13 @@ def assert_can_plan(academic_year=None, faculty=None, filiere=None, niveau=None,
 				fields=["filiere", "niveau"],
 			)
 			if not levels or any(
-				row.filiere not in scope["filieres"] or row.niveau not in scope["niveaux"]
+				str(row.filiere) not in {str(value) for value in scope["filieres"]}
+				or str(row.niveau) not in {str(value) for value in scope["niveaux"]}
 				for row in levels
 			):
 				frappe.throw(_("Accès refusé : cette unité d'enseignement est hors de votre périmètre."), frappe.PermissionError)
+	if niveau:
+		scope["acting_user"] = _coordinator_user(niveau) or scope["user"]
 	return scope
 
 

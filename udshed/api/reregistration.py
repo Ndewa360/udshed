@@ -11,6 +11,7 @@ from udshed.utils.niveaux import (
 	prochain_niveau,
 )
 from udshed.api.school_setting import get_logo_data_uri
+from udshed.api import planning_permission
 
 STAFF_ROLES = {"System Manager", "Coordonateur", "Agent de scolarité", "Comptable"}
 
@@ -835,6 +836,7 @@ def add_level(filiere, level, cycle=None, coordonateur=None, calendrier="Defaut"
 		"gestionnaire_de_planning": gestionnaire_de_planning,
 	})
 	doc.save(ignore_permissions=True)
+	planning_permission.ensure_planning_manager_role(gestionnaire_de_planning)
 	return {"status": True, "message": f"Niveau {level} ajouté à {filiere}"}
 
 
@@ -915,6 +917,7 @@ def update_level(filiere, level_row_name, cycle=None, coordonateur=None, calendr
 		row.gestionnaire_de_planning = gestionnaire_de_planning
 
 	doc.save(ignore_permissions=True)
+	planning_permission.ensure_planning_manager_role(gestionnaire_de_planning)
 	return {"status": True, "message": f"Niveau {row.level} mis à jour dans {filiere}"}
 
 

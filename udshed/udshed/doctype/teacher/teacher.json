@@ -114,7 +114,7 @@
    "fieldname": "grade",
    "fieldtype": "Select",
    "label": "Grade",
-   "options": "Pr\nDr\nIng\nM.",
+   "options": "Pr\nDr\nIng\nM.\nMdm.",
    "reqd": 1
   },
   {
@@ -183,8 +183,8 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-18 09:48:40.177205",
- "modified_by": "Administrator",
+ "modified": "2026-11-20 02:57:50.085346",
+ "modified_by": "admin@udshed.com",
  "module": "Udshed",
  "name": "Teacher",
  "naming_rule": "Expression (old style)",

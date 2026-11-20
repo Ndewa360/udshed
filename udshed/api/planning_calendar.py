@@ -233,7 +233,7 @@ def create_planning(academic_year, cours, course_type, day_of_week, half_day, ba
 		teaching_unit = course.get_single_teaching_unit(cours, academic_year)
 		unit_info = _unit_info(teaching_unit.name)
 		faculty = frappe.db.get_value("Field of study", unit_info["levels"][0].filiere, "faculte") if unit_info["levels"] else None
-		planning_permission.assert_can_plan(
+		scope = planning_permission.assert_can_plan(
 			academic_year,
 			faculty,
 			unit_info["levels"][0].filiere if unit_info["levels"] else None,
@@ -243,18 +243,19 @@ def create_planning(academic_year, cours, course_type, day_of_week, half_day, ba
 		if not unit_info["teachers"]:
 			_throw("Le cours « {0} » n'a pas d'enseignant assigné.".format(unit_info["intitule"]))
 		_check_conflicts(unit_info, day_date, period, salle)
-		planning = frappe.get_doc({
-			"doctype": "Planning Item",
-			"cours": teaching_unit.name,
-			"type": course_type,
-			"date": day_date,
-			"period": period,
-			"academic_year": academic_year,
-			"batiment": batiment,
-			"salle": salle,
-			"mode": mode,
-		})
-		planning.insert(ignore_permissions=True)
+		with planning_permission.as_coordinator(scope):
+			planning = frappe.get_doc({
+				"doctype": "Planning Item",
+				"cours": teaching_unit.name,
+				"type": course_type,
+				"date": day_date,
+				"period": period,
+				"academic_year": academic_year,
+				"batiment": batiment,
+				"salle": salle,
+				"mode": mode,
+			})
+			planning.insert(ignore_permissions=True)
 		return {"status": True, "data": planning.as_dict()}
 	except (frappe.ValidationError, frappe.PermissionError):
 		raise
@@ -272,7 +273,7 @@ def update_planning(planning_item_name, academic_year, cours, course_type, day_o
 		teaching_unit = course.get_single_teaching_unit(cours, academic_year)
 		unit_info = _unit_info(teaching_unit.name)
 		faculty = frappe.db.get_value("Field of study", unit_info["levels"][0].filiere, "faculte") if unit_info["levels"] else None
-		planning_permission.assert_can_plan(
+		scope = planning_permission.assert_can_plan(
 			academic_year,
 			faculty,
 			unit_info["levels"][0].filiere if unit_info["levels"] else None,
@@ -290,7 +291,8 @@ def update_planning(planning_item_name, academic_year, cours, course_type, day_o
 		planning_item.mode = mode
 		planning_item.batiment = batiment
 		planning_item.salle = salle
-		planning_item.save(ignore_permissions=True)
+		with planning_permission.as_coordinator(scope):
+			planning_item.save(ignore_permissions=True)
 		return {"status": True, "data": planning_item.as_dict()}
 	except (frappe.ValidationError, frappe.PermissionError):
 		raise
@@ -310,14 +312,15 @@ def delete_planning(planning_name):
 			fields=["filiere", "niveau"],
 		) if unit else []
 		faculty = frappe.db.get_value("Field of study", levels[0].filiere, "faculte") if levels else None
-		planning_permission.assert_can_plan(
+		scope = planning_permission.assert_can_plan(
 			planning.academic_year,
 			faculty,
 			levels[0].filiere if levels else None,
 			levels[0].niveau if levels else None,
 			unit,
 		)
-		planning.delete(ignore_permissions=True)
+		with planning_permission.as_coordinator(scope):
+			planning.delete(ignore_permissions=True)
 		return True
 	except (frappe.ValidationError, frappe.PermissionError):
 		raise

@@ -11,6 +11,8 @@ const ROLE_LIST = {
     STUDENT: "Student"
 };
 
+const normalizeValue = (value) => value === null || value === undefined ? null : String(value);
+
 window.Udshed.Perms = {
     normalizeUserContext(userContext) {
         const rows = Array.isArray(userContext) ? userContext : [];
@@ -31,7 +33,7 @@ window.Udshed.Perms = {
         const flatten = (key) => unique(
             rows
                 .filter((row) => Array.isArray(row[key]))
-                .flatMap((row) => row[key].map((item) => item && (item.name || item) ))
+                .flatMap((row) => row[key].map((item) => normalizeValue(item && (item.name || item))))
         );
         return {
             academic_year: flatten("academic_year_list"),
@@ -66,9 +68,9 @@ window.Udshed.Perms = {
         if (!hasRole) return false;
         const perms = (userContext.perms || []).filter((perm) => {
             if (!perm.academic_year_list || !perm.filiere || !perm.niveau) return false;
-            const acadFound = perm.academic_year_list.find((acad) => (acad.name || acad) === cellFilter.academic_year);
-            const filiereFound = perm.filiere.find((fil) => (fil.name || fil) === cellFilter.filiere);
-            const niveauFound = perm.niveau.find((niv) => (niv.name || niv) === cellFilter.niveau);
+            const acadFound = perm.academic_year_list.find((acad) => normalizeValue(acad.name || acad) === normalizeValue(cellFilter.academic_year));
+            const filiereFound = perm.filiere.find((fil) => normalizeValue(fil.name || fil) === normalizeValue(cellFilter.filiere));
+            const niveauFound = perm.niveau.find((niv) => normalizeValue(niv.name || niv) === normalizeValue(cellFilter.niveau));
             return acadFound && filiereFound && niveauFound;
         });
         return perms.some((perm) => editableRoles.includes(perm.role));
