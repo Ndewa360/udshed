@@ -5,7 +5,7 @@ window.Udshed.TeachingGrid.UtilsQueries = {
     
     load_data(args, callbackFunction) {
 
-        frappe.call({
+        Udshed.Loading.call({
             method: 'udshed.api.teaching_grid.get_academic_teaching_unit',
             freeze: true,
             freeze_message: __("Chargement de la grille..."),
@@ -22,7 +22,7 @@ window.Udshed.TeachingGrid.UtilsQueries = {
     },
     import_grid(args,callbackFunction)
     {
-        frappe.call({
+        Udshed.Loading.call({
             method: 'udshed.api.teaching_grid.import_grid',
             freeze: true,
             freeze_message: __("Importation de la grille..."),
@@ -42,7 +42,7 @@ window.Udshed.TeachingGrid.UtilsQueries = {
     },    
     load_doctype_list(args,callbackFunction,message ="Chargement de la liste")
     {
-        frappe.call({
+        Udshed.Loading.call({
             method: 'frappe.client.get_list',
             freeze:true,
             freeze_message:__(message),
@@ -59,7 +59,7 @@ window.Udshed.TeachingGrid.UtilsQueries = {
     },
     load_doctype(args,callbackFunction,message ="Chargement de la liste")
     {
-        frappe.call({
+        Udshed.Loading.call({
             method: 'frappe.client.get',
             freeze:true,
             freeze_message:__(message),
@@ -77,7 +77,7 @@ window.Udshed.TeachingGrid.UtilsQueries = {
 
     download_template(callbackFunction= ()=>{})
     {
-            frappe.call({
+            Udshed.Loading.call({
             method: 'udshed.api.teaching_grid.download_template',
             freeze: true,
             freeze_message: __("Génération du modele en cours..."),
@@ -98,7 +98,7 @@ window.Udshed.TeachingGrid.UtilsQueries = {
 
     export_grid(filters,callbackFunction= ()=>{})
     {
-        frappe.call({
+        Udshed.Loading.call({
             method: 'udshed.api.teaching_grid.export_grid',
             args:{...filters},
             freeze: true,
@@ -120,7 +120,7 @@ window.Udshed.TeachingGrid.UtilsQueries = {
 
     update_teacher_list(teachingUnitCode,grid_teacher,callbackFunction = ()=>{})
     {
-        frappe.call({
+        Udshed.Loading.call({
             method: 'udshed.api.course.update_teacher_unit',
             args:{
                 teaching_unit_code:teachingUnitCode,

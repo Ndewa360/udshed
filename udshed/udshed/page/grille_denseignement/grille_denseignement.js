@@ -39,6 +39,16 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
         }, 'download');
         Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter, btnImporter, canManageGrid);
 
+        function update_grid() {
+            if (Udshed.TeachingGrid.UtilsUi.isValideFilterForGrid(filters)) {
+                teaching_grid.load_data(filters);
+            } else {
+                teaching_grid.initData();
+                teaching_grid.render_datatable();
+            }
+            Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter, btnImporter, canManageGrid);
+        }
+
         function applyRestrictions() {
             if (Udshed.Perms.is_admin(userContext)) return;
             if (userContext.academic_year.length) {
@@ -66,11 +76,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
             change(e) {
                 filters.academic_year = this.get_value();
                 Udshed.Utils.refresh_filter(filters,"academic_year",page,levelMap);
-                if(!this.get_value())
-                {
-                    teaching_grid.initData()
-                    teaching_grid.render_datatable()
-                }
+                update_grid();
             }
         });
 
@@ -83,11 +89,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
             change(e) {
                 filters.faculty = this.get_value();
                 Udshed.Utils.refresh_filter(filters,"faculty",page,levelMap);
-                if(!this.get_value())
-                {
-                    teaching_grid.initData()
-                    teaching_grid.render_datatable()
-                }
+                update_grid();
             }
         });
 
@@ -119,13 +121,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
                     niveau_field.df.options = levels ? levels.map((value)=>({value:value.name,label:value.level})) || [] : [];
                     niveau_field.refresh();
                 });
-                Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter, btnImporter, canManageGrid);
-
-                if(!this.get_value())
-                {
-                    teaching_grid.initData()
-                    teaching_grid.render_datatable()
-                }
+                update_grid();
             }
         });
 
@@ -136,11 +132,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
             change() {
                 filters.niveau = this.get_value() || null;
                 Udshed.Utils.refresh_filter(filters,"niveau",page,levelMap);
-                if(!this.get_value())
-                {
-                    teaching_grid.initData()
-                    teaching_grid.render_datatable()
-                }
+                update_grid();
             }
         });
         const semestre_field = page.add_field({
@@ -153,8 +145,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
             ],
             change() {
                 filters.semestre = this.get_value();
-                if(this.get_value()) teaching_grid.load_data(filters);
-                Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter, btnImporter, canManageGrid);
+                update_grid();
             }
         });
 

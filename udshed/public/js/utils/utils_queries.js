@@ -3,8 +3,10 @@ window.Udshed = window.Udshed || {};
 window.Udshed.UtilsQueries = {
     get_data_of_user(callback) {
         return new Promise((resolve) => {
-            frappe.call({
+            Udshed.Loading.call({
                 method: "udshed.api.user_data.get_user_context",
+                loading_message: __("Chargement du contexte utilisateur..."),
+                silent_error: true,
                 callback: (response) => {
                     const data = response.message || [];
                     if (typeof callback === "function") callback(data);
@@ -27,17 +29,22 @@ window.Udshed.UtilsQueries = {
             return Promise.resolve([]);
         }
         return new Promise((resolve) => {
-            frappe.call({
+            Udshed.Loading.call({
                 method: "udshed.api.course.get_levels_for_field",
                 freeze: true,
                 freeze_message: __("Chargement des niveaux académique..."),
+                silent_error: true,
                 args: { field_of_study: filiere },
                 callback: (response) => {
                     const levels = response.message || [];
                     if (typeof callback_function === "function") callback_function(levels);
                     resolve(levels);
                 },
-                error: () => resolve([])
+                error: (err) => {
+                    if (Udshed.Messages) Udshed.Messages.error(err, __("Impossible de charger les niveaux académiques."));
+                    if (typeof callback_function === "function") callback_function([]);
+                    resolve([]);
+                }
             });
         });
     },
@@ -50,17 +57,22 @@ window.Udshed.UtilsQueries = {
             return Promise.resolve([]);
         }
         return new Promise((resolve) => {
-            frappe.call({
+            Udshed.Loading.call({
                 method: "udshed.api.building.get_room_by_building",
                 freeze: true,
                 freeze_message: __("Chargement des salles..."),
+                silent_error: true,
                 args: { building: batiment },
                 callback: (response) => {
                     const rooms = response.message || [];
                     if (typeof callback_function === "function") callback_function(rooms);
                     resolve(rooms);
                 },
-                error: () => resolve([])
+                error: (err) => {
+                    if (Udshed.Messages) Udshed.Messages.error(err, __("Impossible de charger les salles."));
+                    if (typeof callback_function === "function") callback_function([]);
+                    resolve([]);
+                }
             });
         });
     }

@@ -204,8 +204,9 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 
 	// ── Load ──
 	function load_data() {
-		frappe.call({
+		Udshed.Loading.call({
 			method: "udshed.api.reregistration.get_all_levels",
+			loading_message: __("Chargement des niveaux..."),
 			args: { faculty: null, filiere: null },
 			callback(r) {
 				if (!r.message) {

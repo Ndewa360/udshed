@@ -513,15 +513,17 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	}
 
 	function load_context() {
-		frappe.call({
+		Udshed.Loading.call({
 			method: "udshed.api.user_data.get_user_context",
+			loading_message: __("Chargement du contexte utilisateur..."),
 			callback: (r) => {
 				state.ctx = normalize_context(r.message);
 				apply_context();
 			},
 		});
-		frappe.call({
+		Udshed.Loading.call({
 			method: API + "get_enseignant_courant",
+			loading_message: __("Chargement de l'enseignant..."),
 			callback: (r) => {
 				state.enseignant = r.message || null;
 				if (state.ctx) apply_context();
@@ -537,8 +539,9 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		fld.niveau.df.options = [""];
 		fld.niveau.refresh();
 		if (!state.filters.filiere) return;
-		frappe.call({
+		Udshed.Loading.call({
 			method: "udshed.api.course.get_levels_for_field",
+			loading_message: __("Chargement des niveaux académiques..."),
 			args: { field_of_study: state.filters.filiere },
 			callback: (r) => {
 				const levels = r.message || [];
@@ -571,8 +574,9 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			teacher = state.enseignant ? state.enseignant.name : null;
 		}
 		const seq = ++state.ues_seq;
-		frappe.call({
+		Udshed.Loading.call({
 			method: API + "get_ues",
+			loading_message: __("Chargement des cours..."),
 			args: {
 				academic_year: state.filters.academic_year,
 				filiere: state.filters.filiere,
@@ -617,8 +621,9 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		read_filters();
 		if (!state.filters.cours) return;
 		show_banner(__("Chargement des notes..."));
-		frappe.call({
+		Udshed.Loading.call({
 			method: API + "charger_data",
+			loading_message: __("Chargement des notes..."),
 			args: {
 				academic_year: state.filters.academic_year,
 				filiere: state.filters.filiere,
@@ -930,8 +935,9 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		anonBar.html(
 			'<div class="sn-anonbar-load">' + __("Chargement de l'état de l'anonymat...") + "</div>"
 		);
-		frappe.call({
+		Udshed.Loading.call({
 			method: API_ANON + "obtenir_etat_anonymat",
+			loading_message: __("Chargement de l'état de l'anonymat..."),
 			args: { session: session.name, teaching_unit: state.filters.cours || null },
 			callback: (r) => render_anonymat_panel(r.message || {}),
 			error: () => anonBar.toggle(false),

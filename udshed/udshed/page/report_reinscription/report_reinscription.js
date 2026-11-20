@@ -56,8 +56,9 @@ frappe.pages["report-reinscription"].on_page_load = function (wrapper) {
 	}
 
 	function load_report() {
-		frappe.call({
+		Udshed.Loading.call({
 			method: "udshed.api.reregistration.get_reregistration_report",
+			loading_message: __("Chargement du rapport..."),
 			args: filters,
 			callback(r) {
 				if (!r.message) return;

@@ -82,8 +82,9 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 	}
 
 	function load_data() {
-		frappe.call({
+		Udshed.Loading.call({
 			method: "udshed.api.inscription.get_liste_inscriptions",
+			loading_message: __("Chargement des inscriptions..."),
 			args: filters,
 			callback(r) {
 				if (!r.message) return;

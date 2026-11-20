@@ -17,8 +17,9 @@ frappe.pages['reinscription_etudiant'].on_page_load = function(wrapper) {
 	var parcours_notes = null;
 
 	// Initialize - get student and existing registrations
-	frappe.call({
+	Udshed.Loading.call({
 		method: 'udshed.api.reregistration.get_student_by_matricule',
+		loading_message: __("Chargement de votre profil..."),
 		callback: function(r) {
 			if (r.message) {
 				student_data = r.message;
@@ -40,8 +41,9 @@ frappe.pages['reinscription_etudiant'].on_page_load = function(wrapper) {
 	}
 
 	function load_existing_registrations() {
-		frappe.call({
+		Udshed.Loading.call({
 			method: 'udshed.api.reregistration.get_student_registrations',
+			loading_message: __("Chargement de vos réinscriptions..."),
 			args: { student: student_matricule },
 			callback: function(r) {
 				if (r.message) {
@@ -58,8 +60,9 @@ frappe.pages['reinscription_etudiant'].on_page_load = function(wrapper) {
 		page.clear_fields();
 		$(page.main).empty();
 
-		frappe.call({
-			method: 'udshed.api.reregistration.get_open_sessions',
+	Udshed.Loading.call({
+		method: 'udshed.api.reregistration.get_open_sessions',
+		loading_message: __("Chargement des sessions ouvertes..."),
 			callback: function(r) {
 				var has_open_session = r.message && r.message.length > 0;
 				var latest_reg = registrations.length > 0 ? registrations[0] : null;
@@ -348,8 +351,9 @@ frappe.pages['reinscription_etudiant'].on_page_load = function(wrapper) {
 			update_fiche_dynamic(null);
 			return;
 		}
-		frappe.call({
+		Udshed.Loading.call({
 			method: 'udshed.api.reregistration.get_reregistration_preview',
+			loading_message: __("Chargement de votre bilan..."),
 			args: { matricule: student_matricule, reinscription_session: session },
 			callback: function(r) {
 				wizard_data.preview = r.message || null;
@@ -418,13 +422,15 @@ frappe.pages['reinscription_etudiant'].on_page_load = function(wrapper) {
 	}
 
 	function load_parcours() {
-		frappe.call({
+		Udshed.Loading.call({
 			method: 'udshed.api.reregistration.get_niveau_precedent',
+			loading_message: __("Chargement de votre parcours..."),
 			args: { filiere: student_data.filiere, niveau: student_data.niveau_actuel },
 			callback: function(r) {
 				var niveau_precedent_label = r.message || '';
-				frappe.call({
+				Udshed.Loading.call({
 					method: 'udshed.api.reregistration.get_student_notes',
+					loading_message: __("Chargement de vos notes précédentes..."),
 					args: {
 						student: student_matricule,
 						filiere: student_data.filiere,
@@ -518,8 +524,9 @@ frappe.pages['reinscription_etudiant'].on_page_load = function(wrapper) {
 			if (el.length) el.html(render_grid_placeholder());
 			return;
 		}
-		frappe.call({
+		Udshed.Loading.call({
 			method: 'udshed.api.reregistration.get_reregistration_grid',
+			loading_message: __("Chargement des matières..."),
 			args: {
 				matricule: student_matricule,
 				reinscription_session: session,

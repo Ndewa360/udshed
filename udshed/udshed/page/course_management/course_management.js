@@ -25,10 +25,10 @@ function refresh($cards_container,$empty_state,filters) {
 // Chargement backend
 // =========================
 function load_teaching_units($cards_container,filters) {
-	frappe.call({
+	Udshed.Loading.call({
 		method: 'udshed.api.course.get_teaching_units',
 		args: filters,
-		freeze: true,
+		loading_message: __("Chargement des unités d'enseignement..."),
 		callback: (r) => {
 			const data = r.message || [];
 			console.warn("Data to show",data)
@@ -52,8 +52,9 @@ function loadLevels(filiere,niveau_field) {
 		return;
 	}
 
-	frappe.call({
+	Udshed.Loading.call({
 		method: "udshed.api.course.get_levels_for_field",
+		loading_message: __("Chargement des niveaux académiques..."),
 		args: { field_of_study: filiere },
 		callback: (r) => {
 			levelMap = r.message.reduce((acc, curr) => {

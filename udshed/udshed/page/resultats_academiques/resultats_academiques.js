@@ -158,8 +158,9 @@ frappe.pages["resultats-academiques"].on_page_load = function (wrapper) {
 	function init() {
 		render_stats(null);
 		bind_events();
-		frappe.call({
+		Udshed.Loading.call({
 			method: "udshed.api.user_data.get_user_context",
+			loading_message: __("Chargement du contexte utilisateur..."),
 			callback(r) {
 				const ctx = (r.message || [])[0] || {};
 				state.academic_years = (ctx.academic_year_list || []).map((y) => y.name);
@@ -183,8 +184,9 @@ frappe.pages["resultats-academiques"].on_page_load = function (wrapper) {
 	}
 
 	function load_classes() {
-		frappe.call({
+		Udshed.Loading.call({
 			method: API + "get_classes",
+			loading_message: __("Chargement des classes..."),
 			args: { academic_year: state.filters.academic_year || null },
 			callback(r) {
 				state.classes = r.message || [];
@@ -220,8 +222,9 @@ frappe.pages["resultats-academiques"].on_page_load = function (wrapper) {
 		}
 		state.loading = true;
 		render_loading();
-		frappe.call({
+		Udshed.Loading.call({
 			method: API + "get_resultats",
+			loading_message: __("Chargement des résultats..."),
 			args: filtres_backend(),
 			callback(r) {
 				state.loading = false;
@@ -489,8 +492,9 @@ frappe.pages["resultats-academiques"].on_page_load = function (wrapper) {
 	//  Détail étudiant
 	// ------------------------------------------------------------------ //
 	function open_detail(student) {
-		frappe.call({
+		Udshed.Loading.call({
 			method: API + "get_resultat_detail",
+			loading_message: __("Chargement du détail..."),
 			args: {
 				student: student,
 				academic_year: state.filters.academic_year || null,

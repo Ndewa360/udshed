@@ -28,8 +28,12 @@ frappe.pages["correction-copies"].on_page_load = function (wrapper) {
 		frappe.show_alert({ message, indicator: indicator || "green" }, 4);
 	}
 
-	function api(method, args) {
-		return frappe.call({ method: API + method, args }).then((r) => r.message);
+	function api(method, args, loading_message) {
+		return Udshed.Loading.call({
+			method: API + method,
+			args,
+			loading_message: loading_message || __("Chargement des données...")
+		}).then((r) => r.message);
 	}
 
 	function to_num(v) {
@@ -217,7 +221,7 @@ frappe.pages["correction-copies"].on_page_load = function (wrapper) {
 	}
 
 	function load_sessions() {
-		api("obtenir_sessions", { academic_year: state.academic_year || undefined }).then((r) => {
+		api("obtenir_sessions", { academic_year: state.academic_year || undefined }, __("Chargement des sessions...")).then((r) => {
 			fill_select($session, r.sessions, (s) => (s.name || "") + " — " + (s.type_dexamen || ""), state.session);
 			if (state.session) load_matieres();
 		});
@@ -225,7 +229,7 @@ frappe.pages["correction-copies"].on_page_load = function (wrapper) {
 
 	function load_matieres() {
 		if (!state.session) return;
-		api("obtenir_ues_session", { session: state.session }).then((r) => render_resume(r.matieres));
+		api("obtenir_ues_session", { session: state.session }, __("Chargement des cours...")).then((r) => render_resume(r.matieres));
 	}
 
 	function load_copies() {
@@ -235,7 +239,7 @@ frappe.pages["correction-copies"].on_page_load = function (wrapper) {
 		return api("charger_copies", {
 			session: state.session,
 			teaching_unit: state.teaching_unit || undefined,
-		}).then((r) => {
+		}, __("Chargement des copies...")).then((r) => {
 			state.copies = r.copies || [];
 			render_copies();
 			state.busy = false;
@@ -303,7 +307,7 @@ frappe.pages["correction-copies"].on_page_load = function (wrapper) {
 	// ----------------------------------------------------------------------
 	// initialisation
 	// ----------------------------------------------------------------------
-	api("obtenir_sessions", {}).then((r) => {
+	api("obtenir_sessions", {}, __("Chargement des sessions...")).then((r) => {
 		fill_select($academic_year, r.years, (y) => y, state.academic_year);
 		fill_select($session, r.sessions, (s) => (s.name || "") + " — " + (s.type_dexamen || ""), state.session);
 	});

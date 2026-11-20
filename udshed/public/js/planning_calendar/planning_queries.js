@@ -11,7 +11,7 @@ window.Udshed.PlanningQueries = {
             return Promise.resolve([]);
         }
         return new Promise((resolve) => {
-            frappe.call({
+            Udshed.Loading.call({
                 method: "udshed.api.planning_calendar.get_week_planning",
                 freeze: true,
                 freeze_message: __("Chargement du planning..."),
@@ -39,7 +39,7 @@ window.Udshed.PlanningQueries = {
 
     getPlanningType(level, startDate, academic_year, callback_function) {
         return new Promise((resolve) => {
-            frappe.call({
+            Udshed.Loading.call({
                 method: "udshed.api.planning_calendar.get_planning_type",
                 freeze: true,
                 freeze_message: __("Récupération du type de planning..."),
@@ -63,7 +63,7 @@ window.Udshed.PlanningQueries = {
 
     deletePlanning(planning_name, callback_function) {
         return new Promise((resolve) => {
-            frappe.call({
+            Udshed.Loading.call({
                 method: "udshed.api.planning_calendar.delete_planning",
                 freeze: true,
                 freeze_message: __("Suppression du planning en cours..."),
@@ -84,7 +84,7 @@ window.Udshed.PlanningQueries = {
 
     loadCoursePeriod(level, startDate, academic_year) {
         return new Promise((resolve) => {
-            frappe.call({
+            Udshed.Loading.call({
                 method: "udshed.api.planning_period.get_period",
                 freeze: true,
                 freeze_message: __("Chargement des périodes de cours..."),
@@ -104,7 +104,7 @@ window.Udshed.PlanningQueries = {
 
     loadCourseDefaultPeriod() {
         return new Promise((resolve) => {
-            frappe.call({
+            Udshed.Loading.call({
                 method: "udshed.api.planning_period.get_default_period",
                 freeze: true,
                 freeze_message: __("Chargement de la période de cours par défaut..."),
@@ -120,8 +120,9 @@ window.Udshed.PlanningQueries = {
     loadAcademicYearMonths(academic_year) {
         if (!academic_year) return Promise.resolve([]);
         return new Promise((resolve) => {
-            frappe.call({
+            Udshed.Loading.call({
                 method: "udshed.api.user_data.get_academic_year_months",
+                loading_message: __("Chargement des mois de l'année académique..."),
                 args: { academic_year: academic_year },
                 callback: (response) => resolve(response.message || []),
                 error: (err) => {
@@ -135,8 +136,9 @@ window.Udshed.PlanningQueries = {
     loadAvailableRooms(date, period, building) {
         if (!date || !period) return Promise.resolve(null);
         return new Promise((resolve) => {
-            frappe.call({
+            Udshed.Loading.call({
                 method: "udshed.api.building.get_available_rooms",
+                loading_message: __("Chargement des salles disponibles..."),
                 args: { date: date, period: period, building: building || null },
                 callback: (response) => resolve(response.message || null),
                 error: (err) => {

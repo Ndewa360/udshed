@@ -86,8 +86,9 @@ frappe.pages["rapport-general"].on_page_load = function (wrapper) {
 	}
 
 	function load_report() {
-		frappe.call({
+		Udshed.Loading.call({
 			method: "udshed.api.general_report.get_general_report",
+			loading_message: __("Chargement du rapport..."),
 			args: filters,
 			callback(r) {
 				if (!r.message) return;
@@ -314,8 +315,9 @@ frappe.pages["rapport-general"].on_page_load = function (wrapper) {
 
 	function show_candidate_detail(name) {
 		if (!name) return;
-		frappe.call({
+		Udshed.Loading.call({
 			method: "udshed.udshed.doctype.session_inscription_candidate.session_inscription_candidate.get_candidate_detail",
+			loading_message: __("Chargement du détail du candidat..."),
 			args: { name },
 			callback(r) {
 				if (!r.message) return;
