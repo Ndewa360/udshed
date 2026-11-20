@@ -196,14 +196,14 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
     handleTeacherCellClick(rowIndex, colIndex) {
         var me = this;
         if (!me.canEdit) {
-            frappe.show_alert({ message: __('Vous n\'avez pas le droit de modifier cette grille.'), indicator: 'red' });
+            Udshed.Messages.warning(__('Vous n\'avez pas le droit de modifier cette grille.'));
             return;
         }
         
         // Récupérer le code du cours (colonne 1)
         var courseCode = me.datatable.datamanager.data[rowIndex][1];
         if (!courseCode) {
-            frappe.msgprint(__('Cette ligne ne correspond pas à un cours'));
+            Udshed.Messages.validation(__('Cette ligne ne correspond pas à un cours'));
             return;
         }
 

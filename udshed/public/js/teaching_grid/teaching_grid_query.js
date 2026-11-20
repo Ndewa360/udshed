@@ -28,11 +28,7 @@ window.Udshed.TeachingGrid.UtilsQueries = {
             freeze_message: __("Importation de la grille..."),
             args: {...args},
             error:(error)=>{
-                frappe.msgprint({
-                        title: __('Erreur'),
-                        message: error && (error.message || error.exception) || __('Erreur lors de l\'importation.'),
-                        indicator: 'red'
-                    });
+                Udshed.Messages.error(error, __('Erreur lors de l\'importation.'));
                 callbackFunction(null)
             },
             callback: function(r) {
@@ -90,19 +86,11 @@ window.Udshed.TeachingGrid.UtilsQueries = {
                     // Ouvrir l'URL du fichier
                     window.open(r.message.file_url);
                     
-                    frappe.show_alert({
-                        message: __('Téléchargement du template démarré'),
-                        indicator: 'green',
-                        seconds: 3
-                    });
+                    Udshed.Messages.success(__('Téléchargement du template démarré'));
                     frappe.utils.play_sound("submit");
 
                 } else {
-                    frappe.msgprint({
-                        title: __('Erreur'),
-                        message: r.message.error || __('Impossible de générer le template'),
-                        indicator: 'red'
-                    });
+                    Udshed.Messages.validation(r.message.error || __('Impossible de générer le template'), __('Erreur'));
                 }
             }
         });
@@ -120,19 +108,11 @@ window.Udshed.TeachingGrid.UtilsQueries = {
                     // Ouvrir l'URL du fichier
                     window.open(r.message.file_url);
                     
-                    frappe.show_alert({
-                        message: __('Téléchargement de la grille démarré'),
-                        indicator: 'green',
-                        seconds: 3
-                    });
+                    Udshed.Messages.success(__('Téléchargement de la grille démarré'));
                     frappe.utils.play_sound("submit");
 
                 } else {
-                    frappe.msgprint({
-                        title: __('Erreur'),
-                        message: r.message.error || __('Impossible d\'exporter la grille'),
-                        indicator: 'red'
-                    });
+                    Udshed.Messages.validation(r.message.error || __('Impossible d\'exporter la grille'), __('Erreur'));
                 }
             }
         });
@@ -152,28 +132,16 @@ window.Udshed.TeachingGrid.UtilsQueries = {
                 if (r.message) {
                     // Ouvrir l'URL du fichier
                     
-                    frappe.show_alert({
-                        message: __('Gilles mise à jour'),
-                        indicator: 'green',
-                        seconds: 3
-                    });
+                    Udshed.Messages.success(__('Grille mise à jour'));
                     frappe.utils.play_sound("submit");
                     callbackFunction()
 
                 } else {
-                    frappe.msgprint({
-                        title: __('Erreur'),
-                        message: __('Impossible de mettre à jour la grille'),
-                        indicator: 'red'
-                    });
+                    Udshed.Messages.validation(__('Impossible de mettre à jour la grille'), __('Erreur'));
                 }
             },
             error: (error) => {
-                frappe.msgprint({
-                    title: __('Erreur'),
-                    message: error && (error.message || error.exception) || __('Impossible de mettre à jour la grille'),
-                    indicator: 'red'
-                });
+                Udshed.Messages.error(error, __('Impossible de mettre à jour la grille'));
             }
         });
     }

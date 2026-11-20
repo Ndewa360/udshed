@@ -209,24 +209,21 @@ show_import_dialog(filters,onAfterImported= (data)=>{}) {
                 {
                     frappe.utils.play_sound("submit");
 
-                    frappe.msgprint({
+                    Udshed.Messages.dialog({
                         title: __('Import réussi'),
-                        message: `
-                            <p>UE créées: ${data.data.ues_created }</p>
-                            <p>Cours créés: ${data.data.courses_created }</p>
-                            <p>Cours mis à jour: ${data.data.courses_updated }</p>
-                        `,
-                        indicator: 'green'
+                        message: __("UE créées: {0}\nCours créés: {1}\nCours mis à jour: {2}")
+                            .format(data.data.ues_created, data.data.courses_created, data.data.courses_updated),
+                        type: 'success'
                     });
 
                     onAfterImported(data);
                 }
                 else
                 {
-                    frappe.msgprint({
+                    Udshed.Messages.dialog({
                         title: __('Echec d\'importation'),
-                        message: data.message.replace("\n","<br\>"),
-                        indicator: 'red'
+                        message: data.message || __('Impossible d\'importer la grille.'),
+                        type: 'error'
                     });
                     frappe.utils.play_sound("error")
                 }

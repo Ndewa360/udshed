@@ -1,9 +1,9 @@
 frappe.pages["planning-academique"].on_page_load = function (wrapper) {
     frappe.require([
         "/assets/udshed/css/planning_academique.css",
+        "/assets/udshed/js/utils/utils.js",
         "/assets/udshed/js/planning_calendar/dialog_box.js",
         "/assets/udshed/js/planning_calendar/date_utils.js",
-        "/assets/udshed/js/utils/utils.js",
         "/assets/udshed/js/planning_calendar/planning_queries.js",
         "/assets/udshed/js/utils/utils_queries.js",
         "/assets/udshed/js/planning_calendar/ui.js",
@@ -201,6 +201,15 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             );
         });
 
+        const btnSallesLibres = $(`
+            <button class="btn btn-default btn-sm" id="rooms-availability" title="${__("Voir les salles libres par bâtiment")}">
+                ${__("Salles libres")}
+            </button>
+        `).prependTo(page.page_actions);
+        btnSallesLibres.on("click", () => {
+            Udshed.Dialogs.openRoomsAvailabilityDialog(new Date(currentWeekStart), periods);
+        });
+
         page.add_field({
             fieldtype: "Link",
             label: "Année académique",
@@ -326,12 +335,9 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             if (Number.isFinite(value)) currentWeekStart = new Date(value);
             await refreshAll();
         });
-        grid_wrapper.on("click", "#rooms-availability", () => {
-            Udshed.Dialogs.openRoomsAvailabilityDialog(new Date(currentWeekStart), periods);
-        });
         grid_wrapper.on("click", ".planning-cell", function (event) {
             if (!Udshed.Perms.user_can_edit_planning_cell(filters, userContext)) {
-                frappe.show_alert({ message: __("Vous n'avez pas le droit de modifier ce créneau."), indicator: "red" });
+                Udshed.Messages.warning(__("Vous n'avez pas le droit de modifier ce créneau."));
                 return;
             }
             const day = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5 }[$(this).data("day")];

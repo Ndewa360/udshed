@@ -10,11 +10,9 @@ window.Udshed.UtilsQueries = {
                     if (typeof callback === "function") callback(data);
                     resolve(data);
                 },
-                error: () => {
-                    frappe.show_alert({
-                        message: __("Impossible de charger votre contexte utilisateur."),
-                        indicator: "red"
-                    });
+                error: (err) => {
+                    if (Udshed.Messages) Udshed.Messages.error(err, __("Impossible de charger votre contexte utilisateur."));
+                    else frappe.show_alert({ message: __("Impossible de charger votre contexte utilisateur."), indicator: "red" });
                     resolve([]);
                 }
             });

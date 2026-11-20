@@ -1,5 +1,6 @@
 frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
 	frappe.require([
+		'/assets/udshed/css/planning_academique.css',
 		'/assets/udshed/js/utils/utils.js',
 		'/assets/udshed/js/utils/utils_queries.js',
 		'/assets/udshed/js/utils/permission.js',

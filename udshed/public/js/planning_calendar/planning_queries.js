@@ -2,8 +2,7 @@ window.Udshed = window.Udshed || {};
 
 window.Udshed.PlanningQueries = {
     _show_error(err, title) {
-        const message = (err && (err.message || err.exception || err._server_messages)) || __("Une erreur est survenue.");
-        frappe.show_alert({ message: `${title} : ${message}`, indicator: "red" });
+        Udshed.Messages.error(err, title);
     },
 
     fetchPlanningItems(filter, currentWeekStart, callback_function) {
@@ -70,7 +69,7 @@ window.Udshed.PlanningQueries = {
                 freeze_message: __("Suppression du planning en cours..."),
                 args: { planning_name: planning_name },
                 callback: (response) => {
-                    frappe.show_alert({ message: __("Planning supprimé avec succès."), indicator: "green" });
+                    Udshed.Messages.success(__("Planning supprimé avec succès."));
                     frappe.utils.play_sound("delete");
                     if (typeof callback_function === "function") callback_function(response.message);
                     resolve(response.message);
