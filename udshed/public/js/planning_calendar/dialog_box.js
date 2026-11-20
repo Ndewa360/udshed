@@ -297,5 +297,121 @@ window.Udshed.Dialogs = {
             }
         });
         dialog.show();
+    },
+
+    openRoomsAvailabilityDialog(currentWeekStart, periods) {
+        const dayOptions = [
+            { value: "Monday", label: __("Lundi") },
+            { value: "Tuesday", label: __("Mardi") },
+            { value: "Wednesday", label: __("Mercredi") },
+            { value: "Thursday", label: __("Jeudi") },
+            { value: "Friday", label: __("Vendredi") },
+            { value: "Saturday", label: __("Samedi") }
+        ];
+        const periodOptions = (periods || []).map((period) => ({
+            value: period.name,
+            label: period.libelle || [period.heure_de_debut, period.heure_de_fin].filter(Boolean).join(" - ") || period.name
+        }));
+        if (!periodOptions.length) {
+            frappe.show_alert({ message: __("Aucun créneau horaire disponible."), indicator: "orange" });
+            return;
+        }
+
+        const escapeHtml = (value) => String(value === null || value === undefined ? "" : value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        const dayOffsets = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5 };
+        let availabilityDialog;
+
+        const render = async () => {
+            if (!availabilityDialog) return;
+            const day = availabilityDialog.get_value("day");
+            const period = availabilityDialog.get_value("period");
+            const building = availabilityDialog.get_value("building");
+            const date = new Date(currentWeekStart);
+            date.setDate(date.getDate() + (dayOffsets[day] || 0));
+            const wrapper = availabilityDialog.fields_dict.availability.$wrapper;
+            wrapper.html(`<div class="rooms-loading">${__("Chargement des salles...")}</div>`);
+            const data = await Udshed.PlanningQueries.loadAvailableRooms(
+                frappe.datetime.obj_to_str(date),
+                period,
+                building
+            );
+            if (!data) {
+                wrapper.html(`<div class="rooms-empty">${__("Impossible de charger les salles disponibles.")}</div>`);
+                return;
+            }
+            const total = data.buildings.reduce((sum, item) => sum + item.total, 0);
+            const available = data.buildings.reduce((sum, item) => sum + item.available_count, 0);
+            const selectedPeriod = periodOptions.find((option) => option.value === period);
+            const buildingsHtml = data.buildings.map((item) => {
+                const rooms = item.rooms.map((room) => `
+                    <div class="room-chip ${room.available ? "available" : "occupied"}">
+                        <span class="room-name">${escapeHtml(room.label)}</span>
+                        <span class="room-type">${escapeHtml(room.type || "")}</span>
+                        <span class="room-state">${room.available ? __("Libre") : `${__("Occupée")} : ${escapeHtml(room.occupant || "")}`}</span>
+                    </div>
+                `).join("");
+                return `
+                    <div class="rooms-building">
+                        <div class="rooms-building-head">
+                            <strong>${escapeHtml(item.label)}</strong>
+                            <span>${item.available_count}/${item.total} ${__("libres")}</span>
+                        </div>
+                        <div class="rooms-grid">${rooms || `<div class="rooms-empty">${__("Aucune salle configurée.")}</div>`}</div>
+                    </div>
+                `;
+            }).join("");
+            wrapper.html(`
+                <div class="rooms-availability">
+                    <div class="rooms-summary">${available}/${total} ${__("salles libres")} · ${escapeHtml(day)} · ${escapeHtml(selectedPeriod ? selectedPeriod.label : period)}</div>
+                    ${buildingsHtml || `<div class="rooms-empty">${__("Aucun bâtiment disponible.")}</div>`}
+                </div>
+            `);
+        };
+
+        availabilityDialog = new frappe.ui.Dialog({
+            title: __("Salles libres par bâtiment"),
+            fields: [
+                {
+                    fieldtype: "Select",
+                    fieldname: "day",
+                    label: __("Jour"),
+                    options: dayOptions,
+                    default: "Monday",
+                    reqd: 1,
+                    change: render
+                },
+                {
+                    fieldtype: "Select",
+                    fieldname: "period",
+                    label: __("Créneau"),
+                    options: periodOptions,
+                    default: periodOptions[0].value,
+                    reqd: 1,
+                    change: render
+                },
+                {
+                    fieldtype: "Link",
+                    fieldname: "building",
+                    label: __("Bâtiment"),
+                    options: "Building",
+                    change: render
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "availability"
+                }
+            ],
+            primary_action_label: __("Fermer"),
+            primary_action: () => availabilityDialog.hide()
+        });
+        availabilityDialog.set_secondary_action_label(__("Actualiser"));
+        availabilityDialog.set_secondary_action(render);
+        availabilityDialog.show();
+        render();
     }
 };

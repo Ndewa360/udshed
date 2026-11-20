@@ -131,5 +131,20 @@ window.Udshed.PlanningQueries = {
                 }
             });
         });
+    },
+
+    loadAvailableRooms(date, period, building) {
+        if (!date || !period) return Promise.resolve(null);
+        return new Promise((resolve) => {
+            frappe.call({
+                method: "udshed.api.building.get_available_rooms",
+                args: { date: date, period: period, building: building || null },
+                callback: (response) => resolve(response.message || null),
+                error: (err) => {
+                    this._show_error(err, __("Salles disponibles"));
+                    resolve(null);
+                }
+            });
+        });
     }
 };

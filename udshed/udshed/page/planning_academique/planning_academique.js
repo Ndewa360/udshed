@@ -326,6 +326,9 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             if (Number.isFinite(value)) currentWeekStart = new Date(value);
             await refreshAll();
         });
+        grid_wrapper.on("click", "#rooms-availability", () => {
+            Udshed.Dialogs.openRoomsAvailabilityDialog(new Date(currentWeekStart), periods);
+        });
         grid_wrapper.on("click", ".planning-cell", function (event) {
             if (!Udshed.Perms.user_can_edit_planning_cell(filters, userContext)) {
                 frappe.show_alert({ message: __("Vous n'avez pas le droit de modifier ce créneau."), indicator: "red" });

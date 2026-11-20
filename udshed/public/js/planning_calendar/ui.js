@@ -66,6 +66,7 @@ window.Udshed.UI = {
                     </div>
                     <div class="planning-nav-center"><span id="week-label"></span></div>
                     <div class="planning-nav-right">
+                        <button class="btn btn-default btn-sm" id="rooms-availability" title="Voir les salles libres par bâtiment">Salles libres</button>
                         <select id="month-picker" class="form-control input-sm"></select>
                         <select id="week-select" class="form-control input-sm"></select>
                     </div>

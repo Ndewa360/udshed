@@ -168,6 +168,10 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--text-muted);
+  background: var(--gray-100);
+  padding: 1px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
 }
 
 .planning-item-mode {
@@ -321,34 +325,154 @@
 Controle de l'état d'avancement des cours
 */
 .planning-item.cm {
-  background: linear-gradient(180deg, #f7faff 0%, #ffffff 100%);
-  border-left-color: #2f6fed;
+  background: linear-gradient(180deg, #dbeafe 0%, #eff6ff 100%);
+  border-color: #93c5fd;
+  border-left: 5px solid #1d4ed8;
+  color: #1e3a8a;
 }
 
 .planning-item.tp {
-  background: linear-gradient(180deg, #f4fbf5 0%, #ffffff 100%);
-  border-left-color: #2e7d32;
+  background: linear-gradient(180deg, #dcfce7 0%, #f0fdf4 100%);
+  border-color: #86efac;
+  border-left: 5px solid #15803d;
+  color: #14532d;
 }
 
 .planning-item.td {
-  background: linear-gradient(180deg, #f6f3ff 0%, #ffffff 100%);
-  border-left-color: #6d28d9;
+  background: linear-gradient(180deg, #ede9fe 0%, #f5f3ff 100%);
+  border-color: #c4b5fd;
+  border-left: 5px solid #6d28d9;
+  color: #4c1d95;
 }
 
 .planning-item.cc {
-  background: linear-gradient(180deg, #fff8ee 0%, #ffffff 100%);
-  border-left-color: #ef6c00;
+  background: linear-gradient(180deg, #ffedd5 0%, #fff7ed 100%);
+  border-color: #fdba74;
+  border-left: 5px solid #c2410c;
+  color: #7c2d12;
 }
 
 .planning-item.exam {
-  background: linear-gradient(180deg, #fff5f4 0%, #ffffff 100%);
-  border-left-color: #d32f2f;
+  background: linear-gradient(180deg, #fee2e2 0%, #fef2f2 100%);
+  border-color: #fca5a5;
+  border-left: 5px solid #b91c1c;
+  color: #7f1d1d;
 }
+
+.planning-item.cm .planning-item-kind { background: #1d4ed8; color: #fff; }
+.planning-item.tp .planning-item-kind { background: #15803d; color: #fff; }
+.planning-item.td .planning-item-kind { background: #6d28d9; color: #fff; }
+.planning-item.cc .planning-item-kind { background: #c2410c; color: #fff; }
+.planning-item.exam .planning-item-kind { background: #b91c1c; color: #fff; }
+
+.planning-item.cm .planning-item-title,
+.planning-item.tp .planning-item-title,
+.planning-item.td .planning-item-title,
+.planning-item.cc .planning-item-title,
+.planning-item.exam .planning-item-title {
+  color: inherit;
+}
+
+.planning-item.cm .planning-item-details,
+.planning-item.tp .planning-item-details,
+.planning-item.td .planning-item-details,
+.planning-item.cc .planning-item-details,
+.planning-item.exam .planning-item-details {
+  color: inherit;
+  opacity: 0.9;
+}
+
+.planning-item.cm .planning-progress-fill { background: #1d4ed8; }
+.planning-item.tp .planning-progress-fill { background: #15803d; }
+.planning-item.td .planning-progress-fill { background: #6d28d9; }
+.planning-item.cc .planning-progress-fill { background: #c2410c; }
+.planning-item.exam .planning-progress-fill { background: #b91c1c; }
 
 .planning-item:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(16, 24, 40, 0.12);
   cursor: pointer;
+}
+
+.rooms-availability {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rooms-summary {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #e8f1ff;
+  color: #1e3a8a;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.rooms-building {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.rooms-building-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 10px;
+  background: var(--gray-100);
+  font-size: 12px;
+}
+
+.rooms-building-head span {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+  padding: 8px;
+}
+
+.room-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border-left: 4px solid;
+  font-size: 11px;
+}
+
+.room-chip.available {
+  background: #e7f6ea;
+  border-color: #15803d;
+  color: #14532d;
+}
+
+.room-chip.occupied {
+  background: #fdecea;
+  border-color: #b91c1c;
+  color: #7f1d1d;
+}
+
+.room-name {
+  font-weight: 700;
+}
+
+.room-type,
+.room-state {
+  opacity: 0.9;
+}
+
+.rooms-loading,
+.rooms-empty {
+  padding: 14px;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 @media (max-width: 1200px) {

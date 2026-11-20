@@ -18,6 +18,8 @@ body {
   font-family: Arial, sans-serif;
   font-size: 11px;
   color: #222;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 .header {
@@ -185,11 +187,29 @@ th { background:#eef2f7; font-size:10px; }
 .progress-badge.done { background:#e7f6ea; color:#1b7a34; }
 .progress-badge.over { background:#fdecea; color:#b42318; }
 
-.cm { background:#f7faff; border-left-color:#2f6fed; }
-.td { background:#f6f3ff; border-left-color:#6d28d9; }
-.tp { background:#f4fbf5; border-left-color:#2e7d32; }
-.cc { background:#fff8ee; border-left-color:#ef6c00; }
-.exam { background:#fff5f4; border-left-color:#d32f2f; }
+.event.cm { background:#dbeafe; border-color:#93c5fd; border-left:4px solid #1d4ed8; color:#1e3a8a; }
+.event.td { background:#ede9fe; border-color:#c4b5fd; border-left:4px solid #6d28d9; color:#4c1d95; }
+.event.tp { background:#dcfce7; border-color:#86efac; border-left:4px solid #15803d; color:#14532d; }
+.event.cc { background:#ffedd5; border-color:#fdba74; border-left:4px solid #c2410c; color:#7c2d12; }
+.event.exam { background:#fee2e2; border-color:#fca5a5; border-left:4px solid #b91c1c; color:#7f1d1d; }
+
+.event.cm .event-kind { background:#1d4ed8; color:#fff; }
+.event.td .event-kind { background:#6d28d9; color:#fff; }
+.event.tp .event-kind { background:#15803d; color:#fff; }
+.event.cc .event-kind { background:#c2410c; color:#fff; }
+.event.exam .event-kind { background:#b91c1c; color:#fff; }
+
+.event.cm .event-meta,
+.event.td .event-meta,
+.event.tp .event-meta,
+.event.cc .event-meta,
+.event.exam .event-meta { color:inherit; opacity:0.9; }
+
+.event.cm .progress-fill { background:#1d4ed8; }
+.event.td .progress-fill { background:#6d28d9; }
+.event.tp .progress-fill { background:#15803d; }
+.event.cc .progress-fill { background:#c2410c; }
+.event.exam .progress-fill { background:#b91c1c; }
 
 .type_cours {
   font-style: italic;
@@ -221,6 +241,11 @@ th { background:#eef2f7; font-size:10px; }
 
 .box.done { background:#e7f6ea; border-left:4px solid #2e7d32; color:#1b7a34; }
 .box.over { background:#fdecea; border-left:4px solid #d32f2f; color:#b42318; }
+.box.cm { background:#dbeafe; border-left:4px solid #1d4ed8; color:#1e3a8a; font-weight:bold; }
+.box.tp { background:#dcfce7; border-left:4px solid #15803d; color:#14532d; font-weight:bold; }
+.box.td { background:#ede9fe; border-left:4px solid #6d28d9; color:#4c1d95; font-weight:bold; }
+.box.cc { background:#ffedd5; border-left:4px solid #c2410c; color:#7c2d12; font-weight:bold; }
+.box.exam { background:#fee2e2; border-left:4px solid #b91c1c; color:#7f1d1d; font-weight:bold; }
 
 .dense { font-size:10px; }
 .dense .header { margin-bottom:4px; }
