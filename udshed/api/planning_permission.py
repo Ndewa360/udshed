@@ -4,8 +4,8 @@ import frappe
 from frappe import _
 
 ADMIN_ROLES = {"Administrator", "System Manager"}
-PLANNING_ROLES = {"Planning Manager", "Coordonateur", "Coordinateur"}
-TEACHER_ROLES = {"Teacher", "Enseignant"}
+PLANNING_ROLES = {"Planning Manager", "Coordonateur"}
+TEACHER_ROLES = {"Teacher"}
 DOCTYPES_WITH_PLANNING_PERMISSION = ("Planning Item", "Teaching Unit")
 
 

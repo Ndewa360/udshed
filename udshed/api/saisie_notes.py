@@ -432,11 +432,7 @@ def _verifier_acces_enseignant(teaching_unit):
     roles = frappe.get_roles(user)
     if user == "Administrator" or "System Manager" in roles:
         return
-    if (
-        "Planning Manager" in roles
-        or "Coordonateur" in roles
-        or "Coordinateur" in roles
-    ):
+    if "Planning Manager" in roles or "Coordonateur" in roles:
         return
     if "Teacher" in roles:
         enseignant = _get_enseignant_courant()

@@ -31,12 +31,10 @@ STATUT_PUBLIE = "Publié"
 ROLES_RESULTATS = (
     "System Manager",
     "Coordonateur",
-    "Coordinateur",
     "Planning Manager",
     "Registration Manager",
     "Agent de scolarité",
     "Comptable",
-    "Udshed Financial Admin",
 )
 
 
@@ -77,7 +75,7 @@ def _verifier_acces_resultats(filiere=None):
     if (
         filiere
         and "System Manager" not in roles
-        and ("Coordonateur" in roles or "Coordinateur" in roles)
+        and "Coordonateur" in roles
     ):
         filieres = _filieres_coordonnateur(user)
         if filieres and filiere not in filieres:
@@ -103,7 +101,7 @@ def get_classes(academic_year=None):
     user = frappe.session.user
     if user != "Administrator":
         roles = frappe.get_roles(user)
-        if "System Manager" not in roles and ("Coordonateur" in roles or "Coordinateur" in roles):
+        if "System Manager" not in roles and "Coordonateur" in roles:
             filieres_autorisees = set(_filieres_coordonnateur(user)) or None
 
     filters = {}

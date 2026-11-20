@@ -128,7 +128,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-"role": "Enseignant",
+"role": "Teacher",
     "share": 1,
     "write": 1
    },
@@ -138,7 +138,7 @@
     "print": 1,
     "read": 1,
     "report": 1,
-    "role": "student",
+    "role": "Student",
     "share": 1
    }
   ],

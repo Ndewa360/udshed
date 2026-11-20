@@ -2,7 +2,7 @@ import json
 
 import frappe
 
-STUDENT_ROLE = "student"
+STUDENT_ROLE = "Student"
 STUDENT_WORKSPACE = "Inscription - Reinscription"
 STUDENT_SIDEBAR = STUDENT_WORKSPACE.lower()
 

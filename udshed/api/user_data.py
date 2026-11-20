@@ -25,7 +25,7 @@ def get_user_context():
 
 	# COORDINATEUR DE NIVEAU / GESTIONNAIRE DE PLANNING
 	role = None
-	if "Coordinateur" in roles or "Coordonateur" in roles:
+	if "Coordonateur" in roles:
 		role = "Coordonateur"
 	elif "Planning Manager" in roles:
 		role = "Planning Manager"

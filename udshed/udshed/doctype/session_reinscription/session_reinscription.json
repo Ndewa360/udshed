@@ -109,7 +109,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Agent de scolarit\u00e9",
+   "role": "Agent de scolarité",
    "share": 1
   },
   {
@@ -127,7 +127,7 @@
     "print": 1,
     "read": 1,
     "report": 1,
-    "role": "student",
+    "role": "Student",
     "share": 1
    }
   ],

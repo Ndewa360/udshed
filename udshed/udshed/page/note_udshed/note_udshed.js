@@ -481,7 +481,7 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 			default_academic_year,
 			academic_year_list,
 			is_admin: roles.includes("Administrator") || roles.includes("System Manager"),
-			is_coordinator: roles.includes("Planning Manager") || roles.includes("Coordinateur") || roles.includes("Coordonateur"),
+			is_coordinator: roles.includes("Planning Manager") || roles.includes("Coordonateur"),
 			is_teacher: roles.includes("Teacher"),
 		};
 	}

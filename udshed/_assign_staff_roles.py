@@ -2,8 +2,8 @@ import frappe
 
 STAFF = [
 	"System Manager", "Workspace Manager", "Coordonateur", "Script Manager",
-	"Teacher", "Enseignant", "Planning Manager", "Registration Manager",
-	"Agent de scolarité", "Comptable", "Udshed Financial Admin",
+	"Teacher", "Planning Manager", "Registration Manager",
+	"Agent de scolarité", "Comptable",
 ]
 
 def exec():

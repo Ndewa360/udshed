@@ -6,7 +6,7 @@ def exec():
 		"SELECT parenttype, parent FROM `tabHas Role` WHERE role = 'Student'", as_dict=True
 	)
 	print("Has Role 'Student' fixes needed:", len(rows))
-	frappe.db.sql("UPDATE `tabHas Role` SET role = 'student' WHERE role = 'Student'")
+	frappe.db.sql("UPDATE `tabHas Role` SET role = 'Student' WHERE role = 'student'")
 	print("done")
 
 	# 2. Recharger le workspace depuis son JSON (source de vérité, developer mode)

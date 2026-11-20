@@ -5,9 +5,7 @@ const ROLE_LIST = {
     SYSTEM_MANAGER: "System Manager",
     COORDINATOR: "Coordonateur",
     PLANNING_MANAGER: "Planning Manager",
-    PLANNING_ADMIN: "Planning Admin",
     TEACHER: "Teacher",
-    ENSEIGNANT: "Enseignant",
     STUDENT: "Student"
 };
 
@@ -80,7 +78,7 @@ window.Udshed.Perms = {
         if (!userContext) return false;
         if (this.is_admin(userContext)) return true;
         return (userContext.roles || []).some((role) =>
-            [ROLE_LIST.COORDINATOR, ROLE_LIST.PLANNING_MANAGER, ROLE_LIST.TEACHER, ROLE_LIST.ENSEIGNANT].includes(role)
+            [ROLE_LIST.COORDINATOR, ROLE_LIST.PLANNING_MANAGER, ROLE_LIST.TEACHER].includes(role)
         );
     }
 };

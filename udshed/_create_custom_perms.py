@@ -15,7 +15,7 @@ def exec():
         {"role": "Coordonateur", "read": 1, "write": 1, "create": 0, "delete": 0, "submit": 0, "cancel": 0, "amend": 0, "report": 0, "import": 0, "export": 0, "print": 0, "email": 0, "share": 0},
         {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "submit": 0, "cancel": 0, "amend": 0, "report": 1, "import": 0, "export": 1, "print": 1, "email": 1, "share": 1},
         {"role": "Agent de scolarité", "read": 1, "write": 1, "create": 0, "delete": 0, "submit": 0, "cancel": 0, "amend": 0, "report": 0, "import": 0, "export": 0, "print": 0, "email": 0, "share": 0},
-        {"role": "student", "read": 0, "write": 0, "create": 0, "delete": 0, "submit": 0, "cancel": 0, "amend": 0, "report": 0, "import": 0, "export": 0, "print": 0, "email": 0, "share": 0},
+        {"role": "Student", "read": 0, "write": 0, "create": 0, "delete": 0, "submit": 0, "cancel": 0, "amend": 0, "report": 0, "import": 0, "export": 0, "print": 0, "email": 0, "share": 0},
     ]
     
     for p in perms_data:

@@ -34,10 +34,8 @@ role_home_page = {
 	"Script Manager": "/desk",
 	"Coordonateur": "/desk",
 	"Teacher": "/desk",
-	"Enseignant": "/desk",
 	"Planning Manager": "/desk",
 	"Registration Manager": "/desk",
-	"Udshed Financial Admin": "/desk",
 	"Comptable": "/desk",
 	"Agent de scolarité": "/desk",
 	"Correcteur": "/desk",
@@ -50,7 +48,7 @@ fixtures = [
     {
         "dt" : "Role",
         "filters": [
-            ["name","in",["Teacher","Enseignant","Coordonateur","Udshed Financial Admin", "Planning Manager", "Registration Manager", "Agent de scolarité", "Comptable", "Correcteur"]]
+            ["name","in",["System Manager","Workspace Manager","Script Manager","Teacher","Student","Guest","Desk User","Coordonateur","Planning Manager","Registration Manager","Agent de scolarité","Comptable","Correcteur"]]
         ]
     },
     {

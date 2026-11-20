@@ -12,7 +12,7 @@
 	"page_name": "reinscription_etudiant",
 	"roles": [
 		{
-			"role": "student"
+			"role": "Student"
 		}
 	],
 	"script": null,

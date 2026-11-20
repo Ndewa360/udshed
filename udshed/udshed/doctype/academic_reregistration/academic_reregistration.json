@@ -409,7 +409,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Coordonnateur",
+   "role": "Coordonateur",
    "share": 1,
    "write": 1
   },
@@ -420,7 +420,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Agent de scolarit\u00e9",
+   "role": "Agent de scolarité",
    "share": 1,
    "write": 1
   },
@@ -437,7 +437,7 @@
    "if_owner": 1,
    "print": 1,
    "read": 1,
-   "role": "student"
+   "role": "Student"
   }
   ],
  "row_format": "Dynamic",

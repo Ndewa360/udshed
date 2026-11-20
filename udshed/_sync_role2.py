@@ -5,7 +5,7 @@ def exec():
 		"SELECT parenttype, parent FROM `tabHas Role` WHERE role = 'Student'", as_dict=True
 	)
 	print("remaining 'Student' rows:", rows)
-	frappe.db.sql("UPDATE `tabHas Role` SET role = 'student' WHERE role = 'Student'")
+	frappe.db.sql("UPDATE `tabHas Role` SET role = 'Student' WHERE role = 'student'")
 	frappe.db.commit()
 	print("committed")
 
