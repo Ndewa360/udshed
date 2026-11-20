@@ -246,7 +246,7 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             if (Number.isFinite(value)) currentWeekStart = new Date(value);
             await refreshAll();
         });
-        grid_wrapper.on("click", ".planning-cell", function () {
+        grid_wrapper.on("click", ".planning-cell", function (event) {
             if (!Udshed.Perms.user_can_edit_planning_cell(filters, userContext)) {
                 frappe.show_alert({ message: __("Vous n'avez pas le droit de modifier ce créneau."), indicator: "red" });
                 return;
@@ -256,7 +256,8 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             cellDate.setDate(cellDate.getDate() + day);
             const half = $(this).data("half");
             const halfLibelle = $(this).data("half-libelle");
-            const courseData = $(this).data("course");
+            const selectedItem = $(event.target).closest(".planning-item");
+            const courseData = selectedItem.length ? selectedItem.data("course") : $(this).data("course");
             if (courseData && courseData.item && courseData.item.name) {
                 Udshed.Dialogs.openEditPlanningDialog(filters, cellDate, half, halfLibelle, courseData, userContext, refreshAll);
             } else {

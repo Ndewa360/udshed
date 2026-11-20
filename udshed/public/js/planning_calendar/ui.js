@@ -10,22 +10,46 @@ window.Udshed.UI = {
             .replace(/'/g, "&#39;");
     },
 
+    _format_hours(value) {
+        const number = Number(value) || 0;
+        return Number.isInteger(number) ? String(number) : String(Number(number.toFixed(2))).replace(".", ",");
+    },
+
+    _progress_html(item) {
+        if (!item || !item.progress_label) return "";
+        const pct = Math.max(0, Math.min(100, Number(item.progress_pct) || 0));
+        let badge = "";
+        if (item.progress_state === "depassement") {
+            badge = `<span class="planning-item-badge over">Dépassement +${this._escape(this._format_hours(item.progress_extra_hours))}h</span>`;
+        } else if (item.progress_is_last) {
+            badge = `<span class="planning-item-badge done">Séance de fin</span>`;
+        }
+        const state = item.progress_state === "depassement" ? " over" : (item.progress_is_last ? " done" : "");
+        return `
+            <div class="planning-item-progress${state}">
+                <div class="planning-progress-track"><div class="planning-progress-fill" style="width:${pct}%"></div></div>
+                <div class="planning-progress-row"><span>${this._escape(item.progress_label)}</span>${badge}</div>
+            </div>`;
+    },
+
     get_grid_calendar_item(items, filter, coursePeriod) {
         const grid = Udshed.Utils.initDataPeriodForUi(coursePeriod);
         items.forEach((item) => {
             const date = new Date(item.date);
             const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "long" });
             if (!grid[dayOfWeek]) return;
-            if (!grid[dayOfWeek].has(item.period)) {
+            const cell = grid[dayOfWeek].get(item.period);
+            if (!cell) {
                 grid[dayOfWeek].set(item.period, {
-                    subject: item.course || item.cours_label,
-                    level: filter && filter.niveau,
-                    item: item,
-                    teachers: item.teachers || []
+                    level: item.niveau_label || (filter && filter.niveau) || "",
+                    items: [item],
+                    teachers: [...(item.teachers || [])]
                 });
             } else {
-                const cell = grid[dayOfWeek].get(item.period);
-                cell.teachers = [...new Set([...(cell.teachers || []), ...(item.teachers || [])])];
+                cell.items.push(item);
+                (item.teachers || []).forEach((teacher) => {
+                    if (!cell.teachers.includes(teacher)) cell.teachers.push(teacher);
+                });
             }
         });
         return grid;
@@ -67,6 +91,7 @@ window.Udshed.UI = {
 
         const canEdit = Udshed.Perms && filter && Udshed.Perms.user_can_edit_planning_cell(filter, userContext);
         const classByType = {
+            "Cours Magistral (CM)": "cm",
             "Cours": "cm",
             "Traveaux Pratiques (TP)": "tp",
             "Travaux Pratique (TP)": "tp",
@@ -81,26 +106,38 @@ window.Udshed.UI = {
             for (const period of coursePeriod) {
                 const periodItem = grid_data && grid_data[day] ? grid_data[day].get(period.name) : null;
                 let periodCell = "";
-                if (periodItem && periodItem.item) {
-                    const item = periodItem.item;
-                    const css = classByType[item.type] || "cm";
-                    const teacherInfo = forTeacher
-                        ? `<b>${this._escape(item.filiere)} ${this._escape(item.niveau_label)}</b>`
-                        : (periodItem.teachers || []).map((teacher) => `<b>${this._escape(teacher)}</b>`).join("<br/> ");
-                    const modeInfo = item.mode === "En ligne"
-                        ? "En ligne <br/> - <br/>"
-                        : `Batiment: ${this._escape(item.batiment || "")} <br/> Salle: ${this._escape(item.salle || "")}<br/> - <br/>`;
-                    const courseData = this._escape(JSON.stringify(periodItem));
-                    periodCell = `
-                        <div class="planning-cell ${canEdit ? "" : "readonly"}" data-day="${day}" data-half-libelle="${this._escape(period.libelle)}" data-half="${this._escape(period.name)}" data-course="${courseData}">
-                            <div class="planning-item ${css}">
-                                <div class="planning-item-title">
-                                    <span style="font-style:italic">${this._escape(periodItem.subject)}</span><br/>${this._escape(item.cours_label)}
+                if (periodItem && periodItem.items && periodItem.items.length) {
+                    const cards = periodItem.items.map((item) => {
+                        const css = classByType[item.type] || "cm";
+                        const title = item.intitule_label || item.course_label || item.cours;
+                        const teacherInfo = forTeacher
+                            ? `${item.filiere || ""} ${item.niveau_label || ""}`.trim()
+                            : (item.teachers || []).join(" • ");
+                        const location = item.mode === "En ligne"
+                            ? "En ligne"
+                            : [item.batiment, item.salle].filter(Boolean).join(" / ") || "—";
+                        const modeBadge = item.mode && item.mode !== "En présentiel"
+                            ? `<span class="planning-item-mode">${this._escape(item.mode)}</span>`
+                            : "";
+                        const courseData = this._escape(JSON.stringify({ item: item }));
+                        return `
+                            <div class="planning-item ${css}" data-course="${courseData}">
+                                <div class="planning-item-head">
+                                    <span class="planning-item-kind">${this._escape(item.type || "")}</span>
+                                    ${modeBadge}
                                 </div>
-                                <div class="planning-item-meta">${this._escape(item.type)} <br/> - <br/> ${this._escape(item.salle || "")}</div>
-                                <div class="planning-item-meta">${modeInfo}</div>
-                                <div class="planning-item-meta">${teacherInfo}</div>
-                            </div>
+                                <div class="planning-item-title">${this._escape(title)}</div>
+                                <div class="planning-item-details">
+                                    <span>${this._escape(location)}</span>
+                                    <span>${this._escape(teacherInfo || "—")}</span>
+                                </div>
+                                ${this._progress_html(item)}
+                            </div>`;
+                    }).join("");
+                    const cellData = this._escape(JSON.stringify({ item: periodItem.items[0] }));
+                    periodCell = `
+                        <div class="planning-cell ${canEdit ? "" : "readonly"}" data-day="${day}" data-half-libelle="${this._escape(period.libelle)}" data-half="${this._escape(period.name)}" data-course="${cellData}">
+                            ${cards}
                         </div>`;
                 } else {
                     periodCell = `

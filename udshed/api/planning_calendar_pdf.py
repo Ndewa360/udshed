@@ -129,6 +129,7 @@ def generate_planning_pdf(filters):
 			period = []
 
 	css_by_type = {
+		"Cours Magistral (CM)": "cm",
 		"Cours": "cm",
 		"Traveaux Pratiques (TP)": "tp",
 		"Travaux Pratique (TP)": "tp",
@@ -148,8 +149,8 @@ def generate_planning_pdf(filters):
 		if day_name not in grid:
 			continue
 		grid[day_name].setdefault(item.get("period"), []).append({
-			"subject": item.get("course") or item.get("cours_label"),
-			"cours_label": item.get("cours_label"),
+			"subject": item.get("intitule_label") or item.get("course_label") or item.get("course"),
+			"course_label": item.get("course_label"),
 			"type": item.get("type"),
 			"batiment": item.get("batiment"),
 			"salle": item.get("salle"),
@@ -158,6 +159,14 @@ def generate_planning_pdf(filters):
 			"filiere": item.get("filiere"),
 			"niveau_label": item.get("niveau_label"),
 			"css": css_by_type.get(item.get("type"), "cm"),
+			"progress_label": item.get("progress_label"),
+			"progress_done_hours": item.get("progress_done_hours"),
+			"progress_total_hours": item.get("progress_total_hours"),
+			"progress_state": item.get("progress_state"),
+			"progress_is_last": item.get("progress_is_last"),
+			"progress_extra_hours": item.get("progress_extra_hours"),
+			"progress_extra_label": item.get("progress_extra_label"),
+			"progress_pct": item.get("progress_pct"),
 		})
 
 	start = _date_debut(week_start)

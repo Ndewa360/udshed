@@ -124,14 +124,60 @@
 }
 
 .planning-item {
-  background: rgba(68, 138, 255, 0.12);
+  position: relative;
+  background: #fff;
+  border: 1px solid #dfe6f2;
   border-left: 4px solid var(--primary);
-  border-radius: 6px;
-  padding: 6px 8px;
+  border-radius: 7px;
+  padding: 7px 8px;
   margin-bottom: 6px;
-  font-size: 12px;
+  font-size: 11.5px;
+  line-height: 1.35;
   color: var(--text-color);
-  box-shadow: var(--card-shadow);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  text-align: left;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.planning-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.planning-item-kind {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.planning-item-mode {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: var(--gray-100);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.planning-item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.planning-item-details span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .planning-cell.empty {
@@ -156,19 +202,75 @@
 
 
 .planning-item-title {
-  font-weight: 600;
-  margin-bottom: 2px;
+  font-weight: 650;
+  font-size: 11.5px;
   line-height: 1.3;
-}
-
-.planning-item-meta {
-  font-size: 11px;
-  color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 
 .planning-item.selected {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
+}
+
+.planning-item-progress {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.planning-progress-track {
+  height: 4px;
+  background: #e9eef7;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.planning-progress-fill {
+  height: 100%;
+  background: #2f6fed;
+  border-radius: 4px;
+}
+
+.planning-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #344054;
+}
+
+.planning-item-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.planning-item-badge.done {
+  background: #e7f6ea;
+  color: #1b7a34;
+}
+
+.planning-item-badge.over {
+  background: #fdecea;
+  color: #b42318;
+}
+
+.planning-item-progress.done .planning-progress-fill {
+  background: #2e7d32;
+}
+
+.planning-item-progress.over .planning-progress-fill {
+  background: #d32f2f;
+}
+
+.planning-item-progress.over .planning-progress-row {
+  color: #b42318;
 }
 
 .planning-item.conflict {
@@ -204,61 +306,35 @@
 Controle de l'état d'avancement des cours
 */
 .planning-item.cm {
-  background: rgba(68, 138, 255, 0.15);
-  border-left-color: var(--blue-500);
+  background: linear-gradient(180deg, #f7faff 0%, #ffffff 100%);
+  border-left-color: #2f6fed;
 }
 
 .planning-item.tp {
-  background: rgba(76, 175, 80, 0.15);
-  border-left-color: var(--green-500);
+  background: linear-gradient(180deg, #f4fbf5 0%, #ffffff 100%);
+  border-left-color: #2e7d32;
 }
-.planning-item.td { 
-  /* background:#c4c0cf;  */
-  /* border-color:#3e0cc5;  */
-  background:#26097594; 
-  border-left-color:#3e0cc5;
+
+.planning-item.td {
+  background: linear-gradient(180deg, #f6f3ff 0%, #ffffff 100%);
+  border-left-color: #6d28d9;
 }
 
 .planning-item.cc {
-  background: rgba(255, 167, 38, 0.18);
-  border-left-color: var(--orange-500);
+  background: linear-gradient(180deg, #fff8ee 0%, #ffffff 100%);
+  border-left-color: #ef6c00;
 }
 
 .planning-item.exam {
-  background: rgba(244, 67, 54, 0.15);
-  border-left-color: var(--red-500);
+  background: linear-gradient(180deg, #fff5f4 0%, #ffffff 100%);
+  border-left-color: #d32f2f;
 }
 
-.planning-item.near-end::after {
-  content: "Bientôt terminé";
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-size: 10px;
-  color: var(--orange-600);
-  font-weight: 600;
-}
-
-.planning-item.critical {
-  box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.35);
-}
-
-.planning-item.critical::after {
-  content: "Fin proche";
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-size: 10px;
-  color: var(--red-600);
-  font-weight: 700;
-}
 .planning-item:hover {
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.12);
   cursor: pointer;
 }
-
-/* Fin etat d'avancement*/ 
 
 @media (max-width: 1200px) {
   .planning-calendar {

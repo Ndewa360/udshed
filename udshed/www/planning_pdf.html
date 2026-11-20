@@ -78,21 +78,104 @@ th { background:#f2f2f2; }
 .cell { min-height:115px; }
 
 .event {
+  border:1px solid #dfe6f2;
   border-left:4px solid;
-  padding:4px 6px;
-  border-radius:4px;
-  font-size:12px;
-  text-align: center;
+  padding:5px 7px;
+  border-radius:5px;
+  font-size:10.5px;
+  line-height:1.35;
+  margin-bottom:5px;
+  break-inside:avoid;
+  text-align:left;
 }
 
-.cm { background:#e9f1ff; border-color:#2f6fed; }
-.td { background:#c4c0cf; border-color:#3e0cc5; }
-.tp { background:#e7f6ea; border-color:#2e7d32; }
-.cc { background:#fff3e0; border-color:#f57c00; }
-.exam { background:#fdecea; border-color:#d32f2f; }
+.event.done { box-shadow:inset 0 0 0 1px #2e7d32; }
+.event.over { box-shadow:inset 0 0 0 1px #d32f2f; }
 
-.type_cours 
-{
+.event-head {
+  display:flex;
+  justify-content:space-between;
+  gap:5px;
+  margin-bottom:3px;
+}
+
+.event-kind {
+  font-size:8px;
+  font-weight:bold;
+  letter-spacing:0.4px;
+  text-transform:uppercase;
+  color:#667085;
+}
+
+.event-mode {
+  font-size:8px;
+  font-weight:bold;
+  padding:0 4px;
+  border-radius:7px;
+  background:#eef2f6;
+  color:#475467;
+}
+
+.event-title {
+  font-weight:bold;
+  font-size:11px;
+  margin-bottom:2px;
+}
+
+.event-meta {
+  font-size:9.5px;
+  color:#475467;
+}
+
+.event-progress {
+  margin-top:4px;
+  padding-top:4px;
+  border-top:1px dashed #e2e8f0;
+}
+
+.progress-track {
+  height:4px;
+  background:#e9eef7;
+  border-radius:4px;
+}
+
+.progress-fill {
+  height:4px;
+  background:#2f6fed;
+  border-radius:4px;
+}
+
+.progress-fill.done { background:#2e7d32; }
+.progress-fill.over { background:#d32f2f; }
+
+.progress-label {
+  display:flex;
+  justify-content:space-between;
+  gap:4px;
+  margin-top:2px;
+  font-size:9px;
+  font-weight:bold;
+  color:#344054;
+}
+
+.progress-label.over { color:#b42318; }
+
+.progress-badge {
+  padding:0 4px;
+  border-radius:7px;
+  font-size:8px;
+}
+
+.progress-badge.done { background:#e7f6ea; color:#1b7a34; }
+.progress-badge.over { background:#fdecea; color:#b42318; }
+
+.cm { background:#f7faff; border-left-color:#2f6fed; }
+.td { background:#f6f3ff; border-left-color:#6d28d9; }
+.tp { background:#f4fbf5; border-left-color:#2e7d32; }
+.cc { background:#fff8ee; border-left-color:#ef6c00; }
+.exam { background:#fff5f4; border-left-color:#d32f2f; }
+
+.type_cours {
   font-style: italic;
 }
 .empty { text-align:center; font-style:italic; color:#777; margin-top:30px; }
@@ -113,6 +196,9 @@ th { background:#f2f2f2; }
     font-size: 15px;
     text-align: center;
 }
+
+.box.done { background:#e7f6ea; border-left:4px solid #2e7d32; color:#1b7a34; }
+.box.over { background:#fdecea; border-left:4px solid #d32f2f; color:#b42318; }
 
 .watermark {
   position: fixed;
@@ -183,6 +269,8 @@ th { background:#f2f2f2; }
   <div class="box td item-legent">TD</div>
   <div class="box cc item-legent">CC</div>
   <div class="box exam item-legent">Examen</div>
+  <div class="box done item-legent">Fin atteinte</div>
+  <div class="box over item-legent">Dépassement</div>
 </div>
 
 <div class="title ">
@@ -224,22 +312,36 @@ th { background:#f2f2f2; }
   <td class="cell">
     {% if cell_items %}
       {% for item in cell_items %}
-      <div class="event {{ item.css }}">
-        <b>{{ item.subject }}</b><br/>
-        {{ item.cours_label }}<br/><br/>
-        <span class="type_cours">{{ item.type }}</span><br>--------------------------------------<br/>
-        {% if item.mode == "En ligne" %}
-          En ligne
-        {% else %}
-          Batiment: {{ item.batiment or "-" }}<br> Salle: {{ item.salle or "-" }}
+      <div class="event {{ item.css }}{% if item.progress_state == 'depassement' %} over{% elif item.progress_is_last %} done{% endif %}">
+        <div class="event-head">
+          <span class="event-kind">{{ item.type or "" }}</span>
+          {% if item.mode and item.mode != "En présentiel" %}<span class="event-mode">{{ item.mode }}</span>{% endif %}
+        </div>
+        <div class="event-title">{{ item.subject }}</div>
+        {% if item.course_label and item.course_label != item.subject %}
+          <div class="event-meta type_cours">{{ item.course_label }}</div>
         {% endif %}
-        <br>--------------------------------------<br/>
-        {% if filters.teacher %}
-          <b>{{item.filiere}} {{item.niveau_label}}</b><br/>
-        {% else %}
-          {% for t in item.teachers %}
-            <b>{{ t }}</b><br>
-          {% endfor %}
+        <div class="event-meta">
+          {% if item.mode == "En ligne" %}En ligne{% else %}Bâtiment: {{ item.batiment or "-" }} · Salle: {{ item.salle or "-" }}{% endif %}
+        </div>
+        <div class="event-meta">
+          {% if filters.teacher %}{{ item.filiere or "" }} {{ item.niveau_label or "" }}
+          {% else %}{{ item.teachers | join(" · ") }}{% endif %}
+        </div>
+        {% if item.progress_label %}
+          {% set pct = item.progress_pct or 0 %}
+          {% set state_class = "over" if item.progress_state == "depassement" else ("done" if item.progress_is_last else "") %}
+          <div class="event-progress">
+            <div class="progress-track"><div class="progress-fill {{ state_class }}" style="width:{{ pct }}%"></div></div>
+            <div class="progress-label {{ state_class }}">
+              <span>{{ item.progress_label }}</span>
+              {% if item.progress_state == "depassement" %}
+                <span class="progress-badge over">Dépassement +{{ item.progress_extra_label }}h</span>
+              {% elif item.progress_is_last %}
+                <span class="progress-badge done">Séance de fin</span>
+              {% endif %}
+            </div>
+          </div>
         {% endif %}
       </div>
       {% endfor %}

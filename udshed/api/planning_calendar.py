@@ -1,10 +1,18 @@
 import frappe
 from frappe import _
 from frappe.query_builder import DocType
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 
 import udshed.api.course as course
 import udshed.api.planning_permission as planning_permission
+
+PROGRESS_TYPES = {
+	"Cours Magistral (CM)",
+	"Traveaux Pratiques (TP)",
+	"Traveaux Dirigés (TD)",
+	"Travaux Pratique (TP)",
+	"Travaux Dirigés (TD)",
+}
 
 
 def parse_date(value):
@@ -12,9 +20,12 @@ def parse_date(value):
 		return value.date()
 	if isinstance(value, date):
 		return value
-	if isinstance(value, str) and "T" in value:
-		return datetime.fromisoformat(value).date()
-	return datetime.strptime(str(value).strip(), "%Y-%m-%d").date()
+	texte = str(value).strip()
+	if "T" in texte:
+		texte = texte.split("T", 1)[0]
+	elif " " in texte:
+		texte = texte.split(" ", 1)[0]
+	return datetime.strptime(texte[:10], "%Y-%m-%d").date()
 
 
 def _throw(message, exception=frappe.ValidationError):
@@ -109,6 +120,126 @@ def _check_conflicts(unit_info, day_date, period, salle, exclude_name=None):
 			)
 
 
+def _minutes(value):
+	if isinstance(value, timedelta):
+		return int(value.total_seconds() // 60)
+	if isinstance(value, time):
+		return value.hour * 60 + value.minute
+	texte = str(value or "").strip()
+	if "T" in texte:
+		texte = texte.split("T", 1)[1]
+	parties = texte.split(":")
+	if len(parties) >= 2 and parties[0].strip().isdigit() and parties[1].strip().isdigit():
+		return int(parties[0]) * 60 + int(parties[1])
+	return 0
+
+
+def _period_hours(period, cache):
+	if not period:
+		return 0.0
+	if period not in cache:
+		row = frappe.db.get_value(
+			"Planning Period", period, ["heure_de_debut", "heure_de_fin"], as_dict=True
+		)
+		cache[period] = max(0, _minutes(row.heure_de_fin) - _minutes(row.heure_de_debut)) / 60 if row else 0.0
+	return cache[period]
+
+
+def _period_start(period, cache):
+	if not period:
+		return 0
+	if period not in cache:
+		row = frappe.db.get_value("Planning Period", period, "heure_de_debut")
+		cache[period] = _minutes(row)
+	return cache[period]
+
+
+def _format_hours(value):
+	if not value:
+		return "0"
+	if float(value).is_integer():
+		return str(int(value))
+	return ("{0:.2f}".format(float(value)).rstrip("0").rstrip(".")).replace(".", ",")
+
+
+def _attach_progress(rows):
+	if not rows:
+		return
+	unit_names = sorted({str(row.cours) for row in rows if row.cours})
+	years = sorted({str(row.academic_year) for row in rows if row.academic_year})
+	if not unit_names or not years:
+		return
+
+	totals = {}
+	for unit in frappe.get_all(
+		"Teaching Unit",
+		filters={"name": ["in", unit_names]},
+		fields=["name", "nombre_dheure_cm", "nombre_dheure_td", "nombre_dheure_tp"],
+	):
+		totals[unit.name] = sum(
+			frappe.utils.flt(unit.get(field) or 0)
+			for field in ("nombre_dheure_cm", "nombre_dheure_td", "nombre_dheure_tp")
+		)
+
+	all_items = frappe.get_all(
+		"Planning Item",
+		filters={
+			"cours": ["in", unit_names],
+			"academic_year": ["in", years],
+			"type": ["in", sorted(PROGRESS_TYPES)],
+		},
+		fields=["name", "cours", "academic_year", "date", "period", "creation"],
+	)
+	duration_cache = {}
+	start_cache = {}
+	all_items.sort(
+		key=lambda item: (
+			parse_date(item.date) if item.date else date.min,
+			_period_start(item.period, start_cache),
+			item.creation or "",
+		)
+	)
+
+	cumulative = {}
+	progress_by_item = {}
+	for item in all_items:
+		key = (item.cours, item.academic_year)
+		hours = _period_hours(item.period, duration_cache)
+		previous = cumulative.get(key, 0.0)
+		current = previous + hours
+		total = totals.get(item.cours, 0.0)
+		state = "normal"
+		is_last = False
+		extra = 0.0
+		if total:
+			if current > total:
+				state = "depassement"
+				extra = current - total
+			elif previous < total <= current:
+				state = "termine"
+				is_last = True
+			elif current >= total:
+				state = "termine"
+		cumulative[key] = current
+		progress_by_item[item.name] = {
+			"progress_done_hours": current,
+			"progress_total_hours": total,
+			"progress_label": (
+				"{0}/{1} h".format(_format_hours(current), _format_hours(total))
+				if total
+				else "{0} h/—".format(_format_hours(current))
+			),
+			"progress_state": state,
+			"progress_is_last": is_last,
+			"progress_extra_hours": extra,
+			"progress_extra_label": _format_hours(extra),
+			"progress_pct": min(100.0, round(current / total * 100, 1)) if total else 0.0,
+		}
+
+	for row in rows:
+		row.update(progress_by_item.get(row.name, {}))
+
+
 @frappe.whitelist()
 def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teacher=None, faculty=None):
 	try:
@@ -136,6 +267,7 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 			.select(
 				TeachingUnit.course,
 				Course.intitule.as_("course_label"),
+				TeachingUnit.intitule_cours.as_("intitule_label"),
 				PlanningItem.salle,
 				PlanningItem.batiment,
 				PlanningItem.name,
@@ -144,6 +276,7 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 				PlanningItem.date,
 				PlanningItem.period,
 				PlanningItem.mode,
+				PlanningItem.academic_year,
 				CourseNiveauFiliere.niveau,
 				CourseNiveauFiliere.filiere,
 				FieldOfStudy.faculte.as_("faculty"),
@@ -183,9 +316,13 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 			doc["enseignant"] = doc["teachers"][0] if doc["teachers"] else ""
 			del doc["_teachers"]
 			doc["niveau_label"] = _level_label(doc.niveau)
+			doc["salle_name"] = doc.salle or ""
+			doc["batiment_name"] = doc.batiment or ""
 			doc["salle"] = _room_code(doc.salle, room_cache)
 			doc["batiment"] = _batiment_code(doc.batiment, room_cache)
-		return list(seen.values())
+		rows = list(seen.values())
+		_attach_progress(rows)
+		return rows
 	except (frappe.ValidationError, frappe.PermissionError):
 		raise
 	except Exception:

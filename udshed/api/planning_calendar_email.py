@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from datetime import datetime
 
+import udshed.api.planning_calendar as planning_calendar
 import udshed.api.planning_calendar_pdf as planning_calendar_pdf
 import udshed.api.school_setting as school_setting
 import udshed.api.planning_permission as planning_permission
@@ -12,18 +13,22 @@ import udshed.utils.file_utils as file_utils
 def _teacher_doc(name):
 	if not name:
 		return None
-	return frappe.db.get_value("Teacher", name, ["name", "email"], as_dict=True)
+	return frappe.db.get_value(
+		"Teacher", name, ["name", "email", "grade", "first_name", "last_name"], as_dict=True
+	)
+
+
+def _teacher_label(teacher):
+	return " ".join(
+		part for part in [teacher.grade or "", teacher.first_name or "", teacher.last_name or ""] if part
+	).strip() or teacher.name
 
 
 def _recipient_from_user(user):
 	email = frappe.db.get_value("User", user, "email")
-	name = user
 	if not email:
-		teacher = _teacher_doc(user)
-		if teacher:
-			return teacher
 		frappe.throw(_("Adresse email introuvable pour l'utilisateur courant."), frappe.ValidationError)
-	return {"name": name, "email": email}
+	return {"name": user, "email": email, "label": user}
 
 
 def send_planning_to_teacher_email(filters, teacher, school_name, school_logo, pdf, planning_name, start_date, end_date):
@@ -31,7 +36,7 @@ def send_planning_to_teacher_email(filters, teacher, school_name, school_logo, p
 		recipients=[teacher.email],
 		sender=email_utils.get_formatted_sender(),
 		subject="UdM: {0}".format(planning_name.replace(".pdf", "")),
-		message=email_html_template(school_name, school_logo, teacher.name, start_date, end_date),
+		message=email_html_template(school_name, school_logo, teacher.get("label") or _teacher_label(teacher), start_date, end_date),
 		attachments=[{"fname": planning_name, "fcontent": pdf}],
 		delayed=False,
 	)
@@ -56,34 +61,80 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 	)
 
 	school_name, school_logo = school_setting.get_school_data()
-	pdf, planning_name, items, start_date, end_date = planning_calendar_pdf.generate_planning_pdf(filters)
+	_, _, items, _, _ = planning_calendar_pdf.generate_planning_pdf(filters)
+	start_date = planning_calendar.parse_date(week_start)
+	end_date = frappe.utils.add_days(start_date, 6)
 
 	recipients = {}
+
+	def add_recipient(teacher, recipient_filters):
+		if not teacher or not teacher.get("email"):
+			return
+		email = str(teacher["email"]).strip()
+		if not email:
+			return
+		if email in recipients:
+			for key, value in recipient_filters.items():
+				recipients[email]["filters"].setdefault(key, value)
+			return
+		copy_filters = dict(filters)
+		copy_filters.update(recipient_filters)
+		recipients[email] = {"teacher": teacher, "filters": copy_filters}
+
 	if to_teacher and filters.get("teacher"):
 		teacher = _teacher_doc(filters.get("teacher"))
-		if teacher and teacher.email:
-			recipients[teacher.email] = teacher
+		if teacher:
+			entry = dict(teacher)
+			entry["label"] = _teacher_label(teacher)
+			add_recipient(entry, {"teacher": teacher.name})
+
 	if to_all_teacher:
 		ids = {name for item in items for name in (item.get("teacher_ids") or [])}
 		if filters.get("teacher"):
 			ids.add(filters.get("teacher"))
 		for name in ids:
 			teacher = _teacher_doc(name)
-			if teacher and teacher.email:
-				recipients[teacher.email] = teacher
+			if teacher:
+				entry = dict(teacher)
+				entry["label"] = _teacher_label(teacher)
+				add_recipient(entry, {"teacher": teacher.name})
+
 	if to_me:
-		current = _recipient_from_user(frappe.session.user)
-		recipients[current["email"]] = current
+		teacher_name = planning_permission._teacher_name(frappe.session.user)
+		if teacher_name:
+			teacher = _teacher_doc(teacher_name)
+			if teacher:
+				entry = dict(teacher)
+				entry["label"] = _teacher_label(teacher)
+				add_recipient(entry, {"teacher": teacher.name})
+		else:
+			add_recipient(_recipient_from_user(frappe.session.user), {})
 
 	if not recipients:
 		frappe.throw(_("Aucun destinataire sélectionné."), frappe.ValidationError)
 
 	frappe.publish_progress(50, title=_("Préparation des destinataires"))
 	errors = []
-	for email, recipient in recipients.items():
+	for email, entry in recipients.items():
 		try:
+			recipient_filters = entry["filters"]
+			planning_permission.assert_can_view_planning(
+				recipient_filters.get("academic_year"),
+				recipient_filters.get("faculty"),
+				recipient_filters.get("filiere"),
+				recipient_filters.get("niveau"),
+				recipient_filters.get("teacher"),
+			)
+			pdf, planning_name, _, _, _ = planning_calendar_pdf.generate_planning_pdf(recipient_filters)
 			send_planning_to_teacher_email(
-				filters, recipient, school_name, school_logo, pdf, planning_name, start_date, end_date
+				recipient_filters,
+				entry["teacher"],
+				school_name,
+				school_logo,
+				pdf,
+				planning_name,
+				start_date,
+				end_date,
 			)
 		except Exception as exc:
 			frappe.log_error(title="planning_calendar_email envoi", message=frappe.get_traceback())

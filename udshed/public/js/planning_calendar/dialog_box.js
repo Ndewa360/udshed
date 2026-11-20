@@ -36,7 +36,7 @@ window.Udshed.Dialogs = {
     },
 
     _mode_options() {
-        return ["En présentiel", "En ligne"];
+        return ["En présentiel", "En ligne", "Hybride"];
     },
 
     _room_field(defaultValue) {
@@ -45,7 +45,7 @@ window.Udshed.Dialogs = {
             label: __("Salle"),
             fieldname: "salle",
             default: defaultValue || null,
-            depends_on: 'eval:doc.mode=="En présentiel"'
+            depends_on: 'eval:doc.mode!="En ligne"'
         };
     },
 
@@ -56,7 +56,7 @@ window.Udshed.Dialogs = {
             fieldname: "batiment",
             options: "Building",
             default: defaultValue || null,
-            depends_on: 'eval:doc.mode=="En présentiel"',
+            depends_on: 'eval:doc.mode!="En ligne"',
             change() {
                 const dialog = cur_dialog;
                 Udshed.UtilsQueries.loadRooms(this.get_value(), dialog.fields_dict[salleFieldName], (rooms) => {
@@ -196,8 +196,8 @@ window.Udshed.Dialogs = {
                     reqd: 1,
                     change() { dialog.refresh(); }
                 },
-                this._building_field(item.batiment, "salle"),
-                this._room_field(item.salle)
+                this._building_field(item.batiment_name || item.batiment, "salle"),
+                this._room_field(item.salle_name || item.salle)
             ],
             primary_action_label: __("Mettre à jour"),
             primary_action(values) {
