@@ -2,12 +2,12 @@ window.Udshed = window.Udshed || {};
 window.Udshed.Utils = {
     refresh_filter(filters, field, page, levelMap)
     {
-        const clear_field = (name) => {
+        const clear_field = (name, clear_options = true) => {
             const control = page && page.fields_dict && page.fields_dict[name];
             if (!control) return;
             filters[name] = null;
             if (control.get_value && control.get_value()) control.set_value(null);
-            if (control.df && control.df.fieldtype === "Select") control.df.options = [];
+            if (clear_options && control.df && control.df.fieldtype === "Select") control.df.options = [];
             if (control.refresh) control.refresh();
         };
         const clear_level_map = () => {
@@ -20,16 +20,16 @@ window.Udshed.Utils = {
                 clear_field("faculty");
                 clear_field("filiere");
                 clear_field("niveau");
-                clear_field("semestre");
+                clear_field("semestre", false);
                 clear_level_map();
             } else if (field === "faculty") {
                 clear_field("filiere");
                 clear_field("niveau");
-                clear_field("semestre");
+                clear_field("semestre", false);
                 clear_level_map();
             } else if (field === "filiere") {
                 clear_field("niveau");
-                clear_field("semestre");
+                clear_field("semestre", false);
                 clear_level_map();
             }
         } finally {

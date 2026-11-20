@@ -58,9 +58,13 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
         });
     }
     update_title()
-    {  
-        if(this.filters?.semestre) 
-            $('.panel-title').html(`Grille d'enseignement - Semestre <span id="semester-title">${this.filters.semestre.split(" ")[1]}</span>`)
+    {
+        const title = $('.panel-title');
+        if (this.filters?.semestre) {
+            title.html(`Grille d'enseignement - Semestre <span id="semester-title">${this.filters.semestre.split(" ")[1]}</span>`);
+        } else {
+            title.text("Grille d'enseignement");
+        }
     }
 
     getUeByCourseCode(courseCode)
