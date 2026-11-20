@@ -2,9 +2,10 @@ window.Udshed = window.Udshed || {};
 window.Udshed.TeachingGrid = window.Udshed.TeachingGrid || {};
 
 window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
-    constructor(wrapper) {
+    constructor(wrapper, canEdit = true) {
         this.wrapper = wrapper;
         this.page = wrapper.page;
+        this.canEdit = Boolean(canEdit);
         this.datatable = null;
         this.initData()
         this.filters = {};
@@ -82,14 +83,14 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
             { name: 'Code UE', editable: false },
             { name: 'Code Cours', editable: false },
             { name: 'Intitulés', editable: false, fieldtype: 'Data' },
-            { name: 'Crédits', editable: true, fieldtype: 'Int' },
+            { name: 'Crédits', editable: me.canEdit, fieldtype: 'Int' },
             { name: 'Type', editable: false },
-            { name: 'CM', editable: true, fieldtype: 'Int' },
-            { name: 'TD', editable: true, fieldtype: 'Int' },
-            { name: 'TP', editable: true, fieldtype: 'Int' },
-            { name: 'TPE', editable: true, fieldtype: 'Int' },
+            { name: 'CM', editable: me.canEdit, fieldtype: 'Int' },
+            { name: 'TD', editable: me.canEdit, fieldtype: 'Int' },
+            { name: 'TP', editable: me.canEdit, fieldtype: 'Int' },
+            { name: 'TPE', editable: me.canEdit, fieldtype: 'Int' },
             { name: 'Total', editable: false, fieldtype: 'Int' },
-            { name: 'Enseignant', editable: true, fieldtype: 'Link',options:"Teacher", with:180,
+            { name: 'Enseignant', editable: me.canEdit, fieldtype: 'Link',options:"Teacher", with:180,
                 format: function(data) {
 
                     if(!data) return data
@@ -164,7 +165,7 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
                 language: frappe.boot.lang,
                 getEditor: function(colIndex, rowIndex, value, column, row) {
 
-                    if (!row.editable) return;
+                    if (!me.canEdit || !row.editable) return;
 
                     if(colIndex==10 && row.fieldtype== "Link")
 					{
@@ -174,8 +175,7 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
                     
                 },
                 on_update: function(data) {
-					console.log("Update cell", data,colIndex, rowIndex, value, column, row)
-                    // me.handle_cell_update(data);
+                    me.update_totals();
                 }
             });
         }
@@ -195,6 +195,10 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
     // Gestionnaire de clic sur la cellule Enseignant
     handleTeacherCellClick(rowIndex, colIndex) {
         var me = this;
+        if (!me.canEdit) {
+            frappe.show_alert({ message: __('Vous n\'avez pas le droit de modifier cette grille.'), indicator: 'red' });
+            return;
+        }
         
         // Récupérer le code du cours (colonne 1)
         var courseCode = me.datatable.datamanager.data[rowIndex][1];

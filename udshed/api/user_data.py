@@ -25,10 +25,10 @@ def get_user_context():
 
 	# COORDINATEUR DE NIVEAU / GESTIONNAIRE DE PLANNING
 	role = None
-	if "Planning Manager" in roles:
-		role = "Planning Manager"
 	if "Coordinateur" in roles or "Coordonateur" in roles:
 		role = "Coordonateur"
+	elif "Planning Manager" in roles:
+		role = "Planning Manager"
 
 	if role is not None:
 		Teacher = DocType("Teacher")
@@ -115,6 +115,7 @@ def get_user_context():
 		if len(teacher) > 0:
 			teacher_data = {
 				"role": "Teacher",
+				"teacher": teacher[0].enseignant if teacher else None,
 				"faculty": [],
 				"filiere": [],
 				"niveau": [],

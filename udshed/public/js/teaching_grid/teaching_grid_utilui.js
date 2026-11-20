@@ -1,9 +1,14 @@
 window.Udshed = window.Udshed || {};
 window.Udshed.TeachingGrid = window.Udshed.TeachingGrid || {};
 window.Udshed.TeachingGrid.UtilsUi = {
-    update_page_actions(filter,btnExporter,btnImporter) 
+    update_page_actions(filter,btnExporter,btnImporter,canEdit = true) 
     {
-        if(this.isValideFilterForGrid(filter))
+        if(!canEdit)
+        {
+            btnExporter.hide();
+            btnImporter.hide();
+        }
+        else if(this.isValideFilterForGrid(filter))
         {
             btnExporter.show();
             btnImporter.show();

@@ -30,7 +30,7 @@ window.Udshed.TeachingGrid.UtilsQueries = {
             error:(error)=>{
                 frappe.msgprint({
                         title: __('Erreur'),
-                        message: error,
+                        message: error && (error.message || error.exception) || __('Erreur lors de l\'importation.'),
                         indicator: 'red'
                     });
                 callbackFunction(null)
@@ -163,10 +163,17 @@ window.Udshed.TeachingGrid.UtilsQueries = {
                 } else {
                     frappe.msgprint({
                         title: __('Erreur'),
-                        message: r.message.error || __('Impossible d\'exporter la grille'),
+                        message: __('Impossible de mettre à jour la grille'),
                         indicator: 'red'
                     });
                 }
+            },
+            error: (error) => {
+                frappe.msgprint({
+                    title: __('Erreur'),
+                    message: error && (error.message || error.exception) || __('Impossible de mettre à jour la grille'),
+                    indicator: 'red'
+                });
             }
         });
     }

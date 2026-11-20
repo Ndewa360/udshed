@@ -10,6 +10,10 @@ def get_context(context):
         frappe.local.flags.redirect_location = "/login"
         raise frappe.Redirect
 
+    allowed_roles = {"Administrator", "System Manager", "Coordonateur", "Planning Manager"}
+    if not allowed_roles.intersection(frappe.get_roles()):
+        frappe.throw(_("Accès refusé : vous ne pouvez pas gérer les niveaux."), frappe.PermissionError)
+
     context.levels_data = _get_levels_data()
     context.faculties = frappe.get_all("Faculty", fields=["name", "faculty_name"])
 

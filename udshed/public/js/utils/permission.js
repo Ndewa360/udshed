@@ -1,51 +1,84 @@
 window.Udshed = window.Udshed || {};
 
-const ROLE_LIST= {
-    ADMINISTRATOR:"Administrator",
-    PLANNING_ADMIN:"Planning Admin",
-    TEACHER:"Teacher",
-    STUDENT:"Student",
-    COORDINATOR:"Coordinator",
-    SYSTEME_MANAGER:"System Manager",
-    PLANNING_MANAGER:"Planning Manager"
-}
-
+const ROLE_LIST = {
+    ADMINISTRATOR: "Administrator",
+    SYSTEM_MANAGER: "System Manager",
+    COORDINATOR: "Coordonateur",
+    PLANNING_MANAGER: "Planning Manager",
+    PLANNING_ADMIN: "Planning Admin",
+    TEACHER: "Teacher",
+    ENSEIGNANT: "Enseignant",
+    STUDENT: "Student"
+};
 
 window.Udshed.Perms = {
-    user_can_edit_planning_cell(cellFilter,userContext) {
-        if(this.is_admin(userContext)) return true;
-        let permsContext = userContext.perms.filter((p)=>{
-            if(!p.academic_year_list || !p.filiere || !p.niveau ) return false;
-            let acad_found = p.academic_year_list.find((acad)=>acad.name==cellFilter.academic_year)
-            let filiere_found = p.filiere.find((fil)=>fil.code==cellFilter.filiere)
-            let niveau_found = p.niveau.find((niv)=>niv.name==cellFilter.niveau)
-            return acad_found && filiere_found && niveau_found
-        })
-        if(permsContext.length==0) return false;
-        let permContextItem = permsContext[0]
-        return permContextItem.role==ROLE_LIST.COORDINATOR || permContextItem.role==ROLE_LIST.PLANNING_MANAGER;
+    normalizeUserContext(userContext) {
+        const rows = Array.isArray(userContext) ? userContext : [];
+        if (!rows.length) {
+            return {
+                academic_year: [],
+                default_academic_year: null,
+                roles: [],
+                teacher: null,
+                faculty: [],
+                filiere: [],
+                niveau: [],
+                perms: [],
+                can_plan: false
+            };
+        }
+        const unique = (values) => [...new Set(values.filter(Boolean))];
+        const flatten = (key) => unique(
+            rows
+                .filter((row) => Array.isArray(row[key]))
+                .flatMap((row) => row[key].map((item) => item && (item.name || item) ))
+        );
+        return {
+            academic_year: flatten("academic_year_list"),
+            default_academic_year: rows[0].default_academic_year || null,
+            roles: unique(rows.map((row) => row.role)),
+            teacher: rows.find((row) => row.teacher)?.teacher || null,
+            faculty: flatten("faculty"),
+            filiere: flatten("filiere"),
+            niveau: flatten("niveau"),
+            perms: rows,
+            can_plan: unique(rows.map((row) => row.role)).some((role) =>
+                [ROLE_LIST.ADMINISTRATOR, ROLE_LIST.SYSTEM_MANAGER, ROLE_LIST.COORDINATOR, ROLE_LIST.PLANNING_MANAGER].includes(role)
+            )
+        };
     },
-
 
     is_admin(userContext) {
-        return userContext.roles.includes(ROLE_LIST.ADMINISTRATOR) || userContext.roles.includes(ROLE_LIST.SYSTEME_MANAGER);
+        if (!userContext) return false;
+        const roles = userContext.roles || [];
+        return roles.includes(ROLE_LIST.ADMINISTRATOR) || roles.includes(ROLE_LIST.SYSTEM_MANAGER);
     },
+
     should_apply_filter(userContext) {
-        return !this.is_admin(userContext)
+        return !this.is_admin(userContext);
     },
-    normalizeUserContext(userContext)
-    {
-       
-        let normalized = {
-            academic_year: [...new Set(userContext.map((data)=>data.academic_year_list).reduce((acc,curr)=>[...acc,...(curr.map((i)=>i.name))],[]))],
-            default_academic_year: userContext[0].default_academic_year,
-            roles: [...new Set(userContext.map((data)=>data.role))],
-            faculty:[...new Set(userContext.filter((data)=>data.hasOwnProperty("faculty")).map((data)=>data.faculty).reduce((acc,curr)=>[...acc,...(curr.map((i)=>i.name))],[]))],
-            filiere:[...new Set(userContext.filter((data)=>data.hasOwnProperty("filiere")).map((data)=>data.filiere).reduce((acc,curr)=>[...acc,...(curr.map((i)=>i.name))],[]))],
-            niveau:[...new Set(userContext.filter((data)=>data.hasOwnProperty("niveau")).map((data)=>data.niveau).reduce((acc,curr)=>[...acc,...(curr.map((i)=>i.name))],[]))],
-            perms:userContext
-        }
-         
-        return normalized;
+
+    user_can_edit_planning_cell(cellFilter, userContext) {
+        if (!userContext) return false;
+        if (this.is_admin(userContext)) return true;
+        const editableRoles = [ROLE_LIST.COORDINATOR, ROLE_LIST.PLANNING_MANAGER];
+        const hasRole = (userContext.roles || []).some((role) => editableRoles.includes(role));
+        if (!hasRole) return false;
+        const perms = (userContext.perms || []).filter((perm) => {
+            if (!perm.academic_year_list || !perm.filiere || !perm.niveau) return false;
+            const acadFound = perm.academic_year_list.find((acad) => (acad.name || acad) === cellFilter.academic_year);
+            const filiereFound = perm.filiere.find((fil) => (fil.name || fil) === cellFilter.filiere);
+            const niveauFound = perm.niveau.find((niv) => (niv.name || niv) === cellFilter.niveau);
+            return acadFound && filiereFound && niveauFound;
+        });
+        return perms.some((perm) => editableRoles.includes(perm.role));
+    },
+
+    can_view_planning(userContext) {
+        if (!userContext) return false;
+        if (this.is_admin(userContext)) return true;
+        return (userContext.roles || []).some((role) =>
+            [ROLE_LIST.COORDINATOR, ROLE_LIST.PLANNING_MANAGER, ROLE_LIST.TEACHER, ROLE_LIST.ENSEIGNANT].includes(role)
+        );
     }
-}
+};

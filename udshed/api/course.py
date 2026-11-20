@@ -3,6 +3,8 @@ from frappe.utils import cint
 from frappe.query_builder import DocType
 import json
 
+import udshed.api.planning_permission as planning_permission
+
 
 @frappe.whitelist()
 def get_teaching_units(
@@ -20,6 +22,8 @@ def get_teaching_units(
 	# =========================
 	if not academic_year or not faculty:
 		frappe.throw("Année académique et faculté requises")
+
+	planning_permission.assert_can_view_planning(academic_year, faculty, filiere, niveau)
 
 	# =========================
 	# Récupération Teaching Units
@@ -113,6 +117,13 @@ def get_teaching_units(
 
 @frappe.whitelist()
 def get_teaching_unit_by_year(academic_year,faculty=None,field_of_study=None,level=None,teacher=None,semestre=None):
+	field_code = field_of_study
+	field_name = (
+		frappe.db.get_value("Field of study", field_of_study, "name")
+		or frappe.db.get_value("Field of study", {"field_of_study_code": field_of_study}, "name")
+		if field_of_study else None
+	)
+	planning_permission.assert_can_view_planning(academic_year, faculty, field_name, level, teacher)
 	TeachingUnit = DocType("Teaching Unit")
 	Course = DocType("Course")
 	CourseTeacherItem = DocType("Course Teacher Item")
@@ -151,8 +162,8 @@ def get_teaching_unit_by_year(academic_year,faculty=None,field_of_study=None,lev
 	if faculty:
 		query = query.where(CourseFieldOfStudy.faculte == faculty)
 
-	if field_of_study:
-		query = query.where(CourseFieldOfStudy.field_of_study_code==field_of_study)
+	if field_code:
+		query = query.where(CourseFieldOfStudy.field_of_study_code==field_code)
 	
 	if level:
 		query = query.where(CourseFieldOfStudyLevelItem.niveau==level)
@@ -213,6 +224,7 @@ def get_single_teaching_unit(cours,academic_year):
 
 @frappe.whitelist()
 def get_levels_for_field(field_of_study):
+	planning_permission.assert_can_view_planning(filiere=field_of_study)
 	doc = frappe.get_doc("Field of study", field_of_study)
 	return [{"level":row.level,"name":row.name} for row in doc.field_of_study_level]
 
@@ -238,6 +250,13 @@ def get_levels(doctype, txt, searchfield, start, page_len, filters):
 
 @frappe.whitelist()
 def get_teaching_unit_by_level(doctype, txt, searchfield, start, page_len, filters):
+	filters = filters or {}
+	planning_permission.assert_can_view_planning(
+		filters.get("academic_year"),
+		filters.get("faculty"),
+		filters.get("filiere"),
+		filters.get("niveau"),
+	)
 	TeachingUnit = DocType("Teaching Unit")
 	CourseNiveauFiliere = DocType("Course Field of study level item")
 	# print("Doctype ",txt," searchfiled",searchfield)
@@ -264,42 +283,57 @@ def get_teaching_unit_by_level(doctype, txt, searchfield, start, page_len, filte
 	data =  query.run()
 	return data
 
-def clean_course_and_ue_by_acaemic_year(academic_year,faculty,filiere,niveau,semestre,proced_cours,proced_ue):
-	# teachings = get_teaching_units(academic_year,faculty,filiere,niveau)
-	# # print("ue_proceed",proced_ue)
-	# print("proceed_cours",proced_cours)
-	# print("Teaching value ",teachings)
-	# print("Semestre ",semestre)
-	# on_delete_ue = []
-	# for t in teachings:
-	# 	if t['course'] not in proced_cours and t["semestre"]==semestre:
-	# 		print("Course to delete ",t)
-	# 		on_delete_ue.append(t["ue_code"])
-	# 		frappe.delete_doc("Teaching Unit", t['name'])
-	# print("ue to delete ",on_delete_ue)
-	# for ue_del in on_delete_ue:
-	# 	if ue_del not in proced_ue:
-	# 		frappe.delete_doc("Teaching Unit Value",ue_del)
+def clean_course_and_ue_by_academic_year(academic_year, faculty, filiere, niveau, semestre, proced_cours, proced_ue):
+	teaching_units = frappe.get_all(
+		"Teaching Unit",
+		filters={"academic_year": academic_year, "semestre": semestre},
+		fields=["name", "course", "unite_de_valeur"],
+	)
+	kept_units = set(proced_cours or [])
+	kept_ues = set(proced_ue or [])
+	deleted_units = []
+	for unit in teaching_units:
+		if unit.course in kept_units:
+			continue
+		levels = frappe.get_all(
+			"Course Field of study level item",
+			filters={"parent": unit.name, "filiere": filiere, "niveau": niveau},
+			pluck="name",
+		)
+		if not levels:
+			continue
+		frappe.delete_doc("Course Field of study level item", levels[0], ignore_permissions=True)
+		remaining = frappe.db.count("Course Field of study level item", {"parent": unit.name})
+		planning_count = frappe.db.count("Planning Item", {"cours": unit.name})
+		if not remaining and not planning_count:
+			ue_name = unit.unite_de_valeur
+			frappe.delete_doc("Teaching Unit", unit.name, ignore_permissions=True)
+			deleted_units.append(unit.name)
+			if ue_name and ue_name not in kept_ues:
+				other_units = frappe.db.count("Teaching Unit", {"unite_de_valeur": ue_name})
+				if not other_units:
+					frappe.delete_doc("Teaching Unit Value", ue_name, ignore_permissions=True)
+	return deleted_units
 
-	#Todo
-	pass
+
+def clean_course_and_ue_by_acaemic_year(academic_year, faculty, filiere, niveau, semestre, proced_cours, proced_ue):
+	return clean_course_and_ue_by_academic_year(
+		academic_year, faculty, filiere, niveau, semestre, proced_cours, proced_ue
+	)
 
 
 @frappe.whitelist()
-def update_teacher_unit(teaching_unit_code,grid_teacher): 
+def update_teacher_unit(teaching_unit_code, grid_teacher):
 	if isinstance(grid_teacher, str):
-		grid_teacher = json.loads(grid_teacher)
-
-	teaching_unit = frappe.get_doc("Teaching Unit",teaching_unit_code)
+		grid_teacher = frappe.parse_json(grid_teacher)
+	planning_permission.assert_can_plan(teaching_unit=teaching_unit_code)
+	teaching_unit = frappe.get_doc("Teaching Unit", teaching_unit_code)
 	teaching_unit.set("table_enseignant", [])
-	print("Grid teacher",grid_teacher)
-	for t in grid_teacher:
-		print("Teacher ",t)
+	for teacher in grid_teacher or []:
 		teaching_unit.append("table_enseignant", {
-			"enseignant": t["enseignant"],
-			"type_de_cours": t["type_de_cours"]
+			"enseignant": teacher.get("enseignant"),
+			"type_de_cours": teacher.get("type_de_cours"),
 		})
-	teaching_unit.save()
-
+	teaching_unit.save(ignore_permissions=True)
 	return True
 

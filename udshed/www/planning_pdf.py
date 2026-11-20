@@ -1,12 +1,11 @@
-import frappe, json
+import frappe
 import udshed.api.planning_calendar_pdf as planning_calendar_pdf
 
 @frappe.whitelist()
 def download_planning_pdf(filters):
-    try:
-        filters = json.loads(filters)
-    except (json.JSONDecodeError, TypeError):
-        frappe.throw("Filtres invalides.")
+    filters = frappe.parse_json(filters)
+    if not isinstance(filters, dict):
+        frappe.throw("Filtres invalides.", frappe.ValidationError)
     try:
         pdf, planning_name, items, _, _ = planning_calendar_pdf.generate_planning_pdf(filters)
     except (frappe.ValidationError, frappe.PermissionError):

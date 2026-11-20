@@ -1,47 +1,67 @@
 frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
 	frappe.require([
-		'/assets/udshed/js/utils/utils.js', 
-		'/assets/udshed/js/utils/utils_queries.js', 
-		'/assets/udshed/js/teaching_grid/teaching_grid_utilui.js', 
-		'/assets/udshed/js/teaching_grid/teaching_grid_query.js', 
-		'/assets/udshed/js/teaching_grid/teaching_grid_dialog.js', 
-		'/assets/udshed/js/teaching_grid/teaching_grid.js', 
+		'/assets/udshed/js/utils/utils.js',
+		'/assets/udshed/js/utils/utils_queries.js',
+		'/assets/udshed/js/utils/permission.js',
+		'/assets/udshed/js/teaching_grid/teaching_grid_utilui.js',
+		'/assets/udshed/js/teaching_grid/teaching_grid_query.js',
+		'/assets/udshed/js/teaching_grid/teaching_grid_dialog.js',
+		'/assets/udshed/js/teaching_grid/teaching_grid.js',
 	]).then(async () => {
+        const rawUserContext = await Udshed.UtilsQueries.get_data_of_user();
+        const userContext = Udshed.Perms.normalizeUserContext(rawUserContext);
+        const canManageGrid = userContext.can_plan;
+
         var page = frappe.ui.make_app_page({
             parent: wrapper,
             title: 'Grilles d\'enseignements',
             single_column: true
         });
 
-         let filters = {
-            academic_year: null,
-            faculty: null,
-            filiere: null,
-            niveau: null,
-            semestre:null,
+        let filters = {
+            academic_year: userContext.default_academic_year || null,
+            faculty: userContext.faculty.length === 1 ? userContext.faculty[0] : null,
+            filiere: userContext.filiere.length === 1 ? userContext.filiere[0] : null,
+            niveau: userContext.niveau.length === 1 ? userContext.niveau[0] : null,
+            semestre: null,
         };
-        let levelMap = {}; // label => name
+        let levelMap = {};
 
-        let teaching_grid = new Udshed.TeachingGrid.DataGrid(wrapper);
+        let teaching_grid = new Udshed.TeachingGrid.DataGrid(wrapper, canManageGrid);
 
         const btnImporter = page.set_primary_action(__('Importer'), function() {
             Udshed.TeachingGrid.Dialog.show_import_dialog(filters,()=>teaching_grid.refresh());
         }, 'upload');
-        
+
         const btnExporter = page.set_secondary_action(__('Exporter'), function() {
             Udshed.TeachingGrid.UtilsQueries.export_grid(filters,()=>teaching_grid.refresh());
         }, 'download');
-        Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter,btnImporter)
-        
-        // page.add_menu_item(__('Rafraîchir'), function() {
-        //     teaching_grid.refresh();
-        // }, 'refresh');
+        Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter, btnImporter, canManageGrid);
+
+        function applyRestrictions() {
+            if (Udshed.Perms.is_admin(userContext)) return;
+            if (userContext.academic_year.length) {
+                page.fields_dict.academic_year.get_query = () => ({ filters: { name: ["in", userContext.academic_year] } });
+            }
+            if (userContext.faculty.length) {
+                page.fields_dict.faculty.get_query = () => ({ filters: { name: ["in", userContext.faculty] } });
+            }
+            if (userContext.filiere.length) {
+                page.fields_dict.filiere.get_query = () => ({ filters: { name: ["in", userContext.filiere] } });
+            }
+            if (!canManageGrid) {
+                ["academic_year", "faculty", "filiere", "niveau"].forEach((name) => {
+                    if (filters[name] && page.fields_dict[name]) page.fields_dict[name].$input.prop("disabled", true);
+                });
+            }
+        }
 
         page.add_field({
             fieldtype: 'Link',
             label: 'Année académique',
             fieldname: 'academic_year',
             options: 'Academic Year',
+            default: filters.academic_year,
             change(e) {
                 filters.academic_year = this.get_value();
                 Udshed.Utils.refresh_filter(filters,"academic_year",page,levelMap);
@@ -50,8 +70,6 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
                     teaching_grid.initData()
                     teaching_grid.render_datatable()
                 }
-                
-
             }
         });
 
@@ -60,6 +78,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
             label: 'Faculté',
             fieldname: 'faculty',
             options: 'Faculty',
+            default: filters.faculty,
             change(e) {
                 filters.faculty = this.get_value();
                 Udshed.Utils.refresh_filter(filters,"faculty",page,levelMap);
@@ -86,7 +105,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
                         faculte: faculty_field.get_value()
                     }
                 };
-            }, 
+            },
             change() {
                 filters.filiere = this.get_value();
                 Udshed.Utils.refresh_filter(filters,"filiere",page,levelMap);
@@ -99,22 +118,22 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
                     niveau_field.df.options = levels ? levels.map((value)=>({value:value.level,name:value.name})) || [] : [];
                     niveau_field.refresh();
                 });
-				Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter,btnImporter)
-                
+                Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter, btnImporter, canManageGrid);
+
                 if(!this.get_value())
                 {
                     teaching_grid.initData()
                     teaching_grid.render_datatable()
                 }
             }
-        });  
+        });
 
         const niveau_field = page.add_field({
             fieldtype: 'Select',
             label: 'Niveau',
             fieldname: 'niveau',
             change() {
-                filters.niveau = levelMap[this.get_value()];
+                filters.niveau = levelMap[this.get_value()] || this.get_value() || null;
                 Udshed.Utils.refresh_filter(filters,"niveau",page,levelMap);
                 if(!this.get_value())
                 {
@@ -134,13 +153,22 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
             change() {
                 filters.semestre = this.get_value();
                 if(this.get_value()) teaching_grid.load_data(filters);
-				Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter,btnImporter)
+                Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter, btnImporter, canManageGrid);
             }
         });
 
-    })
+        if (filters.filiere) {
+            const levels = await Udshed.UtilsQueries.loadLevels(filters.filiere, niveau_field);
+            levelMap = (levels || []).reduce((acc, curr) => {
+                acc[curr.level] = curr.name;
+                return acc;
+            }, {});
+            niveau_field.df.options = (levels || []).map((value) => ({ value: value.level, name: value.name }));
+            const initialLevel = (levels || []).find((level) => level.name === filters.niveau);
+            if (initialLevel) niveau_field.set_value(initialLevel.level);
+            niveau_field.refresh();
+        }
+
+        applyRestrictions();
+    });
 }
-
-// frappe/app/teaching_grid/teaching_grid.js
-
-

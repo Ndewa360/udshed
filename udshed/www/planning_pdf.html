@@ -216,14 +216,14 @@ th { background:#f2f2f2; }
         <div>{{half.libelle}}</div>
       {% endif %}
         <div>{{half.heure_de_debut}} - {{half.heure_de_fin}}</div>
-        <div>{{half.fuseau_horaire}}</div>
+        <div>{{ fuseau_horaire }}</div>
     </div>
   </td>
   {% for day in ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"] %}
-  {% set item = grid[day][half.name] %}
+  {% set cell_items = grid[day][half.name] %}
   <td class="cell">
-    <!-- {{item}} -->
-    {% if item %}
+    {% if cell_items %}
+      {% for item in cell_items %}
       <div class="event {{ item.css }}">
         <b>{{ item.subject }}</b><br/>
         {{ item.cours_label }}<br/><br/>
@@ -240,8 +240,9 @@ th { background:#f2f2f2; }
           {% for t in item.teachers %}
             <b>{{ t }}</b><br>
           {% endfor %}
-        {% endif %}        
+        {% endif %}
       </div>
+      {% endfor %}
     {% else %}
       <div class="empty">Pas cours</div>
     {% endif %}

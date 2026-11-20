@@ -118,6 +118,11 @@
   cursor: pointer;
 }
 
+.planning-cell.readonly:hover {
+  box-shadow: none;
+  cursor: default;
+}
+
 .planning-item {
   background: rgba(68, 138, 255, 0.12);
   border-left: 4px solid var(--primary);
@@ -256,8 +261,12 @@ Controle de l'état d'avancement des cours
 /* Fin etat d'avancement*/ 
 
 @media (max-width: 1200px) {
+  .planning-calendar {
+    overflow-x: auto;
+  }
+
   .planning-grid {
-    grid-template-columns: 120px repeat(5, 1fr);
+    grid-template-columns: 90px repeat(6, minmax(130px, 1fr));
   }
 
   .planning-cell {

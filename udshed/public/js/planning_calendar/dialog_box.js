@@ -1,59 +1,95 @@
 window.Udshed = window.Udshed || {};
 
 window.Udshed.Dialogs = {
+    _check_edit(filter, userContext) {
+        if (!Udshed.Perms || !Udshed.Perms.user_can_edit_planning_cell) return true;
+        return Udshed.Perms.user_can_edit_planning_cell(filter, userContext);
+    },
 
-    openCreatePlanningDialog(filter,day,halfDay,halfLibelle,userContext,callbak) {
-        if(!filter.academic_year) {
+    _error(err, title) {
+        const serverMessages = err && err._server_messages;
+        let message = err && (err.message || err.exception || "");
+        if (!message && serverMessages) {
+            try {
+                message = JSON.parse(serverMessages).map((entry) => JSON.parse(entry).message).join("<br/>");
+            } catch (e) {
+                message = String(serverMessages);
+            }
+        }
+        frappe.msgprint({
+            title: title || __("Erreur"),
+            indicator: "red",
+            message: message || __("Une erreur est survenue.")
+        });
+        frappe.utils.play_sound("error");
+    },
+
+    _type_options() {
+        return [
+            __("Cours Magistral (CM)"),
+            __("Traveaux Pratiques (TP)"),
+            __("Traveaux Dirigés (TD)"),
+            __("Controlle Continue (CC)"),
+            __("Examen de session normal"),
+            __("Examen de rattrapage")
+        ];
+    },
+
+    _mode_options() {
+        return ["En présentiel", "En ligne"];
+    },
+
+    _room_field(defaultValue) {
+        return {
+            fieldtype: "Select",
+            label: __("Salle"),
+            fieldname: "salle",
+            default: defaultValue || null,
+            depends_on: 'eval:doc.mode=="En présentiel"'
+        };
+    },
+
+    _building_field(defaultValue, salleFieldName) {
+        return {
+            fieldtype: "Link",
+            label: __("Batiment"),
+            fieldname: "batiment",
+            options: "Building",
+            default: defaultValue || null,
+            depends_on: 'eval:doc.mode=="En présentiel"',
+            change() {
+                const dialog = cur_dialog;
+                Udshed.UtilsQueries.loadRooms(this.get_value(), dialog.fields_dict[salleFieldName], (rooms) => {
+                    dialog.fields_dict[salleFieldName].df.options = rooms || [];
+                    dialog.fields_dict[salleFieldName].refresh();
+                });
+            }
+        };
+    },
+
+    openCreatePlanningDialog(filter, day, half_day, halfLibelle, userContext, callback) {
+        if (!this._check_edit(filter, userContext)) {
+            frappe.show_alert({ message: __("Vous n'avez pas le droit de modifier ce créneau."), indicator: "red" });
+            return;
+        }
+        const missing = [
+            ["academic_year", __("année académique")],
+            ["faculty", __("faculté")],
+            ["filiere", __("filière")],
+            ["niveau", __("niveau")]
+        ].find(([key]) => !filter[key]);
+        if (missing) {
             frappe.msgprint({
-                title: __("Année académique requise"),
+                title: __("Filtre requis"),
                 indicator: "red",
-                message: __("Veuillez sélectionner une année académique avant de créer une planification.")
+                message: __("Veuillez sélectionner une {0} avant de créer une planification.").format(missing[1])
             });
-            frappe.utils.play_sound("click");
-
             return;
         }
 
-        if(!filter.faculty) {
-        	frappe.msgprint({
-        		title: __("Faculté requise"),
-        		indicator: "red",
-        		message: __("Veuillez sélectionner une faculté avant de créer une planification.")
-        	});
-            frappe.utils.play_sound("click");
-
-        	return;
-        }
-        if(!filter.filiere)
-        {
-        	frappe.msgprint({
-        		title: __("Filière requise"),
-        		indicator: "red",
-        		message: __("Veuillez sélectionner une filière avant de créer une planification.")
-        	});
-            frappe.utils.play_sound("click");
-
-            return;
-        }
-        
-        if(!filter.niveau) {
-        	frappe.msgprint({
-        		title: __("Niveau requis"),
-        		indicator: "red",
-        		message: __("Veuillez sélectionner un niveau avant de créer une planification.")
-        	});
-            frappe.utils.play_sound("click");
-
-        	return;
-        }       
-        
-
-        // TODO check user context role
-        // if(!Udshed.Perms.user_can_edit_planning_cell(filter,userContext)) return;
-        hafPeriod = halfLibelle?`(${halfLibelle})`:'';
-
+        const periodLabel = halfLibelle ? `(${halfLibelle})` : "";
         const dialog = new frappe.ui.Dialog({
-            title: __(`Nouvelle planification du ${day.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long' })} ${hafPeriod}`),
+            title: __(`Nouvelle planification du ${day.toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long" })} ${periodLabel}`),
             fields: [
                 {
                     fieldtype: "Link",
@@ -62,124 +98,68 @@ window.Udshed.Dialogs = {
                     options: "Teaching Unit",
                     get_query() {
                         return {
-                            query:"udshed.api.course.get_teaching_unit_by_level",
+                            query: "udshed.api.course.get_teaching_unit_by_level",
                             freeze: true,
                             freeze_message: __("Chargement des cours..."),
-                            filters: {
-                                ...filter
-                            }
+                            filters: { ...filter }
                         };
                     },
-                    reqd: 1,
-                    change() {
-                        // console.log("Value ",this.get_value())
-                    //    cur_dialog.fields_dict.mode.set_value(this.get_value())
-                    }
+                    reqd: 1
                 },
-                { 
+                {
                     fieldtype: "Select",
                     label: __("Type"),
                     fieldname: "course_type",
-                    options: [ __("Cours Magistral (CM)"), 
-                        __("Traveaux Pratiques (TP)"),
-                         __("Controlle Continue (CC)"), 
-                         __("Examen de session normal"),
-                         __("Traveaux Dirigés (TD)"),
-                          __("Examen de rattrapage")],
+                    options: this._type_options(),
                     reqd: 1
                 },
-                { 
+                {
                     fieldtype: "Select",
                     label: __("Mode"),
                     fieldname: "mode",
-                    options: [ "En présentiel", "En ligne"],
-                    default:"En présentiel",
+                    options: this._mode_options(),
+                    default: "En présentiel",
                     reqd: 1,
-                    change:function (){
-                        dialog.refresh()
-                    }
+                    change() { dialog.refresh(); }
                 },
-                {
-                    fieldtype: "Link",
-                    label: __("Batiment"),
-                    fieldname: "batiment",
-                    options: "Building",
-                    depends_on:'eval:doc.mode=="En présentiel"',
-                    change() {
-                        Udshed.UtilsQueries.loadRooms(this.get_value(),cur_dialog.fields_dict.salle,(data)=>{
-                            cur_dialog.fields_dict.salle.df.options = data;
-                            cur_dialog.fields_dict.salle.refresh();
-                        });
-                    }
-                },
-                {
-                    fieldtype: "Select",
-                    label: __("Salle"),
-                    fieldname: "salle",
-                    depends_on:'eval:doc.mode=="En présentiel"',
-                },                
+                this._building_field(null, "salle"),
+                this._room_field(null)
             ],
             primary_action_label: __("Créer"),
             primary_action(values) {
                 frappe.call({
                     method: "udshed.api.planning_calendar.create_planning",
                     freeze: true,
-                    freeze_message: __("Nouvelle plannification en cours..."),
+                    freeze_message: __("Nouvelle planification en cours..."),
                     args: {
-                        academic_year:filter.academic_year,                        
-                        ...values,
+                        academic_year: filter.academic_year,
+                        cours: values.cours,
+                        course_type: values.course_type,
+                        mode: values.mode,
+                        batiment: values.batiment || null,
+                        salle: values.salle || null,
                         day_of_week: frappe.datetime.obj_to_str(day),
-                        half_day: halfDay,
+                        half_day: half_day
                     },
-                    callback: (e) => {
+                    callback: () => {
                         dialog.hide();
-                        if(e.message.status)
-                        {
-                            frappe.show_alert({ message:__('Planning crée.'), indicator:'green' });
-                            frappe.utils.play_sound("submit");
-                            callbak();
-                        }
-                        else{
-                            frappe.msgprint({
-                                title: __('Echec de planification'),
-                                message: e.message.message.replace("\n","<br\>"),
-                                indicator: 'red'
-                            });
-                            frappe.utils.play_sound("error");
-                        }
+                        frappe.show_alert({ message: __("Planning créé."), indicator: "green" });
+                        frappe.utils.play_sound("submit");
+                        if (typeof callback === "function") callback();
                     },
-                    error: (err) => {
-                        frappe.utils.play_sound("error");
-                        // ici on reçoit l'exception Python
-                        // if (err.exc_type === "ValidationError") {
-                        //     frappe.msgprint({
-                        //     title: "Conflit de planning",
-                        //     indicator: "red",
-                        //     message: err.exception.split(":")[1]   // <-- ici ton texte: "Conflit de planning détecté..."
-                        //     });
-                        //     return;
-                        // } else {
-                        //     frappe.msgprint({
-                        //     title: "Erreur inattendue",
-                        //     indicator: "red",
-                        //     message: "Une erreur est survenue, vérifiez la console."
-                        //     });
-                        //     console.error(err);
-                        //     return;
-                        // }
-                        }
+                    error: (err) => window.Udshed.Dialogs._error(err, __("Échec de planification"))
                 });
             }
         });
-
         dialog.show();
     },
 
-
-    openEditPlanningDialog(filter,day, halfDay,halfLibelle,course,userContext,callback) {
-
-        // TODO check user context role
-        // if(!Udshed.Perms.user_can_edit_planning_cell(filter,userContext)) return;
+    openEditPlanningDialog(filter, day, half_day, halfLibelle, course, userContext, callback) {
+        if (!this._check_edit(filter, userContext)) {
+            frappe.show_alert({ message: __("Vous n'avez pas le droit de modifier ce créneau."), indicator: "red" });
+            return;
+        }
+        const item = course.item || {};
         const dialog = new frappe.ui.Dialog({
             title: __("Modifier la planification"),
             fields: [
@@ -190,180 +170,128 @@ window.Udshed.Dialogs = {
                     options: "Teaching Unit",
                     get_query() {
                         return {
-                            query:"udshed.api.course.get_teaching_unit_by_level",
+                            query: "udshed.api.course.get_teaching_unit_by_level",
                             freeze: true,
                             freeze_message: __("Chargement des cours..."),
-                            filters: {
-                                ...filter
-                            }
+                            filters: { ...filter }
                         };
                     },
                     reqd: 1,
-                    default: course.item.cours,
+                    default: item.cours
                 },
-                { 
+                {
                     fieldtype: "Select",
-                    label: __("Mode"),
-                    fieldname: "mode",
-                    options: [ "En présentiel", "En ligne"],
-                    default:"En présentiel",
-                    reqd: 1
-                },
-                { 
-                    fieldtype: "Select",
-                    label: "Type",
-                    default: course.item.type,
+                    label: __("Type"),
                     fieldname: "course_type",
-                    options: [  __("Cours Magistral (CM)"), __("Traveaux Pratiques (TP)"), __("Controlle Continue (CC)"), __("Examen de session normal"), __("Examen de rattrapage")],
+                    options: this._type_options(),
+                    default: item.type,
                     reqd: 1
                 },
-                { 
+                {
                     fieldtype: "Select",
                     label: __("Mode"),
                     fieldname: "mode",
-                    options: [ "En présentiel", "En ligne"],
-                    default:course.item.mode,
+                    options: this._mode_options(),
+                    default: item.mode || "En présentiel",
                     reqd: 1,
-                    change:function (){
-                        dialog.refresh()
-                    }
+                    change() { dialog.refresh(); }
                 },
-                {
-                    fieldtype: "Link",
-                    label: __("Batiment"),
-                    fieldname: "batiment",
-                    options: "Building",
-                    default: course.item.batiment,
-                    depends_on:'eval:doc.mode=="En présentiel"',
-                    change() {
-
-                        Udshed.UtilsQueries.loadRooms(this.get_value(),cur_dialog.fields_dict.salle,(data)=>{
-                            cur_dialog.fields_dict.salle.df.options = data;
-                            cur_dialog.fields_dict.salle.refresh();
-                        });
-                    }
-                },
-                {
-                    fieldtype: "Select",
-                    label: __("Salle"),
-                    fieldname: "salle",
-                    default: course.item.room,
-                    depends_on:'eval:doc.mode=="En présentiel"',
-                },                
+                this._building_field(item.batiment, "salle"),
+                this._room_field(item.salle)
             ],
-            primary_action_label: "Mettre à jour",
-            // secondary_action_label:"Supprimer",
+            primary_action_label: __("Mettre à jour"),
             primary_action(values) {
                 frappe.call({
                     method: "udshed.api.planning_calendar.update_planning",
                     freeze: true,
                     freeze_message: __("Mise à jour du planning en cours..."),
                     args: {
-                        planning_item_name: course.item.name, // ID DocType
-                        academic_year:filter.academic_year,
-                        ...values,
+                        planning_item_name: item.name,
+                        academic_year: filter.academic_year,
+                        cours: values.cours,
+                        course_type: values.course_type,
+                        mode: values.mode,
+                        batiment: values.batiment || null,
+                        salle: values.salle || null,
                         day_of_week: frappe.datetime.obj_to_str(day),
-                        half_day: halfDay,
+                        half_day: half_day
                     },
-                    callback: (e) => {
+                    callback: () => {
                         dialog.hide();
-                        if(e.message.status)
-                        {
-                            frappe.show_alert({ message:__('Planning mis à jour.'), indicator:'green' });
-                            frappe.utils.play_sound("submit");
-                            callback();                            
-                        }
-                        else
-                        {
-                           frappe.msgprint({
-                                title: __('Echec de modification du planning'),
-                                message: e.message.message.replace("\n","<br\>"),
-                                indicator: 'red'
-                            });
-                            frappe.utils.play_sound("error"); 
-                        }
-                        
+                        frappe.show_alert({ message: __("Planning mis à jour."), indicator: "green" });
+                        frappe.utils.play_sound("submit");
+                        if (typeof callback === "function") callback();
                     },
-                    error: (err) => {
-                        console.error(err);
-                        frappe.utils.play_sound("error");
-                    }
+                    error: (err) => window.Udshed.Dialogs._error(err, __("Échec de modification"))
                 });
             }
         });
-         dialog.$wrapper.find(".modal-footer").prepend(`
+        dialog.$wrapper.find(".modal-footer").prepend(`
             <button class="btn btn-danger btn-delete-planning">
                 <i class="fa fa-trash"></i> Supprimer
             </button>
         `);
         dialog.$wrapper.find(".btn-delete-planning").on("click", () => {
-                frappe.confirm(
-                    __("Voulez-vous vraiment supprimer ce planning ?"),
-                    () => {
-                        Udshed.PlanningQueries.deletePlanning(course.item.name,()=>{
-                            dialog.hide();
-                            callback();
-                        });
-                        
-                    }
-                );
+            frappe.confirm(__("Voulez-vous vraiment supprimer ce planning ?"), () => {
+                Udshed.PlanningQueries.deletePlanning(item.name, () => {
+                    dialog.hide();
+                    if (typeof callback === "function") callback();
+                });
+            });
         });
         dialog.show();
-       
     },
 
-    openSendPlanningDialog(filter,userContext,callbak) {
-       
-        // hafPeriod = halfLibelle?`(${halfLibelle})`:'';
-
+    openSendPlanningDialog(filter, userContext, callback) {
         const dialog = new frappe.ui.Dialog({
-            title: __(`Nouvel envoi de planning par mail`),
+            title: __("Envoi du planning par mail"),
             fields: [
                 {
                     fieldtype: "Check",
-                    label: __("Envoyer à tous les enseingnats"),
+                    label: __("Envoyer à tous les enseignants"),
                     fieldname: "to_all_teacher",
-                    depends_on:() => filter.niveau?true:false,
-                    default:false
+                    depends_on: () => filter.niveau ? 1 : 0,
+                    default: 0
                 },
-                { 
+                {
                     fieldtype: "Check",
-                    label: __("Envoyer à l'enseingnant"),
-                    depends_on:() => filter.teacher?true:false,
+                    label: __("Envoyer à l'enseignant sélectionné"),
                     fieldname: "to_teacher",
-                    default:false
-                },                
+                    depends_on: () => filter.teacher ? 1 : 0,
+                    default: 0
+                },
                 {
                     fieldtype: "Check",
                     label: __("Recevoir le planning"),
                     fieldname: "to_me",
-                    default:false
-                },                
+                    default: 0
+                }
             ],
             primary_action_label: __("Envoyer le planning"),
             primary_action(values) {
                 frappe.call({
                     method: "udshed.api.planning_calendar_email.send_planning_to_mail",
                     freeze: true,
-                    freeze_message: "Envoi du planning en cours...",
+                    freeze_message: __("Envoi du planning en cours..."),
                     args: {
-                        filters:{...filter},
-                        ...values,
+                        filters: { ...filter },
+                        to_all_teacher: values.to_all_teacher,
+                        to_teacher: values.to_teacher,
+                        to_me: values.to_me
                     },
-                    callback: (e) => {
+                    callback: (response) => {
                         dialog.hide();
-                        frappe.show_alert({ message:__('Planning envoyé.'), indicator:'green' });
-                        frappe.utils.play_sound("submit");
-                        callbak();
+                        const result = response.message || {};
+                        frappe.show_alert({
+                            message: __("Planning envoyé à {0} destinataire(s).").format(result.sent || 0),
+                            indicator: result.failed ? "orange" : "green"
+                        });
+                        if (typeof callback === "function") callback();
                     },
-                    error: (err) => {
-                        frappe.utils.play_sound("error");
-                    }
+                    error: (err) => window.Udshed.Dialogs._error(err, __("Échec de l'envoi"))
                 });
             }
         });
-
         dialog.show();
-    },
+    }
 };
-/**End Dialog */

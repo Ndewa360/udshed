@@ -1,178 +1,155 @@
-import frappe,json
-
+import frappe
+from frappe import _
 from datetime import datetime
-import udshed.api.planning_calendar_pdf as planning_calendar_pdf
-import udshed.utils.file_utils as file_utils
-import udshed.utils.email_utils as email_utils
-import udshed.api.school_setting as school_setting
 
-def send_planning_to_teacher_email(filters,teacher,school_name,school_logo):
-    try:
-        pdf, planning_name,items, start_date,end_date = planning_calendar_pdf.generate_planning_pdf(filters)
-        
-        frappe.sendmail(
-            recipients = [teacher.email],
-            subject =  f"UdM: {planning_name}",
-            message =  email_html_template(school_name,school_logo,teacher.name,start_date,end_date),
-            attachments= [{
-                "fname": planning_name + ".pdf",
-                "fcontent": pdf
-            }],
-            delayed=False,
-            sender = email_utils.get_formatted_sender()
-        )
-    except Exception:
-        frappe.log_error(" planning_calendar_email send_planning_to_teacher_email")
+import udshed.api.planning_calendar_pdf as planning_calendar_pdf
+import udshed.api.school_setting as school_setting
+import udshed.api.planning_permission as planning_permission
+import udshed.utils.email_utils as email_utils
+import udshed.utils.file_utils as file_utils
+
+
+def _teacher_doc(name):
+	if not name:
+		return None
+	return frappe.db.get_value("Teacher", name, ["name", "email"], as_dict=True)
+
+
+def _recipient_from_user(user):
+	email = frappe.db.get_value("User", user, "email")
+	name = user
+	if not email:
+		teacher = _teacher_doc(user)
+		if teacher:
+			return teacher
+		frappe.throw(_("Adresse email introuvable pour l'utilisateur courant."), frappe.ValidationError)
+	return {"name": name, "email": email}
+
+
+def send_planning_to_teacher_email(filters, teacher, school_name, school_logo, pdf, planning_name, start_date, end_date):
+	frappe.sendmail(
+		recipients=[teacher.email],
+		sender=email_utils.get_formatted_sender(),
+		subject="UdM: {0}".format(planning_name.replace(".pdf", "")),
+		message=email_html_template(school_name, school_logo, teacher.name, start_date, end_date),
+		attachments=[{"fname": planning_name, "fcontent": pdf}],
+		delayed=False,
+	)
 
 
 @frappe.whitelist()
-def send_planning_to_mail(filters,to_all_teacher=None,to_teacher=None,to_me=None):
-    try:
-        frappe.publish_progress(10, title="Préparation du planning")
-        filters = json.loads(filters)
-    except (json.JSONDecodeError, TypeError):
-        frappe.throw("Filtres invalides.")
-    try:
-        school_name, school_logo = school_setting.get_school_data()
-        pdf, planning_name,items, start_date,end_date = planning_calendar_pdf.generate_planning_pdf(filters)
-    except Exception:
-        frappe.log_error(" planning_calendar_email send_planning_to_mail generate")
-        frappe.throw(_("Erreur lors de la génération du planning PDF."))
-    if to_teacher and filters["teacher"]:
-        teacher= frappe.get_doc("Teacher", {"name":filters["teacher"]}) 
-        frappe.publish_progress(50, title="Préparation des recepteurs")
-        frappe.sendmail(
-            sender = email_utils.get_formatted_sender(),
-            recipients = [teacher.email],
-            subject =  f"UdM: {planning_name}",
-            message =  email_html_template(school_name,school_logo,teacher.name,start_date,end_date),
-            attachments= [{
-                "fname": planning_name + ".pdf",
-                "fcontent": pdf
-            }],
-            delayed=False,
-        )   
-    if to_all_teacher:
-        teachers = []
-        #Si on a déjà l'enseignant
-        if(filters["teacher"]):
-            teachers = [filters["teacher"]]
+def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=None):
+	if isinstance(filters, str):
+		filters = frappe.parse_json(filters)
+	if not isinstance(filters, dict):
+		frappe.throw(_("Filtres invalides."), frappe.ValidationError)
+	academic_year = filters.get("academic_year")
+	week_start = filters.get("week_start")
+	if not academic_year or not week_start:
+		frappe.throw(_("Année académique et semaine sont requises."), frappe.ValidationError)
+	planning_permission.assert_can_view_planning(
+		academic_year,
+		filters.get("faculty"),
+		filters.get("filiere"),
+		filters.get("niveau"),
+		filters.get("teacher"),
+	)
 
-        for item in items:
-            if not item["enseignant"] in teachers:
-                teachers.append(item["enseignant"])
-        for t in teachers:
-            planning_teacher = frappe.get_doc("Teacher",{"name":t})
-            filters["teacher"] = t
+	school_name, school_logo = school_setting.get_school_data()
+	pdf, planning_name, items, start_date, end_date = planning_calendar_pdf.generate_planning_pdf(filters)
 
-            send_planning_to_teacher_email(filters, planning_teacher,school_name, school_logo)
+	recipients = {}
+	if to_teacher and filters.get("teacher"):
+		teacher = _teacher_doc(filters.get("teacher"))
+		if teacher and teacher.email:
+			recipients[teacher.email] = teacher
+	if to_all_teacher:
+		ids = {name for item in items for name in (item.get("teacher_ids") or [])}
+		if filters.get("teacher"):
+			ids.add(filters.get("teacher"))
+		for name in ids:
+			teacher = _teacher_doc(name)
+			if teacher and teacher.email:
+				recipients[teacher.email] = teacher
+	if to_me:
+		current = _recipient_from_user(frappe.session.user)
+		recipients[current["email"]] = current
 
+	if not recipients:
+		frappe.throw(_("Aucun destinataire sélectionné."), frappe.ValidationError)
 
-    if to_me:
-        if frappe.db.exists("User", frappe.session.user):
-            current_user = frappe.get_doc("User", {"name":frappe.session.user})
-        else:
+	frappe.publish_progress(50, title=_("Préparation des destinataires"))
+	errors = []
+	for email, recipient in recipients.items():
+		try:
+			send_planning_to_teacher_email(
+				filters, recipient, school_name, school_logo, pdf, planning_name, start_date, end_date
+			)
+		except Exception as exc:
+			frappe.log_error(title="planning_calendar_email envoi", message=frappe.get_traceback())
+			errors.append("{0}: {1}".format(email, str(exc)))
 
-            current_user = frappe.get_doc("Teacher",frappe.session.user)
-        frappe.sendmail(
-            sender = email_utils.get_formatted_sender(),
-            recipients = [current_user.email],
-            subject =  f"UdM: {planning_name}",
-            message =  email_html_template(school_name, school_logo, current_user.name, start_date, end_date),
-            attachments= [{
-                "fname": planning_name + ".pdf",
-                "fcontent": pdf
-            }],
-            delayed=False,
-        )   
-
-                
+	frappe.publish_progress(100, title=_("Envoi terminé"))
+	if len(errors) == len(recipients):
+		frappe.throw(_("Échec de l'envoi : {0}").format("; ".join(errors)), frappe.ValidationError)
+	return {
+		"sent": len(recipients) - len(errors),
+		"failed": len(errors),
+		"errors": errors,
+	}
 
 
-def email_html_template(school_name,school_logo, teacher_name,start_date,end_date):
-    school_data_logo = file_utils.load_school_logo(school_logo)
-    app_logo = file_utils.get_app_logo()
-    return f"""
+def email_html_template(school_name, school_logo, teacher_name, start_date, end_date):
+	school_data_logo = file_utils.load_school_logo(school_logo)
+	app_logo = file_utils.get_app_logo()
+	return f"""
         <div style="font-family: Arial, sans-serif; background:#f4f6f9; padding:30px;">
             <div style="max-width:700px; margin:auto; background:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,0.08);">
-
-                <!-- HEADER -->
                 <div style="background:#1f3c88; padding:25px; text-align:center; color:white;">
-                
-                <!-- Logo Institution -->
-                <div style="margin-bottom:15px;">
-                    <img src="{school_data_logo}" style="height:70px;">
+                    <div style="margin-bottom:15px;">
+                        <img src="{school_data_logo}" style="height:70px;">
+                    </div>
+                    <div style="font-size:20px; font-weight:bold; letter-spacing:0.5px;">
+                        {school_name}
+                    </div>
+                    <div style="font-size:13px; opacity:0.85; margin-top:5px;">
+                        Gestion des emplois du temps via UDSHED
+                    </div>
                 </div>
-
-                <!-- Nom Institution -->
-                <div style="font-size:20px; font-weight:bold; letter-spacing:0.5px;">
-                    {school_name}
-                </div>
-
-                <div style="font-size:13px; opacity:0.85; margin-top:5px;">
-                    Gestion des emplois du temps via UDSHED
-                </div>
-                </div>
-
-                <!-- CONTENU -->
                 <div style="padding:35px; color:#333;">
-                
-                <h2 style="margin-top:0; color:#1f3c88;">
-                    📅 Transmission du planning hebdomadaire
-                </h2>
-
-                <p>
-                    Bonjour <strong>{teacher_name}</strong>,
-                </p>
-
-                <p>
-                    Nous vous prions de bien vouloir trouver en pièce jointe 
-                    votre planning académique pour la période suivante :
-                </p>
-
-                <div style="background:#eef2ff; padding:18px; border-radius:8px; 
-                            margin:20px 0; text-align:center; font-size:16px;">
-                    <strong>
-                    Du {start_date.strftime('%d %B %Y')} au {end_date.strftime('%d %B %Y')}
-                    </strong>
+                    <h2 style="margin-top:0; color:#1f3c88;">
+                        Transmission du planning hebdomadaire
+                    </h2>
+                    <p>Bonjour <strong>{teacher_name}</strong>,</p>
+                    <p>
+                        Nous vous prions de bien vouloir trouver en pièce jointe
+                        votre planning académique pour la période suivante :
+                    </p>
+                    <div style="background:#eef2ff; padding:18px; border-radius:8px; margin:20px 0; text-align:center; font-size:16px;">
+                        <strong>Du {start_date.strftime('%d %B %Y')} au {end_date.strftime('%d %B %Y')}</strong>
+                    </div>
+                    <p>
+                        Ce document a été généré automatiquement le
+                        <strong>{datetime.now().strftime('%d/%m/%Y à %H:%M')}</strong>.
+                    </p>
+                    <p>Pour toute question relative à ce planning, merci de contacter l’administration académique.</p>
+                    <p style="margin-top:30px;">
+                        Cordialement,<br>
+                        <strong>Administration académique</strong><br>
+                        {school_name}
+                    </p>
                 </div>
-
-                <p>
-                    Ce document a été généré automatiquement le 
-                    <strong>{datetime.now().strftime('%d/%m/%Y à %H:%M')}</strong>.
-                </p>
-
-                <p>
-                    Pour toute question relative à ce planning, merci de contacter 
-                    l’administration académique.
-                </p>
-
-                <p style="margin-top:30px;">
-                    Cordialement,<br>
-                    <strong>Administration académique</strong><br>
-                    {school_name}
-                </p>
-                </div>
-
-                <!-- FOOTER -->
                 <div style="background:#f1f1f1; padding:20px; text-align:center; font-size:12px; color:#666;">
-                
-                <!-- Logo App -->
-                <div style="margin-bottom:10px;">
-                    <img src="{app_logo}" style="height:40px;">
+                    <div style="margin-bottom:10px;">
+                        <img src="{app_logo}" style="height:40px;">
+                    </div>
+                    <div>
+                        Email généré par <strong>UDSHED</strong> — Système intelligent de gestion des emplois du temps
+                    </div>
+                    <div style="margin-top:5px; font-size:11px; opacity:0.8;">
+                        © {datetime.now().year} Udshed. Tous droits réservés.
+                    </div>
                 </div>
-
-                <div>
-                    Email généré par <strong>UDSHED</strong> — 
-                    Système intelligent de gestion des emplois du temps
-                </div>
-
-                <div style="margin-top:5px; font-size:11px; opacity:0.8;">
-                    © {datetime.now().year} Udshed. Tous droits réservés.
-                </div>
-
-                </div>
-
             </div>
         </div>
         """

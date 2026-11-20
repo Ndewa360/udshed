@@ -2,11 +2,13 @@ import frappe
 from frappe import _
 import pandas as pd
 import os
+import traceback
 import unicodedata
 from frappe.query_builder import DocType
 from frappe.utils import get_site_path
 import udshed.utils.file_utils as file_utils
 import udshed.api.course as cours_api
+import udshed.api.planning_permission as planning_permission
 
 
 def _cle_alphabetique(texte):
@@ -117,12 +119,15 @@ def _enseignant_depuis_cellule(entree):
 def get_academic_teaching_unit(academic_year,faculty,filiere,niveau,semestre):
     try:
         return _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semestre)
+    except (frappe.PermissionError, frappe.ValidationError):
+        raise
     except Exception:
-        frappe.log_error(" teaching_grid get_academic_teaching_unit")
+        frappe.log_error("teaching_grid get_academic_teaching_unit", traceback.format_exc())
         frappe.throw(_("Erreur lors du chargement de la grille pédagogique."))
 
 
 def _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semestre):
+    planning_permission.assert_can_manage_grid(academic_year, faculty, filiere, niveau)
     if not (academic_year and filiere and niveau and semestre):
         return {
             "stats": {"ue_count": 0, "course_count": 0, "total_credits": 0, "total_hours": 0},
@@ -266,7 +271,7 @@ def _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semest
             result[ue]["courses"], key=lambda course: (_cle_alphabetique(course["title"]), course["code"])
         )
 
-    return {"stats":stat_result,"grid":dict(sorted(result.items())).values()}
+    return {"stats":stat_result,"grid":list(dict(sorted(result.items(), key=lambda item: str(item[0]))).values())}
 
 
 
@@ -277,12 +282,9 @@ def _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semest
 @frappe.whitelist()
 def import_grid(file_url,academic_year,faculty,filiere,niveau,semestre):
     """Importer une grille depuis Excel"""
-    #a supposer c'est dans une matrice comme dans le test
+    planning_permission.assert_can_manage_grid(academic_year, faculty, filiere, niveau, semestre)
     data_grid = file_utils.read_frappe_excel(file_url)
     try:
-        frappe.db.begin()
-        
-
         #Rétirer tous cours à cette salle de classe
         TeachingUnit = DocType("Teaching Unit")
         FieldOfStudyLevelItem = DocType("Course Field of study level item")
@@ -467,25 +469,22 @@ def import_grid(file_url,academic_year,faculty,filiere,niveau,semestre):
                 else:
                     teachingUnit.save()
 
-        cours_api.clean_course_and_ue_by_acaemic_year(academic_year,faculty,filiere,niveau,semestre,proceed_ens,proceed_ue)
-
-        frappe.db.commit()
-        # frappe.db.rollback()
+        cours_api.clean_course_and_ue_by_academic_year(
+            academic_year, faculty, filiere, niveau, semestre, proceed_ens, proceed_ue
+        )
 
         return {
             "status":True,
             "data":record_stat
         }
+    except (frappe.PermissionError, frappe.ValidationError):
+        raise
     except Exception as e:
-        frappe.db.rollback()
-        frappe.log_error(f"{str(e)}")
+        frappe.log_error("teaching_grid import_grid", traceback.format_exc())
         return {
             "status":False,
             "message":str(e)
         }
-        # frappe.throw(e)
-
-        # frappe.throw("Erreur d'importation. Réessayez plus tard!")
         
         
 
@@ -548,14 +547,15 @@ def export_grid(academic_year,faculty,filiere,niveau,semestre):
             'file_url': f'/files/templates/{filename}'
         }
         
+    except (frappe.PermissionError, frappe.ValidationError):
+        raise
     except Exception as e:
-        frappe.log_error(f"Erreur download_template: {str(e)}")
-        # frappe.throw(e)
+        frappe.log_error("teaching_grid export_grid", traceback.format_exc())
         return {
             'success': False,
             'error': str(e)
         }
-    
+
 
 @frappe.whitelist()
 def download_template():
