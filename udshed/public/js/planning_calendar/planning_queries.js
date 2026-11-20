@@ -116,5 +116,20 @@ window.Udshed.PlanningQueries = {
                 }
             });
         });
+    },
+
+    loadAcademicYearMonths(academic_year) {
+        if (!academic_year) return Promise.resolve([]);
+        return new Promise((resolve) => {
+            frappe.call({
+                method: "udshed.api.user_data.get_academic_year_months",
+                args: { academic_year: academic_year },
+                callback: (response) => resolve(response.message || []),
+                error: (err) => {
+                    this._show_error(err, __("Mois de l'année académique"));
+                    resolve([]);
+                }
+            });
+        });
     }
 };

@@ -31,6 +31,7 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
         if (!canPlan && !filters.teacher && userContext.teacher) filters.teacher = userContext.teacher;
 
         let levelMap = {};
+        let academicYearMonths = [];
         let initializing = true;
         let filterRequest = 0;
         const defaultPeriods = await Udshed.PlanningQueries.loadCourseDefaultPeriod();
@@ -115,8 +116,8 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
         async function loadPlanning(request) {
             periods = await resolvePeriods();
             if (request !== filterRequest) return;
+            currentWeekStart = Udshed.DateUtils.syncSelectors(weekSelect, monthPicker, currentWeekStart, academicYearMonths);
             Udshed.DateUtils.updateWeekLabel(currentWeekStart);
-            Udshed.DateUtils.syncSelectors(weekSelect, monthPicker, currentWeekStart);
             const items = await Udshed.PlanningQueries.fetchPlanningItems(filters, currentWeekStart);
             if (request !== filterRequest) return;
             Udshed.UI.show_calendar(calendar_zone, Udshed.UI.get_grid_calendar_item(items, filters, periods), periods, Boolean(filters.teacher), filters, userContext);
@@ -144,6 +145,13 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
                 ? "Sélectionnez une filière et un niveau, ou un enseignant, pour afficher le planning."
                 : "Sélectionnez un enseignant pour afficher votre planning.";
             filterHint.html(`<div class="planning-filter-hint-text">${message}</div>`);
+        }
+
+        async function updateAcademicYearMonths() {
+            academicYearMonths = await Udshed.PlanningQueries.loadAcademicYearMonths(filters.academic_year);
+            Udshed.DateUtils.initMonthPicker(monthPicker, academicYearMonths);
+            currentWeekStart = Udshed.DateUtils.clampWeekStart(currentWeekStart, academicYearMonths);
+            Udshed.DateUtils.syncSelectors(weekSelect, monthPicker, currentWeekStart, academicYearMonths);
         }
 
         async function refreshAll() {
@@ -199,11 +207,12 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             fieldname: "academic_year",
             options: "Academic Year",
             default: filters.academic_year,
-            change() {
+            async change() {
                 if (page._planning_filter_sync) return;
                 filters.academic_year = this.get_value() || null;
                 Udshed.Utils.refresh_filter(filters, "academic_year", page, levelMap);
-                refreshAll();
+                await updateAcademicYearMonths();
+                await refreshAll();
             }
         });
 
@@ -281,27 +290,35 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
         }
 
         applyUserRestrictions();
-        Udshed.DateUtils.initMonthPicker(monthPicker);
-        Udshed.DateUtils.syncSelectors(weekSelect, monthPicker, currentWeekStart);
+        await updateAcademicYearMonths();
         initializing = false;
         await refreshAll();
 
         grid_wrapper.on("click", "#prev-week", async () => {
-            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            currentWeekStart = Udshed.DateUtils.clampWeekStart(
+                Udshed.DateUtils.addDays(currentWeekStart, -7),
+                academicYearMonths
+            );
             await refreshAll();
         });
         grid_wrapper.on("click", "#next-week", async () => {
-            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            currentWeekStart = Udshed.DateUtils.clampWeekStart(
+                Udshed.DateUtils.addDays(currentWeekStart, 7),
+                academicYearMonths
+            );
             await refreshAll();
         });
         grid_wrapper.on("click", "#today-week", async () => {
-            currentWeekStart = Udshed.DateUtils.getMonday(new Date());
+            currentWeekStart = Udshed.DateUtils.clampWeekStart(
+                Udshed.DateUtils.getMonday(new Date()),
+                academicYearMonths
+            );
             await refreshAll();
         });
         grid_wrapper.on("change", "#month-picker", async function () {
-            const [year, month] = this.value.split("-").map(Number);
-            const weeks = Udshed.DateUtils.getWeeksOfMonth(year, month);
-            currentWeekStart = Udshed.DateUtils.getFirstWeekInsideMonth(weeks, year, month);
+            const selectedMonth = Udshed.DateUtils.parseMonthValue(this.value);
+            if (!selectedMonth) return;
+            currentWeekStart = Udshed.DateUtils.getFirstWeekInsideMonth(selectedMonth.year, selectedMonth.month);
             await refreshAll();
         });
         grid_wrapper.on("change", "#week-select", async function () {

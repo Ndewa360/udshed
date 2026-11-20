@@ -182,3 +182,63 @@ def get_teacher_ues(teacher):
         pluck="parent",
         distinct=True,
     )
+
+
+_MONTH_NUMBERS = {
+	"janvier": 1,
+	"fevrier": 2,
+	"mars": 3,
+	"avril": 4,
+	"mai": 5,
+	"juin": 6,
+	"juillet": 7,
+	"aout": 8,
+	"septembre": 9,
+	"octobre": 10,
+	"novembre": 11,
+	"decembre": 12,
+}
+
+
+def _month_number(value):
+	text = str(value or "").strip().lower()
+	text = text.replace("é", "e").replace("è", "e").replace("ê", "e").replace("à", "a").replace("ç", "c")
+	if text.isdigit():
+		number = int(text)
+		return number if 1 <= number <= 12 else 0
+	return _MONTH_NUMBERS.get(text, 0)
+
+
+@frappe.whitelist()
+def get_academic_year_months(academic_year):
+	if not academic_year or not frappe.db.exists("Academic Year", academic_year):
+		return []
+
+	scope = planning_permission.get_scope(frappe.session.user)
+	if scope["academic_years"] and academic_year not in scope["academic_years"]:
+		return []
+
+	doc = frappe.get_doc("Academic Year", academic_year)
+	parts = str(academic_year).split("-")
+	start_year = frappe.utils.cint(doc.start_year) or (frappe.utils.cint(parts[0]) if parts else 0)
+	end_year = frappe.utils.cint(doc.end_year) or (frappe.utils.cint(parts[1]) if len(parts) > 1 else 0)
+	start_month = _month_number(doc.start_month) or 9
+	end_month = _month_number(doc.end_month) or 8
+
+	if not start_year:
+		return []
+	if not end_year:
+		end_year = start_year + (1 if end_month < start_month else 0)
+	if (end_year, end_month) < (start_year, start_month):
+		return []
+
+	months = []
+	year = start_year
+	month = start_month
+	while (year, month) <= (end_year, end_month) and len(months) < 24:
+		months.append({"year": year, "month": month - 1})
+		month += 1
+		if month > 12:
+			month = 1
+			year += 1
+	return months
