@@ -6,85 +6,101 @@
 
 @page {
   size: A4 landscape;
-  margin: 10mm 12mm 10mm 12mm;
+  margin: 6mm 8mm 8mm 8mm;
 }
 
 html, body {
   width: 100%;
-  height: 100%;
 }
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif; 
-  font-size: 12.5px; color:#222;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  color: #222;
 }
 
 .header {
   display:flex;
   align-items:center;
-  margin-bottom:10px;
+  margin-bottom:6px;
   justify-content: space-between;
 }
 .header img {
-  height:70px;
-  margin-right:15px;
+  height:52px;
+  margin-right:12px;
 }
-.header h2 { margin:0; }
-.header p { margin:2px 0; }
+.header h2 { margin:0; font-size:16px; }
+.header p { margin:1px 0; font-size:10px; }
 
 .title {
   text-align:center;
   font-weight:bold;
-  margin:20px 0;
-  font-size:14px;
+  margin:8px 0;
+  font-size:12px;
 }
 
 table {
   width:100%;
   border-collapse:collapse;
   table-layout:fixed;
+  page-break-inside:auto;
 }
+thead { display: table-header-group; }
+tr { page-break-inside:avoid; break-inside:avoid; }
 th, td {
-  border:1px solid #bbb;
-  padding:5px;
+  border:1px solid #aab4c2;
+  padding:3px;
   vertical-align:top;
 }
-th { background:#f2f2f2; }
+th { background:#eef2f7; font-size:10px; }
 
-.time { 
-    width:110px; 
-    text-align:center; 
-    font-weight:bold;
-    font-size: 13px;
- }
- .time .time-data {
-    height: 100%;
-    display: block;
-    flex-basis: 100%;
- }
-.time .time-data  div:first-child {
-    display: block;
-    margin-top: 20px;
-    margin-bottom: 20px;
+.time {
+  width:88px;
+  text-align:center;
+  font-weight:bold;
+  font-size:11px;
+}
+.time .time-data {
+  height:100%;
+  display:block;
+  flex-basis:100%;
+}
+.time .time-data div:first-child {
+  display:block;
+  margin:8px 0;
+}
+.time .time-data div:last-child {
+  display:block;
+  margin-bottom:8px;
 }
 
-.time .time-data  div:last-child {
-    display: block;
-    margin-bottom: 20px;
+.cell {
+  min-height:78px;
+  padding:3px;
+  background:#fff;
+  overflow-wrap:anywhere;
 }
 
+.cell.empty-cell {
+  background: repeating-linear-gradient(
+    45deg,
+    #f8fafc,
+    #f8fafc 8px,
+    #e9eef7 8px,
+    #e9eef7 16px
+  );
+}
 
-.cell { min-height:115px; }
 
 .event {
   border:1px solid #dfe6f2;
-  border-left:4px solid;
-  padding:5px 7px;
-  border-radius:5px;
-  font-size:10.5px;
-  line-height:1.35;
-  margin-bottom:5px;
+  border-left:3px solid;
+  padding:3px 5px;
+  border-radius:4px;
+  font-size:9.5px;
+  line-height:1.25;
+  margin-bottom:3px;
   break-inside:avoid;
   text-align:left;
 }
@@ -95,54 +111,54 @@ th { background:#f2f2f2; }
 .event-head {
   display:flex;
   justify-content:space-between;
-  gap:5px;
-  margin-bottom:3px;
+  gap:4px;
+  margin-bottom:2px;
 }
 
 .event-kind {
-  font-size:8px;
+  font-size:7.5px;
   font-weight:bold;
-  letter-spacing:0.4px;
+  letter-spacing:0.3px;
   text-transform:uppercase;
   color:#667085;
 }
 
 .event-mode {
-  font-size:8px;
+  font-size:7.5px;
   font-weight:bold;
-  padding:0 4px;
-  border-radius:7px;
+  padding:0 3px;
+  border-radius:6px;
   background:#eef2f6;
   color:#475467;
 }
 
 .event-title {
   font-weight:bold;
-  font-size:11px;
-  margin-bottom:2px;
+  font-size:10px;
+  margin-bottom:1px;
 }
 
 .event-meta {
-  font-size:9.5px;
+  font-size:8.5px;
   color:#475467;
 }
 
 .event-progress {
-  margin-top:4px;
-  padding-top:4px;
+  margin-top:3px;
+  padding-top:3px;
   border-top:1px dashed #e2e8f0;
 }
 
 .progress-track {
-  height:4px;
+  height:3px;
   background:#e9eef7;
-  border-radius:4px;
+  border-radius:3px;
 }
 
 .progress-fill {
-  height:4px;
+  height:3px;
   background:#2f6fed;
-  border-radius:4px;
+  border-radius:3px;
 }
 
 .progress-fill.done { background:#2e7d32; }
@@ -153,7 +169,7 @@ th { background:#f2f2f2; }
   justify-content:space-between;
   gap:4px;
   margin-top:2px;
-  font-size:9px;
+  font-size:8px;
   font-weight:bold;
   color:#344054;
 }
@@ -178,63 +194,119 @@ th { background:#f2f2f2; }
 .type_cours {
   font-style: italic;
 }
-.empty { text-align:center; font-style:italic; color:#777; margin-top:30px; }
+.empty {
+  text-align:center;
+  font-style:italic;
+  color:#667085;
+  font-size:9px;
+  padding:24px 0;
+}
 
 .legend {
   display:flex;
   width: 100%;
   justify-content:center;
-
-  margin-top:10px;
-  gap:15px;
+  margin-top:6px;
+  gap:10px;
 }
 
 .box {
-    height:20px; 
-    vertical-align:middle;
-    flex-basis: 100%;
-    font-size: 15px;
-    text-align: center;
+  height:16px;
+  vertical-align:middle;
+  flex-basis: 100%;
+  font-size:10px;
+  line-height:16px;
+  text-align:center;
 }
 
 .box.done { background:#e7f6ea; border-left:4px solid #2e7d32; color:#1b7a34; }
 .box.over { background:#fdecea; border-left:4px solid #d32f2f; color:#b42318; }
 
+.dense { font-size:10px; }
+.dense .header { margin-bottom:4px; }
+.dense .header img { height:42px; }
+.dense .header h2 { font-size:14px; }
+.dense .header p { font-size:9px; }
+.dense .legend { margin-top:4px; gap:7px; }
+.dense .box { height:14px; font-size:9px; line-height:14px; }
+.dense .title { margin:5px 0; font-size:11px; }
+.dense th, .dense td { padding:2px; }
+.dense .cell { min-height:62px; padding:2px; }
+.dense .event { padding:2px 4px; font-size:8.5px; line-height:1.2; margin-bottom:2px; }
+.dense .event-title { font-size:9px; }
+.dense .event-meta { font-size:8px; }
+.dense .event-kind, .dense .event-mode { font-size:7px; }
+.dense .event-head { margin-bottom:1px; }
+.dense .event-progress { margin-top:2px; padding-top:2px; }
+.dense .progress-label { font-size:7.5px; }
+.dense .progress-badge { font-size:7px; }
+.dense .time { width:76px; font-size:10px; }
+.dense .time .time-data div:first-child { margin:4px 0; }
+.dense .time .time-data div:last-child { margin-bottom:4px; }
+.dense .empty { font-size:8px; padding:16px 0; }
+.dense .page-footer { margin-top:6px; }
+
+.compact .header img { height:36px; }
+.compact .header h2 { font-size:13px; }
+.compact .header p { font-size:8px; }
+.compact .legend { margin-top:3px; gap:5px; }
+.compact .box { height:12px; font-size:8px; line-height:12px; }
+.compact .title { margin:3px 0; font-size:10px; }
+.compact th, .compact td { padding:1px; }
+.compact .cell { min-height:52px; padding:1px; }
+.compact .event { border-left-width:2px; padding:1px 3px; font-size:8px; line-height:1.15; margin-bottom:1px; }
+.compact .event-title { font-size:8.5px; }
+.compact .event-meta { font-size:7.5px; }
+.compact .event-kind, .compact .event-mode { font-size:6.5px; }
+.compact .event-head { margin-bottom:0; }
+.compact .event-progress { margin-top:1px; padding-top:1px; }
+.compact .progress-track, .compact .progress-fill { height:2px; }
+.compact .progress-label { font-size:7px; }
+.compact .progress-badge { font-size:6.5px; }
+.compact .time { width:68px; font-size:9px; }
+.compact .time .time-data div:first-child { margin:2px 0; }
+.compact .time .time-data div:last-child { margin-bottom:2px; }
+.compact .empty { font-size:7px; padding:10px 0; }
+.compact .page-footer { margin-top:3px; }
+.compact .footer, .compact .footer-bar { font-size:8px; }
+
 .watermark {
   position: fixed;
   top: 50%;
   left: 50%;
-  width: 320px;
-  opacity: 0.06;
+  width: 300px;
+  opacity: 0.05;
   transform: translate(-50%, -50%);
   z-index: -1;
 }
 
-.footer {
-  margin-top:25px;
-  text-align:right;
+.page-footer {
+  margin-top:8px;
 }
+
+.footer {
+  text-align:right;
+  font-size:9px;
+  margin-bottom:5px;
+}
+
 .footer-bar {
-  position: fixed;
-  bottom: 6mm;
-  left: 12mm;
-  right: 12mm;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-  color: #555;
-  border-top: 1px solid #ccc;
-  padding-top: 4px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:9px;
+  color:#333;
+  border-top:1px solid #aab4c2;
+  padding-top:4px;
 }
 
 .footer-bar img {
-  height: 20px;
+  height:16px;
 }
 </style>
 </head>
 
-<body> 
+<body class="{{ density }}">
 <img src="{{ app_logo  }}" class="watermark">
 <!-- EN-TÊTE -->
 <div class="header">
@@ -309,7 +381,7 @@ th { background:#f2f2f2; }
   </td>
   {% for day in ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"] %}
   {% set cell_items = grid[day][half.name] %}
-  <td class="cell">
+  <td class="cell{% if not cell_items %} empty-cell{% endif %}">
     {% if cell_items %}
       {% for item in cell_items %}
       <div class="event {{ item.css }}{% if item.progress_state == 'depassement' %} over{% elif item.progress_is_last %} done{% endif %}">
@@ -358,20 +430,21 @@ th { background:#f2f2f2; }
 
 
 <!-- SIGNATURE -->
-{% if coordinator %}
-  <div class="footer">
-    <p><b>Coordonnateur du niveau </b><br/><br/> {{ coordinator }}</p>
-    <!-- <p>Signature & cachet</p> -->
-  </div>
-{% endif %}
+<div class="page-footer">
+  {% if coordinator %}
+    <div class="footer">
+      <b>Coordonnateur du niveau :</b> {{ coordinator }}
+    </div>
+  {% endif %}
 
-<div class="footer-bar">
-  <div>    
-    Généré le {{ generated_on }} |
-    Fait avec <b>Udshed</b> — Système intelligent de gestion des emplois du temps</div>
-  {% if app_logo %}
-    <img src="{{ app_logo }}" alt="logo" >
-   {% endif %}
+  <div class="footer-bar">
+    <div>
+      Généré le {{ generated_on }} | Fait avec <b>Udshed</b> — Système intelligent de gestion des emplois du temps
+    </div>
+    {% if app_logo %}
+      <img src="{{ app_logo }}" alt="logo" >
+    {% endif %}
+  </div>
 </div>
 
 </body>

@@ -171,9 +171,19 @@ def generate_planning_pdf(filters):
 
 	start = _date_debut(week_start)
 	end = add_days(start, 6)
+	max_items_per_cell = max(
+		(len(cell_items) for day in grid.values() for cell_items in day.values()),
+		default=0,
+	)
+	density = ""
+	if len(period) > 6 or max_items_per_cell > 1:
+		density = "dense"
+	if len(period) > 8 or max_items_per_cell > 2:
+		density = "dense compact"
 	school_name, school_logo = school_setting.get_school_data()
 	data_to_print = {
 		"grid": grid,
+		"density": density,
 		"filters": filters,
 		"week_start": start.strftime("%d %B %Y"),
 		"week_end": end.strftime("%d %B %Y"),
