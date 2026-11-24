@@ -215,6 +215,11 @@ scheduler_events = {
 	"daily": [
 		"udshed.udshed.tasks.daily"
 	],
+	"cron": {
+		# Chaque dimanche à 23 h : les séances de la semaine non déclarées
+		# « Non fait » à la main passent à « Fait » (udshed/utils/pointage.py).
+		"0 23 * * 0": ["udshed.utils.pointage.tache_dimanche"],
+	},
 }
 
 # Testing

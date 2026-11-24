@@ -16,6 +16,7 @@
   "column_break_emails",
   "email_candidature_sender_name",
   "email_candidature_subject",
+  "devise",
   "configuration_des_paiements_par_grade",
   "tab_2_tab",
   "seuil_validation_licence",
@@ -121,6 +122,14 @@
     "default": "Accusé de réception de votre candidature - UDSHED"
   },
   {
+   "default": "XAF",
+   "description": "Devise des montants de vacations (statistiques financi\u00e8res).",
+   "fieldname": "devise",
+   "fieldtype": "Link",
+   "label": "Devise",
+   "options": "Currency"
+  },
+  {
     "fieldname": "configuration_des_paiements_par_grade",
    "fieldtype": "Table",
    "label": "Configuration des paiements par grade",
@@ -182,7 +191,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-07-30 22:50:52.654044",
+ "modified": "2026-11-25 09:05:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Udshed Setting",

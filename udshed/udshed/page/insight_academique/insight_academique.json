@@ -5,7 +5,7 @@
  "doctype": "Page",
  "icon": "liabilities",
  "idx": 0,
- "modified": "2026-02-23 04:49:47.141296",
+ "modified": "2026-11-25 09:10:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "insight-academique",
@@ -13,18 +13,21 @@
  "page_name": "insight-academique",
  "roles": [
   {
-   "role": "Teacher"
+   "role": "System Manager"
   },
   {
    "role": "Coordonateur"
   },
   {
-   "role": "System Manager"
+   "role": "Planning Manager"
+  },
+  {
+   "role": "Teacher"
   }
  ],
  "script": null,
  "standard": "Yes",
  "style": null,
  "system_page": 0,
- "title": "Insight Acad\u00e9mique"
+ "title": "Insight Académique"
 }

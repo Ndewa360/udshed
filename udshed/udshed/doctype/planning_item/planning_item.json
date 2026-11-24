@@ -18,7 +18,8 @@
   "period",
   "batiment",
   "salle",
-  "status"
+  "status",
+  "pointage_manuel"
  ],
  "fields": [
   {
@@ -80,18 +81,25 @@
    "reqd": 1
   },
   {
-   "default": "Fait",
+   "default": "Non fait",
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Non fait\nFait"
+   "options": "Non fait\nFait\nAnnul\u00e9e"
+  },
+  {
+   "default": "0",
+   "description": "Coch\u00e9 quand le statut a \u00e9t\u00e9 fix\u00e9 \u00e0 la main : le pointage automatique du dimanche (23 h) ne modifie alors pas la s\u00e9ance.",
+   "fieldname": "pointage_manuel",
+   "fieldtype": "Check",
+   "label": "Statut fix\u00e9 manuellement"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_calendar_and_gantt": 1,
  "links": [],
- "modified": "2026-11-20 03:15:28.910729",
+ "modified": "2026-11-25 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Planning Item",

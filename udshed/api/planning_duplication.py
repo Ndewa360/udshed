@@ -62,7 +62,9 @@ def _analyser(academic_year, filiere, niveau, semaine_source, semaine_cible, inc
 	ordre_periodes = {p["name"]: i for i, p in enumerate(periodes)}
 
 	seances = []
-	for s in sorted(_seances(academic_year, source, filiere, niveau),
+	# Les séances annulées de la semaine source ne sont pas recopiées.
+	source_seances = [s for s in _seances(academic_year, source, filiere, niveau) if s.get("status") != "Annulée"]
+	for s in sorted(source_seances,
 	                key=lambda r: (str(r["date"]), ordre_periodes.get(r["period"], 99))):
 		jour = planning_calendar.parse_date(s["date"]) + decalage
 		element = {
@@ -107,6 +109,8 @@ def _analyser(academic_year, filiere, niveau, semaine_source, semaine_cible, inc
 	# Récapitulatif de la semaine cible, créneau par créneau.
 	occupants = {}
 	for s in _seances(academic_year, cible, filiere, niveau):
+		if s.get("status") == "Annulée":
+			continue  # une séance annulée libère son créneau
 		cle = (str(planning_calendar.parse_date(s["date"])), s["period"])
 		occupants.setdefault(cle, []).append(s)
 	a_creer = {(e["date"], e["period"]): e for e in seances if e["action"] in ("a_creer", "sans_salle")}

@@ -19,3 +19,22 @@ class PlanningItem(Document):
 				salle=self.salle if self.mode != "En ligne" else None,
 				exclure=None if self.is_new() else self.name,
 			)
+
+		# Pointage : un statut changé à la main (Desk ou page planning) est
+		# « fixé manuellement » ; le pointage automatique du dimanche ne le
+		# modifiera plus. Le pointage automatique lui-même passe ce drapeau.
+		if self.is_new():
+			if not self.status:
+				self.status = "Non fait"
+			return
+		if self.has_value_changed("status") and not self.flags.pointage_automatique:
+			self.pointage_manuel = 1
+		elif (
+			self.has_value_changed("date") and not self.pointage_manuel
+			and self.status != "Annulée" and self.date
+		):
+			# Séance déplacée sans statut fixé à la main : son statut suit sa
+			# nouvelle date (une séance repoussée à plus tard redevient « Non fait »).
+			from udshed.utils.pointage import statut_automatique
+
+			self.status = statut_automatique(self.date)

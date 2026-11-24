@@ -12,3 +12,4 @@ udshed.patches.aligner_code_anonymat_copie
 udshed.patches.renumeroter_code_anonymat_an0001
 udshed.patches.normaliser_roles
 udshed.patches.nom_complet_migration
+udshed.patches.pointage_seances_futures

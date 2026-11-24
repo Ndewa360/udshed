@@ -123,11 +123,20 @@ window.Udshed.UI = {
                             ? `<span class="planning-item-mode" title="${this._escape(__("Séance commune avec « {0} »", [item.cours_planifie_label || item.cours]))}">🔗 ${__("commun")}</span>`
                             : "");
                         const courseData = this._escape(JSON.stringify({ item: item }));
+                        const etat = item.status === "Annulée" ? " annulee" : "";
+                        const pointage = item.status === "Fait"
+                            ? `<span class="planning-item-mode" title="${this._escape(__("Séance pointée : faite"))}">✓</span>`
+                            : item.status === "Annulée"
+                                ? `<span class="planning-item-mode">${__("Annulée")}</span>`
+                                : item.pointage_manuel
+                                    // « Non fait » déclaré : le pointage du dimanche ne la touchera pas.
+                                    ? `<span class="planning-item-mode" title="${this._escape(__("Déclarée non faite : pas de pointage automatique"))}">✗ ${__("non faite")}</span>`
+                                    : "";
                         return `
-                            <div class="planning-item ${css}" data-course="${courseData}">
+                            <div class="planning-item ${css}${etat}" data-course="${courseData}" ${etat ? 'style="opacity:.55;text-decoration:line-through"' : ""}>
                                 <div class="planning-item-head">
                                     <span class="planning-item-kind">${this._escape(item.type || "")}</span>
-                                    ${modeBadge}
+                                    ${modeBadge}${pointage}
                                 </div>
                                 <div class="planning-item-title">${this._escape(title)}</div>
                                 <div class="planning-item-details">

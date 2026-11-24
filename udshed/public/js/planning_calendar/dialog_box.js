@@ -184,7 +184,22 @@ window.Udshed.Dialogs = {
                     change() { dialog.refresh(); }
                 },
                 this._building_field(item.batiment_name || item.batiment, "salle"),
-                this._room_field(item.salle_name || item.salle)
+                this._room_field(item.salle_name || item.salle),
+                {
+                    // Pointage : par défaut la séance est pointée « Fait » automatiquement
+                    // le dimanche à 23 h. Un choix explicite fige le statut.
+                    fieldtype: "Select",
+                    label: __("Statut de la séance"),
+                    fieldname: "statut",
+                    options: [
+                        { value: "auto", label: __("Planifiée — pointée « Fait » automatiquement dimanche 23 h") },
+                        { value: "Fait", label: __("Fait") },
+                        { value: "Non fait", label: __("Non faite — ne pas pointer automatiquement") },
+                        { value: "Annulée", label: __("Annulée — libère le créneau") }
+                    ],
+                    default: item.pointage_manuel ? (item.status || "Non fait")
+                        : (item.status === "Annulée" ? "Annulée" : "auto")
+                }
             ],
             primary_action_label: __("Mettre à jour"),
             primary_action(values) {
@@ -203,7 +218,8 @@ window.Udshed.Dialogs = {
                         day_of_week: frappe.datetime.obj_to_str(day),
                         half_day: half_day,
                         filiere: filter.filiere || null,
-                        niveau: filter.niveau || null
+                        niveau: filter.niveau || null,
+                        statut: values.statut || null
                     },
                     callback: () => {
                         dialog.hide();

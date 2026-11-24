@@ -106,6 +106,8 @@ def seances_du_creneau(jour, period, exclure=None):
 	]
 	if exclure:
 		filters.append(["name", "!=", exclure])
+	# Une séance annulée libère le créneau (classe, enseignant, salle).
+	filters.append(["status", "!=", "Annulée"])
 	return frappe.get_all("Planning Item", filters=filters, fields=["name", "cours", "salle"])
 
 

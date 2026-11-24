@@ -125,6 +125,82 @@ class TestPlanning(IntegrationTestCase):
 		doc.mode = "Hybride"
 		doc.save(ignore_permissions=True)
 
+	def test_seance_annulee_libere_le_creneau(self):
+		doc = self.seance(self.cours_a1)
+		self.assertEqual(doc.status, "Non fait")  # plus « Fait » par défaut
+		doc.status = "Annulée"
+		doc.save(ignore_permissions=True)
+		self.seance(self.cours_a2)  # même classe, même créneau : désormais libre
+
+	def test_pointage_automatique_du_dimanche(self):
+		from frappe.utils import add_days
+
+		from udshed.utils import pointage
+
+		lundi = pointage.debut_semaine()
+		seance = lambda decalage: self.seance(self.cours_a1, jour=add_days(lundi, decalage)).name  # noqa: E731
+		auto = seance(0)                 # lundi de la semaine : planifiée
+		declaree = seance(1)             # mardi : déclarée « Non fait » à la main
+		annulee = seance(2)              # mercredi : annulée
+		suivante = seance(7)             # semaine suivante
+		rattrapage = seance(-7)          # semaine passée jamais traitée
+
+		planning_calendar.update_planning(
+			declaree, self.annee.name, self.cours_a1.name, "Cours Magistral (CM)", str(add_days(lundi, 1)),
+			self.matin, mode="En ligne", statut="Non fait",
+		)
+		self.assertEqual(frappe.db.get_value("Planning Item", declaree, "pointage_manuel"), 1)
+		doc = frappe.get_doc("Planning Item", annulee)
+		doc.status = "Annulée"
+		doc.save(ignore_permissions=True)
+
+		pointage.pointer_semaine()
+		statut = lambda n: frappe.db.get_value("Planning Item", n, "status")  # noqa: E731
+		self.assertEqual(statut(auto), "Fait")
+		self.assertEqual(statut(rattrapage), "Fait")
+		self.assertEqual(statut(declaree), "Non fait")   # choix explicite respecté
+		self.assertEqual(statut(annulee), "Annulée")
+		self.assertEqual(statut(suivante), "Non fait")
+
+	def test_statut_planifiee_et_seance_deplacee(self):
+		from frappe.utils import add_days
+
+		from udshed.utils import pointage
+
+		lundi = pointage.debut_semaine()
+		doc = self.seance(self.cours_a1, jour=add_days(lundi, -14))
+		pointage.pointer_semaine()
+		doc.reload()
+		self.assertEqual((doc.status, doc.pointage_manuel), ("Fait", 0))
+		# Repoussée à la semaine prochaine (Desk) : redevient « Non fait », toujours automatique.
+		doc.date = add_days(lundi, 9)
+		doc.save(ignore_permissions=True)
+		self.assertEqual((doc.status, doc.pointage_manuel), ("Non fait", 0))
+		# Retour au pointage automatique après un choix manuel.
+		planning_calendar.update_planning(
+			doc.name, self.annee.name, self.cours_a1.name, "Cours Magistral (CM)", str(add_days(lundi, 9)),
+			self.matin, mode="En ligne", statut="Annulée",
+		)
+		planning_calendar.update_planning(
+			doc.name, self.annee.name, self.cours_a1.name, "Cours Magistral (CM)", str(add_days(lundi, 9)),
+			self.matin, mode="En ligne", statut="auto",
+		)
+		doc.reload()
+		self.assertEqual((doc.status, doc.pointage_manuel), ("Non fait", 0))
+
+	def test_pointage_fait_refuse_pour_une_seance_future(self):
+		doc = self.seance(self.cours_a1, jour="2099-01-05")
+		with self.assertRaises(frappe.ValidationError):
+			planning_calendar.update_planning(
+				doc.name, self.annee.name, self.cours_a1.name, "Cours Magistral (CM)", "2099-01-05", self.matin,
+				mode="En ligne", statut="Fait",
+			)
+		planning_calendar.update_planning(
+			doc.name, self.annee.name, self.cours_a1.name, "Cours Magistral (CM)", "2099-01-05", self.matin,
+			mode="En ligne", statut="Annulée",
+		)
+		self.assertEqual(frappe.db.get_value("Planning Item", doc.name, "status"), "Annulée")
+
 	# ------------------------------------------------------------------ #
 	#  Droits
 	# ------------------------------------------------------------------ #

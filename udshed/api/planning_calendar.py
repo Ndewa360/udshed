@@ -160,6 +160,7 @@ def _attach_progress(rows):
 			"cours": ["in", unites],
 			"academic_year": ["in", years],
 			"type": ["in", sorted(PROGRESS_TYPES)],
+			"status": ["!=", "Annulée"],
 		},
 		fields=["name", "cours", "academic_year", "date", "period", "creation"],
 	)
@@ -257,6 +258,7 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 				PlanningItem.date,
 				PlanningItem.period,
 				PlanningItem.mode,
+				PlanningItem.status,
 				PlanningItem.academic_year,
 				CourseNiveauFiliere.niveau,
 				CourseNiveauFiliere.filiere,
@@ -311,6 +313,15 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 			doc["batiment"] = _batiment_code(doc.batiment, room_cache)
 			doc["cours_affiche"] = doc.cours
 		rows = list(seen.values())
+		# Statut fixé à la main (pointage) : affiché et repris dans la fenêtre de modification.
+		if rows and frappe.db.has_column("Planning Item", "pointage_manuel"):
+			manuels = set(frappe.get_all(
+				"Planning Item",
+				filters={"name": ["in", [r.name for r in rows]], "pointage_manuel": 1},
+				pluck="name",
+			))
+			for row in rows:
+				row["pointage_manuel"] = 1 if row.name in manuels else 0
 		if filiere and niveau:
 			_afficher_selon_la_grille(rows, academic_year, filiere, niveau)
 		_attach_progress(rows)
@@ -451,7 +462,7 @@ def create_planning(academic_year, cours, course_type, day_of_week, half_day, ba
 
 
 @frappe.whitelist()
-def update_planning(planning_item_name, academic_year, cours, course_type, day_of_week, half_day, batiment=None, salle=None, mode="En présentiel", filiere=None, niveau=None):
+def update_planning(planning_item_name, academic_year, cours, course_type, day_of_week, half_day, batiment=None, salle=None, mode="En présentiel", filiere=None, niveau=None, statut=None):
 	try:
 		planning_item = frappe.get_doc("Planning Item", planning_item_name)
 		period = _resolve_period(half_day)
@@ -469,6 +480,22 @@ def update_planning(planning_item_name, academic_year, cours, course_type, day_o
 		planning_item.period = period
 		planning_item.academic_year = academic_year
 		planning_item.mode = mode
+		if statut:
+			from udshed.utils import pointage
+
+			if statut == pointage.STATUT_AUTO:
+				# « Planifiée » : la séance redevient gérée par le pointage du dimanche.
+				planning_item.flags.pointage_automatique = True
+				planning_item.pointage_manuel = 0
+				planning_item.status = pointage.statut_automatique(day_date)
+			elif statut in pointage.STATUTS:
+				if statut == "Fait" and day_date > frappe.utils.getdate():
+					_throw("Une séance future ne peut pas être pointée « Fait ».")
+				# Choix explicite (même « Non fait » déjà en place) : fixé à la main.
+				planning_item.status = statut
+				planning_item.pointage_manuel = 1
+			else:
+				_throw("Statut de séance invalide : {0}".format(statut))
 		planning_item.batiment = batiment
 		planning_item.salle = salle
 		with planning_permission.as_coordinator(scope):

@@ -372,6 +372,7 @@ def _verifier_programmation(academic_year, teaching_unit, type_dexamen=None):
         .where(
             (planning.cours.isin(list(groupe_du_cours(teaching_unit))))
             & (planning.academic_year == academic_year)
+            & (planning.status.isnull() | (planning.status != "Annulée"))
         )
     )
     if type_dexamen:

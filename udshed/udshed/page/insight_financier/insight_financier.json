@@ -5,7 +5,7 @@
  "doctype": "Page",
  "icon": "chart-no-axes-combined",
  "idx": 0,
- "modified": "2026-02-23 04:54:49.197641",
+ "modified": "2026-11-25 09:10:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "insight-financier",
@@ -13,13 +13,16 @@
  "page_name": "insight-financier",
  "roles": [
   {
-   "role": "Teacher"
+   "role": "System Manager"
+  },
+  {
+   "role": "Comptable"
   },
   {
    "role": "Coordonateur"
   },
   {
-   "role": "System Manager"
+   "role": "Teacher"
   }
  ],
  "script": null,
