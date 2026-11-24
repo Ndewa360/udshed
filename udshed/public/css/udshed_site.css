@@ -1,5 +1,5 @@
 /* Site vitrine Udshed (/udshed) — styles isolés sous body.uds-site :
-   le CSS global du portail (reinscription.css) redéfinit body, h1, a, .btn… */
+   le CSS global du portail (udshed_web.bundle.css) redéfinit body, h1, a, .btn… */
 
 body.uds-site {
 	--uds-bleu: #1f3c88;

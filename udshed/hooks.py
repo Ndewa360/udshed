@@ -83,16 +83,20 @@ fixtures = [
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/udshed/css/gestion_des_niveaux.v3.css"
+# Bundles Frappe (*.bundle.*) : `bench build` leur donne un nom versionné.
+# Un chemin brut (/assets/udshed/js/udshed.js) était inclus SANS version et
+# restait en cache en production : les navigateurs gardaient un ancien
+# udshed.js sans Udshed.Loading (« Udshed.Loading is undefined »).
+app_include_css = "udshed_desk.bundle.css"
 # Sortable (glisser-déposer des niveaux) est déjà fourni par Frappe
 # (window.Sortable, libs.bundle.js) : aucun chargement depuis un CDN externe.
 app_include_js = [
-	"/assets/udshed/js/udshed.js"
+	"udshed.bundle.js"
 ]
 
 # include js, css files in header of web template
-web_include_css = "/assets/udshed/css/reinscription.css"
-web_include_js = "/assets/udshed/js/udshed.js"
+web_include_css = "udshed_web.bundle.css"
+web_include_js = "udshed.bundle.js"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "udshed/public/scss/website"

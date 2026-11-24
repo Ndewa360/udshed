@@ -526,8 +526,6 @@ tbody tr:hover { background: var(--bg-subtle); }
   color: var(--text-muted);
   margin-top: 4px;
 }
-  margin-top: 2px;
-}
 
 /* ---------- Cartes raccourcis ---------- */
 .shortcut-card {
