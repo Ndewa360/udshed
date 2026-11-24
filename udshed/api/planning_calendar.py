@@ -77,49 +77,6 @@ def _level_label(niveau):
 	return label or niveau
 
 
-def _check_conflicts(unit_info, day_date, period, salle, exclude_name=None):
-	filters = {"date": day_date, "period": period}
-	if exclude_name:
-		filters["name"] = ["!=", exclude_name]
-	existing = frappe.get_all(
-		"Planning Item",
-		filters=filters,
-		fields=["name", "cours", "salle", "batiment"],
-	)
-	for row in existing:
-		other = _unit_info(row.cours)
-		common_levels = {
-			(level.filiere, level.niveau)
-			for level in unit_info["levels"]
-		} & {
-			(level.filiere, level.niveau)
-			for level in other["levels"]
-		}
-		if common_levels:
-			labels = ", ".join(
-				"{0} {1}".format(filiere, _level_label(niveau))
-				for filiere, niveau in sorted(common_levels)
-			)
-			_throw(
-				"Conflit de planning : les classes {0} sont déjà occupées par « {1} » sur ce créneau.".format(
-					labels, other["intitule"]
-				)
-			)
-		common_teachers = set(unit_info["teachers"]) & set(other["teachers"])
-		if common_teachers:
-			_throw(
-				"Conflit de planning : les enseignants {0} sont déjà programmés sur ce créneau.".format(
-					", ".join(sorted(common_teachers))
-				)
-			)
-		if salle and row.salle == salle:
-			_throw(
-				"Conflit de salle : « {0} » est déjà utilisée par « {1} » sur ce créneau.".format(
-					salle, other["intitule"]
-				)
-			)
-
-
 def _minutes(value):
 	if isinstance(value, timedelta):
 		return int(value.total_seconds() // 60)
@@ -295,12 +252,20 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 			)
 			.distinct()
 		)
+		condition_classe = None
 		if faculty:
-			query = query.where(FieldOfStudy.faculte == faculty)
+			condition_classe = FieldOfStudy.faculte == faculty
 		if filiere:
-			query = query.where(CourseNiveauFiliere.filiere == filiere)
+			c = CourseNiveauFiliere.filiere == filiere
+			condition_classe = c if condition_classe is None else condition_classe & c
 		if niveau:
-			query = query.where(CourseNiveauFiliere.niveau == niveau)
+			c = CourseNiveauFiliere.niveau == niveau
+			condition_classe = c if condition_classe is None else condition_classe & c
+		if condition_classe is not None:
+			# Séances des cours liés (même cours, autre intitulé, autre grille) :
+			# elles occupent aussi cette classe et doivent y apparaître.
+			lies = _cours_lies_a_la_classe(academic_year, filiere, niveau) if (filiere and niveau) else []
+			query = query.where(condition_classe | PlanningItem.cours.isin(lies) if lies else condition_classe)
 		if teacher:
 			query = query.where(CourseEnseignant.enseignant == teacher)
 
@@ -336,6 +301,25 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 		_throw("Erreur lors du chargement du planning.")
 
 
+def _cours_lies_a_la_classe(academic_year, filiere, niveau):
+	"""Cours d'autres grilles liés (groupe de cours commun) à un cours de la classe."""
+	if not frappe.get_meta("Teaching Unit").has_field("groupe_cours_commun"):
+		return []
+	groupes = frappe.db.sql_list(
+		"""
+		SELECT DISTINCT tu.groupe_cours_commun
+		FROM `tabTeaching Unit` tu
+		INNER JOIN `tabCourse Field of study level item` l ON l.parent = tu.name AND l.parenttype = 'Teaching Unit'
+		WHERE tu.academic_year = %s AND l.filiere = %s AND l.niveau = %s
+		  AND IFNULL(tu.groupe_cours_commun, '') != ''
+		""",
+		(academic_year, filiere, niveau),
+	)
+	if not groupes:
+		return []
+	return frappe.get_all("Teaching Unit", filters={"groupe_cours_commun": ["in", groupes]}, pluck="name")
+
+
 def _format_teacher(teacher, cache):
 	if not teacher:
 		return ""
@@ -368,24 +352,24 @@ def _batiment_code(batiment, cache):
 	return cache[key]
 
 
+def _verifier_droit_planifier(academic_year, teaching_unit, filiere=None, niveau=None):
+	"""Contrôle d'accès pour la classe effectivement planifiée (tronc commun compris)."""
+	faculty = frappe.db.get_value("Field of study", filiere, "faculte") if filiere else None
+	return planning_permission.assert_can_plan(academic_year, faculty, filiere, niveau, teaching_unit)
+
+
 @frappe.whitelist()
-def create_planning(academic_year, cours, course_type, day_of_week, half_day, batiment=None, salle=None, mode="En présentiel"):
+def create_planning(academic_year, cours, course_type, day_of_week, half_day, batiment=None, salle=None, mode="En présentiel", filiere=None, niveau=None):
+	"""Crée une séance. `filiere` / `niveau` : classe affichée dans la page (celle
+	que l'utilisateur planifie) ; les conflits sont contrôlés par Planning Item."""
 	try:
 		period = _resolve_period(half_day)
 		day_date = parse_date(day_of_week)
 		teaching_unit = course.get_single_teaching_unit(cours, academic_year)
 		unit_info = _unit_info(teaching_unit.name)
-		faculty = frappe.db.get_value("Field of study", unit_info["levels"][0].filiere, "faculte") if unit_info["levels"] else None
-		scope = planning_permission.assert_can_plan(
-			academic_year,
-			faculty,
-			unit_info["levels"][0].filiere if unit_info["levels"] else None,
-			unit_info["levels"][0].niveau if unit_info["levels"] else None,
-			teaching_unit.name,
-		)
+		scope = _verifier_droit_planifier(academic_year, teaching_unit.name, filiere, niveau)
 		if not unit_info["teachers"]:
 			_throw("Le cours « {0} » n'a pas d'enseignant assigné.".format(unit_info["intitule"]))
-		_check_conflicts(unit_info, day_date, period, salle)
 		with planning_permission.as_coordinator(scope):
 			planning = frappe.get_doc({
 				"doctype": "Planning Item",
@@ -408,24 +392,18 @@ def create_planning(academic_year, cours, course_type, day_of_week, half_day, ba
 
 
 @frappe.whitelist()
-def update_planning(planning_item_name, academic_year, cours, course_type, day_of_week, half_day, batiment=None, salle=None, mode="En présentiel"):
+def update_planning(planning_item_name, academic_year, cours, course_type, day_of_week, half_day, batiment=None, salle=None, mode="En présentiel", filiere=None, niveau=None):
 	try:
 		planning_item = frappe.get_doc("Planning Item", planning_item_name)
 		period = _resolve_period(half_day)
 		day_date = parse_date(day_of_week)
 		teaching_unit = course.get_single_teaching_unit(cours, academic_year)
 		unit_info = _unit_info(teaching_unit.name)
-		faculty = frappe.db.get_value("Field of study", unit_info["levels"][0].filiere, "faculte") if unit_info["levels"] else None
-		scope = planning_permission.assert_can_plan(
-			academic_year,
-			faculty,
-			unit_info["levels"][0].filiere if unit_info["levels"] else None,
-			unit_info["levels"][0].niveau if unit_info["levels"] else None,
-			teaching_unit.name,
-		)
+		# Droit sur la séance existante ET sur le cours de remplacement.
+		_verifier_droit_planifier(planning_item.academic_year, planning_item.cours, filiere, niveau)
+		scope = _verifier_droit_planifier(academic_year, teaching_unit.name, filiere, niveau)
 		if not unit_info["teachers"]:
 			_throw("Le cours « {0} » n'a pas d'enseignant assigné.".format(unit_info["intitule"]))
-		_check_conflicts(unit_info, day_date, period, salle, planning_item_name)
 		planning_item.cours = teaching_unit.name
 		planning_item.type = course_type
 		planning_item.date = day_date
@@ -445,23 +423,10 @@ def update_planning(planning_item_name, academic_year, cours, course_type, day_o
 
 
 @frappe.whitelist()
-def delete_planning(planning_name):
+def delete_planning(planning_name, filiere=None, niveau=None):
 	try:
 		planning = frappe.get_doc("Planning Item", planning_name)
-		unit = frappe.db.get_value("Teaching Unit", planning.cours, "name")
-		levels = frappe.get_all(
-			"Course Field of study level item",
-			filters={"parent": unit},
-			fields=["filiere", "niveau"],
-		) if unit else []
-		faculty = frappe.db.get_value("Field of study", levels[0].filiere, "faculte") if levels else None
-		scope = planning_permission.assert_can_plan(
-			planning.academic_year,
-			faculty,
-			levels[0].filiere if levels else None,
-			levels[0].niveau if levels else None,
-			unit,
-		)
+		scope = _verifier_droit_planifier(planning.academic_year, planning.cours, filiere, niveau)
 		with planning_permission.as_coordinator(scope):
 			planning.delete(ignore_permissions=True)
 		return True

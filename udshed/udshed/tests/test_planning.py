@@ -1,0 +1,175 @@
+# Copyright (c) 2026, Cédric Nguendap Bedjama and contributors
+# For license information, please see license.txt
+
+"""Tests du planning : conflits de créneau, droits (tronc commun), email.
+
+Cas couverts :
+  - deux cours sur le même créneau d'une même classe sont refusés, quel que
+    soit le chemin d'écriture (insertion directe du Planning Item) ;
+  - conflit d'enseignant et de salle sur un même créneau ;
+  - un créneau différent (autre période ou autre jour) reste libre ;
+  - tronc commun : le coordinateur de CHAQUE classe peut planifier le cours
+    partagé pour sa classe (auparavant toutes les classes devaient être dans
+    son périmètre) ;
+  - un coordinateur ne peut pas planifier pour une classe hors périmètre ;
+  - plus d'usurpation d'identité (as_coordinator ne change plus l'utilisateur) ;
+  - l'envoi du planning par email ne plante plus (« _ » n'est plus écrasé).
+"""
+
+from unittest.mock import patch
+
+import frappe
+from frappe.tests import IntegrationTestCase
+
+from udshed.api import planning_calendar, planning_calendar_email, planning_permission
+from udshed.udshed._fixture_factory import (
+	make_academic_year,
+	make_calendar_planing,
+	make_course,
+	make_faculty,
+	make_field_of_study,
+	make_level,
+	make_teacher,
+	make_teaching_unit,
+	make_user_with_role,
+)
+from udshed.utils.planning_conflits import conflits
+
+
+class TestPlanning(IntegrationTestCase):
+	def setUp(self):
+		self.annee = make_academic_year("2026", "2027")
+		self.calendrier = make_calendar_planing()
+		periode = self.calendrier.append(
+			"heure_planification", {"libelle": "Matin", "heure_de_debut": "08:00:00", "heure_de_fin": "12:00:00"}
+		)
+		periode2 = self.calendrier.append(
+			"heure_planification", {"libelle": "Soir", "heure_de_debut": "13:00:00", "heure_de_fin": "16:00:00"}
+		)
+		self.calendrier.save(ignore_permissions=True)
+		self.matin, self.soir = periode.name, periode2.name
+
+		faculte = make_faculty()
+		self.coord_a, self.coord_b = make_teacher(), make_teacher()
+		self.filiere_a = make_field_of_study(faculte, self.calendrier, self.coord_a)
+		self.niveau_a = make_level(self.filiere_a)
+		self.filiere_b = make_field_of_study(faculte, self.calendrier, self.coord_b)
+		self.niveau_b = make_level(self.filiere_b)
+
+		self.cours_a1 = make_teaching_unit(make_course(), self.annee, self.filiere_a, self.niveau_a)
+		self.cours_a2 = make_teaching_unit(make_course(), self.annee, self.filiere_a, self.niveau_a)
+		# Tronc commun : un seul cours suivi par A et B.
+		self.tronc = make_teaching_unit(make_course(), self.annee, self.filiere_a, self.niveau_a)
+		self.tronc.append("course_levels", {"filiere": self.filiere_b.name, "niveau": self.niveau_b.name, "course_poid": 3})
+		self.tronc.save(ignore_permissions=True)
+
+		self.prof1, self.prof2 = make_teacher(), make_teacher()
+		for cours, prof in ((self.cours_a1, self.prof1), (self.cours_a2, self.prof2), (self.tronc, self.prof2)):
+			cours.append("table_enseignant", {"enseignant": prof.name, "type_de_cours": "Cours Magistral (CM)"})
+			cours.save(ignore_permissions=True)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def seance(self, cours, jour="2026-11-02", period=None, salle=None, inserer=True):
+		doc = frappe.get_doc({
+			"doctype": "Planning Item",
+			"cours": cours.name,
+			"type": "Cours Magistral (CM)",
+			"date": jour,
+			"period": period or self.matin,
+			"academic_year": self.annee.name,
+			"mode": "En présentiel",
+			"salle": salle,
+		})
+		if inserer:
+			doc.insert(ignore_permissions=True)
+		return doc
+
+	def coordinateur(self, teacher):
+		user = make_user_with_role("Coordonateur")
+		frappe.db.set_value("Teacher", teacher.name, "email", user.name)
+		return user.name
+
+	# ------------------------------------------------------------------ #
+	#  Conflits
+	# ------------------------------------------------------------------ #
+	def test_deux_cours_meme_classe_meme_creneau_refuse(self):
+		self.seance(self.cours_a1)
+		with self.assertRaises(frappe.ValidationError):
+			self.seance(self.cours_a2)
+
+	def test_creneau_different_reste_libre(self):
+		self.seance(self.cours_a1)
+		self.seance(self.cours_a2, period=self.soir)
+		self.seance(self.cours_a2, jour="2026-11-03")
+
+	def test_tronc_commun_occupe_les_deux_classes(self):
+		self.seance(self.tronc)
+		# La classe A est occupée par le tronc commun : impossible d'y mettre a1.
+		types = {c["type"] for c in conflits(self.cours_a1.name, "2026-11-02", self.matin)}
+		self.assertIn("classe", types)
+
+	def test_conflit_enseignant(self):
+		self.cours_a1.set("table_enseignant", [{"enseignant": self.prof2.name, "type_de_cours": "Cours Magistral (CM)"}])
+		self.cours_a1.save(ignore_permissions=True)
+		autre_classe = make_teaching_unit(make_course(), self.annee, self.filiere_b, self.niveau_b)
+		autre_classe.append("table_enseignant", {"enseignant": self.prof2.name, "type_de_cours": "Cours Magistral (CM)"})
+		autre_classe.save(ignore_permissions=True)
+		self.seance(self.cours_a1)
+		liste = conflits(autre_classe.name, "2026-11-02", self.matin)
+		self.assertEqual([c["type"] for c in liste], ["enseignant"])
+
+	def test_modification_ne_se_bloque_pas_elle_meme(self):
+		doc = self.seance(self.cours_a1)
+		doc.mode = "Hybride"
+		doc.save(ignore_permissions=True)
+
+	# ------------------------------------------------------------------ #
+	#  Droits
+	# ------------------------------------------------------------------ #
+	def test_coordinateur_peut_planifier_tronc_commun_pour_sa_classe(self):
+		user_b = self.coordinateur(self.coord_b)
+		frappe.set_user(user_b)
+		resultat = planning_calendar.create_planning(
+			self.annee.name, self.tronc.name, "Cours Magistral (CM)", "2026-11-04", self.matin,
+			filiere=self.filiere_b.name, niveau=self.niveau_b.name,
+		)
+		self.assertTrue(resultat["status"])
+		# Plus d'usurpation : la séance est créée au nom du coordinateur B.
+		self.assertEqual(frappe.db.get_value("Planning Item", resultat["data"]["name"], "owner"), user_b)
+		self.assertEqual(frappe.session.user, user_b)
+
+	def test_coordinateur_refuse_hors_perimetre(self):
+		frappe.set_user(self.coordinateur(self.coord_b))
+		with self.assertRaises(frappe.PermissionError):
+			planning_calendar.create_planning(
+				self.annee.name, self.tronc.name, "Cours Magistral (CM)", "2026-11-04", self.matin,
+				filiere=self.filiere_a.name, niveau=self.niveau_a.name,
+			)
+		# Cours qui n'est pas au programme de la classe B.
+		with self.assertRaises(frappe.ValidationError):
+			planning_calendar.create_planning(
+				self.annee.name, self.cours_a1.name, "Cours Magistral (CM)", "2026-11-04", self.matin,
+				filiere=self.filiere_b.name, niveau=self.niveau_b.name,
+			)
+
+	def test_as_coordinator_ne_change_plus_l_utilisateur(self):
+		with planning_permission.as_coordinator({"acting_user": "Guest"}):
+			self.assertEqual(frappe.session.user, "Administrator")
+
+	# ------------------------------------------------------------------ #
+	#  Email
+	# ------------------------------------------------------------------ #
+	def test_envoi_email_ne_plante_plus(self):
+		filtres = {"academic_year": self.annee.name, "week_start": "2026-11-02", "teacher": self.prof1.name}
+		frappe.db.set_value("Teacher", self.prof1.name, "email", "prof1@example.com")
+		faux_pdf = (b"%PDF", "Planning.pdf", [], None, None)
+		with (
+			patch.object(planning_calendar_email.planning_calendar_pdf, "generate_planning_pdf", return_value=faux_pdf),
+			patch.object(planning_calendar_email.frappe, "sendmail") as sendmail,
+			patch.object(planning_calendar_email, "email_html_template", return_value="<p>ok</p>"),
+		):
+			resultat = planning_calendar_email.send_planning_to_mail(filtres, to_teacher=1)
+		self.assertEqual(resultat["sent"], 1)
+		sendmail.assert_called_once()

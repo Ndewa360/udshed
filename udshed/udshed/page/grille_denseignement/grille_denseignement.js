@@ -39,6 +39,28 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
         }, 'download');
         Udshed.TeachingGrid.UtilsUi.update_page_actions(filters, btnExporter, btnImporter, canManageGrid);
 
+        // Édition : ajout / retrait de cours (le contenu se modifie dans le tableau).
+        const grilleChoisie = () => {
+            if (Udshed.TeachingGrid.UtilsUi.isValideFilterForGrid(filters)) return true;
+            Udshed.Messages.validation(__("Sélectionnez l'année, la faculté, la filière, le niveau et le semestre."));
+            return false;
+        };
+        if (canManageGrid) {
+            page.add_inner_button(__("Ajouter un cours"), () => {
+                if (grilleChoisie()) Udshed.TeachingGrid.Dialog.open_add_course_dialog(filters, () => teaching_grid.refresh());
+            });
+            page.add_inner_button(__("Cours communs"), () => {
+                if (grilleChoisie()) {
+                    Udshed.TeachingGrid.Dialog.open_link_courses_dialog(filters, teaching_grid.courses_list(), () => teaching_grid.refresh());
+                }
+            });
+            page.add_inner_button(__("Retirer un cours"), () => {
+                if (grilleChoisie()) {
+                    Udshed.TeachingGrid.Dialog.open_delete_course_dialog(filters, teaching_grid.courses_list(), () => teaching_grid.refresh());
+                }
+            });
+        }
+
         function update_grid() {
             if (Udshed.TeachingGrid.UtilsUi.isValideFilterForGrid(filters)) {
                 teaching_grid.load_data(filters);

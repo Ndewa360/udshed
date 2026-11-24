@@ -23,33 +23,18 @@ def _current_academic_year():
 	return frappe.db.get_single_value("Udshed Setting", "current_year")
 
 
-def _coordinator_user(niveau):
-	if not niveau:
-		return None
-	teacher_name = frappe.db.get_value("Field of study Level", niveau, "coordonateur")
-	if not teacher_name:
-		return None
-	email = frappe.db.get_value("Teacher", teacher_name, "email")
-	if not email:
-		return None
-	user = frappe.db.get_value("User", {"email": email}, "name")
-	if not user or not frappe.db.get_value("User", user, "enabled"):
-		return None
-	return user
-
-
 @contextmanager
 def as_coordinator(scope):
-	acting_user = (scope or {}).get("acting_user")
-	if not acting_user or acting_user == frappe.session.user:
-		yield
-		return
-	previous_user = frappe.session.user
-	try:
-		frappe.set_user(acting_user)
-		yield
-	finally:
-		frappe.set_user(previous_user)
+	"""Conservé pour compatibilité : n'usurpe plus aucune identité.
+
+	L'ancienne version appelait `frappe.set_user(coordinateur)` en pleine
+	requête : Frappe réinitialise alors `session.sid`, `session.data`,
+	`form_dict` et le cache, et la « restauration » ne rétablissait ni le vrai
+	sid ni la session. L'historique (owner / modified_by) attribuait en plus
+	l'action au coordinateur au lieu de son auteur réel. Les écritures se font
+	désormais au nom de l'utilisateur connecté (déjà autorisé par assert_can_plan).
+	"""
+	yield
 
 
 def ensure_planning_manager_role(teacher_name):
@@ -289,33 +274,47 @@ def assert_can_plan(academic_year=None, faculty=None, filiere=None, niveau=None,
 		return _normalize_filters(scope, academic_year, faculty, filiere, niveau, None, require_filters)
 
 	if teaching_unit:
-		unit = frappe.db.get_value("Teaching Unit", teaching_unit, ["name", "academic_year"], as_dict=True)
-		if not unit:
-			frappe.throw(_("Unité d'enseignement introuvable."), frappe.ValidationError)
-		if teaching_unit not in scope["teaching_units"]:
-			frappe.throw(_("Accès refusé : cette unité d'enseignement est hors de votre périmètre."), frappe.PermissionError)
-		levels = frappe.get_all(
-			"Course Field of study level item",
-			filters={"parent": teaching_unit},
-			fields=["filiere", "niveau"],
-		)
-		if not levels:
-			frappe.throw(_("Accès refusé : cette unité d'enseignement n'est rattachée à aucun niveau."), frappe.PermissionError)
-		academic_year = academic_year or unit.academic_year
-		filiere = filiere or levels[0].filiere
-		niveau = niveau or levels[0].niveau
-		if any(
-			str(row.filiere) not in {str(value) for value in scope["filieres"]}
-			or str(row.niveau) not in {str(value) for value in scope["niveaux"]}
-			for row in levels
-		):
-			frappe.throw(_("Accès refusé : cette unité d'enseignement est hors de votre périmètre."), frappe.PermissionError)
+		academic_year, filiere, niveau = _classe_planifiee(scope, teaching_unit, academic_year, filiere, niveau)
 
 	_normalize_filters(scope, academic_year, faculty, filiere, niveau, None, require_filters)
 	scope["acting_user"] = scope["user"]
-	if scope["filters"]["niveau"]:
-		scope["acting_user"] = _coordinator_user(scope["filters"]["niveau"]) or scope["user"]
 	return scope
+
+
+def _classe_planifiee(scope, teaching_unit, academic_year, filiere, niveau):
+	"""Classe (filière, niveau) pour laquelle l'utilisateur agit sur ce cours.
+
+	Un cours de tronc commun appartient à plusieurs classes, souvent gérées par
+	des coordinateurs différents. Il suffit que la classe planifiée soit dans le
+	périmètre de l'utilisateur et suive ce cours (cours liés compris) ;
+	auparavant TOUTES les classes du cours devaient l'être, ce qui empêchait
+	chaque coordinateur de planifier le tronc commun.
+	"""
+	from udshed.utils.planning_conflits import classes_du_cours
+
+	unit = frappe.db.get_value("Teaching Unit", teaching_unit, ["name", "academic_year"], as_dict=True)
+	if not unit:
+		frappe.throw(_("Unité d'enseignement introuvable."), frappe.ValidationError)
+	classes = classes_du_cours(teaching_unit)
+	if not classes:
+		frappe.throw(_("Ce cours n'est rattaché à aucune classe."), frappe.ValidationError)
+
+	niveaux_perimetre = {str(n) for n in scope["niveaux"]}
+	if niveau:
+		if not any(str(n) == str(niveau) for _f, n in classes):
+			frappe.throw(
+				_("Ce cours n'est pas au programme de la classe sélectionnée."), frappe.ValidationError
+			)
+		filiere = filiere or next(f for f, n in classes if str(n) == str(niveau))
+	else:
+		dans_perimetre = sorted((f, n) for f, n in classes if n in niveaux_perimetre)
+		if not dans_perimetre:
+			frappe.throw(
+				_("Accès refusé : ce cours n'est rattaché à aucune classe de votre périmètre."),
+				frappe.PermissionError,
+			)
+		filiere, niveau = dans_perimetre[0]
+	return academic_year or unit.academic_year, filiere, niveau
 
 
 def assert_can_manage_grid(academic_year=None, faculty=None, filiere=None, niveau=None, semestre=None, user=None):

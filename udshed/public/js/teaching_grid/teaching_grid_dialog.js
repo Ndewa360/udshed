@@ -139,103 +139,374 @@ update_teacher_preview_from_grid(courseDocName,teachingUnitName, dialog) {
     )
 },
    	 
-show_import_dialog(filters,onAfterImported= (data)=>{}) {
-    
-    var d = new frappe.ui.Dialog({
+open_add_course_dialog(filters, onDone = () => {}) {
+    const d = new frappe.ui.Dialog({
+        title: __("Ajouter un cours à la grille"),
+        fields: [
+            { fieldtype: "HTML", options: `<div class="text-muted small">${__("Si le code existe déjà pour l'année, le cours est rattaché à cette classe (tronc commun) avec ses propres crédits.")}</div>` },
+            { fieldtype: "Data", fieldname: "code", label: __("Code du cours"), reqd: 1 },
+            { fieldtype: "Data", fieldname: "intitule_cours", label: __("Intitulé") },
+            { fieldtype: "Float", fieldname: "credits", label: __("Crédits (pour cette classe)"), reqd: 1, default: 3 },
+            { fieldtype: "Column Break" },
+            { fieldtype: "Select", fieldname: "ue_code", label: __("UE") },
+            { fieldtype: "Data", fieldname: "ue_intitule", label: __("Intitulé de la nouvelle UE"),
+              depends_on: "eval:doc.ue_code==='__nouvelle__'" },
+            { fieldtype: "Data", fieldname: "ue_nouveau_code", label: __("Code de la nouvelle UE"),
+              depends_on: "eval:doc.ue_code==='__nouvelle__'" },
+            { fieldtype: "Section Break", label: __("Volume horaire") },
+            { fieldtype: "Int", fieldname: "nombre_dheure_cm", label: "CM", default: 0 },
+            { fieldtype: "Int", fieldname: "nombre_dheure_td", label: "TD", default: 0 },
+            { fieldtype: "Column Break" },
+            { fieldtype: "Int", fieldname: "nombre_dheure_tp", label: "TP", default: 0 },
+            { fieldtype: "Int", fieldname: "nombre_dheure_tpe", label: "TPE", default: 0 },
+            { fieldtype: "Section Break" },
+            { fieldtype: "HTML", fieldname: "coherence" },
+        ],
+        primary_action_label: __("Ajouter"),
+        primary_action(v) {
+            const nouvelleUe = v.ue_code === "__nouvelle__";
+            frappe.call({
+                method: "udshed.api.teaching_grid.ajouter_cours",
+                args: {
+                    ...filters,
+                    code: v.code,
+                    intitule_cours: v.intitule_cours,
+                    credits: v.credits,
+                    ue_code: nouvelleUe ? v.ue_nouveau_code : v.ue_code,
+                    ue_intitule: nouvelleUe ? v.ue_intitule : null,
+                    nombre_dheure_cm: v.nombre_dheure_cm, nombre_dheure_td: v.nombre_dheure_td,
+                    nombre_dheure_tp: v.nombre_dheure_tp, nombre_dheure_tpe: v.nombre_dheure_tpe,
+                },
+                freeze: true,
+                callback: (r) => {
+                    const res = r.message || {};
+                    d.hide();
+                    Udshed.Messages.success(res.rattache ? __("Cours existant rattaché à la classe.") : __("Cours ajouté."));
+                    if (res.avertissement) Udshed.Messages.warning(res.avertissement);
+                    onDone();
+                },
+                error: (err) => Udshed.Messages.error(err, __("Ajout impossible")),
+            });
+        },
+    });
+
+    // Rappel en direct de la règle 1 crédit ≈ 10-15 h (CM + TD + TP).
+    const majCoherence = () => {
+        const v = d.get_values(true) || {};
+        const credits = Number(v.credits) || 0;
+        const heures = (v.nombre_dheure_cm || 0) + (v.nombre_dheure_td || 0) + (v.nombre_dheure_tp || 0);
+        const ok = credits > 0 && heures >= credits * 10 && heures <= credits * 15;
+        d.fields_dict.coherence.$wrapper.html(
+            `<div class="small ${ok ? "text-success" : "text-warning"}">${__("Norme : {0} à {1} h de CM+TD+TP pour {2} crédit(s) — saisi : {3} h", [credits * 10, credits * 15, credits, heures])}</div>`
+        );
+    };
+    ["credits", "nombre_dheure_cm", "nombre_dheure_td", "nombre_dheure_tp"].forEach((f) => {
+        d.fields_dict[f].$input && d.fields_dict[f].$input.on("input change", majCoherence);
+    });
+
+    frappe.call({
+        method: "udshed.api.teaching_grid.lister_ues",
+        args: { ...filters },
+        callback: (r) => {
+            const ues = (r.message || []).map((u) => ({ value: u.code, label: `${u.code} — ${u.intitule || ""}` }));
+            ues.push({ value: "__nouvelle__", label: __("+ Nouvelle UE") });
+            d.set_df_property("ue_code", "options", ues);
+            majCoherence();
+        },
+    });
+    d.show();
+},
+
+open_link_courses_dialog(filters, courses, onDone = () => {}) {
+    if (!courses.length) {
+        Udshed.Messages.warning(__("Aucun cours dans cette grille."));
+        return;
+    }
+    const esc = (v) => frappe.utils.escape_html(v === null || v === undefined ? "" : String(v));
+    const API = "udshed.api.cours_commun.";
+    const d = new frappe.ui.Dialog({
+        title: __("Cours communs (liaison manuelle)"),
+        size: "large",
+        fields: [
+            { fieldtype: "HTML", options: `<div class="text-muted small">${__("Liez un cours de cette grille à un cours d'une autre grille quand il s'agit du même enseignement sous un autre intitulé : il sera planifié comme un cours commun (toutes les classes occupées sur le créneau, séance visible dans chaque planning).")}</div>` },
+            {
+                fieldtype: "Select", fieldname: "cours", label: __("Cours de cette grille"), reqd: 1,
+                options: courses.map((c) => ({ value: c.teaching_unit, label: `${c.code} — ${c.title}` })),
+                change() { afficher(); },
+            },
+            {
+                fieldtype: "Link", fieldname: "autre", label: __("Cours identique d'une autre grille"), options: "Teaching Unit",
+                get_query: () => ({ filters: { academic_year: filters.academic_year, semestre: filters.semestre, name: ["!=", d.get_value("cours")] } }),
+            },
+            { fieldtype: "HTML", fieldname: "groupe" },
+            { fieldtype: "Section Break", label: __("Suggestions (intitulés identiques)") },
+            { fieldtype: "HTML", fieldname: "suggestions" },
+        ],
+        primary_action_label: __("Lier"),
+        primary_action(v) {
+            if (!v.autre) {
+                Udshed.Messages.validation(__("Choisissez le cours identique à lier."));
+                return;
+            }
+            lier([v.cours, v.autre]);
+        },
+    });
+
+    const lier = (noms) => frappe.call({
+        method: API + "lier_cours", args: { teaching_units: noms }, freeze: true,
+        callback: () => { Udshed.Messages.success(__("Cours liés.")); d.set_value("autre", null); afficher(); onDone(); },
+        error: (err) => Udshed.Messages.error(err, __("Liaison impossible")),
+    });
+
+    function afficher() {
+        const tu = d.get_value("cours");
+        if (!tu) return;
+        frappe.call({
+            method: API + "groupe_de", args: { teaching_unit: tu },
+            callback: (r) => {
+                const g = r.message || { cours: [] };
+                const lignes = g.cours.map((c) => `
+                    <tr><td><strong>${esc(c.code)}</strong> ${esc(c.intitule)}</td><td>${esc(c.classes.join(", "))}</td>
+                    <td>${g.groupe ? `<button class="btn btn-xs btn-default btn-delier" data-tu="${esc(c.teaching_unit)}">${__("Délier")}</button>` : ""}</td></tr>`).join("");
+                d.fields_dict.groupe.$wrapper.html(g.groupe
+                    ? `<h6>${__("Groupe de cours commun")}</h6><table class="table table-sm table-bordered"><tbody>${lignes}</tbody></table>`
+                    : `<div class="text-muted small">${__("Ce cours n'est lié à aucun autre cours.")}</div>`);
+                d.fields_dict.groupe.$wrapper.find(".btn-delier").on("click", function () {
+                    frappe.call({
+                        method: API + "delier_cours", args: { teaching_unit: $(this).data("tu") }, freeze: true,
+                        callback: () => { Udshed.Messages.success(__("Liaison retirée.")); afficher(); onDone(); },
+                        error: (err) => Udshed.Messages.error(err, __("Opération impossible")),
+                    });
+                });
+            },
+        });
+    }
+
+    frappe.call({
+        method: API + "suggestions", args: { academic_year: filters.academic_year, semestre: filters.semestre },
+        callback: (r) => {
+            const mesCours = new Set(courses.map((c) => c.teaching_unit));
+            const liste = (r.message || []).filter((s) => s.cours.some((c) => mesCours.has(c.teaching_unit)));
+            const zone = d.fields_dict.suggestions.$wrapper;
+            if (!liste.length) {
+                zone.html(`<div class="text-muted small">${__("Aucune suggestion pour cette grille.")}</div>`);
+                return;
+            }
+            zone.html(liste.map((s, i) => `
+                <div class="mb-2"><strong>${esc(s.intitule)}</strong> —
+                ${s.cours.map((c) => `${esc(c.code)} (${esc(c.classes.join(", "))})`).join(" · ")}
+                <button class="btn btn-xs btn-primary btn-lier-suggestion" data-i="${i}">${__("Lier")}</button></div>`).join(""));
+            zone.find(".btn-lier-suggestion").on("click", function () {
+                lier(liste[$(this).data("i")].cours.map((c) => c.teaching_unit));
+            });
+        },
+    });
+    d.show();
+    afficher();
+},
+
+open_delete_course_dialog(filters, courses, onDone = () => {}) {
+    if (!courses.length) {
+        Udshed.Messages.warning(__("Aucun cours dans cette grille."));
+        return;
+    }
+    const d = new frappe.ui.Dialog({
+        title: __("Retirer un cours de la grille"),
+        fields: [
+            {
+                fieldtype: "Select", fieldname: "teaching_unit", label: __("Cours"), reqd: 1,
+                options: courses.map((c) => ({ value: c.teaching_unit, label: `${c.code} — ${c.title}` })),
+                change() { verifier(); },
+            },
+            { fieldtype: "HTML", fieldname: "etat" },
+        ],
+        primary_action_label: __("Retirer"),
+        primary_action(v) {
+            frappe.confirm(__("Retirer définitivement ce cours de la grille de la classe ?"), () => {
+                frappe.call({
+                    method: "udshed.api.teaching_grid.supprimer_cours",
+                    args: { ...filters, teaching_unit: v.teaching_unit },
+                    freeze: true,
+                    callback: (r) => {
+                        const res = r.message || {};
+                        d.hide();
+                        Udshed.Messages.success(res.supprime
+                            ? __("Cours supprimé (il n'était utilisé par aucune autre classe).")
+                            : __("Cours retiré de la grille de la classe."));
+                        onDone();
+                    },
+                    error: (err) => Udshed.Messages.error(err, __("Suppression impossible")),
+                });
+            });
+        },
+    });
+    function verifier() {
+        const tu = d.get_value("teaching_unit");
+        if (!tu) return;
+        frappe.call({
+            method: "udshed.api.teaching_grid.dependances_suppression",
+            args: { ...filters, teaching_unit: tu },
+            callback: (r) => {
+                const res = r.message || {};
+                const esc = frappe.utils.escape_html;
+                let html = res.bloque
+                    ? `<div class="alert alert-danger">🔒 ${__("Suppression impossible : ce cours a des données pour cette classe")} (${esc(res.dependances)}).</div>`
+                    : `<div class="alert alert-success">${__("Aucune donnée ne dépend de ce cours pour cette classe : il peut être retiré.")}</div>`;
+                if ((res.classes_partagees || []).length) {
+                    html += `<div class="text-muted small">${__("Cours partagé avec : {0}. Il reste dans leurs grilles.", [esc(res.classes_partagees.join(", "))])}</div>`;
+                }
+                d.fields_dict.etat.$wrapper.html(html);
+                d.get_primary_btn().prop("disabled", Boolean(res.bloque));
+            },
+        });
+    }
+    d.show();
+    verifier();
+},
+
+show_import_dialog(filters, onAfterImported = (data) => {}) {
+    const esc = (v) => frappe.utils.escape_html(v === null || v === undefined ? "" : String(v));
+    const fmt = (v) => (Number(v) || 0).toLocaleString("fr-FR", { maximumFractionDigits: 2 });
+    const STATUTS = {
+        nouveau: ["green", __("Nouveau")],
+        mis_a_jour: ["blue", __("Mis à jour")],
+        ajout_classe: ["orange", __("Ajouté à la classe (tronc commun)")],
+    };
+    let analyse = null;
+
+    const renderPreview = (data) => {
+        const s = data.stats;
+        const card = (valeur, libelle, couleur) =>
+            `<div class="tg-prev-card ${couleur || ""}"><div class="v">${valeur}</div><div class="l">${libelle}</div></div>`;
+        const erreurs = data.erreurs.length
+            ? `<div class="alert alert-danger"><strong>${__("Erreurs bloquantes")} (${data.erreurs.length})</strong><ul>${
+                data.erreurs.map((e) => `<li>${e.ligne ? __("Ligne {0}", [e.ligne]) + " : " : ""}${esc(e.message)}</li>`).join("")
+              }</ul></div>`
+            : `<div class="alert alert-success">${__("Aucune erreur : le fichier peut être importé.")}</div>`;
+        const lignes = data.ues.map((ue) => {
+            const tete = ue.code === "UNKNOW" ? "" : `
+                <tr class="tg-prev-ue"><td>${esc(ue.code)}</td><td colspan="4">${esc(ue.intitule)}</td>
+                <td>${ue.statut === "nouvelle" ? `<span class="indicator-pill green">${__("Nouvelle UE")}</span>` : ""}</td></tr>`;
+            const cours = ue.cours.map((c) => {
+                const [couleur, libelle] = STATUTS[c.statut] || ["gray", c.statut];
+                const heures = (c.nombre_dheure_cm || 0) + (c.nombre_dheure_td || 0) + (c.nombre_dheure_tp || 0);
+                const avert = (c.avertissements || []).map((a) => `<div class="text-warning small">⚠ ${esc(a)}</div>`).join("");
+                return `<tr>
+                    <td class="text-muted">${c.ligne}</td>
+                    <td><strong>${esc(c.code)}</strong> ${esc(c.intitule_cours)}${avert}</td>
+                    <td class="text-right">${fmt(c.credits)}</td>
+                    <td class="text-right">${fmt(heures)} h</td>
+                    <td>${(c.enseignants || []).length}</td>
+                    <td><span class="indicator-pill ${couleur}">${libelle}</span></td>
+                </tr>`;
+            }).join("");
+            return tete + cours;
+        }).join("");
+        const retraits = data.retraits.length ? `
+            <h6 class="mt-3">${__("Cours absents du fichier (actuellement dans la grille de la classe)")}</h6>
+            <ul class="small">${data.retraits.map((r) => r.bloque
+                ? `<li>🔒 <strong>${esc(r.code)}</strong> ${esc(r.intitule)} : <span class="text-danger">${__("conservé")}</span> (${esc(r.dependances)})</li>`
+                : `<li>🗑 <strong>${esc(r.code)}</strong> ${esc(r.intitule)} : ${__("sera retiré de la classe")}</li>`).join("")}</ul>` : "";
+        return `
+            <div class="tg-prev">
+                <div class="tg-prev-cards">
+                    ${card(s.ues_nouvelles + s.ues_existantes, __("UE"))}
+                    ${card(s.cours_nouveaux, __("Cours nouveaux"), "green")}
+                    ${card(s.cours_mis_a_jour + s.cours_ajoutes_a_la_classe, __("Cours mis à jour"), "blue")}
+                    ${card(s.cours_retires, __("Retirés"), s.cours_retires ? "orange" : "")}
+                    ${card(fmt(s.total_credits), __("Crédits"))}
+                    ${card(s.avertissements, __("Avertissements"), s.avertissements ? "orange" : "")}
+                </div>
+                ${data.colonnes ? `<div class="small text-muted mb-2"><strong>${__("Colonnes reconnues")}</strong>
+                    ${data.mode_colonnes === "position" ? `(${__("en-têtes non reconnus : ordre du modèle utilisé")})` : ""} :
+                    ${Object.entries(data.colonnes).map(([role, entete]) => `${esc(role)} ← « ${esc(entete)} »`).join(" · ")}</div>` : ""}
+                ${erreurs}
+                <div class="tg-prev-table"><table class="table table-sm table-bordered">
+                    <thead><tr><th>${__("Ligne")}</th><th>${__("Cours")}</th><th class="text-right">${__("Crédits")}</th>
+                    <th class="text-right">CM+TD+TP</th><th>${__("Ens.")}</th><th>${__("Action")}</th></tr></thead>
+                    <tbody>${lignes || `<tr><td colspan="6" class="text-muted">${__("Aucun cours")}</td></tr>`}</tbody>
+                </table></div>
+                ${retraits}
+            </div>
+            <style>
+                .tg-prev-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px}
+                .tg-prev-card{border:1px solid var(--border-color);border-radius:8px;padding:8px;text-align:center}
+                .tg-prev-card .v{font-size:18px;font-weight:700}.tg-prev-card .l{font-size:11px;color:var(--text-muted)}
+                .tg-prev-card.green .v{color:var(--green-600)}.tg-prev-card.blue .v{color:var(--blue-600)}.tg-prev-card.orange .v{color:var(--orange-600)}
+                .tg-prev-table{max-height:380px;overflow:auto}.tg-prev-ue td{background:#eef3f8;font-weight:600}
+                @media (max-width:768px){.tg-prev-cards{grid-template-columns:repeat(3,1fr)}}
+            </style>`;
+    };
+
+    const d = new frappe.ui.Dialog({
         title: __('Importer une grille'),
-        freeze: true,
-        freeze_message: __("Importation de la grille en cours..."),  
-        size: 'medium',
+        size: 'extra-large',
         fields: [
             {
                 fieldtype: 'HTML',
                 fieldname: 'template_info',
                 options: `
-                    <div class="alert alert-primary" style="display: flex; align-items: center; justify-content: space-between;">
-                        <div>
-                            <i class="fa fa-download"></i> 
-                            <strong>Téléchargez d'abord le template</strong> pour vous assurer que votre fichier est au bon format.
-                        </div>
-                        <button class="btn btn-sm btn-default download-template-btn">
-                            <i class="fa fa-file-excel-o"></i> Télécharger le template
-                        </button>
-                    </div>
-                `
+                    <div class="alert alert-primary" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div><i class="fa fa-download"></i> <strong>${__("Téléchargez d'abord le modèle")}</strong> ${__("pour respecter le format attendu.")}</div>
+                        <button class="btn btn-sm btn-default download-template-btn"><i class="fa fa-file-excel-o"></i> ${__("Télécharger le modèle")}</button>
+                    </div>`
             },
-            {
-                fieldtype: 'Section Break'
-            },
-
             {
                 fieldtype: 'Attach',
                 fieldname: 'file',
                 label: __('Fichier Excel'),
                 reqd: 1,
-                description: 'Format .xlsx ou .xls'
+                description: __('Format .xlsx. Une prévisualisation est affichée avant tout import.'),
+                change() {
+                    analyse = null;
+                    d.fields_dict.preview.$wrapper.empty();
+                    d.set_primary_action(__('Prévisualiser'), previsualiser);
+                }
             },
-            {
-                fieldtype: 'HTML',
-                fieldname: 'instructions',
-                options: `
-                    <div class="well" style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px;">
-                        <h6><i class="fa fa-info-circle"></i> Instructions :</h6>
-                        <ul class="small" style="margin-bottom: 0; padding-left: 20px;">
-                            <li>Le fichier doit suivre exactement le format du template</li>
-                            <li>Les lignes UE doivent avoir un code dans la première colonne</li>
-                            <li>Les lignes cours doivent avoir un code dans la deuxième colonne</li>
-                            <li>Les informations sur l'année académique, le niveau et le semestre ne doivent pas être renseignées</li>
-                            <li>Ne modifiez pas la structure des colonnes</li>
-                        </ul>
-                    </div>
-                `
-            }
+            { fieldtype: 'HTML', fieldname: 'preview' }
         ],
-        primary_action_label: __('Importer'),
-        primary_action(values) {
-            
-            // Afficher le chargement
-            d.set_primary_action(__('Import en cours...'), null, 'btn-primary disabled');
-            d.fields_dict.file.$wrapper.hide();
+        primary_action_label: __('Prévisualiser'),
+        primary_action: previsualiser,
+    });
 
-            d.hide();
-            Udshed.TeachingGrid.UtilsQueries.import_grid({
-                    file_url: values.file,
-                    ...filters
-                },
-            (data)=>{
-                if(!data) return;
-                console.log("Data import",data)
-                if(data.status)
-                {
-                    frappe.utils.play_sound("submit");
-
-                    Udshed.Messages.dialog({
-                        title: __('Import réussi'),
-                        message: __("UE créées: {0}\nCours créés: {1}\nCours mis à jour: {2}")
-                            .format(data.data.ues_created, data.data.courses_created, data.data.courses_updated),
-                        type: 'success'
-                    });
-
-                    onAfterImported(data);
-                }
-                else
-                {
-                    Udshed.Messages.dialog({
-                        title: __('Echec d\'importation'),
-                        message: data.message || __('Impossible d\'importer la grille.'),
-                        type: 'error'
-                    });
-                    frappe.utils.play_sound("error")
-                }
-                
-            })
+    function previsualiser(values) {
+        const file_url = (values && values.file) || d.get_value('file');
+        if (!file_url) {
+            Udshed.Messages.validation(__('Joignez un fichier Excel.'));
+            return;
         }
-    });
-     d.$wrapper.find('.download-template-btn').on('click', ()=>{
-        Udshed.TeachingGrid.UtilsQueries.download_template(
-            //  ()=>d.hide()
-            );
-    });
+        Udshed.TeachingGrid.UtilsQueries.preview_import({ file_url, ...filters }, (data) => {
+            if (!data) return;
+            analyse = data;
+            d.fields_dict.preview.$wrapper.html(renderPreview(data));
+            if (data.erreurs.length) {
+                d.set_primary_action(__('Corrigez le fichier puis rejoignez-le'), () => {
+                    Udshed.Messages.warning(__("L'import est impossible tant que le fichier contient des erreurs."));
+                });
+                return;
+            }
+            d.set_primary_action(__('Confirmer l\'import'), () => importer(file_url));
+        });
+    }
+
+    function importer(file_url) {
+        if (!analyse || analyse.erreurs.length) return;
+        Udshed.TeachingGrid.UtilsQueries.import_grid({ file_url, ...filters }, (data) => {
+            if (!data || !data.status) return;
+            d.hide();
+            frappe.utils.play_sound("submit");
+            const r = data.data;
+            Udshed.Messages.dialog({
+                title: __('Import réussi'),
+                message: __("UE créées : {0}\nCours créés : {1}\nCours mis à jour : {2}\nCours retirés : {3}\nCours conservés (données existantes) : {4}")
+                    .format(r.ues_created, r.courses_created, r.courses_updated, r.courses_deleted, r.courses_kept),
+                type: 'success'
+            });
+            onAfterImported(data);
+        });
+    }
+
+    d.$wrapper.find('.download-template-btn').on('click', () => Udshed.TeachingGrid.UtilsQueries.download_template());
     d.show();
 },
     

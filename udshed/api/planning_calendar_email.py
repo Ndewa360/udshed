@@ -32,6 +32,10 @@ def _recipient_from_user(user):
 
 
 def send_planning_to_teacher_email(filters, teacher, school_name, school_logo, pdf, planning_name, start_date, end_date):
+	# Les destinataires sont construits en dict simples (dict(teacher), voir
+	# send_planning_to_mail) : sans conversion, `teacher.email` levait
+	# « 'dict' object has no attribute 'email' » pour chaque envoi.
+	teacher = frappe._dict(teacher)
 	frappe.sendmail(
 		recipients=[teacher.email],
 		sender=email_utils.get_formatted_sender(),
@@ -63,7 +67,10 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 	filters = {**filters, **resolved}
 
 	school_name, school_logo = school_setting.get_school_data()
-	_, _, items, _, _ = planning_calendar_pdf.generate_planning_pdf(filters)
+	# Ne jamais déballer dans « _ » : c'est la fonction de traduction importée
+	# plus haut ; l'écraser faisait planter `_("…")` plus bas
+	# (« 'datetime.date' object is not callable »).
+	items = planning_calendar_pdf.generate_planning_pdf(filters)[2]
 	start_date = planning_calendar.parse_date(week_start)
 	end_date = frappe.utils.add_days(start_date, 5)
 
@@ -127,7 +134,7 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 				recipient_filters.get("niveau"),
 				recipient_filters.get("teacher"),
 			)
-			pdf, planning_name, _, _, _ = planning_calendar_pdf.generate_planning_pdf(recipient_filters)
+			pdf, planning_name = planning_calendar_pdf.generate_planning_pdf(recipient_filters)[:2]
 			send_planning_to_teacher_email(
 				recipient_filters,
 				entry["teacher"],

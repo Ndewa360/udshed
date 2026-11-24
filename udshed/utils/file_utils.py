@@ -8,18 +8,19 @@ from frappe.utils import get_site_path, now_datetime
 import os
 
 def read_frappe_excel(file_url):
+    """Lignes de données de la 1re feuille (la ligne d'en-tête est exclue)."""
+    return read_excel_avec_entetes(file_url)[1]
+
+
+def read_excel_avec_entetes(file_url):
+    """(en-têtes, lignes) de la 1re feuille d'un fichier Excel téléversé.
+
+    Les en-têtes permettent de reconnaître les colonnes par leur nom plutôt
+    que par leur position (fichiers préparés à la main, colonnes manquantes
+    ou dans un autre ordre).
     """
-    Reads an Excel file exported from Frappe into a pandas DataFrame.
-    
-    Args:
-        file_path (str): The path to the Excel file (e.g., 'path/to/your/export.xlsx').
-        
-    Returns:
-        pd.DataFrame: The data from the Excel file.
-    """
-    
     frappe.logger().info(f"Début import - fichier: {file_url}")
-    
+
     # Étape 1: Récupérer le chemin complet du fichier
     if file_url.startswith('/private/files/'):
         file_path = get_site_path('private', 'files', file_url.replace('/private/files/', ''))
@@ -44,12 +45,10 @@ def read_frappe_excel(file_url):
         # Use pandas.read_excel to load the data
         df = pd.read_excel(file_path,sheet_name=sheet_name)
         df = df.fillna('')
-        data = df.to_numpy().tolist()
-        print("data to list ",data)
-        print("Excel file successfully read into a pandas DataFrame.")
-        return data
-    except Exception as e:
-        frappe.throw( f'Erreur de lecture du fichier. fichier non conforme: {file_path}')
+        entetes = ["" if str(c).startswith("Unnamed:") else str(c).strip() for c in df.columns]
+        return entetes, df.to_numpy().tolist()
+    except Exception:
+        frappe.throw(f"Erreur de lecture du fichier : fichier Excel non conforme ({os.path.basename(file_path)}).")
 
 
 def load_school_logo(school_logo):

@@ -41,7 +41,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Ann\u00e9e de d\u00e9but",
-   "options": "2024\n2025\n2026\n2027\n2028\n2029\n2030",
+   "options": "2024\n2025\n2026\n2027\n2028\n2029\n2030\n2031\n2032\n2033\n2034\n2035\n2036\n2037\n2038\n2039\n2040\n2041\n2042\n2043\n2044\n2045",
    "reqd": 1
   },
   {
@@ -66,7 +66,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Ann\u00e9e de fin",
-   "options": "2024\n2025\n2026\n2027\n2028\n2029\n2030",
+   "options": "2024\n2025\n2026\n2027\n2028\n2029\n2030\n2031\n2032\n2033\n2034\n2035\n2036\n2037\n2038\n2039\n2040\n2041\n2042\n2043\n2044\n2045",
    "reqd": 1
   },
   {
@@ -84,7 +84,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-11 23:09:17.037474",
+ "modified": "2026-11-24 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Academic Year",

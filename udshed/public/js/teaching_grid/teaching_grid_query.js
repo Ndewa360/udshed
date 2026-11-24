@@ -20,6 +20,20 @@ window.Udshed.TeachingGrid.UtilsQueries = {
             }
         });
     },
+    preview_import(args, callbackFunction)
+    {
+        Udshed.Loading.call({
+            method: 'udshed.api.teaching_grid.previsualiser_import_grille',
+            freeze: true,
+            freeze_message: __("Analyse du fichier..."),
+            args: {...args},
+            error: (error) => {
+                Udshed.Messages.error(error, __('Analyse du fichier impossible.'));
+                callbackFunction(null);
+            },
+            callback: (r) => callbackFunction(r.message || null)
+        });
+    },
     import_grid(args,callbackFunction)
     {
         Udshed.Loading.call({

@@ -61,13 +61,15 @@ window.Udshed.PlanningQueries = {
         });
     },
 
-    deletePlanning(planning_name, callback_function) {
+    deletePlanning(planning_name, callback_function, filter = {}) {
         return new Promise((resolve) => {
             Udshed.Loading.call({
                 method: "udshed.api.planning_calendar.delete_planning",
                 freeze: true,
                 freeze_message: __("Suppression du planning en cours..."),
-                args: { planning_name: planning_name },
+                // Classe affichée : le droit est vérifié pour cette classe
+                // (un cours de tronc commun appartient à plusieurs classes).
+                args: { planning_name: planning_name, filiere: filter.filiere || null, niveau: filter.niveau || null },
                 callback: (response) => {
                     Udshed.Messages.success(__("Planning supprimé avec succès."));
                     frappe.utils.play_sound("delete");

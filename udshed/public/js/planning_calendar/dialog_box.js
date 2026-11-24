@@ -124,7 +124,9 @@ window.Udshed.Dialogs = {
                         batiment: values.batiment || null,
                         salle: values.salle || null,
                         day_of_week: frappe.datetime.obj_to_str(day),
-                        half_day: half_day
+                        half_day: half_day,
+                        filiere: filter.filiere,
+                        niveau: filter.niveau
                     },
                     callback: () => {
                         dialog.hide();
@@ -199,7 +201,9 @@ window.Udshed.Dialogs = {
                         batiment: values.batiment || null,
                         salle: values.salle || null,
                         day_of_week: frappe.datetime.obj_to_str(day),
-                        half_day: half_day
+                        half_day: half_day,
+                        filiere: filter.filiere || null,
+                        niveau: filter.niveau || null
                     },
                     callback: () => {
                         dialog.hide();
@@ -221,10 +225,136 @@ window.Udshed.Dialogs = {
                 Udshed.PlanningQueries.deletePlanning(item.name, () => {
                     dialog.hide();
                     if (typeof callback === "function") callback();
-                });
+                }, filter);
             });
         });
         dialog.show();
+    },
+
+    openDuplicateWeekDialog(filter, currentWeekStart, callback) {
+        if (!filter.academic_year || !filter.filiere || !filter.niveau) {
+            Udshed.Messages.validation(__("Sélectionnez l'année, la filière et le niveau de la classe à dupliquer."), __("Filtre requis"));
+            return;
+        }
+        let d = null;
+        const esc = (v) => frappe.utils.escape_html(v === null || v === undefined ? "" : String(v));
+        const lundi = (date) => frappe.datetime.obj_to_str(Udshed.DateUtils.getMonday(date));
+        const cible = new Date(currentWeekStart);
+        const source = new Date(currentWeekStart);
+        source.setDate(source.getDate() - 7);
+        const ETATS = {
+            libre: ["#e8f5e9", __("Libre")],
+            occupe_commun: ["#e3f2fd", __("Tronc commun / cours lié")],
+            occupe: ["#eceff1", __("Déjà occupé")],
+            a_creer: ["#c8e6c9", __("Sera dupliqué")],
+            sans_salle: ["#fff3e0", __("Dupliqué sans salle")],
+        };
+        const ACTIONS = {
+            a_creer: ["green", __("À créer")],
+            sans_salle: ["orange", __("Sans salle")],
+            deja_planifiee: ["blue", __("Déjà planifiée (commun)")],
+            conflit: ["red", __("Créneau occupé")],
+            ignoree: ["gray", __("Ignorée")],
+        };
+        const args = () => ({
+            academic_year: filter.academic_year,
+            filiere: filter.filiere,
+            niveau: filter.niveau,
+            semaine_source: d.get_value("semaine_source"),
+            semaine_cible: d.get_value("semaine_cible"),
+            inclure_evaluations: d.get_value("inclure_evaluations") ? 1 : 0,
+        });
+
+        const rendre = (data) => {
+            const s = data.stats;
+            const legende = Object.values(ETATS).map(([c, l]) => `<span style="background:${c};padding:2px 8px;border-radius:4px;margin-right:6px">${l}</span>`).join("");
+            const recap = `
+                <table class="table table-bordered table-sm" style="font-size:12px">
+                    <thead><tr><th></th>${data.jours.map((j) => `<th>${esc(j)}</th>`).join("")}</tr></thead>
+                    <tbody>${data.recapitulatif.map((ligne) => `
+                        <tr><th style="white-space:nowrap">${esc(ligne.libelle)}<br><small class="text-muted">${esc(ligne.heures)}</small></th>
+                        ${ligne.jours.map((c) => {
+                            const [couleur, label] = ETATS[c.etat] || ["#fff", c.etat];
+                            return `<td style="background:${couleur}" title="${esc(label)}">${esc(c.texte) || `<span class="text-muted">${label}</span>`}</td>`;
+                        }).join("")}</tr>`).join("")}
+                    </tbody>
+                </table>`;
+            const seances = data.seances.length ? `
+                <table class="table table-sm">
+                    <thead><tr><th>${__("Séance")}</th><th>${__("Cible")}</th><th>${__("Action")}</th></tr></thead>
+                    <tbody>${data.seances.map((e) => {
+                        const [couleur, label] = ACTIONS[e.action] || ["gray", e.action];
+                        return `<tr><td>${esc(e.intitule)} <small class="text-muted">${esc(e.type)}</small>${e.commun ? ` <span class="indicator-pill blue">${__("commun")}</span>` : ""}</td>
+                            <td>${esc(e.jour)} ${esc(e.date)}</td>
+                            <td><span class="indicator-pill ${couleur}">${label}</span>${e.motif ? `<div class="small text-muted">${esc(e.motif)}</div>` : ""}</td></tr>`;
+                    }).join("")}</tbody>
+                </table>` : `<div class="text-muted">${__("Aucune séance dans la semaine source.")}</div>`;
+            return `
+                <div class="alert alert-info small">
+                    ${__("{0} séance(s) à créer, {1} sans salle, {2} déjà planifiée(s) en commun, {3} en conflit, {4} ignorée(s).",
+                        [s.a_creer, s.sans_salle, s.deja_planifiees, s.conflits, s.ignorees])}<br>
+                    ${__("Semaine cible : {0} créneau(x) libre(s), {1} occupé(s) par un tronc commun / cours lié, {2} occupé(s) par d'autres cours.",
+                        [s.creneaux_libres, s.creneaux_tronc_commun, s.creneaux_occupes])}
+                </div>
+                <h6>${__("Récapitulatif de la semaine cible")}</h6><div class="mb-2">${legende}</div>${recap}
+                <h6>${__("Séances de la semaine source")}</h6>${seances}`;
+        };
+
+        let analyse = null;
+        const previsualiser = () => frappe.call({
+            method: "udshed.api.planning_duplication.previsualiser_duplication",
+            args: args(),
+            freeze: true,
+            freeze_message: __("Analyse des créneaux..."),
+            callback: (r) => {
+                analyse = r.message;
+                d.fields_dict.apercu.$wrapper.html(rendre(analyse));
+                const n = analyse.stats.a_creer + analyse.stats.sans_salle;
+                d.set_primary_action(n ? __("Dupliquer {0} séance(s)", [n]) : __("Rien à dupliquer"), n ? dupliquer : () => {});
+            },
+            error: (err) => Udshed.Messages.error(err, __("Analyse impossible")),
+        });
+        const dupliquer = () => frappe.call({
+            method: "udshed.api.planning_duplication.dupliquer_semaine",
+            type: "POST",
+            args: args(),
+            freeze: true,
+            freeze_message: __("Duplication en cours..."),
+            callback: (r) => {
+                const res = r.message || {};
+                d.hide();
+                if ((res.echecs || []).length) {
+                    Udshed.Messages.warning(__("{0} séance(s) dupliquée(s), {1} non créée(s) (créneau pris entre-temps).", [res.creees, res.echecs.length]));
+                } else {
+                    Udshed.Messages.success(__("{0} séance(s) dupliquée(s).", [res.creees]));
+                }
+                if (typeof callback === "function") callback();
+            },
+            error: (err) => Udshed.Messages.error(err, __("Duplication impossible")),
+        });
+
+        const reinit = () => {
+            if (!d) return; // change déclenché pendant la construction du dialogue
+            analyse = null;
+            d.fields_dict.apercu.$wrapper.empty();
+            d.set_primary_action(__("Prévisualiser"), previsualiser);
+        };
+        d = new frappe.ui.Dialog({
+            title: __("Dupliquer le planning d'une semaine"),
+            size: "extra-large",
+            fields: [
+                { fieldtype: "Date", fieldname: "semaine_source", label: __("Semaine à copier (n'importe quel jour)"), reqd: 1, default: lundi(source), change: reinit },
+                { fieldtype: "Column Break" },
+                { fieldtype: "Date", fieldname: "semaine_cible", label: __("Semaine de destination"), reqd: 1, default: lundi(cible), change: reinit },
+                { fieldtype: "Column Break" },
+                { fieldtype: "Check", fieldname: "inclure_evaluations", label: __("Inclure CC et examens"), default: 0, change: reinit },
+                { fieldtype: "Section Break" },
+                { fieldtype: "HTML", fieldname: "apercu" },
+            ],
+            primary_action_label: __("Prévisualiser"),
+            primary_action: previsualiser,
+        });
+        d.show();
     },
 
     openSendPlanningDialog(filter, userContext, callback) {

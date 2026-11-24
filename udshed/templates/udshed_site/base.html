@@ -1,0 +1,84 @@
+{% extends "templates/base.html" %}
+{#- Gabarit du site vitrine Udshed : navigation, pied de page et SEO communs
+    à la landing page (/udshed) et aux pages légales. -#}
+
+{% block meta_block %}
+	{% include "templates/includes/meta_block.html" %}
+	<meta name="description" content="{{ description | e }}">
+	<meta name="author" content="Ndewa360">
+	<meta name="robots" content="index, follow">
+	<link rel="canonical" href="{{ canonical_url }}">
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="Udshed">
+	<meta property="og:locale" content="fr_FR">
+	<meta property="og:title" content="{{ title | e }}">
+	<meta property="og:description" content="{{ description | e }}">
+	<meta property="og:url" content="{{ canonical_url }}">
+	<meta property="og:image" content="{{ og_image }}">
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:title" content="{{ title | e }}">
+	<meta name="twitter:description" content="{{ description | e }}">
+	<meta name="twitter:image" content="{{ og_image }}">
+	<meta name="theme-color" content="#1f3c88">
+{% endblock %}
+
+{% block favicon %}
+	<link rel="icon" href="/assets/udshed/images/logo1.png" type="image/png">
+{% endblock %}
+
+{% block head_include %}
+	{{ super() }}
+	<link rel="stylesheet" href="/assets/udshed/css/udshed_site.css">
+	{% block structured_data %}{% endblock %}
+{% endblock %}
+
+{% block navbar %}
+<header class="uds-nav">
+	<div class="uds-wrap">
+		<a class="uds-marque" href="/udshed" aria-label="{{ _('Udshed, accueil') }}">
+			<img src="/assets/udshed/images/logo1.png" alt="" width="34" height="34"> Udshed
+		</a>
+		<nav class="uds-liens" aria-label="{{ _('Navigation principale') }}">
+			<a href="/udshed#fonctionnalites">{{ _("Fonctionnalités") }}</a>
+			<a href="/udshed#fonctionnement">{{ _("Fonctionnement") }}</a>
+			<a href="/udshed#faq">{{ _("FAQ") }}</a>
+			<a class="uds-btn uds-btn-primaire" href="/udshed#demo">{{ _("Demander une démo") }}</a>
+		</nav>
+	</div>
+</header>
+{% endblock %}
+
+{% block footer %}
+<footer class="uds-pied">
+	<div class="uds-wrap">
+		<div class="grille">
+			<div>
+				<h4>Udshed</h4>
+				<p>{{ _("Plateforme de gestion académique pour les universités et grandes écoles : candidatures, inscriptions, grilles, planning, notes et résultats.") }}</p>
+				<p>{{ _("Conçu et développé par") }} <strong style="color:#fff">Ndewa360</strong>.</p>
+			</div>
+			<div>
+				<h4>{{ _("Produit") }}</h4>
+				<ul>
+					<li><a href="/udshed#fonctionnalites">{{ _("Fonctionnalités") }}</a></li>
+					<li><a href="/udshed#fonctionnement">{{ _("Fonctionnement") }}</a></li>
+					<li><a href="/udshed#demo">{{ _("Demander une démo") }}</a></li>
+					<li><a href="mailto:contact@ndewa-360.com">contact@ndewa-360.com</a></li>
+				</ul>
+			</div>
+			<div>
+				<h4>{{ _("Informations légales") }}</h4>
+				<ul>
+					<li><a href="/udshed/mentions-legales">{{ _("Mentions légales") }}</a></li>
+					<li><a href="/udshed/politique-de-confidentialite">{{ _("Politique de confidentialité") }}</a></li>
+					<li><a href="/udshed/conditions-utilisation">{{ _("Conditions d'utilisation") }}</a></li>
+				</ul>
+			</div>
+		</div>
+		<div class="uds-copyright">
+			<span>© {{ frappe.utils.nowdate()[:4] }} Udshed — {{ _("une solution Ndewa360") }}</span>
+			<span>{{ _("Contact") }} : <a href="mailto:contact@ndewa-360.com">contact@ndewa-360.com</a></span>
+		</div>
+	</div>
+</footer>
+{% endblock %}

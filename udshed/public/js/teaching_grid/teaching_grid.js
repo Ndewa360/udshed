@@ -86,8 +86,8 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
         var columns = [
             { name: 'Code UE', editable: false },
             { name: 'Code Cours', editable: false },
-            { name: 'Intitulés', editable: false, fieldtype: 'Data' },
-            { name: 'Crédits', editable: me.canEdit, fieldtype: 'Int' },
+            { name: 'Intitulés', editable: me.canEdit, fieldtype: 'Data' },
+            { name: 'Crédits', editable: me.canEdit, fieldtype: 'Float' },
             { name: 'Type', editable: false },
             { name: 'CM', editable: me.canEdit, fieldtype: 'Int' },
             { name: 'TD', editable: me.canEdit, fieldtype: 'Int' },
@@ -114,6 +114,24 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
                             //  <span class="teacher-count-badge">${teachers.length}</span>
                 }
              },
+            { name: 'Remarques', editable: false, width: 160,
+                format: function(value) {
+                    if (!value) return '';
+                    const info = JSON.parse(value);
+                    const esc = frappe.utils.escape_html;
+                    let html = '';
+                    if (info.partage) {
+                        html += `<span class="indicator-pill blue" title="${esc(__('Cours partagé : intitulé et heures communs à toutes les classes'))}">${__('Tronc commun')} +${info.partage}</span> `;
+                    }
+                    if (info.lies) {
+                        html += `<span class="indicator-pill purple" title="${esc(__('Lié à des cours d\'autres grilles : planifié comme un cours commun'))}">🔗 ${__('Lié')} +${info.lies}</span> `;
+                    }
+                    if (info.avertissement) {
+                        html += `<span class="indicator-pill orange" title="${esc(info.avertissement)}">⚠ ${__('Crédits/heures')}</span>`;
+                    }
+                    return html;
+                }
+            },
         ];
         
         // Construire les lignes
@@ -127,6 +145,7 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
                     ue.ue_title,
                     {content:ue.ue_credits,editable:false},
                     'UE',
+                    '',
                     '',
                     '',
                     '',
@@ -150,6 +169,9 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
                     course.nombre_dheure_tpe,
                     course.total_hours,
                     JSON.stringify(course.teacher),
+                    (course.classes_partagees || course.avertissement || course.cours_lies)
+                        ? JSON.stringify({ partage: course.classes_partagees || 0, lies: course.cours_lies || 0, avertissement: course.avertissement || '' })
+                        : '',
                 ]);
             });
         });
@@ -170,6 +192,9 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
                 getEditor: function(colIndex, rowIndex, value, column, row) {
 
                     if (!me.canEdit || !row.editable) return;
+                    // Ligne UE : seul l'intitulé est modifiable (le code ne l'est jamais).
+                    const ligne = me.datatable.datamanager.data[rowIndex] || [];
+                    if (ligne[4] === 'UE' && colIndex !== 2) return;
 
                     if(colIndex==10 && row.fieldtype== "Link")
 					{
@@ -326,6 +351,11 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
 		if (fieldtype === 'Int') {
 			input.type = 'number';
 			input.step = '1';
+			input.min = '0';
+		} else if (fieldtype === 'Float') {
+			input.type = 'number';
+			input.step = '0.5';
+			input.min = '0';
 		}
 		
 		return {
@@ -346,33 +376,82 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
 
 	updateCell(rowIndex,colIndex,value){
 		let me = this;
-        let allData = me.datatable.datamanager.data;
-        let codeCours = allData[rowIndex][1]
+        let ligne = me.datatable.datamanager.data[rowIndex];
+        if (ligne[4] === 'UE') {
+            if (colIndex === 2 && value !== ligne[2]) me.save_ue(ligne[0], value);
+            return;
+        }
+        let codeCours = ligne[1]
         let {courseIndex,ueIndex}= me.getUeByCourseCode(codeCours)
+        if (ueIndex < 0 || courseIndex < 0) return;
+        const cours = this.data[ueIndex].courses[courseIndex];
+        const heures = { 5: "nombre_dheure_cm", 6: "nombre_dheure_td", 7: "nombre_dheure_tp", 8: "nombre_dheure_tpe" };
+        let valeurs = null;
 
-		if (colIndex==3)
+		if (colIndex==2)
 		{
-            this.recalculateCredit(parseInt(value), this.data[ueIndex], codeCours)
+            if (!String(value || "").trim() || value === cours.title) return;
+            valeurs = { intitule_cours: String(value).trim() };
+            cours.title = valeurs.intitule_cours;
 		}
-		else if(colIndex==5)
+		else if (colIndex==3)
 		{
-            this.recalcultateTime(parseInt(value),this.data[ueIndex].courses[courseIndex],"nombre_dheure_cm")
+            const credits = parseFloat(String(value).replace(",", ".")) || 0;
+            this.recalculateCredit(credits, this.data[ueIndex], codeCours)
+            valeurs = { credits };
 		}
-        else if(colIndex==6)
+		else if (heures[colIndex])
 		{
-            this.recalcultateTime(parseInt(value),this.data[ueIndex].courses[courseIndex],"nombre_dheure_td")
-		}
-        else if(colIndex==7)
-		{
-            this.recalcultateTime(parseInt(value),this.data[ueIndex].courses[courseIndex],"nombre_dheure_tp")
-		}
-        else if(colIndex==8)
-		{
-            this.recalcultateTime(parseInt(value),this.data[ueIndex].courses[courseIndex],"nombre_dheure_tpe")
+            const nombre = parseInt(value) || 0;
+            this.recalcultateTime(nombre, cours, heures[colIndex])
+            valeurs = { [heures[colIndex]]: nombre };
 		}
         this.render_datatable(false)
-
+        if (valeurs) me.save_course(cours, valeurs);
 	}
+
+    save_course(cours, valeurs) {
+        const me = this;
+        const commun = Object.keys(valeurs).some((k) => k !== "credits");
+        const envoyer = (confirme) => frappe.call({
+            method: "udshed.api.teaching_grid.modifier_cours",
+            args: { teaching_unit: cours.teaching_unit, ...me.filters, valeurs, appliquer_au_tronc_commun: confirme ? 1 : 0 },
+            callback: (r) => {
+                const res = r.message || {};
+                if (res.avertissement) Udshed.Messages.warning(res.avertissement);
+                else Udshed.Messages.success(__("Grille enregistrée."));
+                me.refresh();
+            },
+            error: (err) => {
+                Udshed.Messages.error(err, __("Modification refusée"));
+                me.refresh();
+            }
+        });
+        if (commun && cours.classes_partagees) {
+            frappe.confirm(
+                __("Ce cours est partagé avec {0} autre(s) classe(s) (tronc commun). L'intitulé et les heures seront modifiés pour toutes ces classes. Continuer ?", [cours.classes_partagees]),
+                () => envoyer(true),
+                () => me.refresh()
+            );
+            return;
+        }
+        envoyer(false);
+    }
+
+    save_ue(ue_code, intitule) {
+        const me = this;
+        if (!String(intitule || "").trim()) return me.refresh();
+        frappe.call({
+            method: "udshed.api.teaching_grid.modifier_ue",
+            args: { ue_code, intitule: String(intitule).trim(), ...me.filters },
+            callback: () => { Udshed.Messages.success(__("UE renommée.")); me.refresh(); },
+            error: (err) => { Udshed.Messages.error(err, __("Modification refusée")); me.refresh(); }
+        });
+    }
+
+    courses_list() {
+        return (this.data || []).flatMap((ue) => ue.courses.map((c) => ({ ...c, ue_code: ue.ue_code })));
+    }
     recalcultateTime(value,cours,typeTime)
     {
         cours.nombre_dheure_cm = typeTime=="nombre_dheure_cm"? value:cours.nombre_dheure_cm
@@ -393,7 +472,7 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
             {
                 ue.courses[i].credits = value;
             }
-            totalCredit += ue.courses[i].credits;
+            totalCredit += Number(ue.courses[i].credits) || 0;
         }
         ue.ue_credits = totalCredit;
 

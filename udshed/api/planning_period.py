@@ -74,14 +74,16 @@ def _calendriers_candidats(field_of_study_level, session_exam):
     (« Master en ligne », « Master en Alternance »…) sont vides sur certains
     sites : sans ce repli, le planning de la semaine echouait.
     """
-    vus = set()
+    # dict (et non set) : l'ordre de priorité doit être conservé, sinon
+    # « Defaut » pouvait passer avant le calendrier du niveau.
+    vus = {}
     for session in session_exam or []:
         if session.get("calendar"):
-            vus.add(session.calendar)
+            vus[session.calendar] = True
     niveau = frappe.db.get_value("Field of study Level", field_of_study_level, "calendrier")
     for nom in (niveau, "Defaut"):
         if nom:
-            vus.add(nom)
+            vus[nom] = True
     return list(vus)
 
 

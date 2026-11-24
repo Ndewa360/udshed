@@ -122,7 +122,9 @@ def _generer_code_anonymat():
     visaient le même numéro, la contrainte d'unicité de la base rejette la
     seconde et la nouvelle tentative repart du numéro suivant.
     """
-    for _ in range(50):
+    # Ne pas nommer la variable « _ » : elle masquerait la fonction de
+    # traduction utilisée par le frappe.throw ci-dessous (TypeError).
+    for _tentative in range(50):
         code = "{0}{1:0{2}d}".format(
             PREFIXE_CODE_ANONYMAT,
             cint(_numero_suivant_code_anonymat()),

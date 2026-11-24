@@ -11,6 +11,7 @@
   "course",
   "intitule_cours",
   "unite_de_valeur",
+  "groupe_cours_commun",
   "column_break_askz",
   "academic_year",
   "mode",
@@ -95,6 +96,15 @@
    "options": "Teaching Unit Value"
   },
   {
+   "description": "Cours identiques portant des intitul\u00e9s diff\u00e9rents selon les grilles : un m\u00eame groupe est planifi\u00e9 comme un cours commun (toutes les classes du groupe sont occup\u00e9es).",
+   "fieldname": "groupe_cours_commun",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Groupe de cours commun",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
    "default": "Semestre 1",
    "fetch_from": "course.semestre",
    "fieldname": "semestre",
@@ -152,7 +162,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-20 03:15:30.264539",
+ "modified": "2026-11-24 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Teaching Unit",

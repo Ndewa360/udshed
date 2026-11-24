@@ -180,6 +180,21 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
             Udshed.Dialogs.openRoomsAvailabilityDialog(new Date(currentWeekStart), periods);
         });
 
+        if (canPlan) {
+            const btnDupliquer = $(`
+                <button class="btn btn-default btn-sm" id="duplicate-week" title="${__("Copier le planning d'une semaine vers la semaine affichée")}">
+                    ${__("Dupliquer une semaine")}
+                </button>
+            `).prependTo(page.page_actions);
+            btnDupliquer.on("click", () => {
+                if (!Udshed.Perms.user_can_edit_planning_cell(filters, userContext)) {
+                    Udshed.Messages.warning(__("Vous n'avez pas le droit de modifier le planning de cette classe."));
+                    return;
+                }
+                Udshed.Dialogs.openDuplicateWeekDialog({ ...filters }, new Date(currentWeekStart), refreshAll);
+            });
+        }
+
         page.add_field({
             fieldtype: "Link",
             label: "Année académique",
