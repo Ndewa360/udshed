@@ -164,6 +164,14 @@ class Concours(Document):
 				_("Validez toutes les notes puis utilisez « Lever l'anonymat » : "
 				  "le concours passera alors automatiquement en « Délibération ».")
 			)
+		# Sans candidat autorisé, il n'y a aucune copie à corriger.
+		if self.statut == "Épreuves" and STATUTS.index(avant.statut) < STATUTS.index("Épreuves") \
+				and not frappe.db.count("Candidat Concours", {"concours": self.name}):
+			frappe.throw(
+				_("Aucun candidat n'est autorisé à concourir : passez d'abord des candidatures au statut "
+				  "« Autorisé à concourir » (elles doivent demander une formation du concours et appartenir "
+				  "à la session d'inscription {0}).").format(self.session_inscription)
+			)
 		if avant.statut in STATUTS_DEFINITIFS and STATUTS.index(self.statut) < STATUTS.index(avant.statut):
 			frappe.throw(
 				_("Le concours est au statut « {0} » : il ne peut plus revenir à « {1} ».").format(

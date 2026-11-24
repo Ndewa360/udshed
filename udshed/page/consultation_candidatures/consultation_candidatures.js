@@ -392,7 +392,9 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 							? '<button class="cc-action-concours" data-status="Autorisé à concourir">Autoriser à concourir</button>'
 							: '<button class="cc-action-accept" data-status="Accepté">Accepter</button>'}
 						<button class="cc-action-reject" data-status="Refusé">Rejeter</button>
-						<button class="cc-action-validate" data-status="Inscrit">Valider l'inscription</button>
+						${['Accepté', "Liste d'attente"].includes(d.candidature_status)
+							? '<button class="cc-action-reject" data-status="Désisté">Désistement</button>'
+							: ''}
 					</div>
 				</div>
 			</div>
@@ -412,12 +414,13 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 			var new_status = $(this).data('status');
 			if (new_status === 'Refusé') {
 				prompt_reject(d.name);
-			} else if (new_status === 'Inscrit') {
-				frappe.confirm(
-					'Valider l\'inscription de <strong>' + frappe.utils.escape_html(d.last_name + ' ' + d.first_name) + '</strong> ?',
-					function () {
-						call_update_status(d.name, new_status, null);
-					}
+			} else if (new_status === 'Désisté') {
+				// Le candidat admis ne vient pas : la place est reproposée à la liste d'attente.
+				frappe.prompt(
+					{ fieldtype: 'Small Text', fieldname: 'motif', label: 'Motif du désistement', reqd: 1 },
+					function (v) { call_update_status(d.name, 'Désisté', v.motif); },
+					'Le candidat ne vient pas',
+					'Enregistrer'
 				);
 			} else {
 				frappe.confirm(

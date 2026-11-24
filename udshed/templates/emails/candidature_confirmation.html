@@ -55,9 +55,22 @@
     </div>
 
     <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
-      Pour finaliser votre inscription, veuillez vous rendre sur la page
-      <strong>S'inscrire</strong> de la plateforme en utilisant votre numéro de dossier.
+      Pour confirmer votre place et finaliser votre inscription, rendez-vous sur la page
+      <strong>Mon admission</strong> de la plateforme avec votre numéro de dossier et votre nom.
     </p>
+    {% if lien_admission %}
+    <p style="text-align: center; margin: 20px 0;">
+      <a href="{{ lien_admission }}" style="display: inline-block; padding: 12px 24px; background: #1e3a8a; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold;">Voir mon admission</a>
+    </p>
+    {% endif %}
+
+    {% if date_limite %}
+    <p style="color: #b02a37; font-size: 15px; line-height: 1.6;">
+      <strong>Date limite : {{ date_limite }}.</strong> Sans finalisation à cette date, votre place sera
+      libérée et attribuée à un autre candidat. Si vous ne comptez pas venir, vous pouvez renoncer à votre
+      place depuis la même page.
+    </p>
+    {% endif %}
 
     <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
       <strong>Identifiant :</strong> {{ doc_name }}<br>

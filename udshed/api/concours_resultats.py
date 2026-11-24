@@ -388,9 +388,9 @@ def calculer_classement(concours):
 
 
 # --------------------------------------------------------------------------- #
-#  PV de classement provisoire
+#  PV : classement provisoire (phase 3) et délibération (phase 4)
 # --------------------------------------------------------------------------- #
-ORDRE_PROPOSITION = {"Admis": 0, "Liste d'attente": 1, "": 2, "Non admis": 3}
+ORDRE_PROPOSITION = {"Admis": 0, "Liste d'attente": 1, "": 2, "Désisté": 3, "Non admis": 4}
 
 
 @frappe.whitelist()
@@ -399,9 +399,16 @@ def telecharger_pv_classement(concours, filiere=None):
 	doc = frappe.get_doc("Concours", concours)
 	if not doc.classement_calcule_le:
 		frappe.throw(_("Calculez d'abord le classement."))
+	_pdf_pv(doc, filiere, final=False)
 
+
+def _pdf_pv(doc, filiere=None, final=False):
+	"""PV par filière. final=False : propositions du classement ; final=True :
+	décisions du jury (PV de délibération)."""
+	concours = doc.name
+	colonne = "decision" if final else "proposition"
 	fiches = {f.name: f for f in frappe.get_all(
-		"Candidat Concours", {"concours": concours}, ["name", "numero_table", "nom_complet", "centre_examen"])}
+		"Candidat Concours", {"concours": concours}, ["name", "numero_table", "nom_complet", "centre_examen", "motif_desistement"])}
 	notes = {}
 	for n in frappe.get_all("Candidat Concours Note",
 							{"parenttype": "Candidat Concours", "parent": ["in", list(fiches) or [""]]},
@@ -409,7 +416,8 @@ def telecharger_pv_classement(concours, filiere=None):
 		notes[(n.parent, _cle_matiere(n.matiere))] = "ABS" if n.absent else f"{flt(n.note):.2f}"
 	resultats = frappe.get_all(
 		"Candidat Concours Resultat", {"parenttype": "Candidat Concours", "parent": ["in", list(fiches) or [""]]},
-		["parent", "choix", "filiere", "niveau", "moyenne", "rang", "elimine", "motif", "proposition", "ex_aequo"],
+		["parent", "choix", "filiere", "niveau", "moyenne", "rang", "elimine", "motif", "proposition",
+		 "ex_aequo", "decision"],
 	)
 
 	sections = []
@@ -425,8 +433,11 @@ def telecharger_pv_classement(concours, filiere=None):
 			lignes.append({
 				**r, "numero_table": f.numero_table, "nom_complet": f.nom_complet, "centre": f.centre_examen,
 				"notes": [notes.get((r.parent, _cle_matiere(e["matiere"])), "") for e in epreuves],
+				"verdict": r.get(colonne) or "",
 			})
-		lignes.sort(key=lambda l: (ORDRE_PROPOSITION.get(l["proposition"] or "", 2), l["rang"] or 9999,
+			if lignes[-1]["verdict"] == "Désisté" and f.motif_desistement:
+				lignes[-1]["motif"] = _("Désistement : {0}").format(f.motif_desistement)
+		lignes.sort(key=lambda l: (ORDRE_PROPOSITION.get(l["verdict"], 2), l["rang"] or 9999,
 								   -(l["moyenne"] or 0), l["numero_table"] or ""))
 		sections.append({
 			"filiere": conf.filiere,
@@ -436,9 +447,10 @@ def telecharger_pv_classement(concours, filiere=None):
 			"seuil": doc.moyenne_minimale_de(conf.filiere, conf.niveau),
 			"epreuves": epreuves,
 			"lignes": lignes,
-			"admis": sum(1 for l in lignes if l["proposition"] == "Admis"),
-			"attente": sum(1 for l in lignes if l["proposition"] == "Liste d'attente"),
-			"ex_aequo": sum(1 for l in lignes if l["ex_aequo"]),
+			"admis": sum(1 for l in lignes if l["verdict"] == "Admis"),
+			"attente": sum(1 for l in lignes if l["verdict"] == "Liste d'attente"),
+			"desistes": sum(1 for l in lignes if l["verdict"] == "Désisté"),
+			"ex_aequo": 0 if final else sum(1 for l in lignes if l["ex_aequo"]),
 		})
 	if not sections:
 		frappe.throw(_("Aucune filière ne correspond."))
@@ -450,16 +462,21 @@ def telecharger_pv_classement(concours, filiere=None):
 		{
 			"concours": doc,
 			"sections": sections,
+			"final": final,
+			"publie": doc.statut in ("Résultats publiés", "Clôturé"),
+			"membres_jury": [m.strip() for m in (doc.membres_jury or "").splitlines() if m.strip()],
 			"school_name": settings.school_name or "",
 			"logo_file": "file://" + frappe.get_app_path("udshed", "public", "images", "logo.png"),
 			"date_emission": frappe.utils.formatdate(frappe.utils.today(), "dd/MM/yyyy"),
 			"calcule_le": frappe.utils.format_datetime(doc.classement_calcule_le, "dd/MM/yyyy à HH:mm"),
+			"date_deliberation": frappe.utils.formatdate(doc.date_deliberation, "dd/MM/yyyy") if doc.date_deliberation else "",
 		},
 	)
 	from weasyprint import HTML
 
 	pdf = HTML(string=html, base_url=frappe.utils.get_url()).write_pdf()
-	frappe.response["filename"] = f"PV_classement_provisoire_{doc.name}{'_' + filiere if filiere else ''}.pdf"
+	prefixe = "PV_deliberation" if final else "PV_classement_provisoire"
+	frappe.response["filename"] = f"{prefixe}_{doc.name}{'_' + filiere if filiere else ''}.pdf"
 	frappe.response["filecontent"] = pdf
 	frappe.response["type"] = "download"
 	frappe.response["content_type"] = "application/pdf"

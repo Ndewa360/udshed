@@ -12,6 +12,10 @@ from frappe import _
 from udshed.udshed.doctype.concours.concours import _cle_matiere
 
 STATUT_AUTORISE = "Autorisé à concourir"
+STATUT_LISTE_ATTENTE = "Liste d'attente"
+STATUT_DESISTE = "Désisté"
+# Statuts de candidature posés uniquement par le concours (publication, désistement).
+STATUTS_GERES_PAR_CONCOURS = (STATUT_LISTE_ATTENTE, STATUT_DESISTE)
 # Statuts du concours pendant lesquels on peut encore autoriser des candidats.
 STATUTS_CONCOURS_INSCRIPTION = ("Candidatures ouvertes", "Épreuves")
 # Caractères sans ambiguïté de lecture (ni 0/O, ni 1/I) pour les codes d'anonymat.
@@ -105,6 +109,57 @@ def inscrire_candidat(candidature):
 	})
 	fiche.insert(ignore_permissions=True)
 	return fiche
+
+
+def candidat_non_admis_publie(candidature):
+	"""Vrai si le concours du candidat a publié ses résultats, qu'il n'y est pas
+	admis et qu'il a demandé une formation hors concours : la scolarité peut alors
+	l'accepter sur dossier pour ce choix-là. `candidature` : document."""
+	fiche = frappe.db.get_value("Candidat Concours", {"candidature": candidature.name},
+								["concours", "decision"], as_dict=True)
+	if not fiche or fiche.decision not in ("Non admis", "Absent"):
+		return False
+	if frappe.db.get_value("Concours", fiche.concours, "statut") not in ("Résultats publiés", "Clôturé"):
+		return False
+	concours = frappe.get_doc("Concours", fiche.concours)
+	formations = {(r.filiere, str(r.niveau)) for r in concours.filieres}
+	return any((c.filiere, str(c.niveau)) not in formations for c in candidature.get("choix_de_formation") or [])
+
+
+def envoyer_resultat_liste_attente(candidature):
+	"""E-mail au candidat placé sur liste d'attente, avec son rang par formation."""
+	from udshed.api.candidature import get_school_logo_url
+	from udshed.udshed.doctype.session_inscription_candidate.session_inscription_candidate import _get_sender
+
+	cand = frappe.get_doc("Session Inscription Candidate", candidature)
+	fiche = fiche_du_candidat(candidature)
+	if not cand.email or not fiche:
+		return False
+	fiche = frappe.get_doc("Candidat Concours", fiche)
+	formations = []
+	for r in fiche.resultats:
+		if r.decision == STATUT_LISTE_ATTENTE:
+			libelle = frappe.db.get_value("Field of study", r.filiere, "name_of_field") or r.filiere
+			niveau = frappe.db.get_value("Field of study Level", r.niveau, "level") or r.niveau
+			formations.append({"libelle": f"{libelle} — {niveau}", "rang": r.rang or "—"})
+	concours = frappe.db.get_value("Concours", fiche.concours, ["titre", "academic_year"], as_dict=True)
+	try:
+		frappe.sendmail(
+			recipients=[cand.email],
+			sender=_get_sender(),
+			subject=_("Résultats du concours {0} : liste d'attente").format(concours.titre),
+			template="concours_liste_attente",
+			args={
+				"first_name": cand.first_name, "last_name": cand.last_name, "doc_name": cand.name,
+				"concours": concours.titre, "academic_year": concours.academic_year,
+				"formations": formations, "logo_url": get_school_logo_url(),
+			},
+			now=True,
+		)
+		return True
+	except Exception as e:
+		frappe.log_error(message=str(e), title=f"Échec e-mail liste d'attente {cand.name}")
+		return False
 
 
 def retirer_candidat(candidature):

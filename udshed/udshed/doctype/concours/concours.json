@@ -28,7 +28,15 @@
   "anonymat_leve_le",
   "anonymat_leve_par",
   "column_break_classement",
-  "classement_calcule_le"
+  "classement_calcule_le",
+  "deliberation_section",
+  "date_deliberation",
+  "president_jury",
+  "membres_jury",
+  "column_break_deliberation",
+  "observations_jury",
+  "resultats_publies_le",
+  "delai_finalisation"
  ],
  "fields": [
   {
@@ -173,6 +181,50 @@
    "fieldtype": "Datetime",
    "label": "Classement calculé le",
    "read_only": 1
+  },
+  {
+   "fieldname": "deliberation_section",
+   "fieldtype": "Section Break",
+   "label": "Délibération du jury"
+  },
+  {
+   "fieldname": "date_deliberation",
+   "fieldtype": "Date",
+   "label": "Date de la délibération"
+  },
+  {
+   "fieldname": "president_jury",
+   "fieldtype": "Data",
+   "label": "Président du jury"
+  },
+  {
+   "description": "Un nom par ligne. Repris sur le PV de délibération.",
+   "fieldname": "membres_jury",
+   "fieldtype": "Small Text",
+   "label": "Membres du jury"
+  },
+  {
+   "fieldname": "column_break_deliberation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "observations_jury",
+   "fieldtype": "Small Text",
+   "label": "Observations du jury"
+  },
+  {
+   "fieldname": "resultats_publies_le",
+   "fieldtype": "Datetime",
+   "label": "Résultats publiés le",
+   "read_only": 1
+  },
+  {
+   "default": "15",
+   "description": "Nombre de jours laissés à chaque admis (y compris appelé de la liste d'attente) pour finaliser son inscription. Passé ce délai, la place est libérée et proposée au suivant.",
+   "fieldname": "delai_finalisation",
+   "fieldtype": "Int",
+   "label": "Délai de finalisation (jours)",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
@@ -183,7 +235,7 @@
    "link_fieldname": "concours"
   }
  ],
- "modified": "2026-11-16 12:00:00.000000",
+ "modified": "2026-11-18 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Concours",

@@ -1,0 +1,54 @@
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; border-radius: 12px; overflow: hidden; border: 1px solid #e2e4e9;">
+
+  <!-- Header -->
+  <div style="background: #1e2025; padding: 32px; text-align: center;">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="Udshed" style="display: block; max-height: 72px; max-width: 200px; margin: 0 auto 12px;" />
+    {% endif %}
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0; letter-spacing: -0.02em;">Udshed</h1>
+    <p style="color: #9ca0a8; font-size: 13px; margin: 6px 0 0 0;">Résultats du concours</p>
+  </div>
+
+  <!-- Body -->
+  <div style="padding: 32px; background: #ffffff;">
+    <h2 style="color: #9a6700; font-size: 18px; margin: 0 0 16px 0;">Vous êtes sur liste d'attente</h2>
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Bonjour <strong>{{ first_name }} {{ last_name }}</strong>,
+    </p>
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Le jury du <strong>{{ concours }}</strong> (année académique {{ academic_year }}) a délibéré.
+      Vous n'êtes pas admis(e) d'office, mais vous êtes inscrit(e) sur la <strong>liste d'attente</strong>
+      de la ou des formations suivantes :
+    </p>
+
+    <table style="width: 100%; font-size: 14px; color: #3c3e44; border-collapse: collapse; margin: 16px 0 24px;">
+      <tr>
+        <th style="padding: 8px 10px; border-bottom: 2px solid #e2e4e9; text-align: left; color: #6b6d7a; font-size: 12px; text-transform: uppercase;">Formation</th>
+        <th style="padding: 8px 10px; border-bottom: 2px solid #e2e4e9; text-align: right; color: #6b6d7a; font-size: 12px; text-transform: uppercase;">Votre rang</th>
+      </tr>
+      {% for f in formations %}
+      <tr>
+        <td style="padding: 8px 10px; border-bottom: 1px solid #e2e4e9;">{{ f.libelle }}</td>
+        <td style="padding: 8px 10px; border-bottom: 1px solid #e2e4e9; text-align: right; font-weight: bold;">{{ f.rang }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Si une place se libère, vous serez admis(e) dans l'ordre du classement et vous recevrez
+      immédiatement un e-mail pour finaliser votre inscription.
+    </p>
+    <p style="color: #6b6d7a; font-size: 13px; line-height: 1.6;">
+      Numéro de dossier : <strong>{{ doc_name }}</strong>
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding: 20px 32px; background: #f5f6f8; border-top: 1px solid #e2e4e9; text-align: center;">
+    <p style="color: #9ca0a8; font-size: 12px; margin: 0;">
+      Udshed — Plateforme de gestion des inscriptions académiques
+    </p>
+  </div>
+
+</div>

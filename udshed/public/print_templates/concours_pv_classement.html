@@ -1,4 +1,5 @@
-{# PV de classement provisoire d'un concours : une section (saut de page) par filière. #}
+{# PV d'un concours, une section (saut de page) par filière.
+   final = False : classement provisoire (propositions) ; final = True : délibération du jury. #}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -8,7 +9,7 @@
         size: A4 landscape;
         margin: 12mm 10mm 14mm;
         @bottom-center {
-            content: "{{ school_name }} — PV de classement provisoire — {{ concours.name }} — Page " counter(page) " / " counter(pages);
+            content: "{{ school_name }} — {% if final %}PV de délibération{% else %}PV de classement provisoire{% endif %} — {{ concours.name }} — Page " counter(page) " / " counter(pages);
             font-size: 7pt;
             color: #7f8c8d;
         }
@@ -59,8 +60,17 @@
         </div>
     </div>
 
+    {% if final %}
+    <h1>PROCÈS-VERBAL DE DÉLIBÉRATION</h1>
+    {% if not publie %}<div class="provisoire">Projet — résultats non encore publiés</div>{% endif %}
+    <div class="infos">
+        Délibération du <strong>{{ date_deliberation or "……………" }}</strong>
+        {% if concours.president_jury %} — Président du jury : <strong>{{ concours.president_jury }}</strong>{% endif %}
+    </div>
+    {% else %}
     <h1>PROCÈS-VERBAL DE CLASSEMENT PROVISOIRE</h1>
     <div class="provisoire">Document provisoire, soumis à la délibération du jury — classement calculé le {{ calcule_le }}</div>
+    {% endif %}
     <div class="infos">
         Filière : <strong>{{ s.libelle }}</strong> — Niveau : <strong>{{ s.niveau }}</strong>
         — Places : <strong>{{ s.places }}</strong> — Moyenne minimale : <strong>{{ s.seuil }}/20</strong>
@@ -75,20 +85,20 @@
                 <th>Choix</th>
                 {% for e in s.epreuves %}<th>{{ e.matiere }}<br><small>coef. {{ '%g' % (e.coefficient | float) }}</small></th>{% endfor %}
                 <th>Moyenne /20</th>
-                <th>Proposition</th>
+                <th>{% if final %}Décision du jury{% else %}Proposition{% endif %}</th>
                 <th>Observation</th>
             </tr>
         </thead>
         <tbody>
             {% for l in s.lignes %}
-            <tr class="{% if l.proposition == 'Admis' %}admis{% elif l.proposition == "Liste d'attente" %}attente{% elif l.proposition == 'Non admis' %}non{% endif %}">
-                <td class="c">{% if l.rang %}{{ l.rang }}{% if l.ex_aequo %} <span class="eq">*</span>{% endif %}{% else %}—{% endif %}</td>
+            <tr class="{% if l.verdict == 'Admis' %}admis{% elif l.verdict == "Liste d'attente" %}attente{% elif l.verdict in ('Non admis', 'Désisté') %}non{% endif %}">
+                <td class="c">{% if l.rang %}{{ l.rang }}{% if l.ex_aequo and not final %} <span class="eq">*</span>{% endif %}{% else %}—{% endif %}</td>
                 <td class="c">{{ l.numero_table }}</td>
                 <td class="nom">{{ l.nom_complet }}</td>
                 <td class="c">{{ l.choix }}</td>
                 {% for n in l.notes %}<td class="c">{{ n }}</td>{% endfor %}
                 <td class="c"><strong>{{ "%.2f" | format(l.moyenne or 0) }}</strong></td>
-                <td class="c decision">{{ l.proposition or "—" }}</td>
+                <td class="c decision">{{ l.verdict or "—" }}</td>
                 <td class="motif">{{ l.motif or "" }}</td>
             </tr>
             {% endfor %}
@@ -96,11 +106,18 @@
     </table>
 
     <div class="bilan">
-        Candidats : <strong>{{ s.lignes | length }}</strong> — Proposés admis : <strong>{{ s.admis }}</strong>
+        Candidats : <strong>{{ s.lignes | length }}</strong> — {% if final %}Admis{% else %}Proposés admis{% endif %} : <strong>{{ s.admis }}</strong>
         — Liste d'attente : <strong>{{ s.attente }}</strong>
+        {% if s.desistes %} — Désistements : <strong>{{ s.desistes }}</strong>{% endif %}
         {% if s.ex_aequo %} — <span class="eq">* {{ s.ex_aequo }} candidat(s) ex æquo à départager par le jury</span>{% endif %}
     </div>
 
+    {% if final and concours.observations_jury %}
+    <div class="bilan"><strong>Observations du jury :</strong> {{ concours.observations_jury }}</div>
+    {% endif %}
+    {% if final and membres_jury %}
+    <div class="bilan"><strong>Membres du jury :</strong> {{ membres_jury | join(", ") }}</div>
+    {% endif %}
     <table class="pied"><tr>
         <td>Le président du jury<div class="ligne"></div></td>
         <td>Les membres du jury<div class="ligne"></div></td>

@@ -16,5 +16,15 @@ frappe.ui.form.on("Candidat Concours", {
 		frm.add_custom_button(__("Voir la candidature"), () => {
 			frappe.set_route("Form", "Session Inscription Candidate", frm.doc.candidature);
 		});
+
+		// La décision du jury ne se saisit que pendant la délibération.
+		frappe.db.get_value("Concours", frm.doc.concours, "statut").then((r) => {
+			const deliberation = (r.message || {}).statut === "Délibération";
+			frm.fields_dict.resultats.grid.update_docfield_property("decision", "read_only", deliberation ? 0 : 1);
+			frm.fields_dict.resultats.grid.refresh();
+			if (deliberation) {
+				frm.set_intro(__("Délibération en cours : réglez la « Décision du jury » de chaque formation dans le tableau des résultats."), "blue");
+			}
+		});
 	},
 });

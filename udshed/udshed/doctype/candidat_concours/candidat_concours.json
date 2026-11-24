@@ -20,6 +20,7 @@
   "decision_section",
   "decision",
   "observation_jury",
+  "motif_desistement",
   "column_break_decision",
   "filiere_admise",
   "niveau_admis"
@@ -109,17 +110,26 @@
    "label": "Décision du jury"
   },
   {
+   "description": "Décision publiée. Se règle dans le tableau des résultats ci-dessus.",
    "fieldname": "decision",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Décision",
-   "options": "\nAdmis\nListe d'attente\nNon admis\nAbsent"
+   "options": "\nAdmis\nListe d'attente\nNon admis\nAbsent\nDésisté",
+   "read_only": 1
   },
   {
    "fieldname": "observation_jury",
    "fieldtype": "Small Text",
    "label": "Observation du jury"
+  },
+  {
+   "depends_on": "eval:doc.decision=='Désisté'",
+   "fieldname": "motif_desistement",
+   "fieldtype": "Small Text",
+   "label": "Motif du désistement",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_decision",
@@ -129,19 +139,21 @@
    "fieldname": "filiere_admise",
    "fieldtype": "Link",
    "label": "Filière d'admission",
-   "options": "Field of study"
+   "options": "Field of study",
+   "read_only": 1
   },
   {
    "fieldname": "niveau_admis",
    "fieldtype": "Link",
    "label": "Niveau d'admission",
-   "options": "Field of study Level"
+   "options": "Field of study Level",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-09 11:00:00.000000",
+ "modified": "2026-11-16 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Candidat Concours",
