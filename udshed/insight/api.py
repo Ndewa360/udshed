@@ -252,9 +252,9 @@ def options_filtres(mode, academic_year, faculty=None, filiere=None):
 @frappe.whitelist()
 def exporter(mode, academic_year, faculty=None, filiere=None, niveau=None, semestre=None, teacher=None, type_seance=None):
 	"""Export Excel de la vue courante : synthèse, répartition, cours, évolution, alertes."""
-	import openpyxl
 	from frappe.desk.utils import provide_binary_file
-	from frappe.utils.xlsxutils import make_xlsx
+
+	from udshed.utils.excel import classeur_xlsx
 
 	data = tableau_de_bord(mode, academic_year, faculty, filiere, niveau, semestre, teacher, type_seance)
 	k = data["kpis"]
@@ -301,16 +301,12 @@ def exporter(mode, academic_year, faculty=None, filiere=None, niveau=None, semes
 	]
 	alertes = [["Niveau", "Alerte"]] + [[a["niveau"], a["message"]] for a in data["alertes"]]
 
-	# make_xlsx insère chaque feuille en tête : ordre inverse pour l'ordre final.
-	wb = openpyxl.Workbook()
-	wb.remove(wb.active)
-	for donnees, nom, largeurs in (
-		(alertes, "Alertes", [12, 120]),
-		(evolution, "Évolution", [14, 14, 14, 16, 16, 16, 16]),
-		(cours, "Cours", [14, 40, 12, 40, 40] + [14] * 10),
+	contenu = classeur_xlsx([
+		(synthese, "Synthèse", [32, 40]),
 		(repartition, "Répartition", [40] + [14] * 9),
-	):
-		make_xlsx(donnees, nom, wb=wb, column_widths=largeurs)
-	flux = make_xlsx(synthese, "Synthèse", wb=wb, column_widths=[32, 40])
+		(cours, "Cours", [14, 40, 12, 40, 40] + [14] * 10),
+		(evolution, "Évolution", [14, 14, 14, 16, 16, 16, 16]),
+		(alertes, "Alertes", [12, 120]),
+	])
 	nom_fichier = f"insight_{mode}_{academic_year}".replace("/", "-")
-	provide_binary_file(nom_fichier, "xlsx", flux.getvalue())
+	provide_binary_file(nom_fichier, "xlsx", contenu)

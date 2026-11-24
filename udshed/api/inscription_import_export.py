@@ -354,16 +354,11 @@ def telecharger_modele_import(format="xlsx"):
         _repondre_csv([entetes], nom_fichier)
         return
 
-    import openpyxl
     from frappe.desk.utils import provide_binary_file
-    from frappe.utils.xlsxutils import make_xlsx
 
-    # make_xlsx (Frappe v16) attend un classeur openpyxl, l'enregistre à chaque
-    # appel (d'où un classeur normal : un « write_only » ne s'enregistre qu'une
-    # fois) et insère chaque onglet en PREMIÈRE position : on les crée donc
-    # dans l'ordre inverse pour obtenir Étudiants, Instructions, Filières.
-    wb = openpyxl.Workbook()
-    wb.remove(wb.active)
+    # Classeur écrit directement (udshed.utils.excel) : make_xlsx(wb=...) change
+    # de comportement selon la version de Frappe et plantait en production.
+    from udshed.utils.excel import classeur_xlsx
 
     instructions = [
         ["Colonne", "Obligatoire", "Comment la remplir"],
@@ -386,11 +381,13 @@ def telecharger_modele_import(format="xlsx"):
             order_by="order asc, level asc",
         )
         filieres.append([f.name, f.name_of_field or "", ", ".join(n.level for n in niveaux if n.level)])
-    make_xlsx(filieres, "Filières", wb=wb, column_widths=[18, 40, 60])
-    make_xlsx(instructions, "Instructions", wb=wb, column_widths=[30, 12, 100])
-    flux = make_xlsx([entetes], "Étudiants", wb=wb, column_widths=[22] * len(entetes))
+    contenu = classeur_xlsx([
+        ([entetes], "Étudiants", [22] * len(entetes)),
+        (instructions, "Instructions", [30, 12, 100]),
+        (filieres, "Filières", [18, 40, 60]),
+    ])
 
-    provide_binary_file(nom_fichier, "xlsx", flux.getvalue())
+    provide_binary_file(nom_fichier, "xlsx", contenu)
 
 
 # ====================================================================== #
