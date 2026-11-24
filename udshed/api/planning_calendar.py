@@ -287,7 +287,13 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 			lies = _cours_lies_a_la_classe(academic_year, filiere, niveau) if (filiere and niveau) else []
 			query = query.where(condition_classe | PlanningItem.cours.isin(lies) if lies else condition_classe)
 		if teacher:
-			query = query.where(CourseEnseignant.enseignant == teacher)
+			# Toutes les séances de l'enseignant, dans toutes ses classes, y
+			# compris celles d'un cours lié (cours commun planifié via une
+			# autre grille) : c'est le même enseignement, comme pour les conflits.
+			cours_enseignant = _cours_de_lenseignant(academic_year, teacher)
+			if not cours_enseignant:
+				return []
+			query = query.where(PlanningItem.cours.isin(cours_enseignant))
 
 		data = query.run(as_dict=True)
 		seen = {}
@@ -301,6 +307,7 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 
 		teacher_cache = {}
 		room_cache = {}
+		classes_cache = {}
 		for doc in seen.values():
 			doc["teacher_ids"] = [t for t in (doc._teachers or []) if t]
 			doc["teachers"] = [_format_teacher(t, teacher_cache) for t in doc["teacher_ids"]]
@@ -312,6 +319,9 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 			doc["salle"] = _room_code(doc.salle, room_cache)
 			doc["batiment"] = _batiment_code(doc.batiment, room_cache)
 			doc["cours_affiche"] = doc.cours
+			# Toutes les classes qui suivent la séance (tronc commun, cours
+			# liés) : une ligne par séance ne porte qu'UNE classe dans `niveau`.
+			doc["classes"] = _classes_label(doc.cours, classes_cache)
 		rows = list(seen.values())
 		# Statut fixé à la main (pointage) : affiché et repris dans la fenêtre de modification.
 		if rows and frappe.db.has_column("Planning Item", "pointage_manuel"):
@@ -331,6 +341,37 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 	except Exception:
 		_log()
 		_throw("Erreur lors du chargement du planning.")
+
+
+def _cours_de_lenseignant(academic_year, teacher):
+	"""Cours (Teaching Unit) de l'année où l'enseignant intervient, élargis aux
+	cours qui leur sont liés (groupe de cours commun)."""
+	from udshed.utils.planning_conflits import groupe_du_cours
+
+	propres = frappe.db.sql_list(
+		"""
+		SELECT DISTINCT tu.name FROM `tabTeaching Unit` tu
+		INNER JOIN `tabCourse Teacher Item` ct ON ct.parent = tu.name AND ct.parenttype = 'Teaching Unit'
+		WHERE tu.academic_year = %s AND ct.enseignant = %s
+		""",
+		(academic_year, teacher),
+	)
+	cours = set()
+	for name in propres:
+		cours |= groupe_du_cours(name)
+	return sorted(cours)
+
+
+def _classes_label(teaching_unit, cache):
+	"""Libellés « Filière Niveau » de toutes les classes d'un cours (cours liés compris)."""
+	if teaching_unit not in cache:
+		from udshed.utils.planning_conflits import classes_du_cours
+
+		cache[teaching_unit] = sorted(
+			"{0} {1}".format(filiere, _level_label(niveau) or niveau).strip()
+			for filiere, niveau in classes_du_cours(teaching_unit)
+		)
+	return list(cache[teaching_unit])
 
 
 def _afficher_selon_la_grille(rows, academic_year, filiere, niveau):

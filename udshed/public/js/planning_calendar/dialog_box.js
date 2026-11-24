@@ -66,7 +66,7 @@ window.Udshed.Dialogs = {
         ].find(([key]) => !filter[key]);
         if (missing) {
             Udshed.Messages.validation(
-                __("Veuillez sélectionner une {0} avant de créer une planification.").format(missing[1]),
+                __("Veuillez sélectionner une {0} avant de créer une planification.", [missing[1]]),
                 __("Filtre requis")
             );
             return;
@@ -378,12 +378,21 @@ window.Udshed.Dialogs = {
             Udshed.Messages.warning(__("Sélectionnez une filière et un niveau, ou un enseignant, avant l'envoi."));
             return;
         }
+        const escapeHtml = (value) => frappe.utils.escape_html(String(value === null || value === undefined ? "" : value));
         const dialog = new frappe.ui.Dialog({
             title: __("Envoi du planning par mail"),
             fields: [
                 {
+                    fieldtype: "HTML",
+                    fieldname: "explication",
+                    options: `<div class="text-muted small" style="margin-bottom: 10px;">${__(
+                        "Chaque enseignant reçoit uniquement SON planning de la semaine : toutes ses séances, dans toutes les classes et toutes les salles, en pièce jointe PDF et détaillées dans le corps du mail."
+                    )}</div>`
+                },
+                {
                     fieldtype: "Check",
-                    label: __("Envoyer à tous les enseignants"),
+                    label: __("Envoyer à tous les enseignants de cette classe"),
+                    description: __("Les enseignants ayant au moins une séance cette semaine dans la classe affichée."),
                     fieldname: "to_all_teacher",
                     depends_on: () => filter.niveau ? 1 : 0,
                     default: 0
@@ -397,13 +406,18 @@ window.Udshed.Dialogs = {
                 },
                 {
                     fieldtype: "Check",
-                    label: __("Recevoir le planning"),
+                    label: __("M'envoyer une copie"),
+                    description: __("Enseignant : votre propre planning. Sinon : le planning affiché à l'écran."),
                     fieldname: "to_me",
                     default: 0
                 }
             ],
             primary_action_label: __("Envoyer le planning"),
             primary_action(values) {
+                if (!values.to_all_teacher && !values.to_teacher && !values.to_me) {
+                    Udshed.Messages.warning(__("Cochez au moins un destinataire."));
+                    return;
+                }
                 frappe.call({
                     method: "udshed.api.planning_calendar_email.send_planning_to_mail",
                     freeze: true,
@@ -417,9 +431,28 @@ window.Udshed.Dialogs = {
                     callback: (response) => {
                         dialog.hide();
                         const result = response.message || {};
-                        const sendMessage = __("Planning envoyé à {0} destinataire(s).").format(result.sent || 0);
-                        if (result.failed) Udshed.Messages.warning(sendMessage);
-                        else Udshed.Messages.success(sendMessage);
+                        if (result.queued) {
+                            Udshed.Messages.success(__(
+                                "Envoi lancé en arrière-plan pour {0} destinataire(s). Vous serez notifié à la fin.",
+                                [result.total || 0]
+                            ));
+                        } else {
+                            const details = [];
+                            (result.errors || []).forEach((e) => details.push(`<li>${escapeHtml(e)}</li>`));
+                            (result.sans_email || []).forEach((t) => details.push(
+                                `<li>${escapeHtml(t)} : ${__("aucune adresse email renseignée")}</li>`
+                            ));
+                            const sendMessage = __("Planning envoyé à {0} destinataire(s).", [result.sent || 0]);
+                            if (details.length) {
+                                frappe.msgprint({
+                                    title: __("Envoi du planning"),
+                                    indicator: result.sent ? "orange" : "red",
+                                    message: `<p>${escapeHtml(sendMessage)}</p><p>${__("Non envoyés :")}</p><ul>${details.join("")}</ul>`
+                                });
+                            } else {
+                                Udshed.Messages.success(sendMessage);
+                            }
+                        }
                         if (typeof callback === "function") callback();
                     },
                     error: (err) => window.Udshed.Dialogs._error(err, __("Échec de l'envoi"))

@@ -410,8 +410,8 @@ show_import_dialog(filters, onAfterImported = (data) => {}) {
             const r = data.data;
             Udshed.Messages.dialog({
                 title: __('Import réussi'),
-                message: __("UE créées : {0}\nCours créés : {1}\nCours mis à jour : {2}\nCours retirés : {3}\nCours conservés (données existantes) : {4}")
-                    .format(r.ues_created, r.courses_created, r.courses_updated, r.courses_deleted, r.courses_kept),
+                message: __("UE créées : {0}\nCours créés : {1}\nCours mis à jour : {2}\nCours retirés : {3}\nCours conservés (données existantes) : {4}",
+                    [r.ues_created, r.courses_created, r.courses_updated, r.courses_deleted, r.courses_kept]),
                 type: 'success'
             });
             onAfterImported(data);

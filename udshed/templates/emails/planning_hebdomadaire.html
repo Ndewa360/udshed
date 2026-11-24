@@ -1,0 +1,170 @@
+{#- Planning hebdomadaire envoyé par email (udshed/api/planning_calendar_email.py).
+    HTML « email » : tableaux et styles en ligne, pour un rendu correct dans
+    Gmail, Outlook et les clients mobiles. -#}
+{%- set e = etablissement -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f2f4f7; padding:24px 0; font-family:'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<tr><td align="center" style="padding:0 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:680px; background:#ffffff; border:1px solid #e4e7ec; border-radius:10px; overflow:hidden;">
+
+  <!-- En-tête établissement -->
+  <tr>
+    <td style="background:#1f3c88; padding:24px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          {% if e.logo %}
+          <td width="72" valign="middle" style="padding-right:16px;">
+            <img src="{{ e.logo }}" alt="{{ e.nom }}" width="64" style="display:block; max-width:64px; max-height:64px; background:#ffffff; border-radius:8px; padding:4px;">
+          </td>
+          {% endif %}
+          <td valign="middle" style="color:#ffffff;">
+            <div style="font-size:19px; font-weight:700; line-height:1.3;">{{ e.nom }}</div>
+            {% if e.institut %}<div style="font-size:13px; opacity:0.9; margin-top:2px;">{{ e.institut }}</div>{% endif %}
+            <div style="font-size:12px; opacity:0.8; margin-top:6px; letter-spacing:0.3px; text-transform:uppercase;">Service de la planification académique</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Objet -->
+  <tr>
+    <td style="padding:28px 28px 8px;">
+      <div style="font-size:12px; color:#667085; text-transform:uppercase; letter-spacing:0.6px; font-weight:600;">Emploi du temps hebdomadaire</div>
+      <h1 style="margin:6px 0 0; font-size:22px; line-height:1.35; color:#101828;">
+        {% if est_enseignant %}Votre planning de cours{% else %}Planning de cours{% endif %} {{ periode }}
+      </h1>
+    </td>
+  </tr>
+
+  <!-- Message -->
+  <tr>
+    <td style="padding:12px 28px 4px; color:#344054; font-size:15px; line-height:1.6;">
+      <p style="margin:0 0 12px;">Bonjour <strong>{{ destinataire }}</strong>,</p>
+      {% if est_enseignant %}
+        {% if nb_seances %}
+        <p style="margin:0 0 12px;">
+          Veuillez trouver ci-dessous le récapitulatif de <strong>l'ensemble de vos séances</strong> programmées
+          {{ periode }}, toutes classes et toutes salles confondues. Le planning complet est également joint
+          à ce message au format PDF.
+        </p>
+        {% else %}
+        <p style="margin:0 0 12px;">
+          Aucune séance ne vous est attribuée {{ periode }}. Le planning PDF joint est fourni pour information.
+        </p>
+        {% endif %}
+      {% else %}
+        <p style="margin:0 0 12px;">
+          Veuillez trouver ci-dessous le récapitulatif des séances programmées {{ periode }}.
+          Le planning complet est joint à ce message au format PDF.
+        </p>
+      {% endif %}
+    </td>
+  </tr>
+
+  {% if nb_seances %}
+  <!-- Synthèse -->
+  <tr>
+    <td style="padding:8px 28px 4px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e4e7ec; border-radius:8px; background:#f8faff;">
+        <tr>
+          <td align="center" style="padding:14px 8px; border-right:1px solid #e4e7ec;">
+            <div style="font-size:22px; font-weight:700; color:#1f3c88;">{{ nb_seances }}</div>
+            <div style="font-size:12px; color:#667085;">séance{{ "s" if nb_seances > 1 else "" }}</div>
+          </td>
+          <td align="center" style="padding:14px 8px; border-right:1px solid #e4e7ec;">
+            <div style="font-size:22px; font-weight:700; color:#1f3c88;">{{ volume }}</div>
+            <div style="font-size:12px; color:#667085;">volume horaire</div>
+          </td>
+          <td align="center" style="padding:14px 8px;">
+            <div style="font-size:22px; font-weight:700; color:#1f3c88;">{{ classes | length }}</div>
+            <div style="font-size:12px; color:#667085;">classe{{ "s" if classes | length > 1 else "" }}</div>
+          </td>
+        </tr>
+      </table>
+      {% if classes %}
+      <div style="font-size:13px; color:#475467; margin-top:10px; line-height:1.5;">
+        <strong>Classes concernées :</strong> {{ classes | join(", ") }}
+      </div>
+      {% endif %}
+    </td>
+  </tr>
+
+  <!-- Détail par jour -->
+  <tr>
+    <td style="padding:18px 28px 6px;">
+      {% for jour in jours %}
+      <div style="font-size:14px; font-weight:700; color:#1f3c88; margin:{{ '0' if loop.first else '18px' }} 0 8px; padding-bottom:6px; border-bottom:2px solid #1f3c88;">
+        {{ jour.libelle }}
+      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; font-size:13px; color:#344054;">
+        {% for s in jour.seances %}
+        <tr>
+          <td valign="top" width="96" style="padding:9px 10px 9px 0; border-bottom:1px solid #eaecf0; white-space:nowrap; font-weight:600; color:#101828;">
+            {{ s.horaire }}
+          </td>
+          <td valign="top" style="padding:9px 0; border-bottom:1px solid #eaecf0; line-height:1.5;">
+            <div style="font-weight:600; color:#101828;">
+              {% if s.type %}<span style="display:inline-block; background:#eef2ff; color:#1f3c88; border-radius:4px; padding:1px 6px; font-size:11px; font-weight:700; margin-right:6px;">{{ s.type }}</span>{% endif %}{{ s.cours }}
+            </div>
+            <div style="color:#475467;">
+              {% if s.classes %}{{ s.classes }} · {% endif %}{{ s.lieu }}{% if s.mode and s.mode != "En ligne" %} · {{ s.mode }}{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% endfor %}
+    </td>
+  </tr>
+  {% endif %}
+
+  <!-- Remarques -->
+  <tr>
+    <td style="padding:18px 28px 6px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fffaeb; border:1px solid #fedf89; border-radius:8px;">
+        <tr><td style="padding:12px 16px; font-size:13px; color:#7a2e0e; line-height:1.55;">
+          Ce planning est susceptible d'être modifié. En cas d'indisponibilité ou d'erreur, merci de prévenir
+          l'administration académique au plus tôt{% if e.email or e.telephone %} :
+          {% if e.email %}<a href="mailto:{{ e.email }}" style="color:#7a2e0e;">{{ e.email }}</a>{% endif %}{% if e.email and e.telephone %} · {% endif %}{% if e.telephone %}{{ e.telephone }}{% endif %}{% endif %}.
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Signature -->
+  <tr>
+    <td style="padding:18px 28px 26px; color:#344054; font-size:14px; line-height:1.6;">
+      Cordialement,<br>
+      <strong>L'Administration académique</strong><br>
+      {{ e.nom }}{% if e.institut %} — {{ e.institut }}{% endif %}
+    </td>
+  </tr>
+
+  <!-- Coordonnées de l'établissement -->
+  <tr>
+    <td style="background:#f9fafb; border-top:1px solid #e4e7ec; padding:16px 28px; font-size:12px; color:#475467; line-height:1.6;">
+      <strong style="color:#101828;">{{ e.nom }}</strong>
+      {% if e.adresse %}<br>{{ e.adresse }}{% endif %}
+      {% if e.telephone or e.email or e.site %}<br>
+        {% if e.telephone %}Tél. : {{ e.telephone }}{% endif %}
+        {% if e.email %}{% if e.telephone %} · {% endif %}Email : <a href="mailto:{{ e.email }}" style="color:#1f3c88;">{{ e.email }}</a>{% endif %}
+        {% if e.site %}{% if e.telephone or e.email %} · {% endif %}<a href="{{ e.site if e.site.startswith('http') else 'https://' ~ e.site }}" style="color:#1f3c88;">{{ e.site }}</a>{% endif %}
+      {% endif %}
+    </td>
+  </tr>
+
+  <!-- Éditeur -->
+  <tr>
+    <td style="background:#101828; padding:16px 28px; font-size:11px; color:#d0d5dd; line-height:1.6; text-align:center;">
+      Message généré automatiquement le {{ genere_le }} par <strong style="color:#ffffff;">Udshed</strong>,
+      plateforme de gestion académique éditée par <strong style="color:#ffffff;">{{ editeur.nom }}</strong>.<br>
+      Contacter l'éditeur : {{ editeur.telephone }} ·
+      <a href="mailto:{{ editeur.email }}" style="color:#ffffff;">{{ editeur.email }}</a><br>
+      <span style="color:#98a2b3;">Merci de ne pas répondre directement à l'éditeur pour les questions liées à votre planning : adressez-vous à votre établissement.</span><br>
+      <span style="color:#98a2b3;">© {{ annee }} {{ editeur.nom }} — Udshed. Tous droits réservés.</span>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>

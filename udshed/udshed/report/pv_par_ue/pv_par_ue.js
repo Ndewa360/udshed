@@ -147,9 +147,7 @@ frappe.query_reports["PV par UE"] = {
 				callback(r) {
 					const m = r.message || {};
 					frappe.msgprint(
-						__("Résultats recalculés pour {0} étudiant(s).").format(
-							m.etudiants || 0
-						)
+						__("Résultats recalculés pour {0} étudiant(s).", [m.etudiants || 0])
 					);
 					report.refresh();
 				},

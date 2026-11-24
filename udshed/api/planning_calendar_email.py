@@ -1,15 +1,57 @@
+"""Envoi du planning hebdomadaire par email.
+
+Règles :
+  - un enseignant reçoit UNIQUEMENT son planning : toutes ses séances de la
+    semaine, dans toutes ses classes et toutes les salles (cours liés compris),
+    quel que soit le filtre (classe) affiché à l'écran au moment de l'envoi ;
+  - « Envoyer à tous les enseignants » vise les enseignants qui ont au moins
+    une séance cette semaine dans la classe affichée ;
+  - « M'envoyer une copie » : un enseignant reçoit son propre planning, un
+    gestionnaire reçoit le planning affiché à l'écran ;
+  - chaque mail contient le PDF en pièce jointe ET le détail des séances dans
+    le corps, ainsi que les coordonnées de l'établissement et de l'éditeur.
+
+Au-delà de quelques destinataires, l'envoi part en tâche de fond (génération
+d'un PDF par enseignant) pour ne pas dépasser le délai d'une requête web.
+"""
+
+from datetime import datetime
+
 import frappe
 from frappe import _
-from datetime import datetime
 
 import udshed.api.planning_calendar as planning_calendar
 import udshed.api.planning_calendar_pdf as planning_calendar_pdf
-import udshed.api.school_setting as school_setting
 import udshed.api.planning_permission as planning_permission
 import udshed.utils.email_utils as email_utils
 import udshed.utils.file_utils as file_utils
+from udshed.api.planning_calendar_pdf import date_fr
+
+EDITEUR = {
+	"nom": "Ndewa360",
+	"telephone": "+237 6 80 91 61 59",
+	"email": "contact@ndewa-360.com",
+}
+
+# Au-delà, l'envoi est mis en file (tâche de fond) au lieu d'être fait dans la requête.
+SEUIL_ENVOI_DIRECT = 3
+
+TYPES_COURTS = {
+	"Cours Magistral (CM)": "CM",
+	"Cours": "CM",
+	"Traveaux Pratiques (TP)": "TP",
+	"Travaux Pratique (TP)": "TP",
+	"Traveaux Dirigés (TD)": "TD",
+	"Travaux Dirigés (TD)": "TD",
+	"Controlle Continue (CC)": "CC",
+	"Examen de session normal": "Examen",
+	"Examen de rattrapage": "Rattrapage",
+}
 
 
+# ---------------------------------------------------------------------- #
+#  Destinataires
+# ---------------------------------------------------------------------- #
 def _teacher_doc(name):
 	if not name:
 		return None
@@ -24,28 +66,70 @@ def _teacher_label(teacher):
 	).strip() or teacher.name
 
 
-def _recipient_from_user(user):
-	email = frappe.db.get_value("User", user, "email")
-	if not email:
-		frappe.throw(_("Adresse email introuvable pour l'utilisateur courant."), frappe.ValidationError)
-	return {"name": user, "email": email, "label": user}
+def _filtres_enseignant(filters, teacher):
+	"""Planning complet d'un enseignant : seuls l'année, la semaine et
+	l'enseignant comptent (pas la classe affichée à l'écran)."""
+	return {
+		"academic_year": filters.get("academic_year"),
+		"week_start": filters.get("week_start"),
+		"teacher": teacher,
+	}
 
 
-def send_planning_to_teacher_email(filters, teacher, school_name, school_logo, pdf, planning_name, start_date, end_date):
-	# Les destinataires sont construits en dict simples (dict(teacher), voir
-	# send_planning_to_mail) : sans conversion, `teacher.email` levait
-	# « 'dict' object has no attribute 'email' » pour chaque envoi.
-	teacher = frappe._dict(teacher)
-	frappe.sendmail(
-		recipients=[teacher.email],
-		sender=email_utils.get_formatted_sender(),
-		subject="UdM: {0}".format(planning_name.replace(".pdf", "")),
-		message=email_html_template(school_name, school_logo, teacher.get("label") or _teacher_label(teacher), start_date, end_date),
-		attachments=[{"fname": planning_name, "fcontent": pdf}],
-		delayed=False,
-	)
+def _destinataires(filters, items, to_all_teacher, to_teacher, to_me):
+	"""(destinataires par email, enseignants sans email)."""
+	destinataires = {}
+	sans_email = []
+
+	def ajouter_enseignant(name):
+		teacher = _teacher_doc(name)
+		if not teacher:
+			return
+		label = _teacher_label(teacher)
+		email = (teacher.email or "").strip()
+		if not email:
+			if label not in sans_email:
+				sans_email.append(label)
+			return
+		destinataires.setdefault(email, {
+			"email": email,
+			"label": label,
+			"teacher": teacher.name,
+			"filters": _filtres_enseignant(filters, teacher.name),
+		})
+
+	if to_teacher and filters.get("teacher"):
+		ajouter_enseignant(filters["teacher"])
+
+	if to_all_teacher:
+		ids = {name for item in items for name in (item.get("teacher_ids") or [])}
+		if filters.get("teacher"):
+			ids.add(filters["teacher"])
+		for name in sorted(ids):
+			ajouter_enseignant(name)
+
+	if to_me:
+		user = frappe.session.user
+		teacher_name = planning_permission._teacher_name(user)
+		if teacher_name:
+			ajouter_enseignant(teacher_name)
+		else:
+			email = frappe.db.get_value("User", user, "email")
+			if not email:
+				frappe.throw(_("Adresse email introuvable pour l'utilisateur courant."), frappe.ValidationError)
+			destinataires.setdefault(email, {
+				"email": email,
+				"label": frappe.utils.get_fullname(user) or user,
+				"teacher": None,
+				"filters": dict(filters),
+			})
+
+	return destinataires, sans_email
 
 
+# ---------------------------------------------------------------------- #
+#  Point d'entrée
+# ---------------------------------------------------------------------- #
 @frappe.whitelist()
 def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=None):
 	if isinstance(filters, str):
@@ -56,6 +140,8 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 	week_start = filters.get("week_start")
 	if not academic_year or not week_start:
 		frappe.throw(_("Année académique et semaine sont requises."), frappe.ValidationError)
+	to_all_teacher, to_teacher, to_me = (frappe.utils.cint(v) for v in (to_all_teacher, to_teacher, to_me))
+
 	scope = planning_permission.assert_can_view_planning(
 		academic_year,
 		filters.get("faculty"),
@@ -63,153 +149,212 @@ def send_planning_to_mail(filters, to_all_teacher=None, to_teacher=None, to_me=N
 		filters.get("niveau"),
 		filters.get("teacher"),
 	)
-	resolved = scope["filters"]
-	filters = {**filters, **resolved}
+	filters = {**filters, **scope["filters"]}
 
-	school_name, school_logo = school_setting.get_school_data()
-	# Ne jamais déballer dans « _ » : c'est la fonction de traduction importée
-	# plus haut ; l'écraser faisait planter `_("…")` plus bas
-	# (« 'datetime.date' object is not callable »).
-	items = planning_calendar_pdf.generate_planning_pdf(filters)[2]
-	start_date = planning_calendar.parse_date(week_start)
-	end_date = frappe.utils.add_days(start_date, 5)
+	# Séances de la vue affichée : servent à trouver les enseignants de la classe.
+	items = planning_calendar.get_week_planning(
+		academic_year=academic_year,
+		week_start=week_start,
+		filiere=filters.get("filiere"),
+		niveau=filters.get("niveau"),
+		teacher=filters.get("teacher"),
+		faculty=filters.get("faculty"),
+	) if to_all_teacher else []
 
-	recipients = {}
-
-	def add_recipient(teacher, recipient_filters):
-		if not teacher or not teacher.get("email"):
-			return
-		email = str(teacher["email"]).strip()
-		if not email:
-			return
-		if email in recipients:
-			for key, value in recipient_filters.items():
-				recipients[email]["filters"].setdefault(key, value)
-			return
-		copy_filters = dict(filters)
-		copy_filters.update(recipient_filters)
-		recipients[email] = {"teacher": teacher, "filters": copy_filters}
-
-	if to_teacher and filters.get("teacher"):
-		teacher = _teacher_doc(filters.get("teacher"))
-		if teacher:
-			entry = dict(teacher)
-			entry["label"] = _teacher_label(teacher)
-			add_recipient(entry, {"teacher": teacher.name})
-
-	if to_all_teacher:
-		ids = {name for item in items for name in (item.get("teacher_ids") or [])}
-		if filters.get("teacher"):
-			ids.add(filters.get("teacher"))
-		for name in ids:
-			teacher = _teacher_doc(name)
-			if teacher:
-				entry = dict(teacher)
-				entry["label"] = _teacher_label(teacher)
-				add_recipient(entry, {"teacher": teacher.name})
-
-	if to_me:
-		teacher_name = planning_permission._teacher_name(frappe.session.user)
-		if teacher_name:
-			teacher = _teacher_doc(teacher_name)
-			if teacher:
-				entry = dict(teacher)
-				entry["label"] = _teacher_label(teacher)
-				add_recipient(entry, {"teacher": teacher.name})
-		else:
-			add_recipient(_recipient_from_user(frappe.session.user), {})
-
-	if not recipients:
+	destinataires, sans_email = _destinataires(filters, items, to_all_teacher, to_teacher, to_me)
+	if not destinataires:
+		if sans_email:
+			frappe.throw(
+				_("Aucun email envoyé : adresse email manquante pour {0}.").format(", ".join(sans_email)),
+				frappe.ValidationError,
+			)
 		frappe.throw(_("Aucun destinataire sélectionné."), frappe.ValidationError)
 
-	frappe.publish_progress(50, title=_("Préparation des destinataires"))
-	errors = []
-	for email, entry in recipients.items():
-		try:
-			recipient_filters = entry["filters"]
-			planning_permission.assert_can_view_planning(
-				recipient_filters.get("academic_year"),
-				recipient_filters.get("faculty"),
-				recipient_filters.get("filiere"),
-				recipient_filters.get("niveau"),
-				recipient_filters.get("teacher"),
-			)
-			pdf, planning_name = planning_calendar_pdf.generate_planning_pdf(recipient_filters)[:2]
-			send_planning_to_teacher_email(
-				recipient_filters,
-				entry["teacher"],
-				school_name,
-				school_logo,
-				pdf,
-				planning_name,
-				start_date,
-				end_date,
-			)
-		except Exception as exc:
-			frappe.log_error(title="planning_calendar_email envoi", message=frappe.get_traceback())
-			errors.append("{0}: {1}".format(email, str(exc)))
+	# Contrôle des droits AVANT tout envoi (et dans la requête de l'utilisateur).
+	for entry in destinataires.values():
+		f = entry["filters"]
+		planning_permission.assert_can_view_planning(
+			f.get("academic_year"), f.get("faculty"), f.get("filiere"), f.get("niveau"), f.get("teacher")
+		)
 
-	frappe.publish_progress(100, title=_("Envoi terminé"))
-	if len(errors) == len(recipients):
-		frappe.throw(_("Échec de l'envoi : {0}").format("; ".join(errors)), frappe.ValidationError)
+	liste = list(destinataires.values())
+	if len(liste) > SEUIL_ENVOI_DIRECT:
+		frappe.enqueue(
+			"udshed.api.planning_calendar_email.envoyer_en_arriere_plan",
+			queue="long",
+			timeout=3600,
+			destinataires=liste,
+			sans_email=sans_email,
+			demandeur=frappe.session.user,
+		)
+		return {"queued": True, "total": len(liste), "sans_email": sans_email}
+
+	resultat = _envoyer(liste, immediat=True)
+	if not resultat["sent"]:
+		frappe.throw(_("Échec de l'envoi : {0}").format("; ".join(resultat["errors"])), frappe.ValidationError)
+	resultat["sans_email"] = sans_email
+	return resultat
+
+
+def envoyer_en_arriere_plan(destinataires, sans_email, demandeur):
+	"""Tâche de fond : envoie puis notifie l'utilisateur qui a lancé l'envoi."""
+	frappe.set_user(demandeur)
+	resultat = _envoyer(destinataires, immediat=False)
+	lignes = [_("Planning envoyé à {0} destinataire(s) sur {1}.").format(resultat["sent"], len(destinataires))]
+	lignes += resultat["errors"]
+	lignes += [_("{0} : aucune adresse email renseignée").format(nom) for nom in sans_email]
+	frappe.publish_realtime(
+		"msgprint",
+		{
+			"title": _("Envoi du planning"),
+			"indicator": "green" if not (resultat["errors"] or sans_email) else "orange",
+			"message": "<br>".join(frappe.utils.escape_html(l) for l in lignes),
+		},
+		user=demandeur,
+	)
+	return resultat
+
+
+def _envoyer(destinataires, immediat):
+	etablissement = _etablissement()
+	erreurs = []
+	envoyes = 0
+	for entry in destinataires:
+		try:
+			pdf, nom_pdf, items, start, end = planning_calendar_pdf.generate_planning_pdf(entry["filters"])
+			envoyer_planning(entry, etablissement, pdf, nom_pdf, items, start, end, immediat=immediat)
+			envoyes += 1
+		except Exception as exc:
+			frappe.log_error(title="Envoi du planning par email", message=frappe.get_traceback())
+			erreurs.append("{0} ({1}) : {2}".format(entry["label"], entry["email"], str(exc) or exc.__class__.__name__))
+	return {"sent": envoyes, "failed": len(erreurs), "errors": erreurs}
+
+
+def envoyer_planning(entry, etablissement, pdf, nom_pdf, items, start, end, immediat=True):
+	contexte = contexte_email(entry, etablissement, items, start, end)
+	frappe.sendmail(
+		recipients=[entry["email"]],
+		sender=email_utils.get_formatted_sender(etablissement["nom_expediteur"]),
+		reply_to=etablissement["email"] or None,
+		subject=contexte["sujet"],
+		message=frappe.render_template("udshed/templates/emails/planning_hebdomadaire.html", contexte),
+		attachments=[{"fname": nom_pdf, "fcontent": pdf}],
+		delayed=not immediat,
+	)
+
+
+# ---------------------------------------------------------------------- #
+#  Contenu du mail
+# ---------------------------------------------------------------------- #
+def _etablissement():
+	s = frappe.get_single("Udshed Setting")
+	nom = s.get("school_name") or "Udshed"
+	logo = ""
+	if s.get("school_logo") and not str(s.school_logo).startswith("/private/"):
+		# Les clients mail bloquent souvent les images en data-URI : URL publique.
+		logo = file_utils.get_url_school_logo(s.school_logo)
 	return {
-		"sent": len(recipients) - len(errors),
-		"failed": len(errors),
-		"errors": errors,
+		"nom": nom,
+		"institut": s.get("school_institute") or "",
+		"adresse": s.get("school_address") or "",
+		"telephone": s.get("school_phone") or "",
+		"email": s.get("school_email") or "",
+		"site": s.get("school_website") or "",
+		"logo": logo,
+		"nom_expediteur": s.get("email_candidature_sender_name") or nom,
 	}
 
 
-def email_html_template(school_name, school_logo, teacher_name, start_date, end_date):
-	school_data_logo = file_utils.load_school_logo(school_logo)
-	app_logo = file_utils.get_app_logo()
-	return f"""
-        <div style="font-family: Arial, sans-serif; background:#f4f6f9; padding:30px;">
-            <div style="max-width:700px; margin:auto; background:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,0.08);">
-                <div style="background:#1f3c88; padding:25px; text-align:center; color:white;">
-                    <div style="margin-bottom:15px;">
-                        <img src="{school_data_logo}" style="height:70px;">
-                    </div>
-                    <div style="font-size:20px; font-weight:bold; letter-spacing:0.5px;">
-                        {school_name}
-                    </div>
-                    <div style="font-size:13px; opacity:0.85; margin-top:5px;">
-                        Gestion des emplois du temps via UDSHED
-                    </div>
-                </div>
-                <div style="padding:35px; color:#333;">
-                    <h2 style="margin-top:0; color:#1f3c88;">
-                        Transmission du planning hebdomadaire
-                    </h2>
-                    <p>Bonjour <strong>{teacher_name}</strong>,</p>
-                    <p>
-                        Nous vous prions de bien vouloir trouver en pièce jointe
-                        votre planning académique pour la période suivante :
-                    </p>
-                    <div style="background:#eef2ff; padding:18px; border-radius:8px; margin:20px 0; text-align:center; font-size:16px;">
-                        <strong>Du {start_date.strftime('%d %B %Y')} au {end_date.strftime('%d %B %Y')}</strong>
-                    </div>
-                    <p>
-                        Ce document a été généré automatiquement le
-                        <strong>{datetime.now().strftime('%d/%m/%Y à %H:%M')}</strong>.
-                    </p>
-                    <p>Pour toute question relative à ce planning, merci de contacter l’administration académique.</p>
-                    <p style="margin-top:30px;">
-                        Cordialement,<br>
-                        <strong>Administration académique</strong><br>
-                        {school_name}
-                    </p>
-                </div>
-                <div style="background:#f1f1f1; padding:20px; text-align:center; font-size:12px; color:#666;">
-                    <div style="margin-bottom:10px;">
-                        <img src="{app_logo}" style="height:40px;">
-                    </div>
-                    <div>
-                        Email généré par <strong>UDSHED</strong> — Système intelligent de gestion des emplois du temps
-                    </div>
-                    <div style="margin-top:5px; font-size:11px; opacity:0.8;">
-                        © {datetime.now().year} Udshed. Tous droits réservés.
-                    </div>
-                </div>
-            </div>
-        </div>
-        """
+def _heure(valeur):
+	return planning_calendar_pdf._hhmm(valeur)
+
+
+def _seances(items):
+	"""Séances triées par jour puis heure, regroupées par jour."""
+	creneaux = {}
+	noms = {i.get("period") for i in items if i.get("period")}
+	if noms:
+		for p in frappe.get_all(
+			"Planning Period",
+			filters={"name": ["in", list(noms)]},
+			fields=["name", "libelle", "heure_de_debut", "heure_de_fin"],
+		):
+			creneaux[p.name] = p
+
+	lignes = []
+	for item in items:
+		if item.get("status") == "Annulée":
+			continue
+		p = creneaux.get(item.get("period")) or {}
+		debut, fin = _heure(p.get("heure_de_debut")), _heure(p.get("heure_de_fin"))
+		jour = planning_calendar_pdf._date_debut(item.get("date"))
+		en_ligne = item.get("mode") == "En ligne"
+		lieu = _("En ligne") if en_ligne else " · ".join(
+			x for x in [
+				"{0} {1}".format(_("Bât."), item.get("batiment")) if item.get("batiment") else "",
+				"{0} {1}".format(_("Salle"), item.get("salle")) if item.get("salle") else "",
+			] if x
+		) or _("Salle à préciser")
+		classes = item.get("classes") or [
+			" ".join(x for x in [item.get("filiere") or "", item.get("niveau_label") or ""] if x)
+		]
+		lignes.append({
+			"jour": jour,
+			"horaire": "{0} – {1}".format(debut, fin) if debut and fin else (p.get("libelle") or ""),
+			"debut": debut or "99:99",
+			"cours": item.get("intitule_label") or item.get("course_label") or item.get("course") or item.get("cours"),
+			"type": TYPES_COURTS.get(item.get("type"), item.get("type") or ""),
+			"classes": ", ".join(c for c in classes if c),
+			"lieu": lieu,
+			"mode": item.get("mode") if item.get("mode") and item.get("mode") != "En présentiel" else "",
+			"minutes": _minutes(p.get("heure_de_debut"), p.get("heure_de_fin")),
+		})
+	lignes.sort(key=lambda l: (l["jour"], l["debut"]))
+
+	jours = []
+	for ligne in lignes:
+		if not jours or jours[-1]["date"] != ligne["jour"]:
+			jours.append({"date": ligne["jour"], "libelle": date_fr(ligne["jour"], annee=False, jour=True), "seances": []})
+		jours[-1]["seances"].append(ligne)
+	return lignes, jours
+
+
+def _minutes(debut, fin):
+	d, f = _heure(debut), _heure(fin)
+	try:
+		hd, md = (int(x) for x in d.split(":"))
+		hf, mf = (int(x) for x in f.split(":"))
+		return max(0, (hf * 60 + mf) - (hd * 60 + md))
+	except Exception:
+		return 0
+
+
+def _duree(minutes):
+	h, m = divmod(int(minutes), 60)
+	return "{0} h {1:02d}".format(h, m) if m else "{0} h".format(h)
+
+
+def contexte_email(entry, etablissement, items, start, end):
+	lignes, jours = _seances(items)
+	periode = "du {0} au {1}".format(date_fr(start, annee=start.year != end.year), date_fr(end))
+	est_enseignant = bool(entry.get("teacher"))
+	classes = sorted({c.strip() for l in lignes for c in l["classes"].split(",") if c.strip()})
+	sujet = "{0} – {1} {2}".format(
+		etablissement["nom"],
+		_("Votre planning de cours") if est_enseignant else _("Planning de cours"),
+		periode,
+	)
+	return {
+		"sujet": sujet,
+		"destinataire": entry["label"],
+		"est_enseignant": est_enseignant,
+		"periode": periode,
+		"jours": jours,
+		"nb_seances": len(lignes),
+		"volume": _duree(sum(l["minutes"] for l in lignes)),
+		"classes": classes,
+		"etablissement": etablissement,
+		"editeur": EDITEUR,
+		"genere_le": datetime.now().strftime("%d/%m/%Y à %H:%M"),
+		"annee": datetime.now().year,
+	}

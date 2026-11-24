@@ -131,13 +131,19 @@ def generate_planning_pdf(filters):
 		"Examen de session normal": "exam",
 		"Examen de rattrapage": "exam",
 	}
+	# Planning d'un enseignant : ses séances viennent de classes aux calendriers
+	# différents. Un créneau absent du calendrier par défaut faisait disparaître
+	# la séance du PDF : on ajoute les créneaux réellement utilisés.
+	period = _completer_creneaux(period, items)
 	days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-	grid = {day: {entry.get("period"): [] for entry in period} for day in days}
+	grid = {day: {entry.get("name"): [] for entry in period} for day in days}
 	for item in items:
 		day = item.get("date")
 		if isinstance(day, str):
 			day = datetime.fromisoformat(day)
-		day_name = day.strftime("%A") if hasattr(day, "strftime") else str(day)
+		# Indice du jour, indépendant de la locale du serveur (%A donnait
+		# « lundi » sur un serveur en français et la séance était ignorée).
+		day_name = days[day.weekday()] if hasattr(day, "weekday") and day.weekday() < 6 else None
 		if day_name not in grid:
 			continue
 		grid[day_name].setdefault(item.get("period"), []).append({
@@ -150,6 +156,7 @@ def generate_planning_pdf(filters):
 			"mode": item.get("mode"),
 			"filiere": item.get("filiere"),
 			"niveau_label": item.get("niveau_label"),
+			"classes": item.get("classes") or [],
 			"css": css_by_type.get(item.get("type"), "cm"),
 			"progress_label": item.get("progress_label"),
 			"progress_done_hours": item.get("progress_done_hours"),
@@ -177,8 +184,8 @@ def generate_planning_pdf(filters):
 		"grid": grid,
 		"density": density,
 		"filters": {**filters, **resolved},
-		"week_start": start.strftime("%d %B %Y"),
-		"week_end": end.strftime("%d %B %Y"),
+		"week_start": date_fr(start),
+		"week_end": date_fr(end),
 		"school_name": school_name,
 		"school_logo": file_utils.load_school_logo(school_logo),
 		"app_logo": file_utils.get_app_logo(),
@@ -212,6 +219,44 @@ def generate_planning_pdf(filters):
 	if teacher:
 		planning_name += " " + " ".join([teacher.first_name or "", teacher.last_name or ""]).strip()
 	planning_name += " du {0} au {1} {2}.pdf".format(
-		start.strftime("%d %B"), end.strftime("%d %B"), academic_year
+		date_fr(start, annee=False), date_fr(end, annee=False), academic_year
 	)
 	return pdf, planning_name, items, start, end
+
+
+MOIS_FR = (
+	"janvier", "février", "mars", "avril", "mai", "juin",
+	"juillet", "août", "septembre", "octobre", "novembre", "décembre",
+)
+JOURS_FR = ("Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche")
+
+
+def date_fr(valeur, annee=True, jour=False):
+	"""« 24 novembre 2026 » (ou « Mardi 24 novembre »), sans dépendre de la locale."""
+	d = _date_debut(valeur)
+	texte = "{0} {1}".format(d.day, MOIS_FR[d.month - 1])
+	if annee:
+		texte += " {0}".format(d.year)
+	if jour:
+		texte = "{0} {1}".format(JOURS_FR[d.weekday()], texte)
+	return texte
+
+
+def _completer_creneaux(period, items):
+	"""Ajoute aux créneaux affichés ceux utilisés par les séances et absents,
+	puis trie par heure de début."""
+	connus = {p.get("name") for p in period}
+	manquants = sorted({i.get("period") for i in items if i.get("period") and i.get("period") not in connus})
+	if not manquants:
+		return period
+	ajout = frappe.get_all(
+		"Planning Period",
+		filters={"name": ["in", manquants]},
+		fields=["name", "libelle", "heure_de_debut", "heure_de_fin"],
+	)
+	tous = list(period) + [{**p, "label": p.name} for p in ajout]
+
+	def cle(p):
+		return (_hhmm(p.get("heure_de_debut")) or "99:99", _hhmm(p.get("heure_de_fin")) or "99:99")
+
+	return sorted(tous, key=cle)

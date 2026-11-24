@@ -440,7 +440,8 @@ body.dense.compact { font-size: 12px; }
         <div class="event-meta">
           {% if item.mode == "En ligne" %}En ligne{% else %}Bâtiment : {{ item.batiment or "-" }} · Salle : {{ item.salle or "-" }}{% endif %}
           {% if filters.teacher %}
-            {% if item.filiere or item.niveau_label %} · {{ item.filiere or "" }} {{ item.niveau_label or "" }}{% endif %}
+            {% if item.classes %} · {{ item.classes | join(", ") }}
+            {% elif item.filiere or item.niveau_label %} · {{ item.filiere or "" }} {{ item.niveau_label or "" }}{% endif %}
           {% elif item.teachers %}
              · {{ item.teachers | join(" · ") }}
           {% endif %}
@@ -480,7 +481,8 @@ body.dense.compact { font-size: 12px; }
   {% endif %}
   <div class="footer-bar">
     <div>
-      Généré le {{ generated_on }} | Fait avec <b>Udshed</b> — Système intelligent de gestion des emplois du temps
+      Généré le {{ generated_on }} | Fait avec <b>Udshed</b> — Système intelligent de gestion des emplois du temps,
+      édité par <b>Ndewa360</b> · +237 6 80 91 61 59 · contact@ndewa-360.com
     </div>
     <!-- {% if app_logo %}
       <img src="{{ app_logo }}" alt="logo">

@@ -37,6 +37,19 @@ from udshed.utils.planning_conflits import conflits
 
 
 class TestPlanning(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		# Chaque enseignant créé crée aussi un User : Frappe limite à 60 créations
+		# d'utilisateurs par heure (« Throttled »), limite atteinte par cette classe.
+		cls._sans_limite = patch("frappe.core.doctype.user.user.throttle_user_creation")
+		cls._sans_limite.start()
+
+	@classmethod
+	def tearDownClass(cls):
+		cls._sans_limite.stop()
+		super().tearDownClass()
+
 	def setUp(self):
 		self.annee = make_academic_year("2026", "2027")
 		self.calendrier = make_calendar_planing()
@@ -237,15 +250,108 @@ class TestPlanning(IntegrationTestCase):
 	# ------------------------------------------------------------------ #
 	#  Email
 	# ------------------------------------------------------------------ #
+	def faux_pdf(self, filtres):
+		"""PDF factice, mais séances réelles : vérifie le périmètre envoyé."""
+		from datetime import date
+
+		items = planning_calendar.get_week_planning(
+			academic_year=filtres["academic_year"], week_start=filtres["week_start"],
+			filiere=filtres.get("filiere"), niveau=filtres.get("niveau"), teacher=filtres.get("teacher"),
+		)
+		return b"%PDF", "Planning.pdf", items, date(2026, 11, 2), date(2026, 11, 7)
+
+	def envoyer(self, filtres, **options):
+		with (
+			patch.object(planning_calendar_email.planning_calendar_pdf, "generate_planning_pdf", side_effect=self.faux_pdf),
+			patch.object(planning_calendar_email.frappe, "sendmail") as sendmail,
+		):
+			resultat = planning_calendar_email.send_planning_to_mail(filtres, **options)
+		return resultat, sendmail
+
 	def test_envoi_email_ne_plante_plus(self):
 		filtres = {"academic_year": self.annee.name, "week_start": "2026-11-02", "teacher": self.prof1.name}
-		frappe.db.set_value("Teacher", self.prof1.name, "email", "prof1@example.com")
-		faux_pdf = (b"%PDF", "Planning.pdf", [], None, None)
-		with (
-			patch.object(planning_calendar_email.planning_calendar_pdf, "generate_planning_pdf", return_value=faux_pdf),
-			patch.object(planning_calendar_email.frappe, "sendmail") as sendmail,
-			patch.object(planning_calendar_email, "email_html_template", return_value="<p>ok</p>"),
-		):
-			resultat = planning_calendar_email.send_planning_to_mail(filtres, to_teacher=1)
+		resultat, sendmail = self.envoyer(filtres, to_teacher=1)
 		self.assertEqual(resultat["sent"], 1)
 		sendmail.assert_called_once()
+
+	def test_chaque_enseignant_recoit_tout_son_planning_et_seulement_le_sien(self):
+		# prof2 : a2 (classe A) + tronc commun (A et B) + un cours propre à la classe B.
+		cours_b = make_teaching_unit(make_course(), self.annee, self.filiere_b, self.niveau_b)
+		cours_b.append("table_enseignant", {"enseignant": self.prof2.name, "type_de_cours": "Cours Magistral (CM)"})
+		cours_b.save(ignore_permissions=True)
+		self.seance(self.cours_a1)
+		self.seance(self.cours_a2, period=self.soir)
+		self.seance(self.tronc, jour="2026-11-03")
+		self.seance(cours_b, jour="2026-11-04")
+
+		# Envoi depuis la vue de la classe A, à tous ses enseignants.
+		filtres = {
+			"academic_year": self.annee.name, "week_start": "2026-11-02",
+			"filiere": self.filiere_a.name, "niveau": self.niveau_a.name,
+		}
+		resultat, sendmail = self.envoyer(filtres, to_all_teacher=1)
+		self.assertEqual(resultat["sent"], 2)
+		mails = {c.kwargs["recipients"][0]: c.kwargs for c in sendmail.call_args_list}
+		self.assertEqual(set(mails), {self.prof1.email, self.prof2.email})
+
+		corps_prof2 = mails[self.prof2.email]["message"]
+		# prof2 reçoit aussi sa séance de la classe B (hors de la vue affichée)…
+		self.assertIn(cours_b.course, corps_prof2)
+		self.assertIn(self.tronc.course, corps_prof2)
+		# … mais jamais le cours de prof1.
+		self.assertNotIn(self.cours_a1.course, corps_prof2)
+		self.assertIn(self.cours_a2.course, corps_prof2)
+		corps_prof1 = mails[self.prof1.email]["message"]
+		self.assertNotIn(cours_b.course, corps_prof1)
+
+	def test_mail_contient_etablissement_et_editeur(self):
+		self.seance(self.cours_a1)
+		filtres = {"academic_year": self.annee.name, "week_start": "2026-11-02", "teacher": self.prof1.name}
+		_resultat, sendmail = self.envoyer(filtres, to_teacher=1)
+		mail = sendmail.call_args.kwargs
+		self.assertIn("2 novembre", mail["subject"])
+		for attendu in ("Ndewa360", "+237 6 80 91 61 59", "contact@ndewa-360.com", "Bonjour", "novembre"):
+			self.assertIn(attendu, mail["message"])
+		self.assertEqual(mail["attachments"][0]["fname"], "Planning.pdf")
+
+	def test_enseignant_sans_email_signale(self):
+		frappe.db.set_value("Teacher", self.prof1.name, "email", "")
+		self.seance(self.cours_a1)
+		self.seance(self.cours_a2, period=self.soir)
+		filtres = {
+			"academic_year": self.annee.name, "week_start": "2026-11-02",
+			"filiere": self.filiere_a.name, "niveau": self.niveau_a.name,
+		}
+		resultat, sendmail = self.envoyer(filtres, to_all_teacher=1)
+		self.assertEqual(resultat["sent"], 1)
+		self.assertEqual(len(resultat["sans_email"]), 1)
+		sendmail.assert_called_once()
+
+	def test_pdf_enseignant_affiche_toutes_ses_seances(self):
+		"""Les créneaux du calendrier de la classe (absents du calendrier par
+		défaut) ne font plus disparaître les séances du PDF d'un enseignant."""
+		from udshed.api import planning_calendar_pdf
+
+		self.seance(self.cours_a2)
+		self.seance(self.tronc, jour="2026-11-03", period=self.soir)
+		filtres = {"academic_year": self.annee.name, "week_start": "2026-11-02", "teacher": self.prof2.name}
+		with patch.object(planning_calendar_pdf, "_pdf", side_effect=lambda html: html):
+			html, nom, items, _debut, _fin = planning_calendar_pdf.generate_planning_pdf(filtres)
+		self.assertEqual(len(items), 2)
+		for cours in (self.cours_a2, self.tronc):
+			self.assertIn(frappe.db.get_value("Course", cours.course, "intitule") or cours.course, html)
+		self.assertIn("novembre", nom)
+		self.assertIn("Ndewa360", html)
+
+	def test_planning_enseignant_inclut_cours_lie(self):
+		if not frappe.get_meta("Teaching Unit").has_field("groupe_cours_commun"):
+			self.skipTest("groupe_cours_commun absent")
+		# Cours de la classe B lié à a1 (même enseignement), planifié via la grille B.
+		cours_b = make_teaching_unit(make_course(), self.annee, self.filiere_b, self.niveau_b)
+		groupe = "G-" + frappe.generate_hash(length=6)
+		for cours in (self.cours_a1, cours_b):
+			frappe.db.set_value("Teaching Unit", cours.name, "groupe_cours_commun", groupe)
+		self.seance(cours_b)
+		items = planning_calendar.get_week_planning(self.annee.name, "2026-11-02", teacher=self.prof1.name)
+		self.assertEqual([i.cours for i in items], [cours_b.name])
+		self.assertEqual(len(items[0]["classes"]), 2)
