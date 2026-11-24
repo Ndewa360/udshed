@@ -5,6 +5,21 @@ import frappe
 from frappe import _
 
 from udshed.grade_calculation import get_seuil_validation, get_student_cycle
+from udshed.utils import securite
+
+
+# Les points d'entrée HTTP (boutons des formulaires Resultat Academique /
+# Resultat Semestre) sont réservés à qui peut modifier ces documents. Les
+# fonctions internes `_calculer_*` restent appelables sans contrôle par le
+# code serveur (publication, réinscription, page résultats…).
+def _exiger_resultats_academiques():
+    securite.exiger_personnel()
+    securite.exiger_permission("Resultat Academique", "write")
+
+
+def _exiger_resultats_semestre():
+    securite.exiger_personnel()
+    securite.exiger_permission("Resultat Semestre", "write")
 
 TYPE_NORMALE = "Examen de session normal"
 TYPE_RATTRAPAGE = "Examen de rattrapage"
@@ -150,8 +165,7 @@ def _resultat_ue(student, session_doc, note_normale):
     }
 
 
-@frappe.whitelist()
-def calculer_resultat_session(student, session_examen, teaching_unit=None):
+def _calculer_resultat_session(student, session_examen, teaching_unit=None):
     """Calcule les résultats académiques d'un étudiant pour une session.
 
     Prend la meilleure note entre session normale et session de rattrapage
@@ -199,7 +213,13 @@ def calculer_resultat_session(student, session_examen, teaching_unit=None):
 
 
 @frappe.whitelist()
-def calculer_resultat_semestre(student, semestre, academic_year):
+def calculer_resultat_session(student, session_examen, teaching_unit=None):
+    """Point d'entrée HTTP : contrôle d'accès, puis `_calculer_resultat_session` (usage interne)."""
+    _exiger_resultats_academiques()
+    return _calculer_resultat_session(student=student, session_examen=session_examen, teaching_unit=teaching_unit)
+
+
+def _calculer_resultat_semestre(student, semestre, academic_year):
     """Calcule les résultats de toutes les UE pour un semestre donné.
 
     Args:
@@ -228,7 +248,7 @@ def calculer_resultat_semestre(student, semestre, academic_year):
         ):
             continue
         try:
-            data = calculer_resultat_session(student, session)
+            data = _calculer_resultat_session(student, session)
             resultats.extend(data["resultats"])
         except frappe.ValidationError:
             # Une session normale sans note exploitable pour cet étudiant ne
@@ -278,7 +298,13 @@ def calculer_resultat_semestre(student, semestre, academic_year):
 
 
 @frappe.whitelist()
-def calculer_resultat_annee(student, academic_year):
+def calculer_resultat_semestre(student, semestre, academic_year):
+    """Point d'entrée HTTP : contrôle d'accès, puis `_calculer_resultat_semestre` (usage interne)."""
+    _exiger_resultats_academiques()
+    return _calculer_resultat_semestre(student=student, semestre=semestre, academic_year=academic_year)
+
+
+def _calculer_resultat_annee(student, academic_year):
     """Calcule les résultats annuels et la décision de promotion.
 
     Args:
@@ -303,7 +329,7 @@ def calculer_resultat_annee(student, academic_year):
     resultats_par_semestre = {}
     tous_resultats = []
     for semestre in semestres:
-        data = calculer_resultat_semestre(student, semestre, academic_year)
+        data = _calculer_resultat_semestre(student, semestre, academic_year)
         resultats_par_semestre[semestre] = data
         tous_resultats.extend(data["resultats"])
 
@@ -353,7 +379,13 @@ def calculer_resultat_annee(student, academic_year):
 
 
 @frappe.whitelist()
-def generer_classe_resultat(filiere, niveau, academic_year):
+def calculer_resultat_annee(student, academic_year):
+    """Point d'entrée HTTP : contrôle d'accès, puis `_calculer_resultat_annee` (usage interne)."""
+    _exiger_resultats_academiques()
+    return _calculer_resultat_annee(student=student, academic_year=academic_year)
+
+
+def _generer_classe_resultat(filiere, niveau, academic_year):
     """Génère les résultats pour toute une classe (filière + niveau).
 
     Args:
@@ -386,7 +418,7 @@ def generer_classe_resultat(filiere, niveau, academic_year):
     ajournes = 0
 
     for student in students:
-        resultat_annuel = calculer_resultat_annee(student, academic_year)
+        resultat_annuel = _calculer_resultat_annee(student, academic_year)
 
         if resultat_annuel["decision"] == "Admis":
             admis += 1
@@ -416,6 +448,13 @@ def generer_classe_resultat(filiere, niveau, academic_year):
             sum(e["moyenne_annuelle"] for e in resultats_classe) / len(resultats_classe), 2
         ) if resultats_classe else 0,
     }
+
+
+@frappe.whitelist()
+def generer_classe_resultat(filiere, niveau, academic_year):
+    """Point d'entrée HTTP : contrôle d'accès, puis `_generer_classe_resultat` (usage interne)."""
+    _exiger_resultats_academiques()
+    return _generer_classe_resultat(filiere=filiere, niveau=niveau, academic_year=academic_year)
 
 
 def _get_credits(student, teaching_unit):
@@ -585,8 +624,7 @@ def calculer_mpc(student, academic_year, semestre=None):
     return {"mpc": mpc, "semester_index": len(tous_resultats_semestre)}
 
 
-@frappe.whitelist()
-def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year, teaching_unit_a_exclure=None):
+def _calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year, teaching_unit_a_exclure=None):
     """Calcule la MPS et MPC d'un étudiant et sauvegarde le Resultat Semestre.
 
     Args:
@@ -657,6 +695,13 @@ def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year, teaching_u
         "mention": rs.mention,
         "decision": rs.decision,
     }
+
+
+@frappe.whitelist()
+def calculer_et_sauvegarder_mps_mpc(student, semestre, academic_year, teaching_unit_a_exclure=None):
+    """Point d'entrée HTTP : contrôle d'accès, puis `_calculer_et_sauvegarder_mps_mpc` (usage interne)."""
+    _exiger_resultats_semestre()
+    return _calculer_et_sauvegarder_mps_mpc(student=student, semestre=semestre, academic_year=academic_year, teaching_unit_a_exclure=teaching_unit_a_exclure)
 
 
 def _mpc_actuelle(student):

@@ -909,7 +909,9 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 				'<button type="button" class="btn btn-default btn-sm sn-btn sn-btn-pdf" ' + (pdf_disabled ? "disabled title=\"" + esc(pdf_msg) + "\"" : "") + ">" +
 					"&#128196; " + __("Télécharger PDF") +
 					"</button>" +
-				(!is_cc
+				// Valider / Publier : réservé à qui peut modifier la Session Examen
+				// (même règle que le contrôle serveur _verifier_droit_session).
+				(!is_cc && frappe.model.can_write("Session Examen")
 					? '<button type="button" class="btn btn-success btn-sm sn-btn sn-btn-valider"' + non_planifie_attr + ">" +
 						__("Valider") +
 						"</button>" +

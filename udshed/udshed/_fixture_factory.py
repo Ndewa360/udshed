@@ -334,13 +334,18 @@ def _session_reinscription_ouverte(academic_year_name):
 
 
 def _annee_precedente(academic_year_name):
-    """'2026-2027' -> '2025-2026' (année académique antérieure)."""
+    """'2026-2027' -> '2025-2026' (année académique antérieure).
+
+    L'année est créée si elle n'existe pas : le lien Academic Year de la
+    réinscription d'ancrage échouait sinon sur une base où elle n'avait
+    jamais été saisie (LinkValidationError).
+    """
     debut = (academic_year_name or "").split("-")[0]
     try:
         debut = int(debut)
     except (TypeError, ValueError):
         return None
-    return f"{debut - 1}-{debut}"
+    return make_academic_year(str(debut - 1), str(debut)).name
 
 
 def make_academic_reregistration(

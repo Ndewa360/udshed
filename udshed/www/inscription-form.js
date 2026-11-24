@@ -259,9 +259,11 @@ $(document).ready(function() {
         frappe.call({
             method: "udshed.api.inscription.enregistrer_inscription",
             args: {
-                numero_dossier: candidate.numero_dossier,
-                nom_candidat: candidate.nom_prenom,
-                donnees: JSON.stringify(donnees)
+                // Mêmes valeurs que celles signées dans le jeton (URL).
+                numero_dossier: numero,
+                nom_candidat: nom,
+                donnees: JSON.stringify(donnees),
+                token: token
             },
             callback: function(r) {
                 if (r.message && r.message.status === "success") {

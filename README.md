@@ -1,6 +1,6 @@
 ### Udshed
 
-Outils de planification des cours
+Gestion académique : candidatures, inscriptions et réinscriptions, planning, notes et résultats
 
 ### Installation
 

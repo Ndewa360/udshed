@@ -1,0 +1,31 @@
+-- Général --
+- Faire le logo de l'application (OK)
+
+
+-- Planning (OK) --
+- Terminer le filtre sur les teaching unit pour avoir la liste des niveaux par rapport aux filiére (OK)
+- Se rassurer la planification fonctionne normalement (OK)
+- Imprimer un planning (OK)
+- Gérer les droits (OK)
+
+-- La grille --
+- Importer la grille (Ok)
+- Supprimer les teaching unit non plus utilisé
+- La modification d'un enseignant
+- La modification d'un intiluté
+- ajouter ou supprimer un élement de la grille
+- Gérer les droits d'accés en fontion de la filiére (importer ou modifier la grille uniquement où on est coordonateur mais tout le monde peut visualiser)
+- Terminer l'import pour les filiéres sans UV dans la grille (Important)
+
+-- Statistique ---
+- Dashboard statistique des cours (OK)
+- Exporter les statistiques de cours en excel
+- Dashboard statistique financier
+- Exporter les statistique financiers en excel
+- Exporter les statistiques en pdf (Optionnel mais a regarders)
+
+--- Document académique (word, pdf) en version rempli et le modele ---
+- Fiche de progresison de cours d'enseignant vacataire
+- Fiche de réglement des vacations pour vacataire
+- Fiche de convention des vacations signé
+- Attestation d'enseignement 

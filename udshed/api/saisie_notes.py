@@ -421,6 +421,29 @@ def _verifier_programmation_requise(academic_year, teaching_unit):
         )
 
 
+def peut_gerer_session():
+    """Vrai si l'utilisateur peut valider / publier des sessions d'examen.
+
+    Suit la permission « write » du DocType Session Examen (par défaut :
+    System Manager, Coordonateur, Planning Manager), réglable dans Frappe.
+    """
+    if frappe.session.user == "Guest":
+        return False
+    return bool(frappe.has_permission("Session Examen", "write"))
+
+
+def _verifier_droit_session(session):
+    """Valider ou publier une session touche toutes ses notes : réservé aux
+    responsables ayant le droit de modifier la Session Examen."""
+    if frappe.session.user == "Guest" or not frappe.has_permission(
+        "Session Examen", "write", doc=session
+    ):
+        frappe.throw(
+            _("Vous n'êtes pas autorisé(e) à valider ou publier la session <b>{0}</b>.").format(session),
+            frappe.PermissionError,
+        )
+
+
 def _verifier_acces_enseignant(teaching_unit):
     """Vérifie que l'utilisateur connecté a le droit de gérer les notes d'une UE.
 
@@ -445,9 +468,13 @@ def _verifier_acces_enseignant(teaching_unit):
             _(
                 "Vous n'êtes pas autorisé(e) à gérer les notes de l'UE <b>{0}</b> "
                 "(cet enseignant ne dispense pas ce cours)."
-            ).format(teaching_unit)
+            ).format(teaching_unit),
+            frappe.PermissionError,
         )
-    frappe.throw(frappe.PermissionError)
+    frappe.throw(
+        _("Vous n'êtes pas autorisé(e) à gérer les notes de l'UE <b>{0}</b>.").format(teaching_unit),
+        frappe.PermissionError,
+    )
 
 
 def _valider_lignes(rows):
@@ -1597,6 +1624,7 @@ def valider_notes(session):
     Returns:
         dict: {"session": ..., "validated": n}
     """
+    _verifier_droit_session(session)
     _verifier_programmation_sessions(session)
     names = frappe.get_all(
         "Session Examen Note",
@@ -1630,6 +1658,7 @@ def publier_session(session):
     Returns:
         dict: {"name", "statut", "date_publication", "publied"}
     """
+    _verifier_droit_session(session)
     doc = frappe.get_doc("Session Examen", session)
     deja_publiee = doc.statut == "Publiée"
 
@@ -1720,7 +1749,7 @@ def _declencher_calcul_resultats_post_publication(session_doc):
     Returns:
         list[dict]: une entrée par échec {student, session, message}
     """
-    from udshed.api.resultat_academique import calculer_resultat_session
+    from udshed.api.resultat_academique import _calculer_resultat_session as calculer_resultat_session
 
     students = frappe.db.sql_list(
         """
@@ -1766,7 +1795,7 @@ def _declencher_calcul_resultats_post_publication(session_doc):
         # Persiste le Resultat Semestre (MPS / MPC) : c'est lui qui alimente
         # le relevé de notes et les résultats académiques du semestre.
         try:
-            from udshed.api.resultat_academique import calculer_et_sauvegarder_mps_mpc
+            from udshed.api.resultat_academique import _calculer_et_sauvegarder_mps_mpc as calculer_et_sauvegarder_mps_mpc
 
             calculer_et_sauvegarder_mps_mpc(
                 student, session_doc.semestre, session_doc.academic_year
@@ -1850,27 +1879,20 @@ def _html_en_pdf(html):
     """Convertit du HTML en PDF (octets).
 
     Utilise d'abord le générateur standard de Frappe (wkhtmltopdf). S'il
-    n'est pas installé, repli sur Playwright/Chromium (déjà présent dans
-    l'environnement de développement) pour restituer la même page A4.
+    n'est pas installé, repli sur WeasyPrint (dépendance de Frappe, déjà
+    utilisée par les autres PDF de l'app) avec la même page A4 paysage.
     """
     try:
         from frappe.utils.pdf import get_pdf
 
         return get_pdf(html)
     except Exception:
-        pass
+        pass  # wkhtmltopdf absent ou en échec : repli silencieux (cas normal sans wkhtmltopdf)
 
-    from playwright.sync_api import sync_playwright
+    from weasyprint import CSS, HTML
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(args=["--no-sandbox"])
-        try:
-            page = browser.new_page()
-            page.set_content(html, wait_until="networkidle")
-            pdf = page.pdf(format="A4", landscape=True, print_background=True, margin={"top": "18mm", "bottom": "14mm", "left": "14mm", "right": "14mm"})
-            return pdf
-        finally:
-            browser.close()
+    page = CSS(string="@page { size: A4 landscape; margin: 18mm 14mm 14mm 14mm; }")
+    return HTML(string=html, base_url=frappe.utils.get_url()).write_pdf(stylesheets=[page])
 
 
 
@@ -2519,7 +2541,6 @@ def generer_pdf_cc(academic_year, filiere, niveau, semestre, teaching_unit, sess
     frappe.response["content_type"] = "application/pdf"
 
 
-@frappe.whitelist()
 def _feuille_saisie_entetes(entetes):
     """Colonnes de la feuille de saisie : Code d'anonymat + Crédit + notes.
 
@@ -2749,7 +2770,8 @@ def export_notes(academic_year, filiere, niveau, semestre, teaching_unit, type_d
     cc_columns = _colonnes_cc(cc_columns)
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
-    anonymes = bool(anonyme)
+    # cint : le paramètre arrive en texte depuis l'URL (« 0 » serait vrai avec bool).
+    anonymes = bool(frappe.utils.cint(anonyme))
     if anonymes:
         codes = _exiger_codes_anonymes(
             students, teaching_unit, type_dexamen, libelle=_("l'export anonyme")
@@ -2810,13 +2832,15 @@ def export_evaluations(academic_year, filiere, niveau, semestre, teaching_unit, 
     et ne font pas partie de l'anonymat d'examen.
     L'import relit indifféremment matricules ou codes anonymes.
     """
+    _verifier_acces_enseignant(teaching_unit)
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     students = _get_etudiants(academic_year, filiere, niveau, teaching_unit)
     sessions = _sessions_avec_choix(args, session_examen, type_dexamen)
     notes = _charger_notes(students, teaching_unit, sessions)
     credit = _credits_ue(teaching_unit, filiere, niveau)
 
-    anonymes = bool(anonyme)
+    # cint : le paramètre arrive en texte depuis l'URL (« 0 » serait vrai avec bool).
+    anonymes = bool(frappe.utils.cint(anonyme))
     if anonymes:
         # En mode anonyme : on n'exporte que l'examen anonyme (EXAM).
         # CC, CCTP, EXAMTP sont nominatifs (contrôle continu) -> exclus.

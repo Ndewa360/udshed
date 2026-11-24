@@ -2,6 +2,10 @@
 import re
 
 import frappe
+from frappe import _
+from frappe.rate_limiter import rate_limit
+
+from udshed.utils import securite
 
 _EMOJI_INDIQUES = re.compile(
     "["
@@ -74,6 +78,7 @@ def get_niveaux_filiere(filiere=None):
 
 
 @frappe.whitelist(allow_guest=True)
+@rate_limit(limit=20, seconds=60 * 60)
 def creer_candidature(donnees=None):
     """Crée une nouvelle candidature Session Inscription Candidate depuis le formulaire public.
 
@@ -158,8 +163,70 @@ def creer_candidature(donnees=None):
     }
 
 
+COOKIE_FICHE = "udshed_fiche_candidature"
+
+
+def jeton_fiche_candidature(dossier):
+    """Jeton permanent autorisant le téléchargement de la fiche de `dossier`.
+
+    Remis uniquement au candidat : cookie posé à la soumission et lien de
+    l'email d'accusé de réception.
+    """
+    return securite.signer("fiche-candidature", dossier)
+
+
+def poser_cookie_fiche(dossier):
+    """Mémorise dans le navigateur du candidat le droit de télécharger sa fiche.
+
+    Utilisé juste après la soumission (formulaire web ou page de dépôt) : la
+    page /candidature-success ne reçoit que le numéro de dossier dans l'URL.
+    """
+    cookie_manager = getattr(frappe.local, "cookie_manager", None)
+    if not cookie_manager or not dossier:
+        return
+    cookie_manager.set_cookie(
+        COOKIE_FICHE,
+        f"{dossier}:{jeton_fiche_candidature(dossier)}",
+        max_age=7 * 24 * 60 * 60,
+        httponly=True,
+    )
+
+
+def _jeton_depuis_cookie(dossier):
+    valeur = (frappe.request.cookies.get(COOKIE_FICHE) if frappe.request else None) or ""
+    nom, _sep, jeton = valeur.partition(":")
+    return jeton if nom == dossier else None
+
+
+def _verifier_acces_fiche_candidature(doc, jeton=None):
+    """Personnel habilité, ou candidat porteur du jeton (paramètre ou cookie)."""
+    if frappe.session.user != "Guest" and frappe.has_permission(
+        "Session Inscription Candidate", "read", doc=doc
+    ):
+        return
+    for candidat in (jeton, _jeton_depuis_cookie(doc.name)):
+        if candidat and securite.verifier_signature(candidat, "fiche-candidature", doc.name):
+            return
+    frappe.throw(_("Lien de téléchargement invalide."), frappe.PermissionError)
+
+
 @frappe.whitelist(allow_guest=True)
-def telecharger_fiche_pdf(dossier=None):
+def get_filieres():
+    """Filières proposées dans le formulaire public de candidature.
+
+    Données publiques (code + libellé). Remplace `frappe.client.get_list`,
+    refusé aux invités qui n'ont pas de permission sur « Field of study ».
+    """
+    return frappe.get_all(
+        "Field of study",
+        fields=["name", "name_of_field"],
+        order_by="name_of_field asc",
+        limit_page_length=0,
+    )
+
+
+@frappe.whitelist(allow_guest=True)
+def telecharger_fiche_pdf(dossier=None, jeton=None):
     """Génère et télécharge la fiche de candidature PDF du candidat.
 
     Appelé depuis la page de confirmation (`/candidature-success`) après la
@@ -175,7 +242,10 @@ def telecharger_fiche_pdf(dossier=None):
     if not dossier or dossier.lower() in ("undefined", "null"):
         frappe.throw("Numéro de dossier manquant.")
 
+    if not frappe.db.exists("Session Inscription Candidate", dossier):
+        frappe.throw(_("Lien de téléchargement invalide."), frappe.PermissionError)
     doc = frappe.get_doc("Session Inscription Candidate", dossier)
+    _verifier_acces_fiche_candidature(doc, jeton)
 
     photo_data_uri = ""
     fichier_id_photo = doc.get("id_photo")

@@ -13,14 +13,17 @@ def get_default_academic_year():
     else: 
         past_year -= 1  # Sinon, l'année académique a commencé l'année précédente
 
-    if not default_academic_year:
-        default_academic_year = frappe.get_doc({
-            "doctype": "Academic Year",
-            "start_month": "Septembre",
-            "end_month": "Juin",
-            "start_year": past_year,
-            "end_year": current_year,
+    if default_academic_year:
+        # Déjà configurée : c'est un nom (str), rien à créer.
+        return default_academic_year
 
-        }).insert(ignore_permissions=True)
-    frappe.db.set_single_value('Udshed Setting', 'current_year', default_academic_year.name)
-    return default_academic_year.name
+    nouvelle_annee = frappe.get_doc({
+        "doctype": "Academic Year",
+        "start_month": "Septembre",
+        "end_month": "Juin",
+        "start_year": past_year,
+        "end_year": current_year,
+
+    }).insert(ignore_permissions=True)
+    frappe.db.set_single_value('Udshed Setting', 'current_year', nouvelle_annee.name)
+    return nouvelle_annee.name

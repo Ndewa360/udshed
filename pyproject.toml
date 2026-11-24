@@ -3,12 +3,15 @@ name = "udshed"
 authors = [
     { name = "Cédric Nguendap Bedjama", email = "c.nguendap@ndewa-360.com"}
 ]
-description = "Outils de planification des cours"
+description = "Gestion académique : candidatures, inscriptions et réinscriptions, planning, notes et résultats"
 requires-python = ">=3.14"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     # "frappe~=16.0.0" # Installed and managed by bench.
+    # Bibliothèques importées par l'app et non fournies par Frappe :
+    "docxtpl~=0.20",  # contrats / fiches enseignants (Word), apporte python-docx
+    "pandas>=2.2",  # import / export de la grille d'enseignement
 ]
 
 [build-system]

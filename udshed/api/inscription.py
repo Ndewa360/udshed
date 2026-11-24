@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 import frappe
 import unicodedata
-import hmac
-import hashlib
 import re
 from frappe import _
 from frappe.utils import now_datetime, get_url
 from contextlib import contextmanager
 from udshed.api.candidature import get_school_logo_url
+from udshed.utils import securite
 
 _DUREE_JETON_SEC = 60 * 60  # validité du jeton de connexion formulaire : 1 h
+
+# Anti force brute sur l'authentification « numéro de dossier + nom ».
+_MAX_ECHECS_DOSSIER = 5
+_MAX_ECHECS_IP = 30
+_FENETRE_ECHECS_SEC = 15 * 60
 
 
 @frappe.whitelist(allow_guest=True)
@@ -19,11 +23,19 @@ def authentifier_et_inscrire(numero_dossier, nom_candidat):
     Jette une erreur spécifique si le candidat est déjà inscrit.
     """
 
+    cle_dossier = (numero_dossier or "").strip()
+    ip = securite.ip_client()
+    securite.verifier_tentatives("inscription-dossier", cle_dossier, _MAX_ECHECS_DOSSIER, _FENETRE_ECHECS_SEC)
+    securite.verifier_tentatives("inscription-ip", ip, _MAX_ECHECS_IP, _FENETRE_ECHECS_SEC)
+
     dossier = _get_dossier(numero_dossier, nom_candidat)
 
     if not dossier:
+        securite.enregistrer_echec("inscription-dossier", cle_dossier, _FENETRE_ECHECS_SEC)
+        securite.enregistrer_echec("inscription-ip", ip, _FENETRE_ECHECS_SEC)
         frappe.throw("Authentification échouée. Numéro de dossier ou nom incorrect.")
 
+    securite.reinitialiser_tentatives("inscription-dossier", cle_dossier)
     _verifier_session_ouverte()
 
     # Nouveau : vérifier si le candidat est déjà inscrit
@@ -172,7 +184,7 @@ def _construire_grille_depuis_doc(doc):
             "intitule": ligne.get("intitule_cours") or ligne.get("name") or "—",
             "credits": float(credits) or 0,
         }
-        sem = String(ligne.get("semestre") or "").lower()
+        sem = str(ligne.get("semestre") or "").lower()
         if any(kw in sem for kw in ["2", "second", "deux", "s2"]):
             s2.append(c)
         else:
@@ -188,7 +200,7 @@ def _construire_grille_depuis_doc(doc):
             rows.append(
                 "<tr>"
                 "<td>" + str(i) + "</td>"
-                "<td>" + escape_html(c["intitule"]) + "</td>"
+                "<td>" + frappe.utils.escape_html(c["intitule"]) + "</td>"
                 "<td class='text-right'>" + str(c["credits"]) + "</td>"
                 "</tr>"
             )
@@ -278,18 +290,16 @@ def _resolve_niveau_grid(filiere, niveau_label):
     return None
 
 
-def _secret_jeton():
-    return frappe.conf.get("secret_key") or "udshed-inscription-dev-secret"
+def _parties_jeton(numero_dossier, nom_candidat):
+    # Normalisation : le numéro saisi (casse, espaces) et le nom (accents,
+    # casse) doivent produire le même jeton à la création et à la vérification.
+    return (str(numero_dossier or "").strip().upper(), _normaliser_texte(nom_candidat))
 
 
 def _creer_jeton(numero_dossier, nom_candidat):
+    """Jeton signé (clé du site) valable _DUREE_JETON_SEC pour ce dossier."""
     expiration = int(now_datetime().timestamp()) + _DUREE_JETON_SEC
-    message = f"{numero_dossier}\n{nom_candidat}\n{expiration}"
-    signature = hmac.new(
-        _secret_jeton().encode("utf-8"),
-        message.encode("utf-8"),
-        hashlib.sha256,
-    ).hexdigest()
+    signature = securite.signer("inscription", *_parties_jeton(numero_dossier, nom_candidat), expiration)
     return f"{expiration}.{signature}"
 
 
@@ -299,27 +309,31 @@ def _verifier_jeton(jeton, numero_dossier, nom_candidat):
     try:
         expiration, signature = str(jeton).split(".", 1)
         expiration = int(expiration)
-        if int(now_datetime().timestamp()) > expiration:
-            return False
-        message = f"{numero_dossier}\n{nom_candidat}\n{expiration}"
-        attendu = hmac.new(
-            _secret_jeton().encode("utf-8"),
-            message.encode("utf-8"),
-            hashlib.sha256,
-        ).hexdigest()
-        return hmac.compare_digest(attendu, signature)
-    except Exception:
+    except ValueError:
         return False
+    if int(now_datetime().timestamp()) > expiration:
+        return False
+    return securite.verifier_signature(
+        signature, "inscription", *_parties_jeton(numero_dossier, nom_candidat), expiration
+    )
 
 
 @frappe.whitelist(allow_guest=True)
-def enregistrer_inscription(numero_dossier, nom_candidat, donnees=None):
-    """Enregistre le formulaire après une authentification réussie (flux Web Form)."""
+def enregistrer_inscription(numero_dossier, nom_candidat, donnees=None, token=None):
+    """Enregistre le formulaire après une authentification réussie (flux Web Form).
+
+    Exige le jeton signé émis par `authentifier_et_inscrire` : sans lui,
+    n'importe qui connaissant un numéro de dossier et un nom pourrait
+    finaliser l'inscription d'un autre candidat.
+    """
+    if not _verifier_jeton(token, numero_dossier, nom_candidat):
+        frappe.throw(_("Session d'authentification expirée. Veuillez recommencer."))
+
     _verifier_session_ouverte()
 
     dossier = _get_dossier(numero_dossier, nom_candidat)
     if not dossier:
-        frappe.throw("Session d'authentification invalide.")
+        frappe.throw(_("Session d'authentification invalide."))
 
     _verifier_candidature_validee(dossier)
 
@@ -328,57 +342,6 @@ def enregistrer_inscription(numero_dossier, nom_candidat, donnees=None):
     donnees = donnees or {}
 
     return _finaliser_inscription_complete(dossier, donnees)
-
-
-@frappe.whitelist(allow_guest=True)
-def submit_inscription(doc_name: str, data: str) -> dict:
-    """Finalise l'inscription d'un candidat accepté (flux page /inscription)."""
-    if not doc_name:
-        frappe.throw(_("Numéro de dossier manquant."))
-
-    import json as _json
-    if isinstance(data, str):
-        data = _json.loads(data)
-
-    doc_name = doc_name.strip().upper()
-    candidate = frappe.get_doc("Session Inscription Candidate", doc_name)
-
-    if candidate.candidature_status != "Accepté":
-        frappe.throw(_("Seules les candidatures acceptées peuvent finaliser l'inscription."))
-
-    # Préparer les données pour la finalisation unifiée
-    donnees = {
-        "annee_academique": data.get("annee_academique"),
-        "sexe": data.get("sexe"),
-        "nationalite": data.get("nationalite"),
-        "region_origine": data.get("region_origine"),
-        "langue": data.get("langue"),
-        "religion": data.get("religion"),
-        "situation_matrimoniale": data.get("situation_matrimoniale"),
-        "situatio_emploi": data.get("situatio_emploi"),
-        "handicape": data.get("handicape"),
-        "nom_prenom_pere": data.get("nom_prenom_pere"),
-        "pere_telephone": data.get("pere_telephone"),
-        "pere_profession": data.get("pere_profession"),
-        "pere_ville": data.get("pere_ville"),
-        "nom_prenom_mere": data.get("nom_prenom_mere"),
-        "telephone_mere": data.get("telephone_mere"),
-        "profession_mere": data.get("profession_mere"),
-        "mere_ville": data.get("mere_ville"),
-        "nom_prenom_sponsor": data.get("nom_prenom_sponsor"),
-        "telephone_sponsor": data.get("telephone_sponsor"),
-        "profession_sponsor": data.get("profession_sponsor"),
-        "sponsor_ville": data.get("sponsor_ville"),
-        "dernier_etablissement": data.get("dernier_etablissement"),
-        "diplome_entree": data.get("diplome_entree"),
-        "matricule_diplome": data.get("matricule_diplome"),
-        "activites_sportives": data.get("activites_sportives"),
-        "activites_associatives": data.get("activites_associatives"),
-        "activites_culturelles": data.get("activites_culturelles"),
-        "connaissances_informatiques": data.get("connaissances_informatiques"),
-    }
-
-    return _finaliser_inscription_complete(candidate, donnees)
 
 
 def _finaliser_inscription_complete(dossier, donnees):
@@ -777,15 +740,36 @@ def _normaliser_texte(valeur):
     )
 
 
+def jeton_fiche_inscription(matricule):
+    """Jeton permanent autorisant le téléchargement de la fiche de `matricule`.
+
+    Remis uniquement au candidat (réponse après inscription, email matricule).
+    """
+    return securite.signer("fiche-inscription", matricule)
+
+
 def _pdf_url(matricule):
+    from urllib.parse import quote
+
     return (
         "/api/method/udshed.api.inscription.telecharger_fiche_inscription"
-        f"?matricule={matricule}"
+        f"?matricule={quote(str(matricule))}&jeton={jeton_fiche_inscription(matricule)}"
     )
 
 
+def _verifier_acces_fiche_inscription(doc, jeton):
+    """Personnel habilité (permission sur le document) ou détenteur du jeton signé."""
+    if frappe.session.user != "Guest" and frappe.has_permission(
+        "Inscription Academique", "read", doc=doc
+    ):
+        return
+    if doc.matricule and securite.verifier_signature(jeton, "fiche-inscription", doc.matricule):
+        return
+    frappe.throw(_("Lien de téléchargement invalide."), frappe.PermissionError)
+
+
 @frappe.whitelist(allow_guest=True)
-def telecharger_fiche_inscription(matricule=None, nom=None):
+def telecharger_fiche_inscription(matricule=None, nom=None, jeton=None):
     """Génère la fiche d'inscription officielle (PDF) d'un Inscription Academique.
 
     Rendu via weasyprint directement sur le corps HTML du Print Format
@@ -818,6 +802,8 @@ def telecharger_fiche_inscription(matricule=None, nom=None):
         if not doc:
             frappe.throw(_("Aucune inscription académique trouvée avec ce matricule."))
         doc = frappe.get_doc("Inscription Academique", doc[0].name)
+
+    _verifier_acces_fiche_inscription(doc, jeton)
 
     pf = frappe.get_doc("Print Format", "Fiche Officielle UDM")
 
@@ -1040,6 +1026,8 @@ def _get_sender():
 
 @frappe.whitelist()
 def get_inscription_report(filiere=None, candidature_status=None):
+    # Données nominatives des candidats : mêmes rôles que la page « rapport-general ».
+    securite.exiger_acces_page("rapport-general")
     filters = {}
     if filiere:
         filters["filiere"] = filiere
@@ -1108,6 +1096,7 @@ def get_liste_inscriptions(filiere=None, annee_academique=None, niveau=None, sta
     """
     from udshed.api.inscription_import_export import lister_inscriptions
 
+    securite.exiger_acces_page("liste-des-inscriptions")
     return lister_inscriptions(
         filiere=filiere, annee_academique=annee_academique, niveau=niveau, statut=statut
     )

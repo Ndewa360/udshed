@@ -17,12 +17,9 @@ $(document).ready(function () {
 
     function chargerFilieres() {
         frappe.call({
-            method: "frappe.client.get_list",
-            args: {
-                doctype: "Field of study",
-                fields: ["name", "name_of_field"],
-                limit_page_length: 100,
-            },
+            // Endpoint public dédié : les invités n'ont pas de permission
+            // sur « Field of study », frappe.client.get_list leur est refusé.
+            method: "udshed.api.candidature.get_filieres",
             callback: function (r) {
                 if (r.message && r.message.length) {
                     var select = $("#form-candidature select[name='filiere']");

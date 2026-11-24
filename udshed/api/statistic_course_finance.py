@@ -6,9 +6,17 @@ import udshed.api.statistic_course as statistic_course
 import udshed.api.planning as planning
 from functools import reduce
 
+
+def _exiger_acces_statistiques():
+    """Statistiques financières (coût des vacations) : mêmes rôles que la page « insight-financier »."""
+    from udshed.utils import securite
+
+    securite.exiger_acces_page("insight-financier")
+
 @frappe.whitelist()
 def statistic_year(academic_year, semestre=None):
     """Statistique global des finances de l'année"""
+    _exiger_acces_statistiques()
     try:
         return _statistic_year_impl(academic_year, semestre)
     except Exception:
@@ -96,6 +104,7 @@ def _statistic_year_impl(academic_year, semestre=None):
 @frappe.whitelist()
 def statistic_cours_faculte(academic_year,faculty,course_type=None,semestre=None):
     """ Statistique de la faculté pour une année"""
+    _exiger_acces_statistiques()
     try:
         return _statistic_cours_faculte_impl(academic_year,faculty,course_type,semestre)
     except Exception:
@@ -201,6 +210,7 @@ def _statistic_cours_faculte_impl(academic_year,faculty,course_type=None,semestr
 @frappe.whitelist()
 def statistic_fieldofstudy(academic_year,faculty,filiere,semestre=None,course_type=None):
     """Statistic progression financier pour filiére"""
+    _exiger_acces_statistiques()
     try:
         return _statistic_fieldofstudy_impl(academic_year,faculty,filiere,semestre,course_type)
     except Exception:
@@ -303,6 +313,7 @@ def _statistic_fieldofstudy_impl(academic_year,faculty,filiere,semestre=None,cou
 
 @frappe.whitelist()
 def statistic_level(academic_year,faculty,filiere,niveau,semestre=None,course_type=None):
+    _exiger_acces_statistiques()
     try:
         return _statistic_level_impl(academic_year,faculty,filiere,niveau,semestre,course_type)
     except Exception:
@@ -411,6 +422,7 @@ def _statistic_level_impl(academic_year,faculty,filiere,niveau,semestre=None,cou
 @frappe.whitelist()
 def statistic_teacher(academic_year,teacher, faculty=None,filiere=None,niveau=None, semestre=None ):
     """Statistic finace for teacher"""
+    _exiger_acces_statistiques()
     try:
         return _statistic_teacher_impl(academic_year,teacher,faculty,filiere,niveau,semestre)
     except Exception:
@@ -547,7 +559,8 @@ def _statistic_teacher_impl(academic_year,teacher, faculty=None,filiere=None,niv
 @frappe.whitelist()
 def get_default_finance_config():
     """Get defaut Config finance by title"""
-    udshed_config = frappe.doc = frappe.get_single('Udshed Setting')
+    _exiger_acces_statistiques()
+    udshed_config = frappe.get_single('Udshed Setting')
     config_payement_list = {}
     for config_pay in udshed_config.configuration_des_paiements_par_grade:
         if config_pay.grade not in config_payement_list.keys():

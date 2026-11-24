@@ -34,7 +34,7 @@ class ResultatAcademique(Document):
             return
         if not (self.student and self.semestre and self.academic_year):
             return
-        from udshed.api.resultat_academique import calculer_et_sauvegarder_mps_mpc
+        from udshed.api.resultat_academique import _calculer_et_sauvegarder_mps_mpc as calculer_et_sauvegarder_mps_mpc
         calculer_et_sauvegarder_mps_mpc(
             self.student, self.semestre, self.academic_year,
             teaching_unit_a_exclure=teaching_unit_a_exclure,

@@ -239,6 +239,10 @@ def notifier_publication_note(session, student, teaching_unit):
 @frappe.whitelist()
 def relancer_notification_publication(session):
     """Relance manuellement la notification d'une publication (admin / test)."""
+    # Envoie des emails à toute une promotion : mêmes droits que la publication.
+    from udshed.api.saisie_notes import _verifier_droit_session
+
+    _verifier_droit_session(session)
     nb = notifier_publication_matiere(session)
     frappe.msgprint(
         _("{0} étudiant(s) concerné(s) par la notification de la session {1}.").format(

@@ -12,6 +12,10 @@ def search_students(doctype, txt, searchfield, start, page_len, filters=None):
 
 	Cherche par matricule (issu de l'inscription), nom ou prénom.
 	"""
+	from udshed.utils import securite
+
+	# Annuaire des étudiants : mêmes rôles que la page « releve_notes ».
+	securite.exiger_acces_page("releve_notes")
 	txt = (txt or "").strip()
 	or_filters = None
 	if txt:

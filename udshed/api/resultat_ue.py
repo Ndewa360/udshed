@@ -32,6 +32,13 @@ from frappe import _
 from frappe.utils import flt
 
 from udshed.grade_calculation import get_grade_info, get_seuil_validation, get_student_cycle
+from udshed.utils import securite
+
+
+def _exiger_resultats_ue():
+    """Recalcul manuel (rapport « PV par UE ») : droit d'écriture sur Resultat UE."""
+    securite.exiger_personnel()
+    securite.exiger_permission("Resultat UE", "write")
 
 TYPE_NORMALE = "Examen de session normal"
 TYPE_RATTRAPAGE = "Examen de rattrapage"
@@ -496,8 +503,7 @@ def recalculer_ue_depuis_note(teaching_unit, student, session_examen, filiere=No
     )
 
 
-@frappe.whitelist()
-def recalculer_ue(academic_year, filiere, niveau, semestre, teaching_unit_value, student=None):
+def _recalculer_ue(academic_year, filiere, niveau, semestre, teaching_unit_value, student=None):
     """Recalcule l'UE pour un étudiant ou pour toute la classe.
 
     Sert au bouton « Recalculer » du PV d'UE et à la reprise d'un lot de notes
@@ -522,3 +528,10 @@ def recalculer_ue(academic_year, filiere, niveau, semestre, teaching_unit_value,
         if calculer_resultat_ue(cible, teaching_unit_value, academic_year, semestre, filiere, niveau):
             calcules += 1
     return {"ues": calcules, "etudiants": len(cibles)}
+
+
+@frappe.whitelist()
+def recalculer_ue(academic_year, filiere, niveau, semestre, teaching_unit_value, student=None):
+    """Point d'entrée HTTP : contrôle d'accès, puis `_recalculer_ue` (usage interne)."""
+    _exiger_resultats_ue()
+    return _recalculer_ue(academic_year=academic_year, filiere=filiere, niveau=niveau, semestre=semestre, teaching_unit_value=teaching_unit_value, student=student)

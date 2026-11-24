@@ -227,16 +227,18 @@ class TestSessionNormaleEtRattrapage(IntegrationTestCase):
         with suppress_commits():
             _sauvegarder_rattrapage(args, rows)
 
+        # La session est retrouvée via la note de CET étudiant : IntegrationTestCase
+        # n'annule les écritures qu'en fin de classe, d'autres tests ont donc pu
+        # créer des sessions de rattrapage sur la même année / le même semestre.
         rattrapage_session = frappe.db.get_value(
-            "Session Examen",
-            {
-                "academic_year": self.academic_year.name,
-                "semestre": "Semestre 1",
-                "type_dexamen": TYPE_RATTRAPAGE,
-            },
-            "name",
+            "Session Examen Note",
+            {"student": self.student.name, "teaching_unit": self.tu.name, "rattrapage_saisi": 1},
+            "session_examen",
         )
         self.assertIsNotNone(rattrapage_session)
+        self.assertEqual(
+            frappe.db.get_value("Session Examen", rattrapage_session, "type_dexamen"), TYPE_RATTRAPAGE
+        )
         rattrapage_note = frappe.db.get_value(
             "Session Examen Note",
             {"student": self.student.name, "teaching_unit": self.tu.name,

@@ -806,7 +806,7 @@ def calculer_resultats_classe(
     if not frappe.db.exists("Field of study", filiere):
         frappe.throw(_("La filière <b>{0}</b> est introuvable.").format(filiere))
 
-    from udshed.api.resultat_academique import calculer_resultat_semestre
+    from udshed.api.resultat_academique import _calculer_resultat_semestre as calculer_resultat_semestre
 
     semestres = (
         [semestre]

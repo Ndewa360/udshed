@@ -12,8 +12,22 @@ from udshed.utils.niveaux import (
 )
 from udshed.api.school_setting import get_logo_data_uri
 from udshed.api import planning_permission
+from udshed.utils import securite
 
 STAFF_ROLES = {"System Manager", "Coordonateur", "Agent de scolarité", "Comptable"}
+
+# Rôles autorisés à gérer les niveaux (identiques à la page web /admin-niveaux).
+ROLES_GESTION_NIVEAUX = ("System Manager", "Coordonateur", "Planning Manager")
+
+
+def _exiger_gestion_niveaux():
+	securite.exiger_roles(*ROLES_GESTION_NIVEAUX)
+
+
+def _exiger_rapport_reinscription():
+	"""Rapports nominatifs de réinscription : personnel ayant la lecture du DocType."""
+	securite.exiger_personnel()
+	securite.exiger_permission("Academic Reregistration", "read")
 
 
 def _autorise_etudiant(student):
@@ -52,7 +66,7 @@ def _decision_annee_etudiant(student, academic_year):
 			return row.decision_annee
 
 	try:
-		from udshed.api.resultat_academique import calculer_resultat_annee
+		from udshed.api.resultat_academique import _calculer_resultat_annee as calculer_resultat_annee
 		decision = calculer_resultat_annee(student, academic_year).get("decision")
 		return decision if decision in ("Admis", "Ajourné") else "En attente"
 	except Exception:
@@ -821,6 +835,7 @@ def get_all_levels(faculty=None, filiere=None):
 @frappe.whitelist()
 def add_level(filiere, level, cycle=None, coordonateur=None, calendrier="Defaut", gestionnaire_de_planning=None):
 	"""Ajoute un niveau à une filière en l'insérant au bon endroit par cycle."""
+	_exiger_gestion_niveaux()
 	doc = frappe.get_doc("Field of study", filiere)
 	if any(r.level == level for r in doc.field_of_study_level):
 		frappe.throw(f"Le niveau {level} existe déjà dans {filiere}")
@@ -862,6 +877,7 @@ def reorder_levels(filiere, level_names):
 	dans la filière : les autres niveaux ne bougent pas. L'ordre ainsi choisi
 	est conservé (pas de retour automatique à l'ordre académique).
 	"""
+	_exiger_gestion_niveaux()
 	if not level_names:
 		return {"status": True, "message": "Aucun niveau à réordonner"}
 
@@ -897,6 +913,7 @@ def reorder_levels(filiere, level_names):
 @frappe.whitelist()
 def update_level(filiere, level_row_name, cycle=None, coordonateur=None, calendrier=None, gestionnaire_de_planning=None):
 	"""Met à jour les champs d'un niveau existant dans une filière."""
+	_exiger_gestion_niveaux()
 	doc = frappe.get_doc("Field of study", filiere)
 	row = None
 	for r in doc.field_of_study_level:
@@ -924,6 +941,7 @@ def update_level(filiere, level_row_name, cycle=None, coordonateur=None, calendr
 @frappe.whitelist()
 def delete_level(filiere, level_name):
 	"""Supprime un niveau d'une filière via SQL direct."""
+	_exiger_gestion_niveaux()
 	level = frappe.db.get_value(
 		"Field of study Level",
 		{"parent": filiere, "level": level_name},
@@ -942,6 +960,7 @@ def get_reregistrations_by_session(reinscription_session):
 	Retourne toutes les réinscriptions d'une session
 	avec leurs statuts — pour le tableau de bord du coordonateur
 	"""
+	_exiger_rapport_reinscription()
 	reregistrations = frappe.get_all(
 		"Academic Reregistration",
 		filters={"reinscription_session": reinscription_session},
@@ -979,6 +998,7 @@ def get_reregistration_report(reinscription_session=None, filiere=None, statut=N
 	Retourne les compteurs (total, par statut/filière/niveau) et le détail des
 	lignes pour l'export CSV. Filtres optionnels : session, filière, statut.
 	"""
+	_exiger_rapport_reinscription()
 	filters = {}
 	if reinscription_session:
 		filters["reinscription_session"] = reinscription_session

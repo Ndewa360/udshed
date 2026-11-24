@@ -12,17 +12,26 @@ def configure_student_desk(bootinfo):
 	« Inscription - Reinscription » avec le raccourci « Se réinscrire »
 	est visible. Sidebar, framework Frappe, autres workspaces retirés.
 	"""
+	from udshed.utils.securite import est_personnel
+
 	user = frappe.session.user
 	if user == "Administrator" or user == "Guest":
 		return
-	if "System Manager" in frappe.get_roles(user):
-		return
-	if STUDENT_ROLE not in frappe.get_roles(user):
+	if STUDENT_ROLE not in frappe.get_roles(user) or est_personnel(user):
 		return
 
+	# Le boot ne doit jamais échouer à cause de cette personnalisation :
+	# en cas d'imprévu, on journalise et on laisse le desk par défaut.
+	try:
+		_restreindre_desk(bootinfo)
+	except Exception:
+		frappe.log_error(title="udshed: configure_student_desk")
+
+
+def _restreindre_desk(bootinfo):
 	# Sidebar: garder le format framework {"workspace": {"label":..., "items":[...]}}.
 	# Seul "Se réinscrire" (Page link) est laissé à l'étudiant.
-	sidebar = bootinfo.workspace_sidebar_item.get(STUDENT_SIDEBAR)
+	sidebar = (bootinfo.get("workspace_sidebar_item") or {}).get(STUDENT_SIDEBAR)
 	if not isinstance(sidebar, dict) or "items" not in sidebar:
 		sidebar = {"label": STUDENT_WORKSPACE, "items": [], "app": "udshed"}
 	sidebar["items"] = [
@@ -52,7 +61,7 @@ def configure_student_desk(bootinfo):
 	# Les icônes du desktop sont lues depuis boot.desktop_icons (pas desktop_icons_by_type).
 	# L'étudiant ne garde que le workspace « Inscription - Reinscription ».
 	bootinfo.desktop_icons = [
-		icon for icon in bootinfo.desktop_icons
+		icon for icon in (bootinfo.get("desktop_icons") or [])
 		if icon.get("name") == STUDENT_WORKSPACE or icon.get("label") == STUDENT_WORKSPACE
 	]
 
@@ -78,6 +87,6 @@ def configure_student_desk(bootinfo):
 			},
 		]
 	)
-	for page in (bootinfo.workspaces or {}).get("pages", []):
+	for page in (bootinfo.get("workspaces") or {}).get("pages", []):
 		if page.get("name") == STUDENT_WORKSPACE:
 			page["content"] = student_content

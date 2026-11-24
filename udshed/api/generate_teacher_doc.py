@@ -56,6 +56,13 @@ def download_contract_to_signed():
 
 @frappe.whitelist()
 def download_signed_contract(url_file):
+    # Seuls les modèles Word auxquels l'utilisateur a accès (permission File).
+    if not str(url_file or "").lower().endswith(".docx"):
+        frappe.throw(_("Seuls les fichiers Word (.docx) sont acceptés."))
+    file_name = frappe.db.get_value("File", {"file_url": url_file}, "name")
+    if not file_name:
+        frappe.throw(_("Fichier introuvable."), frappe.DoesNotExistError)
+    frappe.get_doc("File", file_name).check_permission("read")
     try:
         doc = load_template(url_file,True)
         doc.render({})
@@ -73,6 +80,9 @@ def download_signed_contract(url_file):
 
 @frappe.whitelist()
 def download_progression_cours(teaching_unit,teacher,nbre_heure,total_heure):
+    from udshed.utils import securite
+
+    securite.exiger_personnel()
     try:
         doc = load_template("fiche_progression_cours.docx",False)
         teacher_obj = frappe.get_doc("Teacher",teacher)

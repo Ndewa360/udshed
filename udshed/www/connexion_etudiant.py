@@ -2,6 +2,12 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
+from udshed.utils import securite
+
+_MAX_ECHECS_MATRICULE = 5
+_MAX_ECHECS_IP = 50
+_FENETRE_SEC = 15 * 60
+
 
 def get_context(context):
 	context.title = "Connexion étudiant"
@@ -18,17 +24,33 @@ def get_context(context):
 		context.error = _("Veuillez renseigner le matricule et le mot de passe.")
 		return context
 
+	context.matricule = matricule
+
+	# Le mot de passe (date de naissance) a peu de valeurs possibles et les
+	# matricules sont connus (babillard) : on limite les échecs par matricule
+	# et par adresse IP (seuil IP large : un campus partage souvent une IP).
+	ip = securite.ip_client()
+	try:
+		securite.verifier_tentatives("connexion-matricule", matricule, _MAX_ECHECS_MATRICULE, _FENETRE_SEC)
+		securite.verifier_tentatives("connexion-ip", ip, _MAX_ECHECS_IP, _FENETRE_SEC)
+	except frappe.RateLimitExceededError:
+		frappe.clear_messages()
+		context.error = _("Trop de tentatives infructueuses. Réessayez dans {0} minutes.").format(
+			_FENETRE_SEC // 60
+		)
+		return context
+
 	student = _verifier_identifiants(matricule, mot_de_passe)
 	if not student:
+		securite.enregistrer_echec("connexion-matricule", matricule, _FENETRE_SEC)
+		securite.enregistrer_echec("connexion-ip", ip, _FENETRE_SEC)
 		context.error = _("Matricule ou mot de passe incorrect.")
 		return context
 
+	securite.reinitialiser_tentatives("connexion-matricule", matricule)
 	user_email = _assurer_compte_utilisateur(student)
 	_login(user_email)
 
-	frappe.local.cookie_manager.set_cookie(
-		"_rfr_student", student.name, max_age=300
-	)
 	frappe.local.flags.redirect_location = "/dashboard-etudiant"
 	raise frappe.Redirect
 

@@ -354,13 +354,16 @@ def telecharger_modele_import(format="xlsx"):
         _repondre_csv([entetes], nom_fichier)
         return
 
-    import xlsxwriter
+    import openpyxl
     from frappe.desk.utils import provide_binary_file
     from frappe.utils.xlsxutils import make_xlsx
 
-    flux = io.BytesIO()
-    wb = xlsxwriter.Workbook(flux, {"in_memory": True})
-    make_xlsx([entetes], "Étudiants", wb=wb, column_widths=[22] * len(entetes))
+    # make_xlsx (Frappe v16) attend un classeur openpyxl, l'enregistre à chaque
+    # appel (d'où un classeur normal : un « write_only » ne s'enregistre qu'une
+    # fois) et insère chaque onglet en PREMIÈRE position : on les crée donc
+    # dans l'ordre inverse pour obtenir Étudiants, Instructions, Filières.
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
 
     instructions = [
         ["Colonne", "Obligatoire", "Comment la remplir"],
@@ -376,8 +379,6 @@ def telecharger_modele_import(format="xlsx"):
         ["", "", "Un bilan détaillé (importées / ignorées / rejetées + motif) est affiché avant "
                   "et après la validation."],
     ]
-    make_xlsx(instructions, "Instructions", wb=wb, column_widths=[30, 12, 100])
-
     filieres = [["Code filière", "Filière", "Niveaux acceptés"]]
     for f in frappe.get_all("Field of study", fields=["name", "name_of_field"], order_by="name asc"):
         niveaux = frappe.get_all(
@@ -386,8 +387,9 @@ def telecharger_modele_import(format="xlsx"):
         )
         filieres.append([f.name, f.name_of_field or "", ", ".join(n.level for n in niveaux if n.level)])
     make_xlsx(filieres, "Filières", wb=wb, column_widths=[18, 40, 60])
+    make_xlsx(instructions, "Instructions", wb=wb, column_widths=[30, 12, 100])
+    flux = make_xlsx([entetes], "Étudiants", wb=wb, column_widths=[22] * len(entetes))
 
-    wb.close()
     provide_binary_file(nom_fichier, "xlsx", flux.getvalue())
 
 

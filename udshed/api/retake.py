@@ -6,6 +6,19 @@ from frappe import _
 
 from udshed.api.proces_verbal import _credits_ue
 from udshed.grade_calculation import get_seuil_validation, get_student_cycle
+from udshed.utils import securite
+
+
+def _exiger_lecture_rattrapages():
+    """Listes nominatives : rôles du rapport « Liste Etudiants A Rattraper »."""
+    securite.exiger_personnel()
+    securite.exiger_acces_rapport("Liste Etudiants A Rattraper")
+
+
+def _exiger_creation_rattrapage():
+    """Créer une session de rattrapage = créer une Session Examen."""
+    securite.exiger_personnel()
+    securite.exiger_permission("Session Examen", "create")
 
 TYPE_NORMALE = "Examen de session normal"
 
@@ -58,6 +71,7 @@ def identifier_rattrapages(session_examen):
     Returns:
         dict: détails des UE non validées + récapitulatif par étudiant
     """
+    _exiger_lecture_rattrapages()
     try:
         return _identifier_rattrapages_impl(session_examen)
     except Exception:
@@ -167,6 +181,7 @@ def etudiants_eligibles_rattrapage(academic_year, semestre, filiere, niveau):
     Returns:
         dict: liste des étudiants éligibles avec leurs UE concernées
     """
+    _exiger_lecture_rattrapages()
     try:
         return _etudiants_eligibles_rattrapage_impl(academic_year, semestre, filiere, niveau)
     except Exception:
@@ -287,6 +302,7 @@ def creer_session_rattrapage(session_normale, date_debut, date_fin):
     Returns:
         dict: Session de rattrapage créée
     """
+    _exiger_creation_rattrapage()
     try:
         return _creer_session_rattrapage_impl(session_normale, date_debut, date_fin)
     except Exception:
@@ -316,7 +332,7 @@ def _creer_session_rattrapage_impl(session_normale, date_debut, date_fin):
 
     rattrapage.insert()
 
-    resultats = identifier_rattrapages(session_normale)
+    resultats = _identifier_rattrapages_impl(session_normale)
 
     return {
         "session_rattrapage": rattrapage.name,

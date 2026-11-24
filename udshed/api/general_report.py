@@ -19,6 +19,10 @@ def get_general_report(
 	Returns:
 		dict: {inscriptions: {...}}
 	"""
+	from udshed.utils import securite
+
+	# Hors du try : un refus d'accès ne doit pas être masqué en « erreur ».
+	securite.exiger_acces_page("rapport-general")
 	try:
 		return {
 			"inscriptions": get_inscription_report(

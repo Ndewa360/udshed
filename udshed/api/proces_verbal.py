@@ -190,8 +190,21 @@ def _bilan_pv_etudiant(student, academic_year, semestre, mps_sur_4, total_credit
     }
 
 
+def _exiger_acces_pv():
+    """PV = notes nominatives de toute une classe : personnel des résultats
+    (ROLES_RESULTATS, comme download_pv_ue_pdf) ou utilisateurs des rapports PV."""
+    from udshed.api.resultats_page import ROLES_RESULTATS
+    from udshed.utils import securite
+
+    securite.exiger_personnel()
+    if frappe.session.user == "Administrator" or set(frappe.get_roles()) & set(ROLES_RESULTATS):
+        return
+    securite.exiger_acces_rapport("Proces Verbal Recapitulatif", "PV par UE")
+
+
 @frappe.whitelist()
 def get_proces_verbal_data(academic_year, filiere, niveau, semestre):
+    _exiger_acces_pv()
     ues = get_ues(academic_year, filiere, niveau, semestre)
     ue_liste = []
     for ue in ues:
@@ -408,6 +421,7 @@ def get_pv_ue_data(academic_year, filiere, niveau, semestre, teaching_unit_value
     l'état de la saisie, y compris avant le premier enregistrement dans
     ``Resultat UE``.
     """
+    _exiger_acces_pv()
     from udshed.api.resultat_ue import calculer_ue_etudiant, get_matieres_ue
 
     matieres = get_matieres_ue(teaching_unit_value, academic_year, filiere, niveau)

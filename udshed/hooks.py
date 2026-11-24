@@ -1,7 +1,7 @@
 app_name = "udshed"
 app_title = "Udshed"
 app_publisher = "Cédric Nguendap Bedjama"
-app_description = "Outils de planification des cours"
+app_description = "Gestion académique : candidatures, inscriptions et réinscriptions, planning, notes et résultats"
 app_email = "c.nguendap@ndewa-360.com"
 app_license = "mit"
 
@@ -53,6 +53,16 @@ fixtures = [
     },
     {
         "dt": "Web Page",
+        "filters": [
+            ["route", "in", [
+                "index",
+                "suivi-candidature",
+                "document-dossier",
+                "information-candidat",
+                "candidate-choice",
+                "success-candidature",
+            ]]
+        ]
     },
     {
         "dt": "Desktop Icon",
@@ -74,8 +84,9 @@ fixtures = [
 
 # include js, css files in header of desk.html
 app_include_css = "/assets/udshed/css/gestion_des_niveaux.v3.css"
+# Sortable (glisser-déposer des niveaux) est déjà fourni par Frappe
+# (window.Sortable, libs.bundle.js) : aucun chargement depuis un CDN externe.
 app_include_js = [
-	"https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js",
 	"/assets/udshed/js/udshed.js"
 ]
 
@@ -168,13 +179,24 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 
 # Permissions
 # -----------
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+# Un compte uniquement « Student » ne voit que SA fiche et SON inscription
+# (voir udshed/permissions.py). Le personnel n'est pas concerné.
+permission_query_conditions = {
+	"Student": "udshed.permissions.student_query",
+	"Inscription Academique": "udshed.permissions.inscription_query",
+	"Resultat Academique": "udshed.permissions.resultat_query",
+}
+
+has_permission = {
+	"Student": "udshed.permissions.student_has_permission",
+	"Inscription Academique": "udshed.permissions.inscription_has_permission",
+	"Resultat Academique": "udshed.permissions.resultat_has_permission",
+}
+
+# Boot Session
+# ------------
+# Restreint le desk des étudiants à l'espace « Inscription - Reinscription ».
+boot_session = ["udshed.boot_student.configure_student_desk"]
 
 # Document Events
 # ---------------

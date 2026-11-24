@@ -69,6 +69,9 @@ def get_transcript_data(doc):
         return {}
 
     student_doc = frappe.get_doc("Student", student)
+    # Même règle que download_releve_pdf : permission Frappe sur la fiche
+    # Student (un compte étudiant ne lit que la sienne, cf. udshed.permissions).
+    student_doc.check_permission("read")
     settings = frappe.get_single("Udshed Setting")
 
     semesters = frappe.get_all(
