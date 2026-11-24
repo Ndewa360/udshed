@@ -116,9 +116,12 @@ window.Udshed.UI = {
                         const location = item.mode === "En ligne"
                             ? "En ligne"
                             : [item.batiment, item.salle].filter(Boolean).join(" / ") || "—";
-                        const modeBadge = item.mode && item.mode !== "En présentiel"
+                        const modeBadge = (item.mode && item.mode !== "En présentiel"
                             ? `<span class="planning-item-mode">${this._escape(item.mode)}</span>`
-                            : "";
+                            : "") + (item.cours_lie
+                            // Cours lié : séance commune planifiée via la grille d'une autre classe.
+                            ? `<span class="planning-item-mode" title="${this._escape(__("Séance commune avec « {0} »", [item.cours_planifie_label || item.cours]))}">🔗 ${__("commun")}</span>`
+                            : "");
                         const courseData = this._escape(JSON.stringify({ item: item }));
                         return `
                             <div class="planning-item ${css}" data-course="${courseData}">

@@ -173,6 +173,11 @@ def get_scope(user=None):
 			pluck="parent",
 			distinct=True,
 		)
+		# Cours liés (même enseignement sous un autre intitulé) : l'enseignant
+		# assure la séance commune pour les classes de ces cours aussi.
+		from udshed.utils.planning_conflits import groupe_du_cours
+
+		units = sorted({u for unit in units for u in groupe_du_cours(unit)})
 		scope["teaching_units"] = units
 		scope["teachers"] = [teacher_name]
 		if units:

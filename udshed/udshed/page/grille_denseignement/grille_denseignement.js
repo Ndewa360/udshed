@@ -8,6 +8,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
 		'/assets/udshed/js/teaching_grid/teaching_grid_query.js',
 		'/assets/udshed/js/teaching_grid/teaching_grid_dialog.js',
 		'/assets/udshed/js/teaching_grid/teaching_grid.js',
+		'/assets/udshed/js/teaching_grid/cours_communs.js',
 	]).then(async () => {
         const rawUserContext = await Udshed.UtilsQueries.get_data_of_user();
         const userContext = Udshed.Perms.normalizeUserContext(rawUserContext);
@@ -49,10 +50,11 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
             page.add_inner_button(__("Ajouter un cours"), () => {
                 if (grilleChoisie()) Udshed.TeachingGrid.Dialog.open_add_course_dialog(filters, () => teaching_grid.refresh());
             });
+            // Deux grilles côte à côte : tronc commun et cours liés reliés par des traits.
             page.add_inner_button(__("Cours communs"), () => {
-                if (grilleChoisie()) {
-                    Udshed.TeachingGrid.Dialog.open_link_courses_dialog(filters, teaching_grid.courses_list(), () => teaching_grid.refresh());
-                }
+                Udshed.TeachingGrid.CoursCommuns.open({ ...filters }, () => {
+                    if (Udshed.TeachingGrid.UtilsUi.isValideFilterForGrid(filters)) teaching_grid.refresh();
+                });
             });
             page.add_inner_button(__("Retirer un cours"), () => {
                 if (grilleChoisie()) {

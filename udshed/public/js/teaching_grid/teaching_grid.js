@@ -121,10 +121,18 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
                     const esc = frappe.utils.escape_html;
                     let html = '';
                     if (info.partage) {
-                        html += `<span class="indicator-pill blue" title="${esc(__('Cours partagé : intitulé et heures communs à toutes les classes'))}">${__('Tronc commun')} +${info.partage}</span> `;
+                        const classes = (info.partage_classes || []).map((c) => `• ${c}`).join('\n');
+                        const bulle = __('Tronc commun : même cours, intitulé et heures communs.') + '\n'
+                            + __('Aussi suivi par :') + (classes ? '\n' + classes : ` ${info.partage}`);
+                        html += `<span class="indicator-pill blue" title="${esc(bulle)}">${__('Tronc commun')} +${info.partage}</span> `;
                     }
                     if (info.lies) {
-                        html += `<span class="indicator-pill purple" title="${esc(__('Lié à des cours d\'autres grilles : planifié comme un cours commun'))}">🔗 ${__('Lié')} +${info.lies}</span> `;
+                        // Info-bulle : chaque cours lié (autre grille) avec les classes qui le suivent.
+                        const details = (info.lies_details || []).map((c) =>
+                            `• ${c.code}${c.intitule ? ' — ' + c.intitule : ''}\n    ${__('Classes')} : ${(c.classes || []).join(', ') || '—'}`
+                        ).join('\n');
+                        const bulle = __('Lié à (planifié comme un cours commun) :') + '\n' + details;
+                        html += `<span class="indicator-pill purple" title="${esc(bulle)}" style="cursor:help">🔗 ${__('Lié')} +${info.lies}</span> `;
                     }
                     if (info.avertissement) {
                         html += `<span class="indicator-pill orange" title="${esc(info.avertissement)}">⚠ ${__('Crédits/heures')}</span>`;
@@ -170,7 +178,13 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
                     course.total_hours,
                     JSON.stringify(course.teacher),
                     (course.classes_partagees || course.avertissement || course.cours_lies)
-                        ? JSON.stringify({ partage: course.classes_partagees || 0, lies: course.cours_lies || 0, avertissement: course.avertissement || '' })
+                        ? JSON.stringify({
+                            partage: course.classes_partagees || 0,
+                            partage_classes: course.classes_partagees_libelles || [],
+                            lies: course.cours_lies || 0,
+                            lies_details: course.cours_lies_details || [],
+                            avertissement: course.avertissement || ''
+                        })
                         : '',
                 ]);
             });

@@ -120,17 +120,33 @@ def _format_hours(value):
 
 
 def _attach_progress(rows):
+	"""Avancement horaire de chaque séance (heures faites / volume prévu).
+
+	Les cours liés sont un seul enseignement : les heures se cumulent sur tout
+	le groupe ; le volume de référence est celui du cours affiché (celui de la
+	grille consultée).
+	"""
+	from udshed.utils.planning_conflits import groupe_du_cours
+
 	if not rows:
 		return
-	unit_names = sorted({str(row.cours) for row in rows if row.cours})
+	affiches = sorted({str(row.get("cours_affiche") or row.cours) for row in rows if row.cours})
 	years = sorted({str(row.academic_year) for row in rows if row.academic_year})
-	if not unit_names or not years:
+	if not affiches or not years:
 		return
+
+	groupe_de = {}
+	for nom in {str(row.cours) for row in rows if row.cours} | set(affiches):
+		membres = groupe_du_cours(nom)
+		cle = min(membres)
+		for m in membres:
+			groupe_de[m] = cle
+	unites = sorted(groupe_de)
 
 	totals = {}
 	for unit in frappe.get_all(
 		"Teaching Unit",
-		filters={"name": ["in", unit_names]},
+		filters={"name": ["in", affiches]},
 		fields=["name", "nombre_dheure_cm", "nombre_dheure_td", "nombre_dheure_tp"],
 	):
 		totals[unit.name] = sum(
@@ -141,7 +157,7 @@ def _attach_progress(rows):
 	all_items = frappe.get_all(
 		"Planning Item",
 		filters={
-			"cours": ["in", unit_names],
+			"cours": ["in", unites],
 			"academic_year": ["in", years],
 			"type": ["in", sorted(PROGRESS_TYPES)],
 		},
@@ -158,13 +174,19 @@ def _attach_progress(rows):
 	)
 
 	cumulative = {}
-	progress_by_item = {}
+	heures_par_item = {}
 	for item in all_items:
-		key = (item.cours, item.academic_year)
-		hours = _period_hours(item.period, duration_cache)
+		key = (groupe_de.get(item.cours, item.cours), item.academic_year)
 		previous = cumulative.get(key, 0.0)
-		current = previous + hours
-		total = totals.get(item.cours, 0.0)
+		current = previous + _period_hours(item.period, duration_cache)
+		cumulative[key] = current
+		heures_par_item[item.name] = (previous, current)
+
+	for row in rows:
+		if row.name not in heures_par_item:
+			continue
+		previous, current = heures_par_item[row.name]
+		total = totals.get(str(row.get("cours_affiche") or row.cours), 0.0)
 		state = "normal"
 		is_last = False
 		extra = 0.0
@@ -177,8 +199,7 @@ def _attach_progress(rows):
 				is_last = True
 			elif current >= total:
 				state = "termine"
-		cumulative[key] = current
-		progress_by_item[item.name] = {
+		row.update({
 			"progress_done_hours": current,
 			"progress_total_hours": total,
 			"progress_label": (
@@ -191,10 +212,7 @@ def _attach_progress(rows):
 			"progress_extra_hours": extra,
 			"progress_extra_label": _format_hours(extra),
 			"progress_pct": min(100.0, round(current / total * 100, 1)) if total else 0.0,
-		}
-
-	for row in rows:
-		row.update(progress_by_item.get(row.name, {}))
+		})
 
 
 @frappe.whitelist()
@@ -291,7 +309,10 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 			doc["batiment_name"] = doc.batiment or ""
 			doc["salle"] = _room_code(doc.salle, room_cache)
 			doc["batiment"] = _batiment_code(doc.batiment, room_cache)
+			doc["cours_affiche"] = doc.cours
 		rows = list(seen.values())
+		if filiere and niveau:
+			_afficher_selon_la_grille(rows, academic_year, filiere, niveau)
 		_attach_progress(rows)
 		return rows
 	except (frappe.ValidationError, frappe.PermissionError):
@@ -299,6 +320,44 @@ def get_week_planning(academic_year, week_start, filiere=None, niveau=None, teac
 	except Exception:
 		_log()
 		_throw("Erreur lors du chargement du planning.")
+
+
+def _afficher_selon_la_grille(rows, academic_year, filiere, niveau):
+	"""Séance d'un cours lié planifiée via une autre grille : on l'affiche avec
+	le cours de LA grille consultée (code, intitulé), pas celui de l'autre classe.
+
+	`cours` reste le cours réellement planifié (modification / suppression) ;
+	`cours_affiche` est le cours de la classe consultée.
+	"""
+	from udshed.utils.planning_conflits import groupe_du_cours
+
+	propres = set(
+		frappe.db.sql_list(
+			"""
+			SELECT DISTINCT tu.name FROM `tabTeaching Unit` tu
+			INNER JOIN `tabCourse Field of study level item` l ON l.parent = tu.name AND l.parenttype = 'Teaching Unit'
+			WHERE tu.academic_year = %s AND l.filiere = %s AND l.niveau = %s
+			""",
+			(academic_year, filiere, niveau),
+		)
+	)
+	label = _level_label(niveau)
+	for row in rows:
+		if row.cours in propres:
+			continue
+		equivalents = sorted(groupe_du_cours(row.cours) & propres)
+		if not equivalents:
+			continue
+		tu = frappe.db.get_value("Teaching Unit", equivalents[0], ["name", "course", "intitule_cours"], as_dict=True)
+		row["cours_affiche"] = tu.name
+		row["cours_lie"] = 1
+		row["cours_planifie_label"] = row.get("intitule_label") or row.cours
+		row["course"] = tu.course
+		row["intitule_label"] = tu.intitule_cours or tu.name
+		row["course_label"] = frappe.db.get_value("Course", tu.course, "intitule") or tu.intitule_cours
+		row["filiere"] = filiere
+		row["niveau"] = niveau
+		row["niveau_label"] = label
 
 
 def _cours_lies_a_la_classe(academic_year, filiere, niveau):

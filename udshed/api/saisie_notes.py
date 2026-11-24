@@ -361,12 +361,16 @@ def _verifier_programmation(academic_year, teaching_unit, type_dexamen=None):
     """
     from frappe.query_builder import DocType
 
+    from udshed.utils.planning_conflits import groupe_du_cours
+
     planning = DocType("Planning Item")
+    # Cours liés (même enseignement, intitulé propre à chaque grille) : l'examen
+    # commun peut avoir été programmé via le cours d'une autre classe.
     query = (
         frappe.qb.from_(planning)
         .select(planning.name)
         .where(
-            (planning.cours == teaching_unit)
+            (planning.cours.isin(list(groupe_du_cours(teaching_unit))))
             & (planning.academic_year == academic_year)
         )
     )
@@ -458,11 +462,12 @@ def _verifier_acces_enseignant(teaching_unit):
     if "Planning Manager" in roles or "Coordonateur" in roles:
         return
     if "Teacher" in roles:
+        from udshed.utils.planning_conflits import enseignants_du_groupe
+
         enseignant = _get_enseignant_courant()
-        if enseignant and frappe.db.exists(
-            "Course Teacher Item",
-            {"parent": teaching_unit, "enseignant": enseignant},
-        ):
+        # L'enseignant d'un cours lié (même enseignement, autre grille) assure
+        # la séance commune : il gère aussi les notes des cours du groupe.
+        if enseignant and enseignant in enseignants_du_groupe(teaching_unit):
             return
         frappe.throw(
             _(
@@ -1382,16 +1387,16 @@ def get_ues(academic_year, filiere, niveau, semestre=None, teacher=None):
     )
     if semestre:
         query = query.where(TeachingUnit.semestre == semestre)
+    lignes = query.run(as_dict=True)
     if teacher:
-        CourseTeacherItem = DocType("Course Teacher Item")
-        query = (
-            query.join(CourseTeacherItem)
-            .on(CourseTeacherItem.parent == TeachingUnit.name)
-            .where(CourseTeacherItem.enseignant == teacher)
-        )
+        # Cours de la classe enseignés par cet enseignant, directement ou via
+        # un cours lié d'une autre grille (séance commune).
+        from udshed.utils.planning_conflits import enseignants_du_groupe
+
+        lignes = [ue for ue in lignes if teacher in enseignants_du_groupe(ue.name)]
 
     resultats = []
-    for ue in query.run(as_dict=True):
+    for ue in lignes:
         code = ""
         if ue.course:
             code = frappe.db.get_value("Course", ue.course, "code") or ""

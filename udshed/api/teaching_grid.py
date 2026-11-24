@@ -237,18 +237,37 @@ def _get_academic_teaching_unit_impl(academic_year,faculty,filiere,niveau,semest
 
     
     from udshed.utils import grille
+    from udshed.utils.planning_conflits import cours_lies
+
+    classe_courante = (filiere.name, str(niveau))
+    libelles = {}
+
+    def libelle_classe(f, n):
+        if (f, n) not in libelles:
+            nom = frappe.db.get_value("Field of study", f, "name_of_field") or f
+            libelles[(f, n)] = f"{nom} — {grille.libelle_niveau(n)}"
+        return libelles[(f, n)]
 
     for ue in result.keys():
         result[ue]["courses"] = sorted(
             result[ue]["courses"], key=lambda course: (_cle_alphabetique(course["title"]), course["code"])
         )
         for course in result[ue]["courses"]:
-            # Tronc commun : nombre d'autres classes qui partagent ce cours.
-            course["classes_partagees"] = max(0, len(grille.classes_du_cours(course["teaching_unit"])) - 1)
-            # Liaison manuelle : nombre d'autres cours (autres grilles) déclarés identiques.
-            from udshed.utils.planning_conflits import cours_lies
-
-            course["cours_lies"] = len(cours_lies(course["teaching_unit"]))
+            # Tronc commun : autres classes qui partagent ce même cours.
+            autres = sorted(c for c in grille.classes_du_cours(course["teaching_unit"]) if c != classe_courante)
+            course["classes_partagees"] = len(autres)
+            course["classes_partagees_libelles"] = [libelle_classe(f, n) for f, n in autres]
+            # Liaison manuelle : cours d'autres grilles déclarés identiques, avec leurs classes.
+            lies = []
+            for tu in sorted(cours_lies(course["teaching_unit"])):
+                info = frappe.db.get_value("Teaching Unit", tu, ["course", "intitule_cours"], as_dict=True) or {}
+                lies.append({
+                    "code": info.get("course") or tu,
+                    "intitule": info.get("intitule_cours") or "",
+                    "classes": [libelle_classe(f, n) for f, n in sorted(grille.classes_du_cours(tu))],
+                })
+            course["cours_lies"] = len(lies)
+            course["cours_lies_details"] = lies
             course["avertissement"] = grille.coherence_credits(course["credits"], course)
 
     return {"stats":stat_result,"grid":list(dict(sorted(result.items(), key=lambda item: str(item[0]))).values())}

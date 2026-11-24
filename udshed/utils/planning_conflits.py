@@ -67,6 +67,26 @@ def cours_lies(teaching_unit):
 	)
 
 
+def groupe_du_cours(teaching_unit):
+	"""Le cours et tous les cours liés : un même enseignement sous plusieurs intitulés."""
+	if not teaching_unit:
+		return set()
+	return cours_lies(teaching_unit) | {teaching_unit}
+
+
+def enseignants_du_groupe(teaching_unit):
+	"""Enseignants de tous les cours du groupe (cours liés compris)."""
+	if not teaching_unit:
+		return set()
+	return set(
+		frappe.get_all(
+			"Course Teacher Item",
+			filters={"parent": ["in", list(groupe_du_cours(teaching_unit))], "parenttype": "Teaching Unit"},
+			pluck="enseignant",
+		)
+	) - {None, ""}
+
+
 def _libelle_classe(filiere, niveau):
 	label = frappe.db.get_value("Field of study Level", niveau, "level") or niveau
 	return f"{filiere} {label}"

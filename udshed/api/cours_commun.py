@@ -21,6 +21,17 @@ from udshed.api import planning_permission
 from udshed.utils import grille
 
 
+def _exiger_migration():
+	"""Le champ Teaching Unit.groupe_cours_commun n'existe qu'après `bench migrate`."""
+	if not frappe.db.has_column("Teaching Unit", "groupe_cours_commun"):
+		frappe.throw(
+			_("La liaison de cours nécessite une mise à jour de la base : lancez « bench --site {0} migrate ».").format(
+				frappe.local.site
+			),
+			title=_("Mise à jour requise"),
+		)
+
+
 def _verifier_droit(teaching_units):
 	scope = planning_permission.get_scope()
 	if scope["is_admin"]:
@@ -34,6 +45,23 @@ def _verifier_droit(teaching_units):
 				_("Accès refusé : le cours {0} n'appartient à aucune classe de votre périmètre.").format(tu),
 				frappe.PermissionError,
 			)
+
+
+def _verifier_classes_distinctes(membres):
+	"""Un groupe lie des cours de grilles DIFFÉRENTES : une classe ne peut pas
+	suivre deux cours d'un même groupe (ce serait le même enseignement deux fois)."""
+	vues = {}
+	for tu in sorted(membres):
+		for classe in grille.classes_du_cours(tu):
+			if classe in vues:
+				frappe.throw(
+					_("La classe {0} suit déjà « {1} » : elle ne peut pas aussi suivre « {2} » comme cours lié.").format(
+						f"{classe[0]} {grille.libelle_niveau(classe[1])}",
+						frappe.db.get_value("Teaching Unit", vues[classe], "intitule_cours") or vues[classe],
+						frappe.db.get_value("Teaching Unit", tu, "intitule_cours") or tu,
+					)
+				)
+			vues[classe] = tu
 
 
 def _cours(teaching_unit):
@@ -63,6 +91,7 @@ def _description(tu):
 @frappe.whitelist()
 def lier_cours(teaching_units):
 	"""Place les cours dans un même groupe (fusionne les groupes existants)."""
+	_exiger_migration()
 	noms = frappe.parse_json(teaching_units) if isinstance(teaching_units, str) else list(teaching_units or [])
 	noms = list(dict.fromkeys(n for n in noms if n))
 	if len(noms) < 2:
@@ -79,6 +108,7 @@ def lier_cours(teaching_units):
 	membres = set(noms)
 	if groupes:
 		membres |= set(frappe.get_all("Teaching Unit", filters={"groupe_cours_commun": ["in", list(groupes)]}, pluck="name"))
+	_verifier_classes_distinctes(membres)
 	for nom in membres:
 		frappe.db.set_value("Teaching Unit", nom, "groupe_cours_commun", groupe)
 	return groupe_de(noms[0])
@@ -87,6 +117,7 @@ def lier_cours(teaching_units):
 @frappe.whitelist()
 def delier_cours(teaching_unit):
 	"""Retire un cours de son groupe (le groupe disparaît s'il ne reste qu'un cours)."""
+	_exiger_migration()
 	tu = _cours(teaching_unit)
 	if not tu.groupe_cours_commun:
 		return {"groupe": None, "cours": []}
@@ -101,6 +132,7 @@ def delier_cours(teaching_unit):
 @frappe.whitelist()
 def groupe_de(teaching_unit):
 	"""Cours du même groupe que `teaching_unit` (lui compris)."""
+	_exiger_migration()
 	tu = _cours(teaching_unit)
 	if not tu.groupe_cours_commun:
 		return {"groupe": None, "cours": [_description(tu)]}
@@ -117,6 +149,7 @@ def _cle(texte):
 def suggestions(academic_year, semestre=None):
 	"""Cours probablement identiques, non encore liés : même intitulé normalisé
 	(casse, accents, ponctuation) dans des classes différentes."""
+	_exiger_migration()
 	planning_permission.assert_can_plan(academic_year, require_filters=False)
 	filtres = {"academic_year": academic_year}
 	if semestre:
@@ -138,3 +171,103 @@ def suggestions(academic_year, semestre=None):
 			continue
 		resultat.append({"intitule": membres[0].intitule_cours, "cours": [_description(m) for m in membres]})
 	return resultat
+
+
+# ---------------------------------------------------------------------------
+# Vue « deux grilles côte à côte »
+# ---------------------------------------------------------------------------
+def _grille_classe(academic_year, semestre, filiere, niveau):
+	"""Cours d'une classe, groupés par UE (ordre : code UE, intitulé)."""
+	filtres_semestre = "AND tu.semestre = %(semestre)s" if semestre else ""
+	lignes = frappe.db.sql(
+		f"""
+		SELECT tu.name, tu.course, tu.intitule_cours, tu.semestre, tu.groupe_cours_commun,
+		       tu.nombre_dheure_cm, tu.nombre_dheure_td, tu.nombre_dheure_tp, tu.nombre_dheure_tpe,
+		       l.course_poid, ue.code AS ue_code, ue.intitule AS ue_intitule
+		FROM `tabTeaching Unit` tu
+		INNER JOIN `tabCourse Field of study level item` l ON l.parent = tu.name AND l.parenttype = 'Teaching Unit'
+		LEFT JOIN `tabTeaching Unit Value` ue ON ue.name = tu.unite_de_valeur
+		WHERE tu.academic_year = %(annee)s AND l.filiere = %(filiere)s AND l.niveau = %(niveau)s {filtres_semestre}
+		""",
+		{"annee": academic_year, "semestre": semestre, "filiere": filiere, "niveau": niveau},
+		as_dict=True,
+	)
+	ues = {}
+	for l in lignes:
+		code_ue = l.ue_code or "UNKNOW"
+		ue = ues.setdefault(code_ue, {"code": code_ue, "intitule": l.ue_intitule or "", "cours": []})
+		ue["cours"].append({
+			"teaching_unit": l.name,
+			"code": l.course,
+			"intitule": l.intitule_cours or l.course,
+			"semestre": l.semestre,
+			"credits": frappe.utils.flt(l.course_poid),
+			"heures": grille.heures_face_a_face(l),
+			"tpe": frappe.utils.flt(l.nombre_dheure_tpe),
+			"groupe": l.groupe_cours_commun or None,
+			"classes": len(grille.classes_du_cours(l.name)),
+		})
+	for ue in ues.values():
+		ue["cours"].sort(key=lambda c: (_cle(c["intitule"]), c["code"] or ""))
+	return sorted(ues.values(), key=lambda u: (u["code"] == "UNKNOW", u["code"]))
+
+
+def _libelle_classe(filiere, niveau):
+	nom = frappe.db.get_value("Field of study", filiere, "name_of_field") or filiere
+	return f"{nom} — {grille.libelle_niveau(niveau)}"
+
+
+@frappe.whitelist()
+def comparer_grilles(academic_year, filiere_gauche, niveau_gauche, filiere_droite, niveau_droite, semestre=None):
+	"""Deux grilles de classes différentes, avec leurs liens :
+	  - « tronc_commun » : le même cours (Teaching Unit) est dans les deux grilles ;
+	  - « lie » : deux cours différents déclarés identiques (groupe de cours commun) ;
+	  - suggestions : intitulés identiques après normalisation, pas encore liés.
+	"""
+	_exiger_migration()
+	scope = planning_permission.get_scope()
+	if not (scope["is_admin"] or scope["can_plan"]):
+		frappe.throw(_("Accès refusé : réservé aux coordinateurs et gestionnaires de planning."), frappe.PermissionError)
+	if (filiere_gauche, str(niveau_gauche)) == (filiere_droite, str(niveau_droite)):
+		frappe.throw(_("Choisissez deux classes différentes."))
+	for filiere, niveau in ((filiere_gauche, niveau_gauche), (filiere_droite, niveau_droite)):
+		if not frappe.db.exists("Field of study Level", {"name": niveau, "parent": filiere}):
+			frappe.throw(_("Classe introuvable : ce niveau n'appartient pas à la filière choisie."))
+
+	gauche = _grille_classe(academic_year, semestre, filiere_gauche, niveau_gauche)
+	droite = _grille_classe(academic_year, semestre, filiere_droite, niveau_droite)
+	cours_g = {c["teaching_unit"]: c for ue in gauche for c in ue["cours"]}
+	cours_d = {c["teaching_unit"]: c for ue in droite for c in ue["cours"]}
+
+	liens = []
+	for tu in sorted(set(cours_g) & set(cours_d)):
+		liens.append({"gauche": tu, "droite": tu, "type": "tronc_commun"})
+	for tg, cg in sorted(cours_g.items()):
+		if not cg["groupe"] or tg in cours_d:
+			continue
+		for td, cd in sorted(cours_d.items()):
+			if td != tg and cd["groupe"] == cg["groupe"]:
+				liens.append({"gauche": tg, "droite": td, "type": "lie"})
+
+	deja = {(l["gauche"], l["droite"]) for l in liens} | {l["gauche"] for l in liens} | {l["droite"] for l in liens}
+	suggestions = []
+	for tg, cg in sorted(cours_g.items()):
+		for td, cd in sorted(cours_d.items()):
+			if tg == td or tg in deja or td in deja:
+				continue
+			if _cle(cg["intitule"]) and _cle(cg["intitule"]) == _cle(cd["intitule"]):
+				suggestions.append({"gauche": tg, "droite": td})
+
+	niveaux = {str(n) for n in scope["niveaux"]}
+	peut_lier = scope["is_admin"] or (str(niveau_gauche) in niveaux and str(niveau_droite) in niveaux)
+	return {
+		"annee": academic_year,
+		"semestre": semestre,
+		"gauche": {"filiere": filiere_gauche, "niveau": niveau_gauche,
+		           "libelle": _libelle_classe(filiere_gauche, niveau_gauche), "ues": gauche},
+		"droite": {"filiere": filiere_droite, "niveau": niveau_droite,
+		           "libelle": _libelle_classe(filiere_droite, niveau_droite), "ues": droite},
+		"liens": liens,
+		"suggestions": suggestions,
+		"peut_lier": bool(peut_lier),
+	}
