@@ -41,7 +41,11 @@
   "seuil_validation",
   "type_resultat",
   "capitalise",
-  "commentaire"
+  "commentaire",
+  "section_jury",
+  "valide_par_jury",
+  "points_jury",
+  "deliberation"
  ],
  "fields": [
   {
@@ -255,12 +259,37 @@
    "fieldtype": "Small Text",
    "label": "Commentaire",
    "read_only": 1
+  },
+  {
+   "fieldname": "section_jury",
+   "fieldtype": "Section Break",
+   "label": "Délibération du jury",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "valide_par_jury",
+   "fieldtype": "Check",
+   "label": "Validée par le jury",
+   "read_only": 1
+  },
+  {
+   "fieldname": "points_jury",
+   "fieldtype": "Float",
+   "label": "Points de jury accordés (sur 20)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "deliberation",
+   "fieldtype": "Link",
+   "label": "Délibération",
+   "options": "Deliberation Jury",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-25 00:00:00.000000",
+ "modified": "2026-11-25 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Resultat UE",

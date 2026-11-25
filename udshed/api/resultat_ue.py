@@ -363,6 +363,21 @@ def calculer_ue_etudiant(student, teaching_unit_value, academic_year, semestre, 
         statut = "En attente"
     else:
         statut = "Validé" if note_ue_pct >= seuil else "Non Validé"
+
+    # Délibération du jury : points de jury, seuil abaissé ou décision
+    # individuelle peuvent valider l'unité (la note reste inchangée).
+    jury = {"par_jury": False, "points": 0.0, "motif": "", "deliberation": None}
+    if statut != "Validé" and filiere:
+        from udshed.utils.deliberation import ajuster_validation
+
+        jury = ajuster_validation(
+            student, note_ue_pct, seuil, academic_year, filiere, niveau_id, unite=teaching_unit_value
+        )
+        if jury["par_jury"]:
+            statut = "Validé"
+            capitalise = True
+            type_resultat = _("Validé par délibération du jury")
+            commentaire = "{} — {}".format(commentaire, jury["motif"]) if commentaire else jury["motif"]
     if statut != "Validé":
         capitalise = False
 
@@ -389,6 +404,10 @@ def calculer_ue_etudiant(student, teaching_unit_value, academic_year, semestre, 
         ),
         "lignes": lignes,
         "commentaire": commentaire,
+        "valide_par_jury": bool(jury["par_jury"]),
+        "points_jury": jury["points"] if jury["par_jury"] else 0,
+        "motif_jury": jury["motif"] if jury["par_jury"] else "",
+        "deliberation": jury["deliberation"] if jury["par_jury"] else None,
     }
 
 
@@ -445,6 +464,9 @@ def calculer_resultat_ue(student, teaching_unit_value, academic_year, semestre, 
     doc.credits_obtenus = resultat["credits_obtenus"]
     doc.pct_validation = resultat["pct_validation"]
     doc.commentaire = resultat["commentaire"]
+    doc.valide_par_jury = 1 if resultat.get("valide_par_jury") else 0
+    doc.points_jury = resultat.get("points_jury") or 0
+    doc.deliberation = resultat.get("deliberation")
 
     doc.set("table_matieres", [])
     for ligne in resultat["lignes"]:

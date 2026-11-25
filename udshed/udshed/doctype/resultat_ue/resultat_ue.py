@@ -53,12 +53,14 @@ class ResultatUE(Document):
         # les colonnes numériques de Frappe sont `NOT NULL DEFAULT 0`, donc une
         # note absente est relue 0.0. Se fier à la valeur ferait passer l'UE
         # « En attente » à « Non Validé » dès la sauvegarde suivante.
-        if not self.est_calculable:
+        if not self.est_calculable and not self.get("valide_par_jury"):
             self.statut = "En attente"
             self.statut_color = "orange"
             return
 
-        if flt(self.note_ue_pct) >= flt(self.seuil_validation):
+        # Unité validée par délibération du jury (points, seuil abaissé ou
+        # décision individuelle) : la note n'est pas modifiée, la validation l'est.
+        if self.get("valide_par_jury") or flt(self.note_ue_pct) >= flt(self.seuil_validation):
             self.statut = "Validé"
             self.statut_color = "green"
         else:

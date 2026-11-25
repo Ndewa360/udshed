@@ -1,6 +1,58 @@
 // Copyright (c) 2026, Cédric Nguendap Bedjama and contributors
 // For license information, please see license.txt
 
+// Correction motivée d'une note (année close, réclamation après publication) :
+// l'enseignant demande, la coordination approuve ; voir udshed/utils/correction_note.py.
+function ajouter_bouton_correction(frm) {
+    if (frm.is_new()) return;
+    frm.add_custom_button(__("Demander une correction"), () => {
+        frappe.call({
+            method: "udshed.utils.correction_note.composantes_de_la_note",
+            args: { note: frm.doc.name },
+        }).then((r) => {
+            const info = r.message || {};
+            const champs = (info.lignes || []).map((l) => ({
+                fieldtype: "Float", fieldname: l.champ.replace(":", "_"), label: `${l.composante} (actuelle : ${l.valeur ?? "—"})`,
+                default: l.valeur, description: l.champ,
+            }));
+            const d = new frappe.ui.Dialog({
+                title: __("Correction de la note"),
+                fields: [
+                    { fieldtype: "HTML", options: `<p class="text-muted">${__("Note finale actuelle : {0}/20. Modifiez uniquement les composantes à corriger.", [info.note_finale ?? "—"])}</p>` },
+                    ...champs,
+                    { fieldtype: "Section Break" },
+                    { fieldtype: "Select", fieldname: "motif_type", label: __("Type de motif"), reqd: 1,
+                      options: ["Réclamation de l'étudiant", "Erreur de saisie", "Décision du jury", "Autre"] },
+                    { fieldtype: "Small Text", fieldname: "motif", label: __("Motif détaillé"), reqd: 1 },
+                ],
+                primary_action_label: info.peut_approuver ? __("Corriger") : __("Envoyer la demande"),
+                primary_action(v) {
+                    const lignes = (info.lignes || [])
+                        .filter((l) => v[l.champ.replace(":", "_")] !== l.valeur)
+                        .map((l) => ({ champ: l.champ, nouvelle_valeur: v[l.champ.replace(":", "_")] }));
+                    if (!lignes.length) {
+                        frappe.msgprint(__("Aucune note n'a été modifiée."));
+                        return;
+                    }
+                    frappe.call({
+                        method: "udshed.utils.correction_note.demander_correction",
+                        args: { note: frm.doc.name, lignes, motif_type: v.motif_type, motif: v.motif },
+                        freeze: true,
+                    }).then((res) => {
+                        d.hide();
+                        const m = res.message || {};
+                        frappe.msgprint(m.statut === "Appliquée"
+                            ? __("Correction {0} appliquée.", [m.name])
+                            : __("Demande {0} envoyée : elle sera appliquée après approbation.", [m.name]));
+                        frm.reload_doc();
+                    });
+                },
+            });
+            d.show();
+        });
+    });
+}
+
 frappe.ui.form.on("Session Examen Note", {
 
     refresh(frm) {
@@ -10,6 +62,7 @@ frappe.ui.form.on("Session Examen Note", {
         gerer_affichage_rattrapage(frm);
         verrouiller_si_session_publiee(frm);
         ajouter_boutons_statut(frm);
+        ajouter_bouton_correction(frm);
     },
 
     type_ue(frm) {

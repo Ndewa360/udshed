@@ -468,66 +468,76 @@ def _credits_total_niveau(filiere, niveau_name, academic_year):
 
 
 def _credits_validated(student, filiere, niveau_name, academic_year):
-	"""Crédits validés par l'étudiant pour un niveau donné.
+	"""Crédits validés pour un niveau, PAR UNITÉ (compensation entre les matières
+	d'une unité), en tenant compte des acquis des années antérieures
+	(équivalences) et des décisions du jury. Voir udshed/utils/acquis.py.
 
 	Returns:
 		tuple (credits_validated, list validated_teaching_units)
 	"""
-	tu_names = _teaching_units_niveau_year(filiere, niveau_name, academic_year)
-	if not tu_names:
-		return 0, []
+	from udshed.utils.acquis import bilan_niveau
 
-	results = frappe.get_all(
-		"Resultat Academique",
-		filters={
-			"student": student,
-			"academic_year": academic_year,
-			"teaching_unit": ["in", tu_names],
-		},
-		fields=["teaching_unit", "statut"],
-	)
-
-	validated_tu = {r.teaching_unit for r in results if r.statut == "Validé"}
-	credits_validated = 0
-	for tu in tu_names:
-		if tu in validated_tu:
-			credits_validated += _credit_from_grid(filiere, niveau_name, tu)
-
-	return credits_validated, list(validated_tu)
+	bilan = bilan_niveau(student, filiere, niveau_name, academic_year)
+	return bilan["valides"], bilan["tu_valides"]
 
 
 def _dettes_with_credits(student, filiere, niveau_name, academic_year):
-	"""UE non validées (dettes) avec leurs crédits et semestre."""
-	tu_names = _teaching_units_niveau_year(filiere, niveau_name, academic_year)
-	if not tu_names:
-		return []
+	"""Dettes : toutes les matières des unités non validées (une unité non
+	validée se reprend entièrement), avec crédits, semestre et unité."""
+	from udshed.utils.acquis import bilan_niveau
 
-	results = frappe.get_all(
-		"Resultat Academique",
-		filters={
-			"student": student,
-			"academic_year": academic_year,
-			"teaching_unit": ["in", tu_names],
-		},
-		fields=["teaching_unit", "ue_name", "semestre", "note_finale", "statut"],
-	)
+	return [
+		{
+			"teaching_unit": d["teaching_unit"],
+			"intitule": d["intitule"],
+			"semestre": d["semestre"] or "",
+			"note": d["note"] or 0,
+			"credits": d["credits"],
+			"unite": d.get("unite"),
+			"unite_intitule": d.get("unite_intitule"),
+		}
+		for d in bilan_niveau(student, filiere, niveau_name, academic_year)["dettes"]
+	]
 
-	dettes = []
-	for r in results:
-		if r.statut != "Validé":
-			credits = _credit_from_grid(filiere, niveau_name, r.teaching_unit)
-			intitule = r.ue_name or frappe.db.get_value(
-				"Teaching Unit", r.teaching_unit, "intitule_cours"
-			) or r.teaching_unit
-			dettes.append({
-				"teaching_unit": r.teaching_unit,
-				"intitule": intitule,
-				"semestre": r.semestre or "",
-				"note": r.note_finale or 0,
-				"credits": credits,
+
+def _dettes_reportees(student, filiere, niveau_label, niveau_name, annee_resultats, annee_cible, sans_equivalent):
+	"""Dettes d'un niveau reportées sur la grille de l'année `annee_cible`.
+
+	Chaque matière d'une unité non validée est remplacée par son équivalent de
+	la nouvelle année (même cours, ou équivalence déclarée) : c'est sur cette
+	matière que l'étudiant est noté, dans sa classe d'origine. Une matière sans
+	équivalent (grille de la nouvelle année pas encore saisie, matière
+	supprimée) reste en dette sur la matière d'origine — une dette n'est jamais
+	perdue — et est ajoutée à `sans_equivalent` pour que la scolarité déclare
+	l'équivalence.
+	"""
+	from udshed.utils.acquis import equivalent_annee
+
+	reportees = []
+	for d in _dettes_with_credits(student, filiere, niveau_name, annee_resultats):
+		nouvelle = equivalent_annee(d["teaching_unit"], annee_cible, filiere, niveau_label)
+		if not nouvelle:
+			sans_equivalent.append(d)
+			reportees.append({
+				"teaching_unit": d["teaching_unit"],
+				"intitule": d["intitule"],
+				"semestre": d["semestre"],
+				"credits": d["credits"],
+				"motif": "Dette {0} sans matière équivalente en {1} : déclarez l'équivalence (Equivalence UE)".format(
+					niveau_label, annee_cible),
 			})
-
-	return dettes
+			continue
+		info = frappe.db.get_value("Teaching Unit", nouvelle, ["intitule_cours", "semestre"], as_dict=True) or {}
+		reportees.append({
+			"teaching_unit": nouvelle,
+			"intitule": info.get("intitule_cours") or d["intitule"],
+			"semestre": info.get("semestre") or d["semestre"],
+			"credits": _credit_from_grid(filiere, niveau_name, nouvelle) or d["credits"],
+			"motif": "Dette {0} (unité {1} non validée, note {2}/20)".format(
+				niveau_label, d.get("unite_intitule") or d["intitule"], d["note"]
+			),
+		})
+	return reportees
 
 
 def _get_all_previous_levels(filiere, niveau_cible_label):
@@ -569,6 +579,8 @@ def _admission_decision(student, filiere, niveau_precedent_label, niveau_cible_l
 	"""
 	from udshed.utils.niveaux import cycle_niveau
 
+	from udshed.utils.deliberation import regle_de_passage
+
 	niveau_precedent_name = _resolve_level_name(filiere, niveau_precedent_label)
 	if not niveau_precedent_name:
 		return {
@@ -583,6 +595,19 @@ def _admission_decision(student, filiere, niveau_precedent_label, niveau_cible_l
 	total_credits = _credits_total_niveau(filiere, niveau_precedent_name, annee_precedent)
 	credits_validated, _ = _credits_validated(student, filiere, niveau_precedent_name, annee_precedent)
 	debt_credits = total_credits - credits_validated
+
+	# Délibération du jury de la classe : admission individuelle motivée, ou
+	# règle de passage assouplie (pourcentage minimum / dette maximale).
+	pct_min, dette_max, admission_jury = regle_de_passage(
+		student, filiere, niveau_precedent_name, annee_precedent
+	)
+	if admission_jury:
+		return {
+			"admissible": True, "decision": "Admis",
+			"motif": "Admis par décision du jury : {0}".format(admission_jury),
+			"credits_validated": credits_validated, "total_credits": total_credits,
+			"debt_credits": debt_credits, "details": [], "par_jury": True,
+		}
 
 	cycle = cycle_niveau(niveau_cible_label) if niveau_cible_label else ""
 	details = []
@@ -640,7 +665,7 @@ def _admission_decision(student, filiere, niveau_precedent_label, niveau_cible_l
 		}
 
 	pct = round((credits_validated / total_credits) * 100)
-	admissible = pct >= 50 and debt_credits <= 30
+	admissible = pct >= pct_min and debt_credits <= dette_max
 
 	if admissible:
 		decision = "Admis"
@@ -649,12 +674,12 @@ def _admission_decision(student, filiere, niveau_precedent_label, niveau_cible_l
 		)
 	else:
 		decision = "Ajourné"
-		if pct < 50:
-			motif = "Crédits insuffisants: {0}/{1} ({2}%) — minimum 50% requis".format(
-				credits_validated, total_credits, pct
+		if pct < pct_min:
+			motif = "Crédits insuffisants: {0}/{1} ({2}%) — minimum {3}% requis".format(
+				credits_validated, total_credits, pct, pct_min
 			)
 		else:
-			motif = "Dettes trop élevées: {0} crédits — maximum 30 autorisés".format(debt_credits)
+			motif = "Dettes trop élevées: {0} crédits — maximum {1} autorisés".format(debt_credits, dette_max)
 
 	return {
 		"admissible": admissible,
@@ -1599,30 +1624,28 @@ def get_reregistration_grid(matricule, reinscription_session, semestre=None, niv
 			})
 
 	# --- Grille dynamique : dettes (verrouillées) + matières du niveau (à cocher) ---
-	cours = []
-	limite = 30  # crédits max par semestre
+	from udshed.utils.acquis import est_acquise, matieres_acquises
 
+	cours = []
+	dettes_sans_equivalent = []
+	acquises_redoublant = matieres_acquises(matricule) if redoublement else set()
+	limite = 30  # crédits max par semestre
 	if niveau_final_name:
-		# 1) Dettes du niveau précédent → cochées, verrouillées
+		# 1) Dettes du niveau précédent (unités non validées, reprises entièrement)
+		#    → reportées sur la matière ÉQUIVALENTE de la nouvelle année.
 		if niveau_prec_name and annee_resultats:
-			dettes = _dettes_with_credits(matricule, student.filiere, niveau_prec_name, annee_resultats)
-			for d in dettes:
-				cours.append({
-					"teaching_unit": d["teaching_unit"],
-					"intitule": d["intitule"],
-					"semestre": d["semestre"],
-					"credits": d["credits"],
-					"source": "dette",
-					"verrouille": 1,
-					"inscrire": 1,
-					"motif": "Dette du niveau précédent (note: {0}/20)".format(d["note"]),
-				})
+			for d in _dettes_reportees(matricule, student.filiere, niveau_prec_label, niveau_prec_name,
+									   annee_resultats, academic_year, dettes_sans_equivalent):
+				cours.append({**d, "source": "dette", "verrouille": 1, "inscrire": 1})
 
 		# 2) Matières du nouveau niveau → décochées, l'étudiant coche lui-même
 		tu_niveau = _teaching_units_niveau_year(student.filiere, niveau_final_name, academic_year)
 		dettes_tu = {c["teaching_unit"] for c in cours}  # déjà en dette
 		for tu in tu_niveau:
 			if tu in dettes_tu:
+				continue
+			# Redoublant : les unités déjà validées restent acquises, non reprises.
+			if redoublement and est_acquise(tu, acquises_redoublant):
 				continue
 			intitule = frappe.db.get_value("Teaching Unit", tu, "intitule_cours") or tu
 			semestre_tu = frappe.db.get_value("Teaching Unit", tu, "semestre") or ""
@@ -1637,7 +1660,7 @@ def get_reregistration_grid(matricule, reinscription_session, semestre=None, niv
 				"inscrire": 1 if redoublement else 0,
 				"motif": "Matière du niveau {0}{1}".format(
 					niveau_final,
-					" — redoublement : programme complet à reprendre" if redoublement else " — à cocher"
+					" — redoublement : unité non acquise à reprendre" if redoublement else " — à cocher"
 				),
 			})
 
@@ -1666,6 +1689,7 @@ def get_reregistration_grid(matricule, reinscription_session, semestre=None, niv
 		"redoublement": redoublement,
 		"resultats_precedents": resultats,
 		"cours_inscrits": cours,
+		"dettes_sans_equivalent": dettes_sans_equivalent,
 		"stats": {
 			"credit_limit_per_semester": limite,
 			"credits_s1": {

@@ -1,0 +1,53 @@
+{
+ "actions": [],
+ "creation": "2026-11-25 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Correction Note Ligne",
+ "owner": "Administrator",
+ "modified": "2026-11-25 18:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "champ",
+  "composante",
+  "ancienne_valeur",
+  "nouvelle_valeur"
+ ],
+ "fields": [
+  {
+   "fieldname": "champ",
+   "fieldtype": "Data",
+   "label": "Champ",
+   "hidden": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "composante",
+   "fieldtype": "Data",
+   "label": "Composante",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "ancienne_valeur",
+   "fieldtype": "Float",
+   "label": "Ancienne note",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "nouvelle_valeur",
+   "fieldtype": "Float",
+   "label": "Nouvelle note",
+   "in_list_view": 1
+  }
+ ],
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "row_format": "Dynamic",
+ "istable": 1,
+ "editable_grid": 1
+}

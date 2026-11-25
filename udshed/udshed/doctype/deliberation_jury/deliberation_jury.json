@@ -1,0 +1,227 @@
+{
+ "actions": [],
+ "creation": "2026-11-25 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Deliberation Jury",
+ "owner": "Administrator",
+ "modified": "2026-11-25 16:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "section_classe",
+  "academic_year",
+  "filiere",
+  "niveau",
+  "column_break_classe",
+  "statut",
+  "date_deliberation",
+  "appliquee_le",
+  "appliquee_par",
+  "section_jury",
+  "president",
+  "membres",
+  "section_regles",
+  "points_jury_max",
+  "seuil_abaisse",
+  "column_break_regles",
+  "pourcentage_credits_min",
+  "dette_max_credits",
+  "section_decisions",
+  "decisions",
+  "section_pv",
+  "observations",
+  "bilan"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_classe",
+   "fieldtype": "Section Break",
+   "label": "Classe délibérée"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "label": "Filière",
+   "options": "Field of study",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "niveau",
+   "fieldtype": "Link",
+   "label": "Niveau",
+   "options": "Field of study Level",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_classe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Statut",
+   "options": "Brouillon\nAppliquée",
+   "default": "Brouillon",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "date_deliberation",
+   "fieldtype": "Date",
+   "label": "Date de la délibération"
+  },
+  {
+   "fieldname": "appliquee_le",
+   "fieldtype": "Datetime",
+   "label": "Appliquée le",
+   "read_only": 1
+  },
+  {
+   "fieldname": "appliquee_par",
+   "fieldtype": "Link",
+   "label": "Appliquée par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_jury",
+   "fieldtype": "Section Break",
+   "label": "Jury"
+  },
+  {
+   "fieldname": "president",
+   "fieldtype": "Data",
+   "label": "Président du jury"
+  },
+  {
+   "fieldname": "membres",
+   "fieldtype": "Small Text",
+   "label": "Membres du jury"
+  },
+  {
+   "fieldname": "section_regles",
+   "fieldtype": "Section Break",
+   "label": "Règles collectives",
+   "description": "S'appliquent à tous les étudiants de la classe. Laissez vide une règle non retenue."
+  },
+  {
+   "fieldname": "points_jury_max",
+   "fieldtype": "Float",
+   "label": "Points de jury (maximum, sur 20)",
+   "description": "Bonus au plus égal à cette valeur, ajouté à la moyenne d'une unité pour atteindre le seuil. Ex. 0,5."
+  },
+  {
+   "fieldname": "seuil_abaisse",
+   "fieldtype": "Float",
+   "label": "Seuil de validation abaissé (sur 20)",
+   "description": "Une unité est validée à partir de cette moyenne. Ex. 9."
+  },
+  {
+   "fieldname": "column_break_regles",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pourcentage_credits_min",
+   "fieldtype": "Percent",
+   "label": "Passage : crédits validés minimum (%)",
+   "description": "Remplace 50 % pour le passage au niveau supérieur (règle standard)."
+  },
+  {
+   "fieldname": "dette_max_credits",
+   "fieldtype": "Int",
+   "label": "Passage : dette maximale (crédits)",
+   "description": "Remplace 30 crédits pour le passage au niveau supérieur (règle standard)."
+  },
+  {
+   "fieldname": "section_decisions",
+   "fieldtype": "Section Break",
+   "label": "Décisions individuelles"
+  },
+  {
+   "fieldname": "decisions",
+   "fieldtype": "Table",
+   "label": "Décisions individuelles motivées",
+   "options": "Deliberation Jury Decision"
+  },
+  {
+   "fieldname": "section_pv",
+   "fieldtype": "Section Break",
+   "label": "Procès-verbal"
+  },
+  {
+   "fieldname": "observations",
+   "fieldtype": "Text Editor",
+   "label": "Observations du jury"
+  },
+  {
+   "fieldname": "bilan",
+   "fieldtype": "Small Text",
+   "label": "Bilan de l'application",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Registration Manager"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Coordonateur"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Agent de scolarité"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "row_format": "Dynamic",
+ "autoname": "format:DELIB-{academic_year}-{#####}",
+ "naming_rule": "Expression",
+ "track_changes": 1
+}

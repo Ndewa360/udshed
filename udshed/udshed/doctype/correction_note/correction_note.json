@@ -1,0 +1,248 @@
+{
+ "actions": [],
+ "creation": "2026-11-25 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Correction Note",
+ "owner": "Administrator",
+ "modified": "2026-11-25 18:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "section_note",
+  "session_examen_note",
+  "student",
+  "teaching_unit",
+  "column_break_note",
+  "academic_year",
+  "session_examen",
+  "statut",
+  "section_motif",
+  "motif_type",
+  "motif",
+  "section_lignes",
+  "lignes",
+  "note_finale_avant",
+  "column_break_finale",
+  "note_finale_apres",
+  "section_circuit",
+  "demandee_par",
+  "traitee_par",
+  "column_break_circuit",
+  "traitee_le",
+  "motif_refus",
+  "bilan"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_note",
+   "fieldtype": "Section Break",
+   "label": "Note corrigée"
+  },
+  {
+   "fieldname": "session_examen_note",
+   "fieldtype": "Link",
+   "label": "Note",
+   "options": "Session Examen Note",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Étudiant",
+   "options": "Student",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "teaching_unit",
+   "fieldtype": "Link",
+   "label": "Matière",
+   "options": "Teaching Unit",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_note",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "session_examen",
+   "fieldtype": "Link",
+   "label": "Session d'examen",
+   "options": "Session Examen",
+   "read_only": 1
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Statut",
+   "options": "En attente\nAppliquée\nRefusée",
+   "default": "En attente",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "section_motif",
+   "fieldtype": "Section Break",
+   "label": "Motif"
+  },
+  {
+   "fieldname": "motif_type",
+   "fieldtype": "Select",
+   "label": "Type de motif",
+   "reqd": 1,
+   "options": "Réclamation de l'étudiant\nErreur de saisie\nDécision du jury\nAutre",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "motif",
+   "fieldtype": "Small Text",
+   "label": "Motif détaillé",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_lignes",
+   "fieldtype": "Section Break",
+   "label": "Notes avant / après"
+  },
+  {
+   "fieldname": "lignes",
+   "fieldtype": "Table",
+   "label": "Composantes corrigées",
+   "options": "Correction Note Ligne",
+   "reqd": 1
+  },
+  {
+   "fieldname": "note_finale_avant",
+   "fieldtype": "Float",
+   "label": "Note finale avant",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_finale",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "note_finale_apres",
+   "fieldtype": "Float",
+   "label": "Note finale après",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_circuit",
+   "fieldtype": "Section Break",
+   "label": "Circuit"
+  },
+  {
+   "fieldname": "demandee_par",
+   "fieldtype": "Link",
+   "label": "Demandée par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "traitee_par",
+   "fieldtype": "Link",
+   "label": "Approuvée / refusée par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_circuit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "traitee_le",
+   "fieldtype": "Datetime",
+   "label": "Traitée le",
+   "read_only": 1
+  },
+  {
+   "fieldname": "motif_refus",
+   "fieldtype": "Small Text",
+   "label": "Motif du refus",
+   "read_only": 1
+  },
+  {
+   "fieldname": "bilan",
+   "fieldtype": "Small Text",
+   "label": "Conséquences de la correction",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Registration Manager"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Coordonateur"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Teacher",
+   "if_owner": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Agent de scolarité"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "row_format": "Dynamic",
+ "autoname": "format:COR-{academic_year}-{#####}",
+ "naming_rule": "Expression",
+ "track_changes": 1,
+ "title_field": "student",
+ "description": "Correction d'une note après publication ou d'une année close : motif, approbation, historique et recalcul des résultats, de la progression et de la réinscription."
+}

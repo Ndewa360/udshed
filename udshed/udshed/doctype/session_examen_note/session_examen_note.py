@@ -80,6 +80,10 @@ class SessionExamenNote(Document):
         return self._formule_note() is None
 
     def validate(self):
+        # Année close : la note ne change plus que par une correction approuvée.
+        from udshed.utils.correction_note import verifier_modification
+
+        verifier_modification(self)
         self.remplir_filiere_niveau()
         self.deriver_drapeaux_saisie()
         self.valider_saisie()

@@ -1,0 +1,66 @@
+{
+ "actions": [],
+ "creation": "2026-11-25 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Deliberation Jury Decision",
+ "owner": "Administrator",
+ "modified": "2026-11-25 16:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "student",
+  "type_decision",
+  "unite",
+  "matiere",
+  "motif"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Étudiant",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "type_decision",
+   "fieldtype": "Select",
+   "label": "Décision",
+   "reqd": 1,
+   "in_list_view": 1,
+   "options": "Validation d'unité\nAdmission au niveau supérieur"
+  },
+  {
+   "fieldname": "unite",
+   "fieldtype": "Link",
+   "label": "Unité (UE)",
+   "options": "Teaching Unit Value",
+   "in_list_view": 1,
+   "depends_on": "eval:doc.type_decision=='Validation d\\'unité'"
+  },
+  {
+   "fieldname": "matiere",
+   "fieldtype": "Link",
+   "label": "Matière (hors unité)",
+   "options": "Teaching Unit",
+   "depends_on": "eval:doc.type_decision=='Validation d\\'unité'",
+   "description": "Pour une matière qui n'appartient à aucune unité."
+  },
+  {
+   "fieldname": "motif",
+   "fieldtype": "Small Text",
+   "label": "Motif",
+   "reqd": 1,
+   "in_list_view": 1
+  }
+ ],
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "row_format": "Dynamic",
+ "istable": 1,
+ "editable_grid": 1
+}

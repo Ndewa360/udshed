@@ -307,26 +307,42 @@ class AcademicReregistration(Document):
 
 		# 1. Dettes (source=dette, verrouillées) — les 2 semestres sont repris
 		# En redoublement, les dettes proviennent du niveau repris lui-même.
+		from udshed.api.reregistration import _dettes_reportees
+		from udshed.utils.acquis import est_acquise, matieres_acquises
+
 		niveau_dettes_label = self.niveau if redoublement else self.niveau_precedent
 		niveau_dettes_name = _resolve_level_name(self.filiere, niveau_dettes_label) if niveau_dettes_label else None
+		dettes, sans_equivalent = [], []
 		if niveau_dettes_name:
 			annee_dettes = _annee_resultats_etudiant(self.student, niveau_dettes_label)
-			dettes = _dettes_with_credits(
-				self.student, self.filiere, niveau_dettes_name, annee_dettes or self.academic_year
+			# Unités non validées reprises entièrement, sur la matière équivalente
+			# de l'année de réinscription (notée dans la classe d'origine).
+			dettes = _dettes_reportees(
+				self.student, self.filiere, niveau_dettes_label, niveau_dettes_name,
+				annee_dettes or self.academic_year, self.academic_year, sans_equivalent,
 			)
 			for dette in dettes:
 				self.append("cours_inscrits", {
 					"teaching_unit": dette["teaching_unit"],
 					"intitule": dette["intitule"],
 					"semestre": dette["semestre"],
-					"statut": "Reporté",
+					"statut": "Inscrit",
 					"inscrire": 1,
 					"est_obligatoire": 1,
 					"source": "dette",
 					"verrouille": 1,
-					"motif": "Dette du niveau précédent (note: {0}/20)".format(dette["note"]),
+					"motif": dette["motif"],
 					"credits": dette["credits"],
 				})
+		if sans_equivalent:
+			frappe.msgprint(
+				"Dettes sans matière équivalente dans la grille {0} : {1}. "
+				"Déclarez une équivalence (Equivalence UE) pour les inscrire.".format(
+					self.academic_year, ", ".join(d["intitule"] for d in sans_equivalent)
+				),
+				indicator="orange",
+			)
+		acquises = matieres_acquises(self.student) if redoublement else set()
 
 		# 2. Matières du niveau admis (source=niveau_actuel) — à cocher par l'étudiant
 		niveau_name = _resolve_level_name(self.filiere, niveau_cible)
@@ -335,6 +351,9 @@ class AcademicReregistration(Document):
 			deja_ajoutes = {c["teaching_unit"] for c in dettes} if niveau_dettes_name else set()
 			for tu in tu_niveau:
 				if tu in deja_ajoutes:
+					continue
+				# Redoublant : ses unités validées restent acquises.
+				if redoublement and est_acquise(tu, acquises):
 					continue
 				if self.semestre and self.semestre != "Les deux":
 					semestre_tu = frappe.db.get_value("Teaching Unit", tu, "semestre") or ""
@@ -354,7 +373,7 @@ class AcademicReregistration(Document):
 					"verrouille": 1 if redoublement else 0,
 					"motif": "Matière du niveau {0}{1}".format(
 						niveau_cible,
-						" — redoublement : programme complet à reprendre" if redoublement else " — à cocher"
+						" — redoublement : unité non acquise à reprendre" if redoublement else " — à cocher"
 					),
 					"credits": credits,
 				})

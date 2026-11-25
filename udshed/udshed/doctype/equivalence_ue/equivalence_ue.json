@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "creation": "2026-11-25 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Equivalence UE",
+ "owner": "Administrator",
+ "modified": "2026-11-25 16:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "filiere",
+  "ancienne_matiere",
+  "annee_source",
+  "column_break_eq",
+  "nouvelle_matiere",
+  "annee_cible",
+  "section_motif",
+  "motif"
+ ],
+ "fields": [
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "label": "Filière",
+   "options": "Field of study",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "ancienne_matiere",
+   "fieldtype": "Link",
+   "label": "Matière de l'ancienne grille",
+   "options": "Teaching Unit",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "annee_source",
+   "fieldtype": "Link",
+   "label": "Année de l'ancienne matière",
+   "options": "Academic Year",
+   "fetch_from": "ancienne_matiere.academic_year",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_eq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "nouvelle_matiere",
+   "fieldtype": "Link",
+   "label": "Matière équivalente (nouvelle grille)",
+   "options": "Teaching Unit",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "annee_cible",
+   "fieldtype": "Link",
+   "label": "Année de la nouvelle matière",
+   "options": "Academic Year",
+   "fetch_from": "nouvelle_matiere.academic_year",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "section_motif",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "motif",
+   "fieldtype": "Small Text",
+   "label": "Motif / commentaire"
+  }
+ ],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Registration Manager"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Coordonateur"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Agent de scolarité"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "row_format": "Dynamic",
+ "autoname": "format:EQV-{#####}",
+ "naming_rule": "Expression",
+ "description": "Quand la grille change d'une année à l'autre : la matière de l'ancienne grille correspond à cette matière de la nouvelle. Sans déclaration, une matière est équivalente à celle de même cours (Course) dans la même filière."
+}

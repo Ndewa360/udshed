@@ -599,32 +599,53 @@ def _get_etudiants(academic_year, filiere, niveau_label, teaching_unit):
         },
         fields=["name", "student"],
     )
-    if not regs:
-        return []
 
     parents = [r.name for r in regs]
-    exclus = frappe.get_all(
+    lignes = frappe.get_all(
         "Reregistration Course Item",
-        filters={
-            "parent": ["in", parents],
-            "teaching_unit": teaching_unit,
-            "statut": ["in", ["Dispensé", "Reporté"]],
-        },
-        fields=["parent"],
+        filters={"parent": ["in", parents or [""]], "parenttype": "Academic Reregistration"},
+        fields=["parent", "teaching_unit", "inscrire", "statut"],
     )
-    exclus_parents = {e.parent for e in exclus}
+    par_reinscription = {}
+    for ligne in lignes:
+        par_reinscription.setdefault(ligne.parent, []).append(ligne)
+
+    def suit_le_cours(reg_name):
+        """Réinscription avec choix de cours : seuls les cours cochés comptent.
+        Ancienne réinscription sans détail des cours : toute la classe."""
+        cours = par_reinscription.get(reg_name)
+        if not cours:
+            return True
+        return any(
+            c.teaching_unit == teaching_unit and c.inscrire and c.statut not in ("Dispensé", "Reporté")
+            for c in cours
+        )
 
     # Un même étudiant peut apparaître sur plusieurs réinscriptions validées
     # (saisie en double) : on déduplique pour ne renvoyer qu'une seule ligne.
     students = []
     vus = set()
     for r in regs:
-        if r.name in exclus_parents:
+        if not suit_le_cours(r.name):
             continue
         if r.student in vus:
             continue
         vus.add(r.student)
         students.append(r.student)
+
+    # Étudiants d'une autre classe qui portent ce cours en DETTE (unité non
+    # validée l'an passé, reportée sur ce cours) : notés dans la classe d'origine.
+    for dette in frappe.get_all(
+        "Reregistration Course Item",
+        filters={"teaching_unit": teaching_unit, "source": "dette", "inscrire": 1,
+                 "parenttype": "Academic Reregistration"},
+        fields=["parent"],
+    ):
+        reg = frappe.db.get_value("Academic Reregistration", dette.parent,
+                                  ["student", "academic_year", "statut"], as_dict=True)
+        if reg and reg.statut == "Validée" and reg.academic_year == academic_year and reg.student not in vus:
+            vus.add(reg.student)
+            students.append(reg.student)
 
     resultats = []
     for student in students:

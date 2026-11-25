@@ -1,0 +1,24 @@
+{% extends "templates/emails/cadre_etablissement.html" %}
+
+{% block contenu %}
+<p style="margin: 0 0 14px;">Bonjour <strong>{{ nom }}</strong>,</p>
+
+<p style="margin: 0 0 14px;">
+  Votre note de <strong>{{ matiere }}</strong> ({{ annee }}) a été corrigée par l'administration académique.
+</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 18px; background: #f4f7fb; border-radius: 8px;">
+  <tr><td style="padding: 14px 18px; font-size: 14px; line-height: 1.8;">
+    Note finale avant : <strong>{{ avant if avant is not none else "—" }}/20</strong><br>
+    Note finale après : <strong>{{ apres if apres is not none else "—" }}/20</strong><br>
+    Motif : {{ motif_type }}
+  </td></tr>
+</table>
+
+<p style="margin: 0 0 14px;">
+  Vos résultats ont été recalculés en conséquence. Vous pouvez les consulter dans votre espace étudiant.
+</p>
+<p style="margin: 0 0 6px; text-align: center;">
+  <a href="{{ lien }}" style="display: inline-block; background: #1f3c88; color: #ffffff; padding: 11px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Mon espace étudiant</a>
+</p>
+{% endblock %}
