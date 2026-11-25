@@ -23,6 +23,7 @@ ROLES_PERSONNEL = frozenset(
 		"Agent de scolarité",
 		"Comptable",
 		"Correcteur",
+		"Responsable Diplomation",
 		"Teacher",
 	}
 )

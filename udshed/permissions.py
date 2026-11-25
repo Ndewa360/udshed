@@ -132,3 +132,59 @@ def candidature_has_permission(doc, ptype=None, user=None, debug=False):
 	if not _coordonnateur_seul(user):
 		return True
 	return doc.filiere in filieres_coordonnees(user)
+
+
+# ---------------------------------------------------------------------------
+# Actes académiques : un étudiant ne voit que les siens.
+# ---------------------------------------------------------------------------
+def acte_query(user=None):
+	user = user or frappe.session.user
+	if not _etudiant_seul(user):
+		return ""
+	student = _student_de(user)
+	if not student:
+		return "1=0"
+	return f"`tabActe Academique`.`student` = {frappe.db.escape(student)}"
+
+
+def acte_has_permission(doc, ptype=None, user=None, debug=False):
+	user = user or frappe.session.user
+	if not _etudiant_seul(user):
+		return True
+	return doc.student == _student_de(user)
+
+
+# ---------------------------------------------------------------------------
+# Diplômes et requêtes : un étudiant ne voit que les siens.
+# ---------------------------------------------------------------------------
+def _query_proprietaire(doctype, user):
+	user = user or frappe.session.user
+	if not _etudiant_seul(user):
+		return ""
+	student = _student_de(user)
+	if not student:
+		return "1=0"
+	return f"`tab{doctype}`.`student` = {frappe.db.escape(student)}"
+
+
+def _permission_proprietaire(doc, user):
+	user = user or frappe.session.user
+	if not _etudiant_seul(user):
+		return True
+	return doc.student == _student_de(user)
+
+
+def diplome_query(user=None):
+	return _query_proprietaire("Diplome Etudiant", user)
+
+
+def diplome_has_permission(doc, ptype=None, user=None, debug=False):
+	return _permission_proprietaire(doc, user)
+
+
+def requete_query(user=None):
+	return _query_proprietaire("Requete Etudiant", user)
+
+
+def requete_has_permission(doc, ptype=None, user=None, debug=False):
+	return _permission_proprietaire(doc, user)

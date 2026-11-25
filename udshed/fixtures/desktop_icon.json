@@ -80,7 +80,7 @@
   "link_to": "Inscription - Reinscription",
   "link_type": "Workspace Sidebar",
   "logo_url": null,
-  "modified": "2026-11-25 14:00:00.000000",
+  "modified": "2026-11-25 22:00:00.000000",
   "name": "Inscription - Reinscription",
   "parent_icon": null,
   "restrict_removal": 0,
@@ -99,6 +99,9 @@
    },
    {
     "role": "Comptable"
+   },
+   {
+    "role": "Responsable Diplomation"
    }
   ],
   "sidebar": "Inscription - Reinscription",

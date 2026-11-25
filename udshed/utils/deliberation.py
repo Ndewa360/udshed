@@ -15,6 +15,8 @@ de notes) et chaque unité validée par le jury en garde la trace.
 """
 
 import frappe
+
+from udshed.utils.etablissement import nom_etudiant
 from frappe import _
 from frappe.utils import flt, now_datetime
 
@@ -154,7 +156,7 @@ def simuler(delib):
 			passage = _admission_decision(student, delib.filiere, label, cible, delib.academic_year) if cible else {}
 			lignes.append({
 				"student": student,
-				"nom": frappe.db.get_value("Student", student, "nom_complet") or student,
+				"nom": nom_etudiant(student),
 				"unites_repechees": repechees,
 				"decision": passage.get("decision"),
 				"motif": passage.get("motif"),

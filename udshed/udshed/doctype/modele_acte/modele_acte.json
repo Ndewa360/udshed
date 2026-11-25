@@ -1,0 +1,192 @@
+{
+ "actions": [],
+ "creation": "2026-11-25 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Modele Acte",
+ "owner": "Administrator",
+ "modified": "2026-11-25 20:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "section_general",
+  "titre",
+  "type_acte",
+  "format",
+  "column_break_general",
+  "actif",
+  "libre_service",
+  "condition",
+  "section_signature",
+  "mode_signature",
+  "signataire_titre",
+  "signataire_nom",
+  "column_break_signature",
+  "image_signature",
+  "image_cachet",
+  "section_dessin",
+  "image_fond",
+  "layout"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_general",
+   "fieldtype": "Section Break",
+   "label": "Modèle"
+  },
+  {
+   "fieldname": "titre",
+   "fieldtype": "Data",
+   "label": "Titre",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "type_acte",
+   "fieldtype": "Select",
+   "label": "Type d'acte",
+   "options": "Certificat de scolarité\nAttestation d'inscription\nCarte d'étudiant\nRelevé de notes\nAttestation de réussite\nDiplôme\nAutre",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "format",
+   "fieldtype": "Select",
+   "label": "Format",
+   "reqd": 1,
+   "default": "A4 portrait",
+   "options": "A4 portrait\nA4 paysage\nA5 paysage\nCarte (85,6 × 54 mm)"
+  },
+  {
+   "fieldname": "column_break_general",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "actif",
+   "fieldtype": "Check",
+   "label": "Actif",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "libre_service",
+   "fieldtype": "Check",
+   "label": "Libre-service étudiant",
+   "description": "L'étudiant obtient le document lui-même, sans demande. Sinon : demande puis délivrance par un responsable."
+  },
+  {
+   "fieldname": "condition",
+   "fieldtype": "Select",
+   "label": "Condition d'obtention",
+   "default": "Inscrit pour l'année en cours",
+   "options": "Inscrit pour l'année en cours\nRésultats publiés\nDiplômé du cycle\nAucune"
+  },
+  {
+   "fieldname": "section_signature",
+   "fieldtype": "Section Break",
+   "label": "Signature"
+  },
+  {
+   "fieldname": "mode_signature",
+   "fieldtype": "Select",
+   "label": "Mode de signature",
+   "reqd": 1,
+   "default": "Électronique",
+   "options": "Électronique\nManuscrite",
+   "description": "Électronique : signature et cachet apposés, PDF téléchargeable. Manuscrite : document imprimé et signé à la main, à retirer."
+  },
+  {
+   "fieldname": "signataire_titre",
+   "fieldtype": "Data",
+   "label": "Titre du signataire",
+   "default": "Le Directeur des affaires académiques"
+  },
+  {
+   "fieldname": "signataire_nom",
+   "fieldtype": "Data",
+   "label": "Nom du signataire"
+  },
+  {
+   "fieldname": "column_break_signature",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "image_signature",
+   "fieldtype": "Attach Image",
+   "label": "Image de la signature"
+  },
+  {
+   "fieldname": "image_cachet",
+   "fieldtype": "Attach Image",
+   "label": "Image du cachet"
+  },
+  {
+   "fieldname": "section_dessin",
+   "fieldtype": "Section Break",
+   "label": "Dessin du document"
+  },
+  {
+   "fieldname": "image_fond",
+   "fieldtype": "Attach Image",
+   "label": "Image de fond (optionnelle)"
+  },
+  {
+   "fieldname": "layout",
+   "fieldtype": "Code",
+   "label": "Disposition (JSON)",
+   "options": "JSON",
+   "read_only": 1,
+   "description": "Modifiée avec l'éditeur visuel (bouton « Ouvrir l'éditeur »)."
+  }
+ ],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Responsable Diplomation"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Registration Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Agent de scolarité"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "row_format": "Dynamic",
+ "autoname": "field:titre",
+ "naming_rule": "By fieldname",
+ "title_field": "titre",
+ "track_changes": 1
+}

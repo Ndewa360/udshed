@@ -50,7 +50,7 @@ fixtures = [
     {
         "dt" : "Role",
         "filters": [
-            ["name","in",["System Manager","Workspace Manager","Script Manager","Teacher","Student","Guest","Desk User","Coordonateur","Planning Manager","Registration Manager","Agent de scolarité","Comptable","Correcteur"]]
+            ["name","in",["System Manager","Workspace Manager","Script Manager","Teacher","Student","Guest","Desk User","Coordonateur","Planning Manager","Registration Manager","Agent de scolarité","Comptable","Correcteur","Responsable Diplomation"]]
         ]
     },
     {
@@ -189,6 +189,9 @@ permission_query_conditions = {
 	"Inscription Academique": "udshed.permissions.inscription_query",
 	"Resultat Academique": "udshed.permissions.resultat_query",
 	"Session Inscription Candidate": "udshed.permissions.candidature_query",
+	"Acte Academique": "udshed.permissions.acte_query",
+	"Diplome Etudiant": "udshed.permissions.diplome_query",
+	"Requete Etudiant": "udshed.permissions.requete_query",
 	"Academic Reregistration": "udshed.api.permission.academic_reregistration_query",
 	"Progression Academique": "udshed.api.permission.progression_query",
 }
@@ -198,6 +201,9 @@ has_permission = {
 	"Inscription Academique": "udshed.permissions.inscription_has_permission",
 	"Resultat Academique": "udshed.permissions.resultat_has_permission",
 	"Session Inscription Candidate": "udshed.permissions.candidature_has_permission",
+	"Acte Academique": "udshed.permissions.acte_has_permission",
+	"Diplome Etudiant": "udshed.permissions.diplome_has_permission",
+	"Requete Etudiant": "udshed.permissions.requete_has_permission",
 	"Academic Reregistration": "udshed.api.permission.academic_reregistration_has_permission",
 	"Progression Academique": "udshed.api.permission.progression_has_permission",
 }

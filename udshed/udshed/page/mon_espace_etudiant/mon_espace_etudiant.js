@@ -10,6 +10,8 @@ frappe.pages["mon-espace-etudiant"].on_page_load = function (wrapper) {
 				<button class="mee-onglet actif" data-onglet="grille" role="tab">${__("Ma grille d'enseignement")}</button>
 				<button class="mee-onglet" data-onglet="planning" role="tab">${__("Mon planning")}</button>
 				<button class="mee-onglet" data-onglet="resultats" role="tab">${__("Mes résultats")}</button>
+				<button class="mee-onglet" data-onglet="documents" role="tab">${__("Mes documents")}</button>
+				<button class="mee-onglet" data-onglet="requetes" role="tab">${__("Mes requêtes")}</button>
 				<button class="mee-onglet" data-onglet="reinscription" role="tab">${__("Ma réinscription")}</button>
 			</div>
 			<div class="mee-zone"></div>
@@ -61,6 +63,8 @@ frappe.pages["mon-espace-etudiant"].on_page_load = function (wrapper) {
 		if (onglet === "grille") return grille();
 		if (onglet === "planning") return planning();
 		if (onglet === "resultats") return resultats();
+		if (onglet === "documents") return documents();
+		if (onglet === "requetes") return requetes();
 		$zone.html(`<div class="mee-vide">${__("La réinscription se fait chaque année pendant la session ouverte.")}<br><br>
 			<a class="btn btn-primary btn-sm" href="/app/reinscription_etudiant">${__("Ouvrir ma réinscription")}</a></div>`);
 	}
@@ -109,6 +113,88 @@ frappe.pages["mon-espace-etudiant"].on_page_load = function (wrapper) {
 			$zone.html(html);
 			$zone.find(".mee-prec").on("click", () => { lundi = frappe.datetime.add_days(lundi, -7); planning(); });
 			$zone.find(".mee-suiv").on("click", () => { lundi = frappe.datetime.add_days(lundi, 7); planning(); });
+		});
+	}
+
+	// ---- Documents : libre-service (certificat, carte, relevé) ou demande de signature ----
+	function documents() {
+		const A = "udshed.api.actes.";
+		$zone.html(`<div class="text-muted">${__("Chargement...")}</div>`);
+		frappe.call({ method: A + "mes_documents" }).then((r) => {
+			const docs = r.message || [];
+			if (!docs.length) {
+				$zone.html(`<div class="mee-vide">${__("Aucun document n'est proposé pour le moment.")}</div>`);
+				return;
+			}
+			const pastille = { "Disponible": "green", "Demandé": "orange", "Prêt à retirer": "blue", "Retiré": "gray", "Refusé": "red" };
+			const lignes = docs.map((d) => {
+				const derniers = (d.actes || []).map((a) =>
+					`<div class="small"><span class="indicator-pill ${pastille[a.statut] || "gray"}">${esc(__(a.statut))}</span>
+					 ${esc(a.name)} ${a.statut === "Disponible" ? `<a href="#" data-telecharger="${esc(a.name)}">${__("Télécharger")}</a>` : ""}
+					 ${a.statut === "Prêt à retirer" ? __("— à retirer à la scolarité") : ""}
+					 ${a.statut === "Refusé" && a.motif_refus ? "— " + esc(a.motif_refus) : ""}</div>`).join("");
+				const action = !d.possible
+					? `<div class="small text-muted">${esc(d.message)}</div>`
+					: d.libre_service
+						? `<button class="btn btn-primary btn-sm" data-obtenir="${esc(d.name)}">${__("Obtenir maintenant")}</button>`
+						: `<button class="btn btn-default btn-sm" data-demander="${esc(d.name)}">${__("Demander")}</button>`;
+				return `<tr><td><b>${esc(d.titre)}</b><div class="small text-muted">${d.libre_service ? __("Immédiat")
+					: (d.mode_signature === "Manuscrite" ? __("Sur demande — original signé à retirer") : __("Sur demande — signé électroniquement"))}</div></td>
+					<td>${action}</td><td>${derniers}</td></tr>`;
+			}).join("");
+			$zone.html(`<div class="table-responsive"><table class="table table-bordered table-sm"><thead><tr>
+				<th>${__("Document")}</th><th>${__("Action")}</th><th>${__("Mes demandes / documents")}</th></tr></thead>
+				<tbody>${lignes}</tbody></table></div>`);
+			const telecharger = (nom) => open_url_post("/api/method/" + A + "telecharger", { acte: nom }, true);
+			$zone.find("[data-telecharger]").on("click", function (e) { e.preventDefault(); telecharger($(this).data("telecharger")); });
+			$zone.find("[data-obtenir]").on("click", function () {
+				frappe.call({ method: A + "obtenir", args: { modele: $(this).data("obtenir") }, freeze: true })
+					.then((res) => { telecharger(res.message.name); documents(); });
+			});
+			$zone.find("[data-demander]").on("click", function () {
+				const modele = $(this).data("demander");
+				frappe.prompt({ fieldname: "motif", fieldtype: "Small Text", label: __("Motif de la demande (facultatif)") },
+					(v) => frappe.call({ method: A + "obtenir", args: { modele, motif: v.motif } }).then(() => {
+						frappe.show_alert({ message: __("Demande envoyée : vous serez notifié(e)."), indicator: "green" });
+						documents();
+					}), __("Demander le document"));
+			});
+		});
+	}
+
+	// ---- Requêtes et réclamations ----
+	function requetes() {
+		const R = "udshed.api.requetes.";
+		$zone.html(`<div class="text-muted">${__("Chargement...")}</div>`);
+		frappe.call({ method: R + "mes_requetes" }).then((r) => {
+			const data = r.message || {};
+			const liste = (data.requetes || []).map((q) => `<tr><td>${esc(q.name)}</td><td>${esc(q.type_requete)}</td>
+				<td>${esc(q.objet)}</td><td>${esc(__(q.statut))}</td><td>${esc(q.reponse || "")}</td></tr>`).join("");
+			$zone.html(`<div class="mb-2"><button class="btn btn-primary btn-sm mee-nouvelle">${__("Nouvelle requête")}</button></div>
+				${liste ? `<div class="table-responsive"><table class="table table-bordered table-sm"><thead><tr><th>${__("N°")}</th>
+				<th>${__("Type")}</th><th>${__("Objet")}</th><th>${__("Statut")}</th><th>${__("Réponse")}</th></tr></thead><tbody>${liste}</tbody></table></div>`
+				: `<div class="mee-vide">${__("Aucune requête.")}</div>`}`);
+			$zone.find(".mee-nouvelle").on("click", () => {
+				const d = new frappe.ui.Dialog({
+					title: __("Nouvelle requête"),
+					fields: [
+						{ fieldtype: "Select", fieldname: "type_requete", label: __("Type"), reqd: 1, options: data.types || [] },
+						{ fieldtype: "Select", fieldname: "matiere", label: __("Matière concernée (réclamation de note)"),
+						  options: [""].concat((data.matieres || []).map((m) => ({ value: m.value, label: m.label }))),
+						  depends_on: "eval:doc.type_requete=='Réclamation de note'" },
+						{ fieldtype: "Data", fieldname: "objet", label: __("Objet"), reqd: 1 },
+						{ fieldtype: "Small Text", fieldname: "description", label: __("Description"), reqd: 1 },
+						{ fieldtype: "Attach", fieldname: "piece_jointe", label: __("Pièce justificative") },
+					],
+					primary_action_label: __("Envoyer"),
+					primary_action: (v) => frappe.call({ method: R + "soumettre", args: v }).then(() => {
+						d.hide();
+						frappe.show_alert({ message: __("Requête envoyée."), indicator: "green" });
+						requetes();
+					}),
+				});
+				d.show();
+			});
 		});
 	}
 

@@ -44,3 +44,11 @@ def etablissement():
 		"expediteur": (s.get("email_candidature_sender_name") or "").strip() or nom,
 		"app": APP,
 	})
+
+
+def nom_etudiant(student):
+	"""« Nom Prénom » d'un étudiant (le nom complet n'est pas stocké)."""
+	row = frappe.db.get_value("Student", student, ["nom", "prenom"], as_dict=True)
+	if not row:
+		return student
+	return " ".join(x for x in [row.nom, row.prenom] if x) or student

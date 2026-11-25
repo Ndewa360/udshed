@@ -460,7 +460,9 @@ def _verifier_acces_enseignant(teaching_unit):
     roles = frappe.get_roles(user)
     if user == "Administrator" or "System Manager" in roles:
         return
-    if "Planning Manager" in roles or "Coordonateur" in roles:
+    # Coordination et scolarité saisissent pour toute matière (saisie
+    # centralisée, reprise de PV papier), en plus des enseignants.
+    if {"Planning Manager", "Coordonateur", "Agent de scolarité", "Registration Manager"} & set(roles):
         return
     if "Teacher" in roles:
         from udshed.utils.planning_conflits import enseignants_du_groupe

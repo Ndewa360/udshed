@@ -91,3 +91,7 @@ def after_install():
     from udshed.utils.compte_etudiant import activer_connexion_par_matricule
 
     activer_connexion_par_matricule()
+    # Modèles d'actes académiques par défaut (modifiables avec l'éditeur).
+    from udshed.utils.actes import creer_modeles_defaut
+
+    creer_modeles_defaut()

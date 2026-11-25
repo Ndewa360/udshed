@@ -41,7 +41,7 @@ from udshed.api.saisie_notes import (
 ROLES_CORRECTION = ("System Manager", "Coordonateur", "Correcteur", "Teacher")
 
 # Rôles pouvant générer les codes, valider la correction et lever l'anonymat.
-ROLES_RESPONSABLE = ("System Manager", "Coordonateur", "Registration Manager")
+ROLES_RESPONSABLE = ("System Manager", "Coordonateur", "Registration Manager", "Agent de scolarité")
 
 STATUTS_ATTENTE = ("En attente", "Déposée", "En correction")
 STATUTS_INJECTABLES = ("Validée",)

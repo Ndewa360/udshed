@@ -23,7 +23,7 @@
    "fieldname": "date_debut",
    "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Date de d\u00e9but",
+   "label": "Date de début",
    "reqd": 1
   },
   {
@@ -45,7 +45,7 @@
    "fieldname": "academic_year",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Ann\u00e9e Acad\u00e9mique",
+   "label": "Année Académique",
    "options": "Academic Year",
    "reqd": 1
   },
@@ -79,7 +79,7 @@
   {
    "fieldname": "classes_concernees",
    "fieldtype": "Table",
-   "label": "Classes concern\u00e9es",
+   "label": "Classes concernées",
    "options": "Session Examen Field of study Level"
   },
   {
@@ -93,7 +93,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-02 06:36:27.387334",
+ "modified": "2026-11-25 21:30:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Examen",
@@ -135,6 +135,28 @@
    "role": "Planning Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Agent de scolarité"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Registration Manager"
   }
  ],
  "row_format": "Dynamic",

@@ -193,6 +193,10 @@ def appliquer(doc):
 		"note_finale_apres": flt(note.note_finale), "bilan": "\n".join(consequences),
 	})
 	notifier_etudiant(doc, note)
+	# Réclamation de note ouverte sur cette matière : la correction y est rattachée.
+	from udshed.api.requetes import lier_correction
+
+	lier_correction(doc)
 	return {"statut": "Appliquée", "bilan": consequences}
 
 

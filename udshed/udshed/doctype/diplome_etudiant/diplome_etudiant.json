@@ -1,0 +1,169 @@
+{
+ "actions": [],
+ "creation": "2026-11-25 21:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Diplome Etudiant",
+ "owner": "Administrator",
+ "modified": "2026-11-25 21:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "student",
+  "nom",
+  "intitule",
+  "cycle",
+  "filiere",
+  "column_break_dip",
+  "academic_year",
+  "date_jury",
+  "jury",
+  "moyenne",
+  "mention",
+  "statut"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Étudiant",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "nom",
+   "fieldtype": "Data",
+   "label": "Nom",
+   "read_only": 1
+  },
+  {
+   "fieldname": "intitule",
+   "fieldtype": "Data",
+   "label": "Intitulé du diplôme",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cycle",
+   "fieldtype": "Select",
+   "label": "Cycle",
+   "options": "Licence\nMaster\nBTS",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "label": "Filière",
+   "options": "Field of study"
+  },
+  {
+   "fieldname": "column_break_dip",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année d'obtention",
+   "options": "Academic Year",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "date_jury",
+   "fieldtype": "Date",
+   "label": "Date du jury"
+  },
+  {
+   "fieldname": "jury",
+   "fieldtype": "Link",
+   "label": "Jury",
+   "options": "Jury Diplomation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "moyenne",
+   "fieldtype": "Float",
+   "label": "Moyenne du cycle (/20)"
+  },
+  {
+   "fieldname": "mention",
+   "fieldtype": "Select",
+   "label": "Mention",
+   "options": "\nPassable\nAssez bien\nBien\nTrès bien\nExcellent",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Statut",
+   "options": "Délivré\nAnnulé",
+   "default": "Délivré",
+   "in_list_view": 1
+  }
+ ],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Responsable Diplomation"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Registration Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Agent de scolarité"
+  },
+  {
+   "read": 1,
+   "print": 1,
+   "role": "Student"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "row_format": "Dynamic",
+ "autoname": "format:DIP-{cycle}-{#####}",
+ "naming_rule": "Expression",
+ "title_field": "intitule",
+ "track_changes": 1
+}

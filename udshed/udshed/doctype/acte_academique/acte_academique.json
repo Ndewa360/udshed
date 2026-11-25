@@ -1,0 +1,216 @@
+{
+ "actions": [],
+ "creation": "2026-11-25 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Acte Academique",
+ "owner": "Administrator",
+ "modified": "2026-11-25 20:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "section_acte",
+  "student",
+  "modele",
+  "type_acte",
+  "column_break_acte",
+  "statut",
+  "academic_year",
+  "code_verification",
+  "section_demande",
+  "motif_demande",
+  "demande_par",
+  "demande_le",
+  "column_break_traitement",
+  "traite_par",
+  "traite_le",
+  "signe_electroniquement",
+  "motif_refus",
+  "section_donnees",
+  "donnees"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_acte",
+   "fieldtype": "Section Break",
+   "label": "Acte"
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Étudiant",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "modele",
+   "fieldtype": "Link",
+   "label": "Modèle",
+   "options": "Modele Acte",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "type_acte",
+   "fieldtype": "Data",
+   "label": "Type d'acte",
+   "fetch_from": "modele.type_acte",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_acte",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Statut",
+   "default": "Demandé",
+   "read_only": 1,
+   "options": "Demandé\nDisponible\nPrêt à retirer\nRetiré\nRefusé",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year"
+  },
+  {
+   "fieldname": "code_verification",
+   "fieldtype": "Data",
+   "label": "Code de vérification",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "section_demande",
+   "fieldtype": "Section Break",
+   "label": "Demande"
+  },
+  {
+   "fieldname": "motif_demande",
+   "fieldtype": "Small Text",
+   "label": "Motif de la demande"
+  },
+  {
+   "fieldname": "demande_par",
+   "fieldtype": "Link",
+   "label": "Demandé par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "demande_le",
+   "fieldtype": "Datetime",
+   "label": "Demandé le",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_traitement",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "traite_par",
+   "fieldtype": "Link",
+   "label": "Délivré / refusé par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "traite_le",
+   "fieldtype": "Datetime",
+   "label": "Délivré le",
+   "read_only": 1
+  },
+  {
+   "fieldname": "signe_electroniquement",
+   "fieldtype": "Check",
+   "label": "Signé électroniquement",
+   "read_only": 1
+  },
+  {
+   "fieldname": "motif_refus",
+   "fieldtype": "Small Text",
+   "label": "Motif du refus",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_donnees",
+   "fieldtype": "Section Break",
+   "label": "Données figées à la délivrance",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "donnees",
+   "fieldtype": "Code",
+   "label": "Données",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Responsable Diplomation"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Registration Manager"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Agent de scolarité"
+  },
+  {
+   "read": 1,
+   "print": 1,
+   "role": "Student"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "row_format": "Dynamic",
+ "autoname": "format:ACTE-{YYYY}-{#####}",
+ "naming_rule": "Expression",
+ "title_field": "type_acte",
+ "track_changes": 1
+}

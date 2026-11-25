@@ -464,3 +464,95 @@ def consulter_matiere(niveau=None, matricule=None, academic_year=None, teaching_
 		},
 		"school_name": frappe.db.get_single_value("Udshed Setting", "school_name") or "",
 	}
+
+# ---------------------------------------------------------------------------
+# Babillard par classe (public détaillé) : critères simples, toute la classe,
+# notes publiées par matière, moyenne et décision.
+# ---------------------------------------------------------------------------
+from frappe.rate_limiter import rate_limit  # noqa: E402
+
+
+@frappe.whitelist(allow_guest=True)
+@rate_limit(limit=300, seconds=600)
+def options_babillard(academic_year=None):
+	"""Années ayant des sessions publiées et, pour l'année choisie, les classes."""
+	annees = sorted(
+		set(frappe.get_all("Session Examen", filters={"statut": "Publiée"}, pluck="academic_year")),
+		key=_start_year, reverse=True,
+	)
+	annee = academic_year or (annees[0] if annees else None)
+	classes = []
+	if annee:
+		sessions = frappe.get_all("Session Examen", filters={"statut": "Publiée", "academic_year": annee},
+								  fields=["name", "semestre"])
+		vus = set()
+		for row in frappe.get_all("Session Examen Field of study Level",
+								  filters={"parent": ["in", [s.name for s in sessions] or [""]]},
+								  fields=["filiere", "niveau"]):
+			label = frappe.db.get_value("Field of study Level", row.niveau, "level") or row.niveau
+			cle = (row.filiere, label)
+			if row.filiere and label and cle not in vus:
+				vus.add(cle)
+				classes.append({"filiere": row.filiere, "filiere_label": _get_filiere_name(row.filiere),
+								"niveau": label})
+		classes.sort(key=lambda c: (c["filiere_label"], c["niveau"]))
+		semestres = sorted({s.semestre for s in sessions if s.semestre})
+	else:
+		semestres = []
+	return {"annees": annees, "annee": annee, "classes": classes, "semestres": semestres}
+
+
+@frappe.whitelist(allow_guest=True)
+@rate_limit(limit=300, seconds=600)
+def resultats_classe(academic_year=None, filiere=None, niveau=None, semestre=None):
+	"""Toute la classe : notes PUBLIÉES par matière (CC, examen, note finale),
+	moyenne du semestre, crédits et décision."""
+	if not (academic_year and filiere and niveau):
+		_erreur(_("Choisissez l'année, la filière et le niveau."))
+	students = sorted(set(frappe.get_all(
+		"Academic Reregistration",
+		filters={"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "statut": "Validée"},
+		pluck="student")))
+	filtres_sess = {"academic_year": academic_year, "statut": "Publiée"}
+	if semestre:
+		filtres_sess["semestre"] = semestre
+	sessions = frappe.get_all("Session Examen", filters=filtres_sess, pluck="name")
+	notes = frappe.get_all(
+		"Session Examen Note",
+		filters={"session_examen": ["in", sessions or [""]], "student": ["in", students or [""]], "statut": "Publié"},
+		fields=["student", "teaching_unit", "note_cc_moyenne", "note_examen", "note_examen_rattrapage",
+				"note_finale", "grade"],
+	)
+	meilleures = {}
+	for n in notes:
+		cle = (n.student, n.teaching_unit)
+		if cle not in meilleures or (n.note_finale or 0) > (meilleures[cle].note_finale or 0):
+			meilleures[cle] = n
+	matieres = sorted({tu for _s, tu in meilleures}, key=lambda tu: _get_ue_label(tu))
+	colonnes = [{"teaching_unit": tu, "libelle": _get_ue_label(tu)} for tu in matieres]
+
+	lignes = []
+	for student in students:
+		info = frappe.db.get_value("Student", student, ["matricule", "nom", "prenom"], as_dict=True) or {}
+		filt = {"student": student, "academic_year": academic_year}
+		if semestre:
+			filt["semestre"] = semestre
+		sems = frappe.get_all("Resultat Semestre", filters=filt,
+							  fields=["semestre", "mps", "credits_obtenus", "total_credits", "decision", "mention"])
+		decision_annee = frappe.db.get_value("Resultat Academique", {"student": student, "academic_year": academic_year,
+																	 "decision_annee": ["is", "set"]}, "decision_annee")
+		lignes.append({
+			"matricule": info.get("matricule") or student,
+			"nom": " ".join(x for x in [info.get("nom"), info.get("prenom")] if x),
+			"notes": {tu: {"cc": meilleures[(student, tu)].note_cc_moyenne, "examen": meilleures[(student, tu)].note_examen,
+						   "rattrapage": meilleures[(student, tu)].note_examen_rattrapage,
+						   "finale": meilleures[(student, tu)].note_finale, "grade": meilleures[(student, tu)].grade}
+					  for tu in matieres if (student, tu) in meilleures},
+			"moyenne": round(sum(flt(s.mps) for s in sems) / len(sems), 2) if sems else None,
+			"credits": "{0}/{1}".format(sum(s.credits_obtenus or 0 for s in sems), sum(s.total_credits or 0 for s in sems))
+			if sems else "",
+			"decision": (sems[0].decision if semestre and sems else decision_annee) or "",
+			"mention": sems[0].mention if semestre and sems else "",
+		})
+	lignes.sort(key=lambda l: l["nom"])
+	return {"colonnes": colonnes, "lignes": lignes, "filiere_label": _get_filiere_name(filiere)}
