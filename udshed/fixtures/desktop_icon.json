@@ -76,11 +76,11 @@
   "icon_image": "/assets/udshed/images/logo-reinscription.png",
   "icon_type": "Link",
   "label": "Inscription - Reinscription",
-    "link": null,
-    "link_to": "Inscription - Reinscription",
-    "link_type": "Workspace Sidebar",
+  "link": null,
+  "link_to": "Inscription - Reinscription",
+  "link_type": "Workspace Sidebar",
   "logo_url": null,
-  "modified": "2026-08-24 14:43:50.701295",
+  "modified": "2026-11-25 14:00:00.000000",
   "name": "Inscription - Reinscription",
   "parent_icon": null,
   "restrict_removal": 0,
@@ -89,10 +89,16 @@
     "role": "System Manager"
    },
    {
+    "role": "Registration Manager"
+   },
+   {
+    "role": "Agent de scolarité"
+   },
+   {
     "role": "Coordonateur"
    },
    {
-    "role": "Student"
+    "role": "Comptable"
    }
   ],
   "sidebar": "Inscription - Reinscription",

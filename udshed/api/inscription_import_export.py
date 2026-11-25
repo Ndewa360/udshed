@@ -962,16 +962,20 @@ def finaliser_inscription_hors_candidature(ia, nom=None, prenom=None, student=No
         student_name = s.name
     else:
         if not ia.matricule:
-            ia.db_set("matricule", _generer_matricule_atomique(lettre=LETTRE_HORS_CANDIDATURE))
+            ia.db_set("matricule", _generer_matricule_atomique(
+                lettre=LETTRE_HORS_CANDIDATURE, academic_year=ia.annee_academique))
             nouveau_matricule = True
         student_name = _creer_student(ia, nom, prenom)
 
     ue_inscrites, ue_ignorees = [], ""
-    annee_courante = _annee_academique_courante()
-    if ia.annee_academique != annee_courante:
-        ue_ignorees = _("UE non inscrites : l'année {0} n'est pas l'année courante").format(ia.annee_academique)
-    elif not frappe.db.exists("Academic Reregistration", {"student": student_name, "academic_year": annee_courante}):
-        ue_inscrites = _auto_enroll_student_bulk(student_name, ia.filiere, ia.classe)
+    # UE de l'année de l'inscription (année en cours OU année de rentrée suivante).
+    if not frappe.db.exists("Academic Reregistration", {"student": student_name, "academic_year": ia.annee_academique}):
+        ue_inscrites = _auto_enroll_student_bulk(
+            student_name, ia.filiere, ia.classe, academic_year=ia.annee_academique
+        )
+        if not ue_inscrites:
+            ue_ignorees = _("Aucune UE n'existe encore pour {0} {1} en {2}").format(
+                ia.filiere, ia.classe, ia.annee_academique)
 
     if envoyer_email and ia.email:
         _envoyer_email_matricule_async(

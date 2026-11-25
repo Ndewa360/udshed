@@ -87,3 +87,7 @@ def after_install():
     # aucun chargement manuel n'est nécessaire ici.
     create_default_data()
     create_releve_notes_pf()
+    # Étudiants : connexion Frappe avec le matricule comme identifiant.
+    from udshed.utils.compte_etudiant import activer_connexion_par_matricule
+
+    activer_connexion_par_matricule()

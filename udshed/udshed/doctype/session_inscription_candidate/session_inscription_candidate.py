@@ -11,6 +11,7 @@ from udshed.api.candidature import (
 	poser_cookie_fiche,
 )
 from udshed.utils import securite
+from udshed.utils.campagne import annee_cible
 from udshed.udshed.doctype.concours.concours import concours_pour_formation
 from udshed.api.concours import (
 	STATUT_AUTORISE,
@@ -57,14 +58,30 @@ class SessionInscriptionCandidate(Document):
 			if self.get(champ) == defaut:
 				self.set(champ, "")
 		self.status_updated_on = frappe.utils.now_datetime()
-		if not self.session_inscription:
-			self.session_inscription = self._session_inscription_courante()
+		self._rattacher_campagne()
+
+	def _rattacher_campagne(self):
+		"""Un candidat ne dépose que pendant la période de dépôt d'une campagne.
+		Le personnel peut saisir un dossier hors période (rattrapage) : il est
+		alors rattaché à la campagne courante."""
+		from udshed.utils import campagne as campagnes
+
+		if self.session_inscription:
+			return
+		if securite.est_personnel():
+			c = campagnes.campagne_ouverte() or campagnes.campagne_courante()
+		else:
+			c = campagnes.exiger_depot_ouvert()
+		if not c:
+			frappe.throw(_("Aucune campagne d'admission n'est configurée."))
+		self.session_inscription = c.name
 
 	def validate(self):
 		for champ in ("phone", "parent_phone", "father_phone", "mother_phone", "sponsor_phone"):
 			valeur = getattr(self, champ, None)
 			if valeur:
 				setattr(self, champ, _nettoyer_telephone(valeur))
+		self._controler_centre()
 		self._deduire_filiere_niveau_des_choix()
 		self._rattacher_concours()
 		self._controler_admission()
@@ -99,6 +116,20 @@ class SessionInscriptionCandidate(Document):
 			from udshed.api.concours_finalisation import echeance_finalisation
 
 			self.finaliser_avant = echeance_finalisation(self)
+
+	def _controler_centre(self):
+		"""Le centre d'examen doit être l'un de ceux de la campagne (s'ils sont configurés)."""
+		from udshed.utils.campagne import campagne_du_dossier, centres
+
+		if not self.examination_centre or not (self.is_new() or self.has_value_changed("examination_centre")):
+			return
+		proposes = centres(campagne_du_dossier(self))
+		if proposes and self.examination_centre not in proposes:
+			frappe.throw(
+				_("Centre d'examen « {0} » inconnu pour cette campagne. Centres proposés : {1}.").format(
+					self.examination_centre, ", ".join(proposes)
+				)
+			)
 
 	def _deduire_filiere_niveau_des_choix(self):
 		"""Le formulaire ne collecte plus filière/niveau en haut de page : on les
@@ -170,19 +201,6 @@ class SessionInscriptionCandidate(Document):
 		if ancien == STATUT_AUTORISE:
 			verifier_retrait(self)
 
-	def _session_inscription_courante(self):
-		"""Retourne la session d'inscription ouverte, sinon la plus récente."""
-		ouverte = frappe.db.exists("Session Inscription", {"status": "Open"})
-		if ouverte:
-			return ouverte
-		recente = frappe.db.get_value(
-			"Session Inscription",
-			{},
-			"name",
-			order_by="creation desc",
-		)
-		return recente
-
 	def after_insert(self):
 		# Le candidat (invité) qui vient de soumettre peut télécharger SA fiche
 		# depuis /candidature-success, sans exposer les fiches des autres.
@@ -216,8 +234,8 @@ class SessionInscriptionCandidate(Document):
 			envoyer_resultat_liste_attente(self.name)
 		elif self.candidature_status == "Refusé":
 			_send_rejection_email(self, (self.status_comment or "").strip())
-		elif self.candidature_status == "Inscrit":
-			_send_validation_email(self)
+		# « Inscrit » : l'email du matricule est envoyé par la finalisation
+		# (udshed/api/inscription.py), seule à poser ce statut.
 
 	def _proteger_statut_accepte(self):
 		"""Une fois une candidature acceptée, son statut ne peut plus être modifié,
@@ -246,9 +264,11 @@ class SessionInscriptionCandidate(Document):
 			return
 
 		setting = frappe.get_single("Udshed Setting")
+		from udshed.utils.etablissement import etablissement
+
 		subject = getattr(setting, "email_candidature_subject", None) or _(
-			"Accusé de réception de votre candidature - UDSHED"
-		)
+			"Accusé de réception de votre candidature - {0}"
+		).format(etablissement().nom)
 		sender = _get_sender()
 
 		try:
@@ -276,11 +296,25 @@ class SessionInscriptionCandidate(Document):
 				title=f"Échec envoi e-mail candidat {self.name}",
 			)
 
+	def _destinataires_coordination(self):
+		"""Coordonnateurs des niveaux demandés (1er, 2e, 3e choix), plus
+		l'adresse générale des réglages si elle est renseignée."""
+		emails = []
+		niveaux = [row.get("niveau") for row in self.get("choix_de_formation") or [] if row.get("niveau")]
+		for niveau in niveaux:
+			teacher = frappe.db.get_value("Field of study Level", niveau, "coordonateur")
+			email = frappe.db.get_value("Teacher", teacher, "email") if teacher else None
+			if email and email not in emails:
+				emails.append(email)
+		general = frappe.db.get_single_value("Udshed Setting", "email_coordinateur")
+		if general and general not in emails:
+			emails.append(general)
+		return emails
+
 	def _send_coordinator_email(self):
-		setting = frappe.get_single("Udshed Setting")
-		coord_email = getattr(setting, "email_coordinateur", None)
-		if not coord_email:
-			frappe.logger().info("Pas d'email coordonnateur configuré — notification non envoyée.")
+		destinataires = self._destinataires_coordination()
+		if not destinataires:
+			frappe.logger().info("Aucun coordonnateur à notifier pour cette candidature.")
 			return
 
 		sender = _get_sender()
@@ -296,7 +330,7 @@ class SessionInscriptionCandidate(Document):
 
 		try:
 			frappe.sendmail(
-				recipients=[coord_email],
+				recipients=destinataires,
 				sender=sender,
 				subject=_("Nouvelle candidature reçue - {0} {1} ({2})").format(
 					self.first_name, self.last_name, self.name
@@ -319,7 +353,7 @@ class SessionInscriptionCandidate(Document):
 				now=True,
 			)
 			frappe.logger().info(
-				f"Notification coordonnateur envoyée à {coord_email} pour la candidature {self.name}"
+				f"Notification coordination envoyée à {', '.join(destinataires)} pour la candidature {self.name}"
 			)
 		except Exception as e:
 			frappe.log_error(
@@ -332,7 +366,8 @@ class SessionInscriptionCandidate(Document):
 def track_candidature(doc_name: str) -> dict:
 	"""Rechercher une candidature par son numéro et retourner les infos de suivi.
 
-	Accès public (allow_guest) — utilisé par la page /suivi-candidature.
+	Accès public (allow_guest). Remplacé par l'espace « Mon dossier » (/mon-dossier),
+	conservé pour les liens existants : ne renvoie plus de motif ni d'email.
 	Seuls les champs utiles au suivi sont renvoyés.
 	"""
 	if not doc_name:
@@ -381,44 +416,28 @@ def track_candidature(doc_name: str) -> dict:
 		"status_date": frappe.utils.format_datetime(doc.status_updated_on, "dd/MM/yyyy HH:mm")
 			if doc.status_updated_on
 			else frappe.utils.format_datetime(doc.creation, "dd/MM/yyyy HH:mm"),
-		"status_comment": doc.status_comment or "",
 		"submitted_on": frappe.utils.format_datetime(doc.creation, "dd/MM/yyyy HH:mm"),
+		"detail_url": "/mon-dossier",
 	}
 
 
 @frappe.whitelist(allow_guest=True)
 def get_session_status() -> dict:
-	"""Retourne le statut de la dernière Session Inscription active.
+	"""État de la campagne d'admission pour le bandeau de la page d'accueil."""
+	from udshed.utils.campagne import infos_publiques
 
-	Utilisé dynamiquement sur la page d'accueil pour afficher
-	'Ouverte', 'Fermée' ou 'Brouillon'.
-	"""
-	session = frappe.db.get_value(
-		"Session Inscription",
-		{},
-		["name", "status", "academic_year"],
-		order_by="creation desc",
-		as_dict=True,
-	)
-
-	if not session:
-		return {"status": "Aucune", "academic_year": "", "label": "Aucune session disponible"}
-
-	status_map = {
-		"Open": {"label": "Session {year} ouverte", "css_class": "open"},
-		"Closed": {"label": "Session {year} fermée", "css_class": "closed"},
-		"Draft": {"label": "Session {year} — brouillon", "css_class": "draft"},
+	infos = infos_publiques()
+	c = infos["campagne"]
+	if not c:
+		return {"status": "Aucune", "academic_year": "", "label": _("Aucune campagne de candidature"), "css_class": "draft"}
+	libelles = {
+		"ouverte": (_("Candidatures {0} ouvertes jusqu'au {1}").format(c["academic_year"], c["cloture"]), "open", "Open"),
+		"a_venir": (_("Candidatures {0} : ouverture le {1}").format(c["academic_year"], c["ouverture"]), "draft", "Draft"),
+		"close": (_("Candidatures {0} closes").format(c["academic_year"]), "closed", "Closed"),
 	}
-
-	info = status_map.get(session.status, {"label": "Session {year}", "css_class": "draft"})
-	year = session.academic_year or ""
-
-	return {
-		"status": session.status,
-		"academic_year": year,
-		"label": info["label"].format(year=year),
-		"css_class": info["css_class"],
-	}
+	label, css, statut = libelles.get(infos["etat"], (c["titre"], "draft", "Draft"))
+	return {"status": statut, "academic_year": c["academic_year"], "label": label, "css_class": css,
+			"route": infos["route_candidature"]}
 
 
 # ---------------------------------------------------------------------------
@@ -511,6 +530,52 @@ def get_candidates_list(
 	return {"candidates": docs, "total": total}
 
 
+ROLES_DECISION = ("System Manager", "Registration Manager", "Agent de scolarité")
+ROLES_RESPONSABLE = ("System Manager", "Registration Manager")
+
+
+def droits_candidature(doc):
+	"""Actions que l'utilisateur courant peut faire sur ce dossier (pour l'écran
+	de consultation ; le serveur revérifie chaque action)."""
+	from udshed.api.concours import candidat_non_admis_publie
+
+	roles = set(frappe.get_roles())
+	decide = bool(roles & set(ROLES_DECISION)) and frappe.has_permission(
+		"Session Inscription Candidate", "write", doc=doc
+	)
+	statut = doc.candidature_status or "En attente"
+	en_examen = statut in ("En attente", "Dossier en cours d'examen")
+	# Non-admis au concours renvoyé en étude de dossier : acceptation sur dossier permise.
+	accepte_dossier = doc.mode_admission != "Concours" or (
+		statut == "Dossier en cours d'examen" and candidat_non_admis_publie(doc)
+	)
+	return {
+		"decider": decide,
+		"mettre_en_cours": decide and statut == "En attente",
+		"accepter": decide and en_examen and accepte_dossier,
+		"autoriser_concours": decide and en_examen and doc.mode_admission == "Concours" and not accepte_dossier,
+		"rejeter": decide and en_examen,
+		"desister": bool(roles & set(ROLES_RESPONSABLE)) and statut in ("Accepté", "Liste d'attente"),
+	}
+
+
+@frappe.whitelist()
+def options_consultation():
+	"""Valeurs des filtres de l'écran de consultation (rien de figé)."""
+	securite.exiger_personnel()
+	securite.exiger_permission("Session Inscription Candidate", "read")
+	from udshed.utils.campagne import centres
+
+	niveaux = sorted({n for n in frappe.get_all("Session Inscription Candidate", pluck="niveau", distinct=True) if n})
+	tous_centres = set()
+	for nom in frappe.get_all("Session Inscription", pluck="name"):
+		tous_centres.update(centres(frappe.get_cached_doc("Session Inscription", nom)))
+	tous_centres.update(c for c in frappe.get_all("Session Inscription Candidate", pluck="examination_centre",
+												  distinct=True) if c)
+	statuts = (frappe.get_meta("Session Inscription Candidate").get_field("candidature_status").options or "").split("\n")
+	return {"niveaux": niveaux, "centres": sorted(tous_centres), "statuts": [s for s in statuts if s]}
+
+
 @frappe.whitelist()
 def get_candidate_detail(name):
 	"""Détail complet d'un candidat (y compris child tables)."""
@@ -534,6 +599,7 @@ def get_candidate_detail(name):
 		})
 
 	return {
+		"droits": droits_candidature(doc),
 		"name": doc.name,
 		"first_name": doc.first_name,
 		"last_name": doc.last_name,
@@ -605,6 +671,12 @@ def update_candidate_status(name, new_status, comment=None):
 # Emails — Confirmation + Validation
 # ---------------------------------------------------------------------------
 
+def _nom_etablissement():
+	from udshed.utils.etablissement import etablissement
+
+	return etablissement().nom
+
+
 def _get_sender():
 	"""Return the formatted sender name from Udshed Setting."""
 	setting = frappe.get_single("Udshed Setting")
@@ -624,16 +696,14 @@ def _send_confirmation_email(doc):
 		return
 
 	sender = _get_sender()
-	academic_year = frappe.db.get_value(
-		"Session Inscription", {}, "academic_year", order_by="creation desc"
-	) or ""
+	academic_year = annee_cible(doc)
 	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
 
 	try:
 		frappe.sendmail(
 			recipients=[doc.email],
 			sender=sender,
-			subject=_("Félicitations, votre candidature a été acceptée - Udshed"),
+			subject=_("Félicitations, votre candidature a été acceptée - {0}").format(_nom_etablissement()),
 			template="candidature_confirmation",
 			args={
 				"first_name": doc.first_name,
@@ -644,7 +714,7 @@ def _send_confirmation_email(doc):
 				"niveau": doc.niveau or "",
 				"centre": doc.examination_centre or "",
 				"date_limite": frappe.utils.format_date(doc.finaliser_avant) if doc.get("finaliser_avant") else "",
-				"lien_admission": frappe.utils.get_url("/mon-admission"),
+				"lien_admission": frappe.utils.get_url("/mon-dossier"),
 				"logo_url": get_school_logo_url(),
 			},
 			now=True,
@@ -653,69 +723,6 @@ def _send_confirmation_email(doc):
 	except Exception as e:
 		frappe.log_error(
 			message=str(e), title=f"Échec email confirmation {doc.name}"
-		)
-
-
-def _send_validation_email(doc):
-	"""Email envoyé au candidat quand son inscription est validée."""
-	if not doc.email:
-		frappe.logger().warning(
-			f"Pas d'email pour {doc.name} — email validation non envoyé."
-		)
-		return
-
-	setting = frappe.get_single("Udshed Setting")
-	school_name = getattr(setting, "school_name", "UDSHED")
-	sender = _get_sender()
-	academic_year = frappe.db.get_value(
-		"Session Inscription", {}, "academic_year", order_by="creation desc"
-	)
-	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
-
-	uv_liste = ""
-	matricule = ""
-	student_name = frappe.db.get_value("Student", {"email": doc.email}, "name")
-	if student_name:
-		matricule = frappe.db.get_value("Student", student_name, "matricule") or student_name
-		uv_records = frappe.get_all(
-			"Session Examen Note",
-			filters={"student": student_name},
-			fields=["teaching_unit"],
-			pluck="teaching_unit",
-		)
-		if uv_records:
-			uv_labels = []
-			for tu_name in uv_records:
-				course = frappe.db.get_value("Teaching Unit", tu_name, "course")
-				if course:
-					uv_labels.append(course)
-			uv_liste = ", ".join(uv_labels)
-
-	try:
-		frappe.sendmail(
-			recipients=[doc.email],
-			sender=sender,
-			subject=_("Inscription validée - {0}").format(school_name),
-			template="candidature_validation",
-			args={
-				"first_name": doc.first_name,
-				"last_name": doc.last_name,
-				"doc_name": doc.name,
-				"matricule": matricule,
-				"filiere": filiere_label,
-				"niveau": doc.niveau or "",
-				"centre": doc.examination_centre or "",
-				"school_name": school_name,
-				"academic_year": academic_year or "",
-				"uv_liste": uv_liste,
-				"logo_url": get_school_logo_url(),
-			},
-			now=True,
-		)
-		frappe.logger().info(f"Email validation envoyé à {doc.email} pour {doc.name}")
-	except Exception as e:
-		frappe.log_error(
-			message=str(e), title=f"Échec email validation {doc.name}"
 		)
 
 
@@ -728,9 +735,7 @@ def _send_rejection_email(doc, motif=None):
 		return
 
 	sender = _get_sender()
-	academic_year = frappe.db.get_value(
-		"Session Inscription", {}, "academic_year", order_by="creation desc"
-	) or ""
+	academic_year = annee_cible(doc)
 	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
 
 	motif = (motif or doc.status_comment or "").strip()
@@ -739,7 +744,7 @@ def _send_rejection_email(doc, motif=None):
 		frappe.sendmail(
 			recipients=[doc.email],
 			sender=sender,
-			subject=_("Résultat de votre candidature"),
+			subject=_("Résultat de votre candidature - {0}").format(_nom_etablissement()),
 			template="candidature_rejection",
 			args={
 				"first_name": doc.first_name,

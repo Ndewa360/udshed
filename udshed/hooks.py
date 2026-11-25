@@ -39,6 +39,8 @@ role_home_page = {
 	"Comptable": "/desk",
 	"Agent de scolarité": "/desk",
 	"Correcteur": "/desk",
+	# Étudiant : directement son espace (desk restreint, voir boot_student.py).
+	"Student": "/app/mon-espace-etudiant",
 }
 
 
@@ -54,14 +56,10 @@ fixtures = [
     {
         "dt": "Web Page",
         "filters": [
-            ["route", "in", [
-                "index",
-                "suivi-candidature",
-                "document-dossier",
-                "information-candidat",
-                "candidate-choice",
-                "success-candidature",
-            ]]
+            # Seule la page d'accueil est livrée (rendue dynamiquement) ; les
+            # anciennes pages du dépôt en plusieurs étapes sont dépubliées
+            # (patch campagne_admission).
+            ["route", "in", ["index"]]
         ]
     },
     {
@@ -190,6 +188,7 @@ permission_query_conditions = {
 	"Student": "udshed.permissions.student_query",
 	"Inscription Academique": "udshed.permissions.inscription_query",
 	"Resultat Academique": "udshed.permissions.resultat_query",
+	"Session Inscription Candidate": "udshed.permissions.candidature_query",
 	"Academic Reregistration": "udshed.api.permission.academic_reregistration_query",
 	"Progression Academique": "udshed.api.permission.progression_query",
 }
@@ -198,6 +197,7 @@ has_permission = {
 	"Student": "udshed.permissions.student_has_permission",
 	"Inscription Academique": "udshed.permissions.inscription_has_permission",
 	"Resultat Academique": "udshed.permissions.resultat_has_permission",
+	"Session Inscription Candidate": "udshed.permissions.candidature_has_permission",
 	"Academic Reregistration": "udshed.api.permission.academic_reregistration_has_permission",
 	"Progression Academique": "udshed.api.permission.progression_has_permission",
 }
@@ -300,9 +300,21 @@ scheduler_events = {
 
 # Website redirects
 # -----------------
-# /login → Frappe login (desk / personnel administratif).
-# /connexion-etudiant → portail de connexion par matricule pour les étudiants.
-# Aucune redirection automatique entre les deux.
+# Parcours candidat : un formulaire générique (/candidature) et un espace
+# unique (/mon-dossier). Étudiants : connexion Frappe standard (/login, avec le
+# matricule comme identifiant) puis espace étudiant dans le desk.
+# Les anciennes adresses (liens d'emails, favoris) redirigent vers les nouvelles.
+website_redirects = [
+	{"source": r"/session-de-2025(/.*)?", "target": "/candidature/new"},
+	{"source": "/session-2025", "target": "/candidature/new"},
+	{"source": "/depot-candidature", "target": "/candidature/new"},
+	{"source": "/suivi-candidature", "target": "/mon-dossier"},
+	{"source": "/mon-admission", "target": "/mon-dossier"},
+	{"source": r"/inscription(/inscription)?", "target": "/mon-dossier"},
+	{"source": "/connexion-etudiant", "target": "/login"},
+	{"source": "/dashboard-etudiant", "target": "/app/mon-espace-etudiant"},
+	{"source": "/espace-etudiant", "target": "/app/mon-espace-etudiant"},
+]
 
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs

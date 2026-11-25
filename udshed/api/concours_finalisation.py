@@ -28,18 +28,24 @@ JOURS_AVANT_RELANCE = 3
 #  Délai
 # --------------------------------------------------------------------------- #
 def delai_finalisation(candidature):
-	"""Délai (jours) applicable à une candidature (nom ou document)."""
+	"""Délai (jours) applicable à une candidature (nom ou document) : celui du
+	concours s'il en fixe un, sinon celui de la campagne d'admission."""
+	from udshed.utils import campagne
+
 	concours = (frappe.db.get_value("Session Inscription Candidate", candidature, "concours")
 				if isinstance(candidature, str) else candidature.get("concours"))
 	if concours:
 		delai = frappe.db.get_value("Concours", concours, "delai_finalisation")
 		if delai:
 			return int(delai)
-	return DELAI_PAR_DEFAUT
+	return campagne.delai_finalisation(campagne.campagne_du_dossier(candidature))
 
 
 def echeance_finalisation(candidature):
-	return add_days(today(), delai_finalisation(candidature))
+	"""Date limite d'un admis, plafonnée à la date limite d'inscription de la campagne."""
+	from udshed.utils import campagne
+
+	return campagne.echeance_individuelle(campagne.campagne_du_dossier(candidature), delai_finalisation(candidature))
 
 
 def delai_depasse(finaliser_avant):
@@ -110,7 +116,7 @@ def renoncer_admission(numero_dossier, nom_candidat, token=None, motif=None):
 
 
 # --------------------------------------------------------------------------- #
-#  Page publique « Mon admission »
+#  Espace candidat « Mon dossier »
 # --------------------------------------------------------------------------- #
 @frappe.whitelist(allow_guest=True)
 def consulter_admission(numero_dossier, nom_candidat):
@@ -152,6 +158,8 @@ def consulter_admission(numero_dossier, nom_candidat):
 		"numero_dossier": cand.name, "nom": cand.full_name, "statut": statut,
 		"concours": frappe.db.get_value("Concours", cand.concours, "titre") if cand.concours else "",
 		"formation": formation(cand.filiere, cand.niveau) if cand.filiere else "",
+		"mode": _("Sur concours") if cand.mode_admission == "Concours" else _("Sur étude de dossier"),
+		"depose_le": format_date(cand.creation),
 	}
 	if statut == "Accepté":
 		res.update({
@@ -175,6 +183,20 @@ def consulter_admission(numero_dossier, nom_candidat):
 		res.update({"etat": "refuse", "motif": cand.status_comment or ""})
 	elif statut == STATUT_DESISTE:
 		res.update({"etat": "desiste", "motif": cand.status_comment or ""})
+	elif statut == "Autorisé à concourir":
+		fiche = _fiche_concours(cand)
+		dates = frappe.db.get_value("Concours", cand.concours, ["date_debut_epreuves", "date_fin_epreuves"],
+									as_dict=True) if cand.concours else None
+		texte_dates = ""
+		if dates and dates.date_debut_epreuves:
+			texte_dates = format_date(dates.date_debut_epreuves)
+			if dates.date_fin_epreuves and dates.date_fin_epreuves != dates.date_debut_epreuves:
+				texte_dates = _("du {0} au {1}").format(texte_dates, format_date(dates.date_fin_epreuves))
+		res.update({"etat": "convoque", "convocation": {
+			"centre": cand.examination_centre or "",
+			"numero_table": fiche.numero_table if fiche else "",
+			"dates": texte_dates,
+		}})
 	else:
 		res["etat"] = "en_cours"
 	return res
@@ -206,7 +228,7 @@ def _envoyer(cand, expiree):
 				"niveau": cand.niveau or "",
 				"date_limite": format_date(cand.finaliser_avant),
 				"expiree": expiree,
-				"lien_admission": frappe.utils.get_url("/mon-admission"),
+				"lien_admission": frappe.utils.get_url("/mon-dossier"),
 				"logo_url": get_school_logo_url(),
 			},
 			now=True,

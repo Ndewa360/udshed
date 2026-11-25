@@ -56,6 +56,19 @@ class Concours(Document):
 		if self.statut != "Brouillon":
 			self._verifier_configuration_complete()
 
+	def on_update(self):
+		self._donner_role_correcteur()
+
+	def _donner_role_correcteur(self):
+		"""Un correcteur désigné sur une épreuve doit avoir le rôle « Correcteur »
+		pour ouvrir l'écran de saisie : il lui est attribué s'il ne l'a pas."""
+		for user in {e.correcteur for e in self.epreuves if e.correcteur}:
+			if user in ("Administrator", "Guest") or not frappe.db.exists("User", user):
+				continue
+			if "Correcteur" not in frappe.get_roles(user):
+				frappe.get_doc("User", user).add_roles("Correcteur")
+				frappe.msgprint(_("Rôle « Correcteur » attribué à {0}.").format(user), alert=True)
+
 	# ------------------------------------------------------------ contrôles
 	def _verifier_campagne(self):
 		annee = frappe.db.get_value("Session Inscription", self.session_inscription, "academic_year")

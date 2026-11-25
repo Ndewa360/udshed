@@ -1,6 +1,6 @@
 {% extends "templates/web.html" %}
 
-{% block title %}Inscription académique{% endblock %}
+{% block title %}Inscription académique - {{ etablissement().nom }}{% endblock %}
 
 {% block style %}
 <link rel="stylesheet" href="/assets/udshed/css/inscription.css">
@@ -9,7 +9,10 @@
 {% block page_content %}
 <div class="container inscription-form-wrap">
     <div class="form-header text-center mb-4">
-        <img src="/assets/udshed/images/logo.png" alt="UDSHED" style="max-width: 150px; margin-bottom: 20px;">
+        {% set etab = etablissement() %}
+        <img src="{{ etab.logo }}" alt="{{ etab.nom }}" style="max-width: 120px; max-height: 120px; margin-bottom: 12px;">
+        <div style="font-weight: 700; font-size: 18px;">{{ etab.nom }}</div>
+        {% if etab.institut %}<div class="text-muted" style="font-size: 13px; margin-bottom: 14px;">{{ etab.institut }}</div>{% endif %}
         <h3 class="mb-1">Formulaire d'inscription académique</h3>
         <p id="candidat-authentifie" class="text-muted">Vérification du candidat...</p>
         <p id="date-limite" class="alert alert-warning" style="display: none; font-size: 14px;"></p>
@@ -52,7 +55,7 @@
                 <div class="card p-4 mb-4">
                     <h5 class="mb-3">Informations académiques</h5>
                     <div class="row">
-                        <div class="col-md-6 form-group"><label>Année académique</label><input name="annee_academique" class="form-control" value="2025-2026" required></div>
+                        <div class="col-md-6 form-group"><label>Année académique (rentrée)</label><input id="annee_academique" class="form-control" readonly></div>
                         <div class="col-md-6 form-group"><label>Filière</label><input id="filiere" class="form-control" readonly></div>
                         <div class="col-md-6 form-group"><label>Niveau</label><input id="classe" class="form-control" readonly></div>
                         <div class="col-md-6 form-group"><label>Sexe</label><select name="sexe" class="form-control"><option value="">Sélectionner</option><option>Masculin</option><option>Féminin</option></select></div>
@@ -221,7 +224,7 @@
             Vous ne souhaitez plus rejoindre l'établissement ?
             <a href="#" id="lien-renoncer" style="color: #b02a37;">Je renonce à ma place</a>
         </div>
-        <p class="text-center mb-5"><a href="/inscription/inscription">Retour à l'authentification</a></p>
+        <p class="text-center mb-5"><a href="/mon-dossier">Retour à mon dossier</a></p>
     </div>
 </div>
 {% endblock %}

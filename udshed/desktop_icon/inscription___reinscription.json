@@ -11,25 +11,28 @@
  "label": "Inscription - Reinscription",
  "link_to": "Inscription - Reinscription",
  "link_type": "Workspace Sidebar",
- "modified": "2026-08-14 12:27:01.914989",
+ "modified": "2026-11-25 14:00:00.000000",
  "modified_by": "Administrator",
  "name": "Inscription - Reinscription",
  "owner": "Administrator",
  "restrict_removal": 0,
-  "roles": [
-   {
-    "role": "System Manager"
-   },
-   {
-    "role": "Coordonateur"
-   },
-   {
-    "role": "Agent de scolarité"
-   },
-   {
-    "role": "Comptable"
-   }
-  ],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Registration Manager"
+  },
+  {
+   "role": "Agent de scolarité"
+  },
+  {
+   "role": "Coordonateur"
+  },
+  {
+   "role": "Comptable"
+  }
+ ],
  "sidebar": "Inscription - Reinscription",
  "standard": 1
 }

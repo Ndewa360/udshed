@@ -1,4 +1,71 @@
 frappe.ready(function() {
+	// ---- Campagne d'admission et établissement (aucune valeur figée) ----
+	// Titre, logo, nom de l'université, année de rentrée et centres d'examen
+	// viennent de la campagne courante. Hors période de dépôt, le formulaire est
+	// remplacé par un message (le serveur refuse de toute façon le dépôt).
+	var UDSHED_INFOS = null;
+	frappe.call({
+		method: "udshed.utils.campagne.infos_publiques",
+		callback: function (r) {
+			UDSHED_INFOS = r.message || {};
+			appliquerCampagne(UDSHED_INFOS);
+		}
+	});
+
+	function echapper(t) {
+		return String(t === null || t === undefined ? "" : t)
+			.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+	}
+
+	function appliquerCampagne(infos) {
+		var etab = infos.etablissement || {};
+		var c = infos.campagne;
+		var bandeau = document.createElement("div");
+		bandeau.className = "udshed-campagne";
+		bandeau.innerHTML =
+			'<img src="' + echapper(etab.logo) + '" alt="" class="udshed-campagne-logo">' +
+			'<div><div class="udshed-campagne-etab">' + echapper(etab.nom) + "</div>" +
+			(etab.institut ? '<div class="udshed-campagne-inst">' + echapper(etab.institut) + "</div>" : "") +
+			(c ? '<div class="udshed-campagne-titre">' + echapper(c.titre) + " · rentrée " + echapper(c.academic_year) +
+				(infos.etat === "ouverte" ? " · dépôts jusqu'au " + echapper(c.cloture) : "") + "</div>" : "") +
+			"</div>";
+		var conteneur = document.querySelector(".web-form-container") || document.querySelector(".web-form");
+		if (conteneur) conteneur.insertBefore(bandeau, conteneur.firstChild);
+
+		if (infos.etat !== "ouverte") {
+			var message = !c
+				? "Aucune campagne de candidature n'est configurée pour le moment."
+				: infos.etat === "a_venir"
+					? "Les candidatures pour l'année " + c.academic_year + " ouvriront le " + c.ouverture + "."
+					: "Les candidatures pour l'année " + c.academic_year + " sont closes depuis le " + c.cloture + ".";
+			var formulaire = document.querySelector(".web-form");
+			if (formulaire) {
+				formulaire.innerHTML = '<div class="udshed-campagne-close"><h3>Candidatures fermées</h3><p>' +
+					echapper(message) + '</p><p><a href="/mon-dossier">Suivre un dossier déjà déposé</a></p></div>';
+			}
+			document.body.classList.add("udshed-formed");
+			return;
+		}
+		var centres = (c && c.centres) || [];
+		if (centres.length && frappe.web_form && frappe.web_form.set_df_property) {
+			frappe.web_form.set_df_property("examination_centre", "options", [""].concat(centres));
+		}
+	}
+
+	var STYLE_CAMPAGNE = `
+		.udshed-campagne { display: flex; align-items: center; gap: 16px; max-width: 1100px; margin: 0 auto 18px;
+			padding: 14px 18px; background: #fff; border: 1px solid #cbd9e8; border-radius: 14px; }
+		.udshed-campagne-logo { width: 56px; height: 56px; object-fit: contain; }
+		.udshed-campagne-etab { font-weight: 700; font-size: 18px; color: #003B6F; }
+		.udshed-campagne-inst { font-size: 13px; color: #4a5a70; }
+		.udshed-campagne-titre { font-size: 13px; color: #F08000; font-weight: 600; margin-top: 2px; }
+		.udshed-campagne-close { max-width: 640px; margin: 40px auto; padding: 28px; text-align: center; background: #fff;
+			border: 1px solid #cbd9e8; border-radius: 14px; }
+	`;
+	var styleCampagne = document.createElement("style");
+	styleCampagne.textContent = STYLE_CAMPAGNE;
+	document.head.appendChild(styleCampagne);
+
 	// ---- Style personnalisé — reproduit la structure de la page « Choix du candidat » ----
 	const STYLE = `
 		:root {
@@ -488,7 +555,7 @@ frappe.ready(function() {
 			if (corps && titreNat) {
 				const titre = document.createElement('h3');
 				titre.className = 'form-card-title';
-				titre.textContent = (titreNat.textContent || '').trim() || 'Session de 2025';
+				titre.textContent = (titreNat.textContent || '').trim() || 'Candidature';
 				corps.insertBefore(titre, corps.firstChild);
 				if (introNat && (introNat.textContent || '').trim()) {
 					const sous = document.createElement('p');

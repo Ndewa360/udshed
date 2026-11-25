@@ -1,8 +1,11 @@
 $(document).ready(function() {
-    var params = new URLSearchParams(window.location.search);
-    var numero = (params.get("numero_dossier") || "").trim();
-    var nom = (params.get("nom_candidat") || "").trim();
-    var token = (params.get("token") || "").trim();
+    // Identité et jeton remis par « Mon dossier » via le stockage de session
+    // (jamais dans l'URL : historique du navigateur, journaux du serveur).
+    var session = {};
+    try { session = JSON.parse(sessionStorage.getItem("udshed_inscription") || "{}") || {}; } catch (e) { session = {}; }
+    var numero = (session.numero_dossier || "").trim();
+    var nom = (session.nom_candidat || "").trim();
+    var token = (session.token || "").trim();
     var candidate;
     var currentStep = 1;
     var totalSteps = 5;
@@ -14,7 +17,7 @@ $(document).ready(function() {
     }
 
     if (!numero || !nom || !token) {
-        show_error("Les informations du candidat sont manquantes.");
+        show_error("Ouvrez d'abord votre dossier sur la page « Mon dossier » puis cliquez sur « Je confirme ma place ».");
         return;
     }
 
@@ -34,6 +37,7 @@ $(document).ready(function() {
             $("#candidat-authentifie").text("Candidat : " + candidate.nom_prenom);
             $("#filiere").val(candidate.filiere || "");
             $("#classe").val(candidate.classe || "");
+            $("#annee_academique").val(candidate.annee_academique || "");
             if (candidate.finaliser_avant) {
                 $("#date-limite").html("Finalisez votre inscription <strong>avant le " + escapeHtml(candidate.finaliser_avant)
                     + "</strong>. Passé cette date, votre place sera attribuée à un autre candidat.").show();
@@ -298,12 +302,19 @@ $(document).ready(function() {
             },
             callback: function(r) {
                 if (r.message && r.message.status === "success") {
+                    try { sessionStorage.removeItem("udshed_inscription"); } catch (e) { /* rien */ }
+                    var annee = r.message.annee_academique ? " pour l'année " + escapeHtml(r.message.annee_academique) : "";
                     $("#stepper-wrapper").html(
                         '<div class="text-center py-4">' +
-                        '<h3 style="color: #28a745;">Inscription académique validée</h3>' +
+                        '<h3 style="color: #28a745;">Inscription académique validée' + annee + '</h3>' +
                         '<p>Votre matricule officiel :</p>' +
-                        '<p class="font-weight-bold h4" style="color: #003B6F;">' + r.message.matricule + '</p>' +
-                        '<a href="' + r.message.pdf_url + '" class="btn btn-success mt-3">Télécharger ma fiche d\u0027inscription</a>' +
+                        '<p class="font-weight-bold h4" style="color: #003B6F;">' + escapeHtml(r.message.matricule) + '</p>' +
+                        '<a href="' + escapeHtml(r.message.pdf_url) + '" class="btn btn-success mt-3">Télécharger ma fiche d\u0027inscription</a>' +
+                        '<div class="alert alert-info mt-4 text-left" style="max-width: 560px; margin: 24px auto 0;">' +
+                        '<b>Votre compte étudiant</b><br>Un e-mail vient de vous être envoyé avec votre matricule et un lien ' +
+                        'pour <b>choisir votre mot de passe</b>. Vous vous connecterez ensuite sur ' +
+                        '<a href="/login">la page de connexion</a> avec votre <b>matricule</b> (ou votre e-mail) ' +
+                        'pour consulter votre grille, votre planning et vos notes.</div>' +
                         '</div>'
                     );
                 } else {

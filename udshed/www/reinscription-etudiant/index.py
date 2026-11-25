@@ -7,7 +7,7 @@ no_cache = 1
 
 def get_context(context):
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/connexion-etudiant"
+		frappe.local.flags.redirect_location = "/login?redirect-to=/reinscription-etudiant"
 		raise frappe.Redirect
 
 	context.title = "Réinscription"

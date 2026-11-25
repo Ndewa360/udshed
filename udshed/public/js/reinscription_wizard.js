@@ -52,7 +52,7 @@ window.udshed_reinscription = function(opts) {
 				return;
 			}
 			if (xhr.status === 403 && r.exc_type === 'SessionExpired') {
-				window.location.href = '/connexion-etudiant';
+				window.location.href = '/login?redirect-to=' + encodeURIComponent(window.location.pathname);
 				return;
 			}
 			if (!afficher_messages(r, true)) {

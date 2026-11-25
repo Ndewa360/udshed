@@ -91,3 +91,44 @@ def resultat_has_permission(doc, ptype=None, user=None, debug=False):
 	if not _etudiant_seul(user):
 		return True
 	return doc.get("student") == _student_de(user)
+
+
+# ---------------------------------------------------------------------------
+# Candidatures : un coordonnateur (sans rôle de décision) ne voit que les
+# dossiers des filières qu'il coordonne (Field of study Level.coordonateur).
+# ---------------------------------------------------------------------------
+ROLES_DECISION_CANDIDATURE = {"System Manager", "Registration Manager", "Agent de scolarité"}
+
+
+def _coordonnateur_seul(user):
+	if not user or user in ("Administrator", "Guest"):
+		return False
+	roles = set(frappe.get_roles(user))
+	return "Coordonateur" in roles and not (roles & ROLES_DECISION_CANDIDATURE)
+
+
+def filieres_coordonnees(user):
+	teacher = frappe.db.get_value("Teacher", {"email": user}, "name")
+	if not teacher:
+		return []
+	return sorted(set(frappe.get_all(
+		"Field of study Level", filters={"coordonateur": teacher, "parenttype": "Field of study"}, pluck="parent"
+	)))
+
+
+def candidature_query(user=None):
+	user = user or frappe.session.user
+	if not _coordonnateur_seul(user):
+		return ""
+	filieres = filieres_coordonnees(user)
+	if not filieres:
+		return "1=0"
+	liste = ", ".join(frappe.db.escape(f) for f in filieres)
+	return f"`tabSession Inscription Candidate`.`filiere` in ({liste})"
+
+
+def candidature_has_permission(doc, ptype=None, user=None, debug=False):
+	user = user or frappe.session.user
+	if not _coordonnateur_seul(user):
+		return True
+	return doc.filiere in filieres_coordonnees(user)

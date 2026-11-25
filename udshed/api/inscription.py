@@ -6,7 +6,7 @@ from frappe import _
 from frappe.utils import now_datetime, get_url
 from contextlib import contextmanager
 from udshed.api.candidature import get_school_logo_url
-from udshed.utils import securite
+from udshed.utils import campagne, securite
 
 _DUREE_JETON_SEC = 60 * 60  # validité du jeton de connexion formulaire : 1 h
 
@@ -36,7 +36,7 @@ def authentifier_et_inscrire(numero_dossier, nom_candidat):
         frappe.throw("Authentification échouée. Numéro de dossier ou nom incorrect.")
 
     securite.reinitialiser_tentatives("inscription-dossier", cle_dossier)
-    _verifier_session_ouverte()
+    campagne.exiger_inscription_ouverte(dossier)
 
     # Nouveau : vérifier si le candidat est déjà inscrit
     deja_inscrit = frappe.db.exists(
@@ -98,12 +98,12 @@ def get_grille_enseignement(numero_dossier, nom_candidat, token=None):
             "filiere": dossier.filiere,
             "filiere_label": dossier.filiere,
             "niveau": dossier.niveau or "",
-            "academic_year": _annee_academique_courante() or "",
+            "academic_year": campagne.annee_cible(dossier),
             "cours": [],
             "total_credits": 0,
         }
 
-    academic_year = _annee_academique_courante()
+    academic_year = campagne.annee_cible(dossier)
     lignes = frappe.db.sql(
         """
         SELECT tu.name, tu.intitule_cours, tu.semestre,
@@ -263,6 +263,7 @@ def _infos_candidat(dossier):
         "date_naissance": dossier.birthdate,
         "lieu_naissance": dossier.birth_place,
         "telephone": dossier.phone,
+        "annee_academique": campagne.annee_cible(dossier),
         "finaliser_avant": frappe.utils.format_date(dossier.get("finaliser_avant")) if dossier.get("finaliser_avant") else "",
     }
 
@@ -330,11 +331,10 @@ def enregistrer_inscription(numero_dossier, nom_candidat, donnees=None, token=No
     if not _verifier_jeton(token, numero_dossier, nom_candidat):
         frappe.throw(_("Session d'authentification expirée. Veuillez recommencer."))
 
-    _verifier_session_ouverte()
-
     dossier = _get_dossier(numero_dossier, nom_candidat)
     if not dossier:
         frappe.throw(_("Session d'authentification invalide."))
+    campagne.exiger_inscription_ouverte(dossier)
 
     _verifier_candidature_validee(dossier)
 
@@ -376,13 +376,20 @@ def _finaliser_inscription_complete(dossier, donnees):
     verifier_delai(dossier)
 
     # Transaction atomique : tout ou rien
+    annee = campagne.annee_cible(dossier)
+    if not annee:
+        frappe.throw(_("Aucune année de rentrée n'est définie pour la campagne de ce dossier."))
+
     with _transaction_ou_erreur():
-        # 1. Générer matricule UNIQUE (atomique avec lock)
-        matricule = _generer_matricule_atomique()
+        # 1. Générer matricule UNIQUE (atomique avec lock), série de la campagne
+        matricule = _generer_matricule_atomique(
+            academic_year=annee, session_name=dossier.get("session_inscription")
+        )
 
         # 2. Créer Inscription Academique
+        # L'année n'est jamais saisie par le candidat : c'est celle de sa campagne.
         champs_autorises = {
-            "annee_academique", "sexe", "nationalite", "region_origine", "langue",
+            "sexe", "nationalite", "region_origine", "langue",
             "religion", "handicape", "situation_matrimoniale", "situatio_emploi",
             "nom_prenom_pere", "pere_telephone", "pere_profession", "pere_ville",
             "nom_prenom_mere", "telephone_mere", "profession_mere", "mere_ville",
@@ -392,13 +399,15 @@ def _finaliser_inscription_complete(dossier, donnees):
             "connaissances_informatiques",
         }
         valeurs = {champ: donnees.get(champ) for champ in champs_autorises if donnees.get(champ) is not None}
+        if not valeurs.get("sexe"):
+            valeurs["sexe"] = {"Homme": "Masculin", "Femme": "Féminin"}.get(dossier.get("sexe") or "", "")
         for champ in ("pere_telephone", "telephone_mere", "telephone_sponsor"):
             if champ in valeurs:
                 valeurs[champ] = _telephone_237(valeurs[champ])
 
         doc_inscription = frappe.get_doc({
             "doctype": "Inscription Academique",
-            "annee_academique": donnees.get("annee_academique") or _annee_academique_courante(),
+            "annee_academique": annee,
             "matricule": matricule,
             "dossier_origine": dossier.name,
             "nom_prenom": dossier.full_name,
@@ -417,7 +426,11 @@ def _finaliser_inscription_complete(dossier, donnees):
         student_name, est_nouveau = _creer_ou_maj_student(dossier, matricule, donnees)
 
         # 4. Auto-enroll BULK aux UE (une seule requête groupée)
-        enrolled_tus = _auto_enroll_student_bulk(student_name, dossier.filiere, dossier.niveau)
+        enrolled_tus = _auto_enroll_student_bulk(
+            student_name, dossier.filiere, dossier.niveau, academic_year=annee
+        )
+        if not enrolled_tus:
+            _alerter_inscription_sans_ue(nom_inscription, matricule, dossier, annee)
 
         # 5. Compte utilisateur : déjà créé par Student.after_insert si nouveau
         if not est_nouveau:
@@ -444,7 +457,36 @@ def _finaliser_inscription_complete(dossier, donnees):
         "pdf_url": _pdf_url(matricule),
         "student_name": student_name,
         "enrolled_count": len(enrolled_tus),
+        "annee_academique": annee,
     }
+
+
+def _alerter_inscription_sans_ue(inscription, matricule, dossier, annee):
+    """Aucune UE trouvée pour la classe sur l'année de rentrée (grille pas
+    encore saisie) : l'inscription est enregistrée, la scolarité est prévenue
+    pour affecter les UE une fois la grille saisie."""
+    message = _(
+        "Inscription {0} (matricule {1}) : aucune UE n'existe encore pour {2} {3} en {4}. "
+        "Affectez les UE à cet étudiant une fois la grille saisie."
+    ).format(inscription, matricule, dossier.filiere, dossier.niveau, annee)
+    frappe.get_doc("Inscription Academique", inscription).add_comment("Comment", message)
+    destinataires = set()
+    for role in ("Registration Manager", "Agent de scolarité"):
+        destinataires.update(
+            frappe.get_all("Has Role", filters={"role": role, "parenttype": "User"}, pluck="parent")
+        )
+    for user in destinataires:
+        if user in ("Administrator", "Guest") or not frappe.db.get_value("User", user, "enabled"):
+            continue
+        frappe.get_doc({
+            "doctype": "Notification Log",
+            "for_user": user,
+            "type": "Alert",
+            "subject": _("Inscription sans UE : {0}").format(matricule),
+            "email_content": message,
+            "document_type": "Inscription Academique",
+            "document_name": inscription,
+        }).insert(ignore_permissions=True)
 
 
 def _creer_ou_maj_student(dossier, matricule, donnees):
@@ -491,7 +533,7 @@ def _creer_ou_maj_student(dossier, matricule, donnees):
     return student, False
 
 
-def _auto_enroll_student_bulk(student_name, filiere, niveau):
+def _auto_enroll_student_bulk(student_name, filiere, niveau, academic_year=None):
     """
     Inscription BULK aux UE : une seule requête pour trouver les TU éligibles,
     puis bulk insert dans Academic Reregistration.
@@ -502,11 +544,9 @@ def _auto_enroll_student_bulk(student_name, filiere, niveau):
     (session de réinscription courante, niveau, nom, email) sont renseignés et
     les UE inscrites sont explicitement fournies.
     """
-    setting = frappe.get_single("Udshed Setting")
-    academic_year = getattr(setting, "current_year", None)
-
+    academic_year = academic_year or _annee_academique_courante()
     if not academic_year:
-        frappe.logger().warning("Aucune année académique courante configurée dans Udshed Setting.")
+        frappe.logger().warning("Aucune année académique pour l'inscription aux UE.")
         return []
 
     niveau_grid = _resolve_niveau_grid(filiere, niveau)
@@ -557,23 +597,14 @@ def _auto_enroll_student_bulk(student_name, filiere, niveau):
     return tus_eligibles
 
 
-def _cree_compte_utilisateur(student_name, dossier):
-	"""Crée le compte utilisateur pour l'étudiant inscrit (si absent)."""
-	email = dossier.email or f"{student_name}@udshed.local"
-	if not frappe.db.exists("User", email):
-		user = frappe.get_doc({
-			"doctype": "User",
-			"email": email,
-			"first_name": dossier.get("first_name") or "",
-			"last_name": dossier.get("last_name") or "",
-			"send_welcome_email": 0,
-			"roles": [{"role": "Student"}],
-		})
-		user.insert(ignore_permissions=True)
-	frappe.db.set_value("Student", student_name, "utilisateur", email)
+def _cree_compte_utilisateur(student_name, dossier=None):
+	"""Crée ou complète le compte Frappe de l'étudiant (identifiant = matricule)."""
+	from udshed.utils.compte_etudiant import assurer_compte
+
+	return assurer_compte(student_name)
 
 
-def _generer_matricule_atomique(lettre=None):
+def _generer_matricule_atomique(lettre=None, academic_year=None, session_name=None):
     """
     Génère un matricule unique de façon ATOMIQUE (avec verrou SQL nommé).
     Évite les doublons sous concurrence.
@@ -586,7 +617,8 @@ def _generer_matricule_atomique(lettre=None):
     aussi compte des matricules déjà portés par un Student (import d'étudiants
     avec leur matricule).
     """
-    lock_key = f"udshed_matricule:{_matricule_annee(_annee_academique_courante())}"
+    annee = academic_year or _annee_academique_courante()
+    lock_key = f"udshed_matricule:{_matricule_annee(annee)}"
 
     lignes = frappe.db.sql("SELECT GET_LOCK(%s, 10)", (lock_key,))
     if not lignes or lignes[0][0] != 1:
@@ -594,14 +626,14 @@ def _generer_matricule_atomique(lettre=None):
 
     try:
         if lettre:
-            if not _annee_academique_courante():
-                frappe.throw(_("Aucune année académique courante n'est configurée dans Udshed Setting."))
-            prefix = _matricule_annee(_annee_academique_courante()) + lettre
+            if not annee:
+                frappe.throw(_("Aucune année académique n'est définie pour générer le matricule."))
+            prefix = _matricule_annee(annee) + lettre
             doctypes = ("Inscription Academique", "Student")
         else:
-            session, lettre = _session_et_lettre()
-            academic_year = session.get("academic_year") if session else _annee_academique_courante()
-            prefix = _matricule_annee(academic_year) + lettre
+            session, lettre = _session_et_lettre(session_name)
+            annee_session = (session.get("academic_year") if session else None) or annee
+            prefix = _matricule_annee(annee_session) + lettre
             doctypes = ("Inscription Academique",)
 
         # Le verrou nominal sérialise déjà l'accès ; le max est calculé en SQL
@@ -673,10 +705,15 @@ def _envoyer_email_matricule(email, nom_prenom, numero_dossier, matricule, nom_i
         pdf_url = _pdf_url(matricule)
         sender = _get_sender()
 
+        from udshed.utils.compte_etudiant import lien_activation
+        from udshed.utils.etablissement import etablissement
+
+        etab = etablissement()
+        student = frappe.db.get_value("Student", {"matricule": matricule}, ["name", "utilisateur"], as_dict=True)
         frappe.sendmail(
             recipients=[email],
             sender=sender,
-            subject=_("Votre matricule d'inscription - UDSHED"),
+            subject=_("Votre matricule et votre compte étudiant - {0}").format(etab.nom),
             template="inscription_matricule_email",
             args={
                 "matricule": matricule,
@@ -684,7 +721,8 @@ def _envoyer_email_matricule(email, nom_prenom, numero_dossier, matricule, nom_i
                 "numero_dossier": numero_dossier,
                 "pdf_url": pdf_url,
                 "base_url": base_url or frappe.utils.get_url(),
-                "logo_url": get_school_logo_url(),
+                "lien_activation": lien_activation(student.utilisateur) if student else "",
+                "lien_connexion": frappe.utils.get_url("/login"),
             },
             now=True,
         )
@@ -720,12 +758,6 @@ def _get_dossier(numero_dossier, nom_candidat):
         _normaliser_texte(dossier.get("last_name")),
     }
     return dossier if nom_candidat in noms_possibles else None
-
-
-def _verifier_session_ouverte():
-    session = frappe.db.exists("Session Inscription", {"status": "Open"})
-    if not session:
-        frappe.throw(_("Aucune session d'inscription en cours. Veuillez réessayer plus tard."))
 
 
 def _verifier_candidature_validee(dossier):
@@ -782,7 +814,7 @@ def telecharger_fiche_inscription(matricule=None, nom=None, jeton=None):
     """Génère la fiche d'inscription officielle (PDF) d'un Inscription Academique.
 
     Rendu via weasyprint directement sur le corps HTML du Print Format
-    « Fiche Officielle UDM » : aucune dépendance à wkhtmltopdf/chrome ni au
+    « Fiche Inscription » : aucune dépendance à wkhtmltopdf/chrome ni au
     champ « pdf_generator » du Print Format. Le logo en filigrane est
     embarqué en data-URI (aucune URL réseau requise côté rendu).
 
@@ -814,7 +846,7 @@ def telecharger_fiche_inscription(matricule=None, nom=None, jeton=None):
 
     _verifier_acces_fiche_inscription(doc, jeton)
 
-    pf = frappe.get_doc("Print Format", "Fiche Officielle UDM")
+    pf = frappe.get_doc("Print Format", "Fiche Inscription")
 
     logo = ""
     try:
@@ -842,7 +874,7 @@ def telecharger_fiche_inscription(matricule=None, nom=None, jeton=None):
     frappe.response["content_type"] = "application/pdf; charset=utf-8"
 
 
-def _session_et_lettre():
+def _session_et_lettre(session_name=None):
     """Retourne (session, lettre) avec UNE SEULE requête sur Session Inscription.
 
     La session est la session « Open », sinon la plus récente ; la lettre est
@@ -855,7 +887,11 @@ def _session_et_lettre():
     )
     if not sessions:
         return None, "A"
-    active = next((s for s in sessions if s.get("status") == "Open"), None) or sessions[-1]
+    active = (
+        next((s for s in sessions if s.name == session_name), None)
+        or next((s for s in sessions if s.get("status") == "Open"), None)
+        or sessions[-1]
+    )
     index = next(
         (i + 1 for i, s in enumerate(sessions) if s.name == active.get("name")),
         1,
@@ -888,7 +924,7 @@ def _annee_academique_courante():
     return ""
 
 
-# -------------------- Fiche d'inscription (Print Format « Fiche Officielle UDM ») --------------------
+# -------------------- Fiche d'inscription (Print Format « Fiche Inscription ») --------------------
 
 def _info_etablissement():
     """Coordonnées de l'établissement (Udshed Setting) pour les impressions."""
@@ -1000,7 +1036,7 @@ def _grille_enseignement_fiche(doc):
 
 
 def donnees_fiche_inscription(doc):
-    """Données dynamiques du Print Format « Fiche Officielle UDM ».
+    """Données dynamiques du Print Format « Fiche Inscription ».
 
     Regroupe les coordonnées de l'établissement (config), l'en-tête
     (département = Field of study, matricule, n° de dossier) et la grille

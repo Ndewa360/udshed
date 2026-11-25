@@ -34,10 +34,13 @@
     <div class="container auth-container">
         <div class="auth-card">
             <div class="auth-brand">
-                <img src="/assets/udshed/images/logo.png" alt="UDSHED" class="auth-logo">
-                <h3 class="auth-title">Mon admission</h3>
+                {% set etab = etablissement() %}
+                <img src="{{ etab.logo }}" alt="{{ etab.nom }}" class="auth-logo">
+                <div style="font-weight:700;color:#0f172a;">{{ etab.nom }}</div>
+                <h3 class="auth-title">Mon dossier</h3>
                 <p class="auth-subtitle adm-intro">
-                    Consultez le résultat de votre candidature et confirmez votre place.
+                    Suivez votre candidature, consultez votre résultat ou votre convocation,
+                    puis confirmez votre place et finalisez votre inscription.
                 </p>
             </div>
 
@@ -57,7 +60,7 @@
                     </div>
                 </div>
                 <button id="adm_valider" type="submit" class="btn btn-primary btn-block">
-                    <span class="btn-label">Voir mon résultat</span>
+                    <span class="btn-label">Voir mon dossier</span>
                     <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
                 </button>
             </form>

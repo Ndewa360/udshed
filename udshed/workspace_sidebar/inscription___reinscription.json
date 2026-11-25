@@ -4,7 +4,7 @@
  "header_icon": "user-plus",
  "items": [
   {
-"child": 1,
+   "child": 1,
    "collapsible": 0,
    "icon": "bar-chart",
    "indent": 1,
@@ -33,7 +33,7 @@
    "icon": "list",
    "indent": 1,
    "keep_closed": 0,
-   "label": "Session Inscription",
+   "label": "Campagnes d'admission",
    "link_to": "Session Inscription",
    "link_type": "DocType",
    "open_in_new_tab": 1,
@@ -49,6 +49,19 @@
    "label": "Candidats",
    "link_to": "Session Inscription Candidate",
    "link_type": "DocType",
+   "open_in_new_tab": 1,
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "search",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Consultation des candidatures",
+   "link_to": "consultation-candidatures",
+   "link_type": "Page",
    "open_in_new_tab": 1,
    "show_arrow": 0,
    "type": "Link"
@@ -115,33 +128,33 @@
    "show_arrow": 0,
    "type": "Link"
   },
-{
-    "child": 1,
-    "collapsible": 1,
-    "icon": "sort-asc",
-    "indent": 1,
-    "keep_closed": 0,
-    "label": "Gestion des Niveaux",
-    "link_to": "gestion-des-niveaux",
-    "link_type": "Page",
-    "show_arrow": 0,
-    "type": "Link"
-   },
-   {
-    "child": 1,
-    "collapsible": 1,
-    "icon": "bar-chart",
-    "indent": 1,
-    "keep_closed": 0,
-    "label": "Rapports de réinscription",
-    "link_to": "report-reinscription",
-    "link_type": "Page",
-    "show_arrow": 0,
-    "type": "Link"
-   }
-  ],
-  "modified": "2026-08-29 12:47:13.994824",
-  "modified_by": "Administrator",
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "sort-asc",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Gestion des Niveaux",
+   "link_to": "gestion-des-niveaux",
+   "link_type": "Page",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "bar-chart",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Rapports de réinscription",
+   "link_to": "report-reinscription",
+   "link_type": "Page",
+   "show_arrow": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-11-25 14:00:00.000000",
+ "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Inscription - Reinscription",
  "standard": 1,

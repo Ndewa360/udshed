@@ -7,26 +7,39 @@
  "engine": "InnoDB",
  "field_order": [
   "informations_section",
+  "titre",
   "academic_year",
   "status",
   "column_break_1",
   "opening_date",
-  "closing_date"
+  "closing_date",
+  "date_limite_inscription",
+  "delai_finalisation",
+  "centres_section",
+  "centres_examen"
  ],
  "fields": [
   {
    "fieldname": "informations_section",
    "fieldtype": "Section Break",
-   "label": "Session Information"
+   "label": "Campagne d'admission"
+  },
+  {
+   "fieldname": "titre",
+   "fieldtype": "Data",
+   "label": "Titre affiché aux candidats",
+   "in_list_view": 1,
+   "description": "Vide : « Candidatures <année> »."
   },
   {
    "fieldname": "academic_year",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Academic Year",
+   "label": "Année de rentrée (année cible)",
    "options": "Academic Year",
-   "reqd": 1
+   "reqd": 1,
+   "description": "Année académique POUR laquelle on recrute (ex. 2026-2027), pas l'année en cours."
   },
   {
    "default": "Draft",
@@ -34,9 +47,10 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Status",
+   "label": "Statut des dépôts",
    "options": "Draft\nOpen\nClosed",
-   "reqd": 1
+   "reqd": 1,
+   "description": "Ouverte et fermée automatiquement aux dates de dépôt."
   },
   {
    "fieldname": "column_break_1",
@@ -46,21 +60,45 @@
    "fieldname": "opening_date",
    "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Opening Date",
+   "label": "Ouverture des dépôts",
    "reqd": 1
   },
   {
    "fieldname": "closing_date",
    "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Closing Date",
+   "label": "Clôture des dépôts",
    "reqd": 1
+  },
+  {
+   "fieldname": "date_limite_inscription",
+   "fieldtype": "Date",
+   "label": "Date limite d'inscription des admis",
+   "description": "Les admis finalisent leur inscription jusqu'à cette date, même après la clôture des dépôts. Vide : 90 jours après la clôture."
+  },
+  {
+   "default": "15",
+   "fieldname": "delai_finalisation",
+   "fieldtype": "Int",
+   "label": "Délai de confirmation d'un admis (jours)",
+   "description": "Délai individuel accordé à chaque admis (un concours peut fixer le sien)."
+  },
+  {
+   "fieldname": "centres_section",
+   "fieldtype": "Section Break",
+   "label": "Centres d'examen"
+  },
+  {
+   "fieldname": "centres_examen",
+   "fieldtype": "Small Text",
+   "label": "Centres d'examen proposés",
+   "description": "Un centre par ligne. Proposés dans le formulaire de candidature."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-11 06:45:48.936895",
+ "modified": "2026-11-25 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Inscription",
@@ -75,9 +113,9 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "System Manager",
    "share": 1,
-   "write": 1
+   "write": 1,
+   "role": "System Manager"
   },
   {
    "create": 1,
@@ -87,15 +125,30 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Registration Manager",
    "share": 1,
-   "write": 1
+   "write": 1,
+   "role": "Registration Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "role": "Agent de scolarité"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "role": "Coordonateur"
   }
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "sort_field": "creation",
+ "sort_field": "opening_date",
  "sort_order": "DESC",
  "states": [],
- "title_field": "academic_year"
+ "title_field": "titre",
+ "show_title_field_in_link": 1
 }

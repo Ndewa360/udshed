@@ -2,7 +2,7 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "25C.###",
+ "autoname": "format:INS-{annee_academique}-{#####}",
  "creation": "2026-08-26 22:14:24.723115",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -357,7 +357,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-24 12:00:00.000000",
+ "modified": "2026-11-25 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Inscription Academique",
@@ -377,15 +377,13 @@
    "write": 1
   },
   {
-   "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "Coordonateur",
-   "share": 1,
-   "write": 1
+   "share": 1
   },
   {
    "create": 1,

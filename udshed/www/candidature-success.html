@@ -1,8 +1,9 @@
 {% extends "templates/web.html" %}
 
-{% block title %}Candidature soumise - UDSHED{% endblock %}
+{% block title %}Candidature soumise - {{ etablissement().nom }}{% endblock %}
 
 {% block page_content %}
+{% set etab = etablissement() %}
 <style>
     .success-hero {
         display: flex;
@@ -108,11 +109,16 @@
 
 <div class="success-hero">
     <div class="success-card">
+        <div class="success-etab">
+            <img src="{{ etab.logo }}" alt="" style="width:64px;height:64px;object-fit:contain;">
+            <div style="font-weight:700;font-size:17px;margin-top:6px;">{{ etab.nom }}</div>
+            {% if etab.institut %}<div style="font-size:13px;color:var(--text-muted);">{{ etab.institut }}</div>{% endif %}
+        </div>
         <div class="success-icon">✓</div>
         <h1 class="success-title">Candidature envoyée avec succès !</h1>
         <p class="success-message">
             Votre candidature a bien été <span class="success-checkmark">enregistrée</span>.<br>
-            Vous serez contacté(e) pour la suite du processus d'inscription.<br>
+            Le résultat de l'étude de votre dossier (ou du concours) vous sera communiqué par email.<br>
             Un accusé de réception vous a été envoyé par email.
         </p>
         <div class="dossier-number" id="dossier-number">Chargement…</div>
@@ -120,9 +126,10 @@
             <a id="btn-pdf" class="btn btn-primary btn-home" href="#" style="background:#c0392b;border-color:#c0392b;">
                 &#128196; Télécharger ma fiche de candidature
             </a>
-            <a href="/" class="btn btn-primary btn-home">Retour à l'accueil</a>
+            <a href="/mon-dossier" class="btn btn-primary btn-home">Suivre mon dossier</a>
+            <a href="/" class="btn btn-outline-secondary btn-home">Retour à l'accueil</a>
         </div>
-        <p class="success-note">Vous pouvez suivre l'avancement de votre dossier à tout moment.</p>
+        <p class="success-note">Conservez votre numéro de dossier : avec votre nom, il vous permet de suivre votre dossier, de consulter votre résultat et de finaliser votre inscription sur la page « Mon dossier ».</p>
     </div>
 </div>
 

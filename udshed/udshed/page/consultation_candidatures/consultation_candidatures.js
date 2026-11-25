@@ -138,14 +138,25 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 			parent: $f.find('#cc-f-filiere')
 		}).refresh();
 
-		var $niveau = $('<select class="form-control form-control-sm" style="font-size:13px;"><option value="">Tous</option><option>BTS</option><option>LICENCE 1</option><option>LICENCE 2</option><option>LICENCE 3</option><option>MASTER 1</option><option>MASTER 2</option></select>');
+		// Niveaux, centres et statuts : fournis par le serveur (campagnes, dossiers).
+		var $niveau = $('<select class="form-control form-control-sm" style="font-size:13px;"><option value="">Tous</option></select>');
 		$f.find('#cc-f-niveau').append($niveau);
-
-		var $centre = $('<select class="form-control form-control-sm" style="font-size:13px;"><option value="">Tous</option><option>Bangangté</option><option>Bafoussam</option><option>Yaoundé</option><option>Douala</option></select>');
+		var $centre = $('<select class="form-control form-control-sm" style="font-size:13px;"><option value="">Tous</option></select>');
 		$f.find('#cc-f-centre').append($centre);
-
-		var $statut = $('<select class="form-control form-control-sm" style="font-size:13px;"><option value="">Tous</option><option>En attente</option><option>Dossier en cours d\'examen</option><option>Accepté</option><option>Refusé</option><option>Inscrit</option></select>');
+		var $statut = $('<select class="form-control form-control-sm" style="font-size:13px;"><option value="">Tous</option></select>');
 		$f.find('#cc-f-statut').append($statut);
+		frappe.call({
+			method: API + 'options_consultation',
+			callback: function (r) {
+				var o = r.message || {};
+				var remplir = function ($sel, valeurs) {
+					(valeurs || []).forEach(function (v) { $sel.append($('<option>').text(v).val(v)); });
+				};
+				remplir($niveau, o.niveaux);
+				remplir($centre, o.centres);
+				remplir($statut, o.statuts);
+			}
+		});
 
 		$f.find('#cc-btn-search').on('click', function () {
 			state.filters.session = $f.find('[data-fieldname="session"]').val() || null;
@@ -387,14 +398,12 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 					</div>
 
 					<div class="cc-modal-actions">
-						<button class="cc-action-review" data-status="Dossier en cours d'examen">Mettre en cours</button>
-						${d.mode_admission === 'Concours'
-							? '<button class="cc-action-concours" data-status="Autorisé à concourir">Autoriser à concourir</button>'
-							: '<button class="cc-action-accept" data-status="Accepté">Accepter</button>'}
-						<button class="cc-action-reject" data-status="Refusé">Rejeter</button>
-						${['Accepté', "Liste d'attente"].includes(d.candidature_status)
-							? '<button class="cc-action-reject" data-status="Désisté">Désistement</button>'
-							: ''}
+						${(d.droits || {}).mettre_en_cours ? '<button class="cc-action-review" data-status="Dossier en cours d\'examen">Mettre en cours</button>' : ''}
+						${(d.droits || {}).autoriser_concours ? '<button class="cc-action-concours" data-status="Autorisé à concourir">Autoriser à concourir</button>' : ''}
+						${(d.droits || {}).accepter ? '<button class="cc-action-accept" data-status="Accepté">Accepter</button>' : ''}
+						${(d.droits || {}).rejeter ? '<button class="cc-action-reject" data-status="Refusé">Rejeter</button>' : ''}
+						${(d.droits || {}).desister ? '<button class="cc-action-reject" data-status="Désisté">Désistement</button>' : ''}
+						${(d.droits || {}).decider ? '' : '<span class="text-muted" style="font-size:12px;">Consultation seule : les décisions sont prises par la scolarité.</span>'}
 					</div>
 				</div>
 			</div>

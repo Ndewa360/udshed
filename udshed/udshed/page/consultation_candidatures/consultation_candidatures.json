@@ -5,7 +5,7 @@
  "doctype": "Page",
  "icon": "eye",
  "idx": 0,
- "modified": "2026-08-19 00:00:00.000000",
+ "modified": "2026-11-25 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "consultation-candidatures",
@@ -16,10 +16,13 @@
    "role": "System Manager"
   },
   {
-   "role": "Coordonateur"
+   "role": "Registration Manager"
   },
   {
    "role": "Agent de scolarité"
+  },
+  {
+   "role": "Coordonateur"
   }
  ],
  "script": null,

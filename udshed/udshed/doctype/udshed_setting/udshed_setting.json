@@ -5,7 +5,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "g\u00e9n\u00e9ral_tab",
+  "général_tab",
   "current_year",
   "column_break_lpdk",
   "school_name",
@@ -30,14 +30,14 @@
  ],
  "fields": [
   {
-   "fieldname": "g\u00e9n\u00e9ral_tab",
+   "fieldname": "général_tab",
    "fieldtype": "Tab Break",
-   "label": "G\u00e9n\u00e9ral"
+   "label": "Général"
   },
   {
    "fieldname": "current_year",
    "fieldtype": "Link",
-   "label": "Ann\u00e9e Acad\u00e9mique courante",
+   "label": "Année Académique courante",
    "options": "Academic Year"
   },
   {
@@ -49,7 +49,8 @@
    "fieldname": "school_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Nom de l'\u00e9tablissement"
+   "label": "Nom de l'établissement",
+   "permlevel": 1
   },
   {
    "fieldname": "column_break_lpdk",
@@ -58,7 +59,8 @@
   {
    "fieldname": "school_logo",
    "fieldtype": "Attach Image",
-   "label": "Logo"
+   "label": "Logo",
+   "permlevel": 1
   },
   {
    "fieldname": "column_break_ecole",
@@ -67,70 +69,79 @@
   {
    "fieldname": "school_institute",
    "fieldtype": "Data",
-   "label": "Institut / Ecole"
+   "label": "Institut / Ecole",
+   "permlevel": 1
   },
   {
    "fieldname": "school_address",
    "fieldtype": "Data",
-   "label": "Adresse (BP, ville)"
+   "label": "Adresse (BP, ville)",
+   "permlevel": 1
   },
   {
    "fieldname": "school_phone",
    "fieldtype": "Data",
-   "label": "T\u00e9l\u00e9phone"
+   "label": "Téléphone",
+   "permlevel": 1
   },
   {
    "fieldname": "school_email",
    "fieldtype": "Data",
-   "label": "Email"
+   "label": "Email",
+   "permlevel": 1
   },
   {
    "fieldname": "school_website",
    "fieldtype": "Data",
-   "label": "Site web"
+   "label": "Site web",
+   "permlevel": 1
   },
   {
    "fieldname": "section_break_bsrn",
-    "fieldtype": "Section Break"
+   "fieldtype": "Section Break"
   },
   {
-    "fieldname": "section_break_emails",
-    "fieldtype": "Section Break",
-    "label": "Notifications par email"
+   "fieldname": "section_break_emails",
+   "fieldtype": "Section Break",
+   "label": "Notifications par email"
   },
   {
-    "fieldname": "email_coordinateur",
-    "fieldtype": "Data",
-    "label": "Email du coordonnateur",
-    "options": "Email",
-    "description": "Adresse email de notification pour les nouvelles candidatures"
+   "fieldname": "email_coordinateur",
+   "fieldtype": "Data",
+   "label": "Email du coordonnateur",
+   "options": "Email",
+   "description": "Adresse email de notification pour les nouvelles candidatures",
+   "permlevel": 1
   },
   {
-    "fieldname": "email_candidature_sender_name",
-    "fieldtype": "Data",
-    "label": "Nom de l'expéditeur",
-    "default": "UDSHED"
+   "fieldname": "email_candidature_sender_name",
+   "fieldtype": "Data",
+   "label": "Nom de l'expéditeur",
+   "default": "UDSHED",
+   "permlevel": 1
   },
   {
-    "fieldname": "column_break_emails",
-    "fieldtype": "Column Break"
+   "fieldname": "column_break_emails",
+   "fieldtype": "Column Break"
   },
   {
-    "fieldname": "email_candidature_subject",
-    "fieldtype": "Data",
-    "label": "Objet de l'email candidat",
-    "default": "Accusé de réception de votre candidature - UDSHED"
+   "fieldname": "email_candidature_subject",
+   "fieldtype": "Data",
+   "label": "Objet de l'email candidat",
+   "default": "Accusé de réception de votre candidature - UDSHED",
+   "permlevel": 1
   },
   {
    "default": "XAF",
-   "description": "Devise des montants de vacations (statistiques financi\u00e8res).",
+   "description": "Devise des montants de vacations (statistiques financières).",
    "fieldname": "devise",
    "fieldtype": "Link",
    "label": "Devise",
-   "options": "Currency"
+   "options": "Currency",
+   "permlevel": 1
   },
   {
-    "fieldname": "configuration_des_paiements_par_grade",
+   "fieldname": "configuration_des_paiements_par_grade",
    "fieldtype": "Table",
    "label": "Configuration des paiements par grade",
    "options": "Financial Payment Grade Config"
@@ -191,7 +202,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-25 09:05:00.000000",
+ "modified": "2026-11-25 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Udshed Setting",
@@ -223,6 +234,22 @@
    "read": 1,
    "role": "Teacher",
    "share": 1
+  },
+  {
+   "role": "System Manager",
+   "permlevel": 1,
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Coordonateur",
+   "permlevel": 1,
+   "read": 1
+  },
+  {
+   "role": "Teacher",
+   "permlevel": 1,
+   "read": 1
   }
  ],
  "row_format": "Dynamic",

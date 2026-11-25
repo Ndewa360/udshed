@@ -104,24 +104,10 @@ class Student(Document):
 			self.cycle = "Licence"
 
 	def after_insert(self):
-		# Crée automatiquement un compte utilisateur Frappe lié à l'étudiant.
-		if not frappe.db.exists("User", self.email):
-			user = frappe.get_doc({
-				"doctype": "User",
-				"email": self.email,
-				"first_name": self.nom,
-				"last_name": self.prenom,
-				"send_welcome_email": 0,
-				"roles": [
-					{"role": "Student"}
-				]
-			})
-			user.insert(ignore_permissions=True)
-		else:
-			user = frappe.get_doc("User", self.email)
+		# Compte Frappe de l'étudiant : identifiant = matricule (connexion /login).
+		from udshed.utils.compte_etudiant import assurer_compte
 
-		# Lie l'utilisateur à l'étudiant
-		self.db_set("utilisateur", user.name)
+		self.utilisateur = assurer_compte(self)
 
 	def after_delete(self):
 		# Supprime le compte utilisateur quand l'étudiant est supprimé

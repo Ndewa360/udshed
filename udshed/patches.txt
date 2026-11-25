@@ -14,3 +14,5 @@ udshed.patches.normaliser_roles
 udshed.patches.nom_complet_migration
 udshed.patches.pointage_seances_futures
 udshed.patches.depublier_web_form_reinscription
+udshed.patches.campagne_admission
+udshed.patches.compte_etudiant_matricule

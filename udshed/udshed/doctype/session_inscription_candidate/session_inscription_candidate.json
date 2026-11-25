@@ -94,7 +94,7 @@
    "fieldname": "session_inscription",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Session d'inscription",
+   "label": "Campagne d'admission",
    "options": "Session Inscription"
   },
   {
@@ -433,9 +433,9 @@
   },
   {
    "fieldname": "examination_centre",
-   "fieldtype": "Select",
-   "label": "Examination Centre",
-   "options": "Bangangté\nBafoussam\nYaoundé\nDouala"
+   "fieldtype": "Data",
+   "label": "Centre d'examen",
+   "description": "Un des centres de la campagne d'admission."
   },
   {
    "fieldname": "home_city",
@@ -528,40 +528,57 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-25 12:00:00.000000",
+ "modified": "2026-11-25 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Inscription Candidate",
  "naming_rule": "Expression",
  "owner": "Administrator",
-  "permissions": [
-   {
-    "create": 1,
-    "delete": 1,
-    "email": 1,
-    "export": 1,
-    "print": 1,
-    "read": 1,
-    "report": 1,
-    "role": "System Manager",
-    "share": 1,
-    "write": 1
-   },
-    {
-     "create": 1,
-     "role": "Guest"
-    },
-    {
-     "read": 1,
-     "write": 1,
-     "role": "Coordonateur"
-    },
-    {
-     "read": 1,
-     "write": 1,
-     "role": "Agent de scolarité"
-    }
-   ],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "Registration Manager"
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "write": 1,
+   "role": "Agent de scolarité"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur"
+  },
+  {
+   "create": 1,
+   "role": "Guest"
+  }
+ ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",

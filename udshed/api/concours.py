@@ -232,6 +232,12 @@ def _contexte_convocation(fiche):
 	}
 
 
+def _nom_etablissement():
+	from udshed.utils.etablissement import etablissement
+
+	return etablissement().nom
+
+
 def envoyer_convocation(fiche_name):
 	"""Envoie la convocation. Un échec d'envoi est journalisé sans bloquer l'autorisation."""
 	from udshed.api.candidature import get_school_logo_url
@@ -247,7 +253,7 @@ def envoyer_convocation(fiche_name):
 		frappe.sendmail(
 			recipients=[candidature.email],
 			sender=_get_sender(),
-			subject=_("Convocation au concours {0} - Udshed").format(args["concours"]),
+			subject=_("Convocation au concours {0} - {1}").format(args["concours"], _nom_etablissement()),
 			template="concours_convocation",
 			args=args,
 			now=True,

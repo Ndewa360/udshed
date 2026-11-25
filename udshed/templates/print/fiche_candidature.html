@@ -73,15 +73,7 @@
         <img class="logo" src="{{ udshed_logo }}">
         <div class="brand">
             <div class="univ">{{ school_name }}</div>
-            <div class="sub">Admissions &amp; Scolarité &middot; Session {{ "2025-2026" }}</div>
-        </div>
-        <div class="logo-space">
-            {% set setting_logo = frappe.db.get_single_value("Udshed Setting", "school_logo") %}
-            {% if setting_logo %}
-                <img class="logo" src="{{ frappe.utils.get_url(setting_logo) }}">
-            {% else %}
-                <div class="logo-placeholder">Logo</div>
-            {% endif %}
+            <div class="sub">Admissions &amp; Scolarité &middot; Candidatures {{ annee }}</div>
         </div>
         <div class="titre">
             <div class="doc">Fiche de candidature</div>

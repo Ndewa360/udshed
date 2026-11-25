@@ -29,7 +29,7 @@
     "icon": "list",
     "indent": 1,
     "keep_closed": 0,
-    "label": "Session Inscription",
+    "label": "Campagnes d'admission",
     "link_to": "Session Inscription",
     "link_type": "DocType",
     "navigate_to_tab": null,
@@ -48,6 +48,22 @@
     "label": "Dossier candidats",
     "link_to": "Session Inscription Candidate",
     "link_type": "DocType",
+    "navigate_to_tab": null,
+    "route_options": null,
+    "show_arrow": 0,
+    "type": "Link",
+    "url": null
+   },
+   {
+    "child": 1,
+    "collapsible": 1,
+    "filters": null,
+    "icon": "search",
+    "indent": 1,
+    "keep_closed": 0,
+    "label": "Consultation des candidatures",
+    "link_to": "consultation-candidatures",
+    "link_type": "Page",
     "navigate_to_tab": null,
     "route_options": null,
     "show_arrow": 0,
@@ -86,22 +102,22 @@
     "type": "Link",
     "url": null
    },
-    {
-     "child": 1,
-     "collapsible": 0,
-     "filters": null,
-     "icon": "bar-chart",
-     "indent": 1,
-     "keep_closed": 0,
-     "label": "Rapport général",
-     "link_to": "rapport-general",
-     "link_type": "Page",
-     "navigate_to_tab": null,
-     "route_options": null,
-     "show_arrow": 0,
-     "type": "Link",
-     "url": null
-    },
+   {
+    "child": 1,
+    "collapsible": 0,
+    "filters": null,
+    "icon": "bar-chart",
+    "indent": 1,
+    "keep_closed": 0,
+    "label": "Rapport général",
+    "link_to": "rapport-general",
+    "link_type": "Page",
+    "navigate_to_tab": null,
+    "route_options": null,
+    "show_arrow": 0,
+    "type": "Link",
+    "url": null
+   },
    {
     "child": 0,
     "collapsible": 1,
@@ -166,7 +182,6 @@
     "type": "Link",
     "url": null
    },
-
    {
     "child": 0,
     "collapsible": 1,
@@ -184,7 +199,7 @@
     "url": null
    }
   ],
-  "modified": "2026-11-02 10:00:00.000000",
+  "modified": "2026-11-25 14:00:00.000000",
   "module": "Udshed",
   "module_onboarding": null,
   "name": "Inscription - Reinscription",

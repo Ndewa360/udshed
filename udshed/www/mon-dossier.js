@@ -1,5 +1,7 @@
-// Page publique « Mon admission » : le candidat voit son résultat et,
-// s'il est admis, confirme sa place (finalisation) ou y renonce.
+// Espace candidat « Mon dossier » : suivi du dossier, convocation au concours,
+// résultat et, pour un admis, confirmation de la place (inscription) ou renoncement.
+// Le jeton d'inscription ne passe jamais dans l'URL : il est remis au formulaire
+// d'inscription par le stockage de session du navigateur.
 $(document).ready(function () {
     var numero = "", nom = "", infos = null;
 
@@ -82,9 +84,20 @@ $(document).ready(function () {
                 + (i.motif ? '<div class="adm-boite">' + esc(i.motif) + "</div>" : ""));
         } else if (i.etat === "desiste") {
             html = bloc("–", "neutre", "Vous avez renoncé à votre place", '<div class="adm-boite">' + esc(i.motif || "") + "</div>");
+        } else if (i.etat === "convoque") {
+            var conv = i.convocation || {};
+            html = bloc("✎", "att", "Vous êtes convoqué(e) au concours", contexte + formation
+                + '<div class="adm-boite">'
+                + (conv.centre ? "Centre d'examen : <b>" + esc(conv.centre) + "</b><br>" : "")
+                + (conv.numero_table ? "Numéro de table : <b>" + esc(conv.numero_table) + "</b><br>" : "")
+                + (conv.dates ? "Épreuves : <b>" + esc(conv.dates) + "</b><br>" : "")
+                + "Votre convocation détaillée vous a été envoyée par e-mail. Présentez-vous avec une pièce d'identité.</div>");
         } else {
-            html = bloc("…", "neutre", "Candidature en cours de traitement", contexte
-                + '<div class="adm-boite">Statut actuel : <b>' + esc(i.statut) + "</b>. Vous serez informé(e) par e-mail.</div>");
+            html = bloc("…", "neutre", "Candidature en cours de traitement", contexte + formation
+                + '<div class="adm-boite">Statut actuel : <b>' + esc(i.statut) + "</b>"
+                + (i.mode ? "<br>Mode d'admission : <b>" + esc(i.mode) + "</b>" : "")
+                + (i.depose_le ? "<br>Déposée le " + esc(i.depose_le) : "")
+                + "<br>Vous serez informé(e) par e-mail de chaque étape.</div>");
         }
 
         $("#adm-form, .adm-intro").hide();
@@ -99,8 +112,15 @@ $(document).ready(function () {
     });
 
     $("#adm-resultat").on("click", ".adm-confirmer", function () {
-        window.location.href = "/inscription-form?numero_dossier=" + encodeURIComponent(numero)
-            + "&nom_candidat=" + encodeURIComponent(nom) + "&token=" + encodeURIComponent(infos.token || "");
+        try {
+            sessionStorage.setItem("udshed_inscription", JSON.stringify({
+                numero_dossier: numero, nom_candidat: nom, token: infos.token || ""
+            }));
+        } catch (e) {
+            erreur("Votre navigateur bloque le stockage de session : autorisez-le pour finaliser votre inscription.");
+            return;
+        }
+        window.location.href = "/inscription-form";
     });
 
     $("#adm-resultat").on("click", ".adm-renoncer", function (e) {

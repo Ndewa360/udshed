@@ -1,81 +1,62 @@
-<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; border-radius: 12px; overflow: hidden; border: 1px solid #e2e4e9;">
+{% extends "templates/emails/cadre_etablissement.html" %}
 
-  <!-- Header -->
-  <div style="background: #1e2025; padding: 32px; text-align: center;">
-    {% if logo_url %}
-    <img src="{{ logo_url }}" alt="Udshed" style="display: block; max-height: 72px; max-width: 200px; margin: 0 auto 12px;" />
+{% block contenu %}
+<h2 style="color: #004085; font-size: 18px; margin: 0 0 16px 0;">Vous êtes autorisé(e) à concourir</h2>
+
+<p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+  Bonjour <strong>{{ first_name }} {{ last_name }}</strong>,
+</p>
+<p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+  Votre dossier a été vérifié. Vous êtes convoqué(e) aux épreuves du
+  <strong>{{ concours }}</strong> (année académique {{ academic_year }}).
+</p>
+
+<!-- Convocation -->
+<div style="background: #f5f6f8; border: 1px solid #e2e4e9; border-radius: 10px; padding: 20px; margin: 24px 0;">
+  <span style="display: block; color: #6b6d7a; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Votre convocation</span>
+
+  <table style="width: 100%; font-size: 14px; color: #3c3e44;">
+    <tr>
+      <td style="padding: 4px 0; color: #6b6d7a; width: 40%;">Numéro de table</td>
+      <td style="padding: 4px 0; font-weight: bold; font-size: 18px;">{{ numero_table }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; color: #6b6d7a;">Centre d'examen</td>
+      <td style="padding: 4px 0; font-weight: bold;">{{ centre or "À préciser" }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; color: #6b6d7a;">Numéro de dossier</td>
+      <td style="padding: 4px 0;">{{ doc_name }}</td>
+    </tr>
+    {% if date_debut %}
+    <tr>
+      <td style="padding: 4px 0; color: #6b6d7a;">Dates des épreuves</td>
+      <td style="padding: 4px 0;">{% if date_fin and date_fin != date_debut %}du {{ date_debut }} au {{ date_fin }}{% else %}le {{ date_debut }}{% endif %}</td>
+    </tr>
     {% endif %}
-    <h1 style="color: #ffffff; font-size: 20px; margin: 0; letter-spacing: -0.02em;">Udshed</h1>
-    <p style="color: #9ca0a8; font-size: 13px; margin: 6px 0 0 0;">Convocation au concours</p>
-  </div>
-
-  <!-- Body -->
-  <div style="padding: 32px; background: #ffffff;">
-    <h2 style="color: #004085; font-size: 18px; margin: 0 0 16px 0;">Vous êtes autorisé(e) à concourir</h2>
-
-    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
-      Bonjour <strong>{{ first_name }} {{ last_name }}</strong>,
-    </p>
-    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
-      Votre dossier a été vérifié. Vous êtes convoqué(e) aux épreuves du
-      <strong>{{ concours }}</strong> (année académique {{ academic_year }}).
-    </p>
-
-    <!-- Convocation -->
-    <div style="background: #f5f6f8; border: 1px solid #e2e4e9; border-radius: 10px; padding: 20px; margin: 24px 0;">
-      <span style="display: block; color: #6b6d7a; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Votre convocation</span>
-
-      <table style="width: 100%; font-size: 14px; color: #3c3e44;">
-        <tr>
-          <td style="padding: 4px 0; color: #6b6d7a; width: 40%;">Numéro de table</td>
-          <td style="padding: 4px 0; font-weight: bold; font-size: 18px;">{{ numero_table }}</td>
-        </tr>
-        <tr>
-          <td style="padding: 4px 0; color: #6b6d7a;">Centre d'examen</td>
-          <td style="padding: 4px 0; font-weight: bold;">{{ centre or "À préciser" }}</td>
-        </tr>
-        <tr>
-          <td style="padding: 4px 0; color: #6b6d7a;">Numéro de dossier</td>
-          <td style="padding: 4px 0;">{{ doc_name }}</td>
-        </tr>
-        {% if date_debut %}
-        <tr>
-          <td style="padding: 4px 0; color: #6b6d7a;">Dates des épreuves</td>
-          <td style="padding: 4px 0;">{% if date_fin and date_fin != date_debut %}du {{ date_debut }} au {{ date_fin }}{% else %}le {{ date_debut }}{% endif %}</td>
-        </tr>
-        {% endif %}
-        {% for f in formations %}
-        <tr>
-          <td style="padding: 4px 0; color: #6b6d7a;">{% if loop.first %}Formation(s) demandée(s){% endif %}</td>
-          <td style="padding: 4px 0;">{{ f }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-    </div>
-
-    {% if epreuves %}
-    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6; margin-bottom: 8px;"><strong>Épreuves à composer :</strong></p>
-    <table style="width: 100%; font-size: 14px; color: #3c3e44; border-collapse: collapse; margin-bottom: 24px;">
-      {% for e in epreuves %}
-      <tr>
-        <td style="padding: 8px 10px; border-bottom: 1px solid #e2e4e9;">{{ e.matiere }}</td>
-        <td style="padding: 8px 10px; border-bottom: 1px solid #e2e4e9; color: #6b6d7a; text-align: right;">{{ e.date or "Date communiquée ultérieurement" }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-    {% endif %}
-
-    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
-      Présentez-vous à votre centre <strong>30 minutes avant</strong> le début de la première épreuve,
-      muni(e) de cette convocation (imprimée ou sur téléphone) et d'une <strong>pièce d'identité</strong>.
-    </p>
-  </div>
-
-  <!-- Footer -->
-  <div style="padding: 20px 32px; background: #f5f6f8; border-top: 1px solid #e2e4e9; text-align: center;">
-    <p style="color: #9ca0a8; font-size: 12px; margin: 0;">
-      Udshed — Plateforme de gestion des inscriptions académiques
-    </p>
-  </div>
-
+    {% for f in formations %}
+    <tr>
+      <td style="padding: 4px 0; color: #6b6d7a;">{% if loop.first %}Formation(s) demandée(s){% endif %}</td>
+      <td style="padding: 4px 0;">{{ f }}</td>
+    </tr>
+    {% endfor %}
+  </table>
 </div>
+
+{% if epreuves %}
+<p style="color: #3c3e44; font-size: 15px; line-height: 1.6; margin-bottom: 8px;"><strong>Épreuves à composer :</strong></p>
+<table style="width: 100%; font-size: 14px; color: #3c3e44; border-collapse: collapse; margin-bottom: 24px;">
+  {% for e in epreuves %}
+  <tr>
+    <td style="padding: 8px 10px; border-bottom: 1px solid #e2e4e9;">{{ e.matiere }}</td>
+    <td style="padding: 8px 10px; border-bottom: 1px solid #e2e4e9; color: #6b6d7a; text-align: right;">{{ e.date or "Date communiquée ultérieurement" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+  Présentez-vous à votre centre <strong>30 minutes avant</strong> le début de la première épreuve,
+  muni(e) de cette convocation (imprimée ou sur téléphone) et d'une <strong>pièce d'identité</strong>.
+</p>
+{% endblock %}

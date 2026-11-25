@@ -1,15 +1,15 @@
 import frappe
 
+from udshed.utils.campagne import infos_publiques
+
+
 def get_context(context):
-    context.filieres = frappe.get_all(
-        "Field of study",
-        fields=["name", "name_of_field", "field_of_study_code", "faculte"],
-        order_by="name_of_field"
-    )
-    context.centres_examen = ["Bangangté", "Bafoussam", "Yaoundé", "Douala"]
-    context.niveaux = [
-        "BTS 1", "BTS 2",
-        "LICENCE 1", "LICENCE 2", "LICENCE 3",
-        "MASTER 1", "MASTER 2"
-    ]
-    context.max_file_size = 10  # MB
+	"""Formulaire générique de candidature : titre, établissement, campagne
+	et centres viennent de la campagne d'admission courante (rien de figé)."""
+	infos = infos_publiques()
+	context.udshed_infos = infos
+	campagne = infos["campagne"]
+	etab = infos["etablissement"]
+	if campagne:
+		context.title = "{0} — {1}".format(campagne["titre"], etab.nom)
+	context.max_file_size = 10  # Mo
