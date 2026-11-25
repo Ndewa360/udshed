@@ -36,6 +36,7 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 		.cc-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 		.cc-badge-waiting { background: #fff3cd; color: #856404; }
 		.cc-badge-review { background: #cce5ff; color: #004085; }
+		.cc-badge-concours { background: #ece4f7; color: #5a3d8a; }
 		.cc-badge-accepted { background: #d4edda; color: #155724; }
 		.cc-badge-rejected { background: #f8d7da; color: #721c24; }
 		.cc-badge-enrolled { background: #d1ecf1; color: #0c5460; }
@@ -60,6 +61,7 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 		.cc-modal-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 16px 24px; border-top: 1px solid #e2e4e9; }
 		.cc-modal-actions button { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid #e2e4e9; }
 		.cc-action-review { background: #cce5ff; color: #004085; border-color: #b8daff !important; }
+		.cc-action-concours { background: #ece4f7; color: #5a3d8a; border-color: #d6c7ee !important; }
 		.cc-action-accept { background: #d4edda; color: #155724; border-color: #c3e6cb !important; }
 		.cc-action-reject { background: #f8d7da; color: #721c24; border-color: #f5c6cb !important; }
 		.cc-action-validate { background: #1e2025; color: #fff; border-color: #1e2025 !important; }
@@ -178,6 +180,7 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 			{ key: 'total', label: 'Total', color: '#1e2025' },
 			{ key: 'en_attente', label: 'En attente', color: '#856404', bg: '#fff3cd', statut: 'En attente' },
 			{ key: 'en_cours', label: 'En cours', color: '#004085', bg: '#cce5ff', statut: 'Dossier en cours d\'examen' },
+			{ key: 'autorise', label: 'Au concours', color: '#5a3d8a', bg: '#ece4f7', statut: 'Autorisé à concourir' },
 			{ key: 'accepte', label: 'Acceptées', color: '#155724', bg: '#d4edda', statut: 'Accepté' },
 			{ key: 'refuse', label: 'Refusées', color: '#721c24', bg: '#f8d7da', statut: 'Refusé' },
 			{ key: 'inscrit', label: 'Inscrites', color: '#0c5460', bg: '#d1ecf1', statut: 'Inscrit' }
@@ -227,6 +230,7 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 		switch (statut) {
 			case 'En attente': return 'cc-badge-waiting';
 			case 'Dossier en cours d\'examen': return 'cc-badge-review';
+			case 'Autorisé à concourir': return 'cc-badge-concours';
 			case 'Accepté': return 'cc-badge-accepted';
 			case 'Refusé': return 'cc-badge-rejected';
 			case 'Inscrit': return 'cc-badge-enrolled';
@@ -376,6 +380,7 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 						<div class="cc-detail-section">
 							<h4>Statut</h4>
 							<div><span class="cc-badge ${badge_class(d.candidature_status)}">${frappe.utils.escape_html(d.candidature_status)}</span></div>
+							<div style="margin-top:8px;font-size:13px;color:#3c3e44;"><strong>Admission :</strong> ${d.mode_admission === 'Concours' ? 'sur concours (' + frappe.utils.escape_html(d.concours) + ')' : 'sur dossier'}</div>
 							${d.status_comment ? '<div style="margin-top:8px;font-size:13px;color:#3c3e44;"><strong>Observation :</strong> ' + frappe.utils.escape_html(d.status_comment) + '</div>' : ''}
 							${d.status_updated_on ? '<div style="margin-top:4px;font-size:12px;color:#6b6d7a;">Dernière mise à jour : ' + frappe.utils.escape_html(d.status_updated_on) + '</div>' : ''}
 						</div>
@@ -383,9 +388,13 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 
 					<div class="cc-modal-actions">
 						<button class="cc-action-review" data-status="Dossier en cours d'examen">Mettre en cours</button>
-						<button class="cc-action-accept" data-status="Accepté">Accepter</button>
+						${d.mode_admission === 'Concours'
+							? '<button class="cc-action-concours" data-status="Autorisé à concourir">Autoriser à concourir</button>'
+							: '<button class="cc-action-accept" data-status="Accepté">Accepter</button>'}
 						<button class="cc-action-reject" data-status="Refusé">Rejeter</button>
-						<button class="cc-action-validate" data-status="Inscrit">Valider l'inscription</button>
+						${['Accepté', "Liste d'attente"].includes(d.candidature_status)
+							? '<button class="cc-action-reject" data-status="Désisté">Désistement</button>'
+							: ''}
 					</div>
 				</div>
 			</div>
@@ -405,12 +414,13 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 			var new_status = $(this).data('status');
 			if (new_status === 'Refusé') {
 				prompt_reject(d.name);
-			} else if (new_status === 'Inscrit') {
-				frappe.confirm(
-					'Valider l\'inscription de <strong>' + frappe.utils.escape_html(d.last_name + ' ' + d.first_name) + '</strong> ?',
-					function () {
-						call_update_status(d.name, new_status, null);
-					}
+			} else if (new_status === 'Désisté') {
+				// Le candidat admis ne vient pas : la place est reproposée à la liste d'attente.
+				frappe.prompt(
+					{ fieldtype: 'Small Text', fieldname: 'motif', label: 'Motif du désistement', reqd: 1 },
+					function (v) { call_update_status(d.name, 'Désisté', v.motif); },
+					'Le candidat ne vient pas',
+					'Enregistrer'
 				);
 			} else {
 				frappe.confirm(

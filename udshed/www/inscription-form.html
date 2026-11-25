@@ -12,6 +12,7 @@
         <img src="/assets/udshed/images/logo.png" alt="UDSHED" style="max-width: 150px; margin-bottom: 20px;">
         <h3 class="mb-1">Formulaire d'inscription académique</h3>
         <p id="candidat-authentifie" class="text-muted">Vérification du candidat...</p>
+        <p id="date-limite" class="alert alert-warning" style="display: none; font-size: 14px;"></p>
     </div>
 
     <div id="form-error" class="alert alert-danger" style="display: none;"></div>
@@ -216,6 +217,10 @@
                 <button type="submit" id="btn_enregistrer" class="btn btn-primary" style="display: none;">Confirmer ma grille et terminer</button>
             </div>
         </form>
+        <div id="bloc-renoncer" class="text-center text-muted mb-3" style="font-size: 13px;">
+            Vous ne souhaitez plus rejoindre l'établissement ?
+            <a href="#" id="lien-renoncer" style="color: #b02a37;">Je renonce à ma place</a>
+        </div>
         <p class="text-center mb-5"><a href="/inscription/inscription">Retour à l'authentification</a></p>
     </div>
 </div>

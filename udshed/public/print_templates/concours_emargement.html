@@ -1,0 +1,93 @@
+{# Liste d'émargement d'un concours : une section (saut de page) par centre. #}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+    @page {
+        size: A4 {% if epreuves | length > 4 %}landscape{% else %}portrait{% endif %};
+        margin: 12mm 10mm;
+        @bottom-center {
+            content: "{{ school_name }} — Liste d'émargement — {{ concours.name }} — Page " counter(page) " / " counter(pages);
+            font-size: 7pt;
+            color: #7f8c8d;
+        }
+        @bottom-right {
+            content: "Édité le {{ date_emission }}";
+            font-size: 7pt;
+            color: #7f8c8d;
+        }
+    }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #222; margin: 0; font-size: 9.5pt; }
+    .centre { page-break-after: always; }
+    .centre:last-child { page-break-after: auto; }
+    .entete { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #003B6F; padding-bottom: 8px; margin-bottom: 10px; }
+    .entete img { height: 52px; }
+    .entete .ecole { font-size: 11pt; font-weight: bold; color: #003B6F; }
+    .entete .sous { font-size: 9pt; color: #555; }
+    h1 { font-size: 14pt; text-align: center; margin: 6px 0 2px; letter-spacing: 0.04em; }
+    .infos { text-align: center; font-size: 10pt; margin-bottom: 10px; }
+    .infos strong { color: #003B6F; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #555; padding: 5px 6px; vertical-align: middle; }
+    th { background: #e8eef5; font-size: 8.5pt; text-transform: uppercase; }
+    td.num { text-align: center; width: 8mm; }
+    td.table-no { font-weight: bold; white-space: nowrap; width: 24mm; }
+    td.signature { height: 11mm; }
+    td.sans-objet { background: repeating-linear-gradient(45deg, #eee, #eee 3px, #fff 3px, #fff 6px); }
+    .pied { margin-top: 14px; display: flex; justify-content: space-between; font-size: 9.5pt; }
+    .pied div { width: 45%; }
+    .pied .ligne { border-bottom: 1px dotted #555; height: 14mm; }
+</style>
+</head>
+<body>
+{% for centre, candidats in centres %}
+<div class="centre">
+    <div class="entete">
+        {% if logo_file %}<img src="{{ logo_file }}" alt="">{% endif %}
+        <div>
+            <div class="ecole">{{ school_name }}</div>
+            <div class="sous">{{ concours.titre }} — Année académique {{ concours.academic_year }}</div>
+        </div>
+    </div>
+
+    <h1>LISTE D'ÉMARGEMENT</h1>
+    <div class="infos">
+        Centre : <strong>{{ centre }}</strong> — {{ candidats | length }} candidat(s)
+        {% if concours.date_debut_epreuves %} — Épreuves du {{ frappe.utils.formatdate(concours.date_debut_epreuves, "dd/MM/yyyy") }}{% if concours.date_fin_epreuves and concours.date_fin_epreuves != concours.date_debut_epreuves %} au {{ frappe.utils.formatdate(concours.date_fin_epreuves, "dd/MM/yyyy") }}{% endif %}{% endif %}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>N°</th>
+                <th>N° de table</th>
+                <th>Nom et prénom</th>
+                {% for e in epreuves %}<th>{{ e }}</th>{% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in candidats %}
+            <tr>
+                <td class="num">{{ loop.index }}</td>
+                <td class="table-no">{{ c.numero_table }}</td>
+                <td>{{ c.nom_complet }}</td>
+                {% for compose in c.cases %}
+                <td class="signature{% if not compose %} sans-objet{% endif %}"></td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p style="font-size:8pt;color:#666;margin-top:4px;">Case hachurée : épreuve non composée par le candidat (hors de ses filières).</p>
+
+    <p style="margin-top:14px;">Nombre de présents : ............ &nbsp; Absents : ............</p>
+    <div class="pied">
+        <div>Le surveillant (nom et signature)<div class="ligne"></div></div>
+        <div>Le chef de centre (nom et signature)<div class="ligne"></div></div>
+    </div>
+</div>
+{% endfor %}
+</body>
+</html>

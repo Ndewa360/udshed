@@ -33,6 +33,7 @@ frappe.ui.form.on("Academic Reregistration", {
 			if (student.filiere) {
 				frm.set_value("filiere", student.filiere);
 			}
+			appliquer_progression(frm);
 		});
 	},
 
@@ -43,7 +44,7 @@ frappe.ui.form.on("Academic Reregistration", {
 		if (!frm.doc.reinscription_session) return;
 
 		frappe.db.get_doc("Session Reinscription", frm.doc.reinscription_session).then(session => {
-			frm.set_value("academic_year", session.academic_year);
+			frm.set_value("academic_year", session.academic_year).then(() => appliquer_progression(frm));
 		});
 	},
 
@@ -92,6 +93,27 @@ frappe.ui.form.on("Academic Reregistration", {
 		charger_matieres_precedentes(frm);
 	}
 });
+
+
+// =============================================
+// Niveau et filière imposés par la Progression Academique
+// (le serveur refuse toute autre valeur)
+// =============================================
+function appliquer_progression(frm) {
+	if (!frm.is_new() || !frm.doc.student || !frm.doc.academic_year) return;
+	frappe.call({
+		method: "udshed.api.progression.get_progression_reinscription",
+		args: { student: frm.doc.student, academic_year: frm.doc.academic_year },
+		callback(r) {
+			const p = r.message || {};
+			if (p.message) {
+				frappe.msgprint({ title: __("Réinscription impossible"), message: p.message, indicator: "red" });
+				return;
+			}
+			frm.set_value("filiere", p.filiere).then(() => frm.set_value("niveau", p.niveau));
+		}
+	});
+}
 
 
 // =============================================

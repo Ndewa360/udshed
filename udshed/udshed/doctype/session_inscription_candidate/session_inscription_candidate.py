@@ -11,6 +11,20 @@ from udshed.api.candidature import (
 	poser_cookie_fiche,
 )
 from udshed.utils import securite
+from udshed.udshed.doctype.concours.concours import concours_pour_formation
+from udshed.api.concours import (
+	STATUT_AUTORISE,
+	STATUT_DESISTE,
+	STATUT_LISTE_ATTENTE,
+	STATUTS_GERES_PAR_CONCOURS,
+	candidat_non_admis_publie,
+	envoyer_convocation,
+	envoyer_resultat_liste_attente,
+	inscrire_candidat,
+	retirer_candidat,
+	verifier_autorisation,
+	verifier_retrait,
+)
 
 
 class SessionInscriptionCandidate(Document):
@@ -52,9 +66,39 @@ class SessionInscriptionCandidate(Document):
 			if valeur:
 				setattr(self, champ, _nettoyer_telephone(valeur))
 		self._deduire_filiere_niveau_des_choix()
+		self._rattacher_concours()
+		self._controler_admission()
 		self._proteger_statut_accepte()
+		self._controler_statut_concours()
 		if self.candidature_status == "Refusé" and not (self.status_comment or "").strip():
 			frappe.throw(_("Le motif du rejet est obligatoire pour un statut « Refusé »."))
+
+	def _controler_admission(self):
+		"""« Accepté » est une offre de place, pas une inscription :
+		- « Inscrit » n'est posé que par la finalisation (matricule, fiche étudiant) ;
+		- « Désisté » passe par l'action « Enregistrer un désistement » (place reproposée) ;
+		- l'admission fixe la date limite de finalisation."""
+		if self.is_new():
+			return
+		avant = self.get_doc_before_save()
+		ancien = avant.candidature_status if avant else None
+		nouveau = self.candidature_status
+		if ancien == nouveau:
+			return
+		if nouveau == "Inscrit":
+			frappe.throw(
+				_("Le statut « Inscrit » ne se pose pas à la main : il est attribué automatiquement "
+				  "quand le candidat admis finalise son inscription (création du matricule).")
+			)
+		if nouveau == STATUT_DESISTE and not frappe.flags.admission_par_jury:
+			frappe.throw(
+				_("Utilisez l'action « Enregistrer un désistement » : elle demande le motif et "
+				  "repropose la place au suivant de la liste d'attente.")
+			)
+		if nouveau == "Accepté":
+			from udshed.api.concours_finalisation import echeance_finalisation
+
+			self.finaliser_avant = echeance_finalisation(self)
 
 	def _deduire_filiere_niveau_des_choix(self):
 		"""Le formulaire ne collecte plus filière/niveau en haut de page : on les
@@ -75,6 +119,56 @@ class SessionInscriptionCandidate(Document):
 				"Field of study Level", niveau_name, "level"
 			)
 			self.niveau = niveau_label or niveau_name
+
+	def _rattacher_concours(self):
+		"""Mode d'admission : « Concours » dès qu'une des formations demandées
+		(1er, 2e ou 3e choix) est au programme d'un concours de la campagne,
+		sinon « Dossier ». Recalculé tant que le dossier n'est pas tranché."""
+		if not self.is_new() and self.candidature_status not in ("En attente", "Dossier en cours d'examen"):
+			return
+		concours = None
+		for row in self.get("choix_de_formation") or []:
+			concours = concours_pour_formation(self.session_inscription, row.get("filiere"), row.get("niveau"))
+			if concours:
+				break
+		self.concours = concours
+		self.mode_admission = "Concours" if concours else "Dossier"
+
+	def _controler_statut_concours(self):
+		"""Règles du circuit concours :
+		- « Autorisé à concourir » : seulement pour un dossier rattaché à un concours ouvert ;
+		- « Accepté » : pour un candidat au concours, seule la délibération du jury
+		  le prononce (frappe.flags.admission_par_jury) ;
+		- quitter « Autorisé à concourir » retire le candidat du concours, tant
+		  qu'aucune note n'est saisie."""
+		if self.is_new():
+			return
+		avant = self.get_doc_before_save()
+		ancien = avant.candidature_status if avant else None
+		nouveau = self.candidature_status
+		if ancien == nouveau:
+			return
+		if nouveau == STATUT_AUTORISE:
+			verifier_autorisation(self)
+		if frappe.flags.admission_par_jury:
+			return
+		if nouveau in STATUTS_GERES_PAR_CONCOURS or ancien in STATUTS_GERES_PAR_CONCOURS:
+			frappe.throw(
+				_("Le statut « {0} » est géré par le concours (publication des résultats, "
+				  "désistement) : il ne se modifie pas à la main.").format(
+					nouveau if nouveau in STATUTS_GERES_PAR_CONCOURS else ancien)
+			)
+		if (
+			nouveau == "Accepté"
+			and self.mode_admission == "Concours"
+			and not candidat_non_admis_publie(self)
+		):
+			frappe.throw(
+				_("Ce candidat passe par le concours {0} : son admission sera prononcée par la "
+				  "délibération du jury, pas manuellement.").format(self.concours)
+			)
+		if ancien == STATUT_AUTORISE:
+			verifier_retrait(self)
 
 	def _session_inscription_courante(self):
 		"""Retourne la session d'inscription ouverte, sinon la plus récente."""
@@ -110,8 +204,16 @@ class SessionInscriptionCandidate(Document):
 			frappe.utils.now_datetime(),
 			update_modified=False,
 		)
+		if self.candidature_status == STATUT_AUTORISE:
+			fiche = inscrire_candidat(self)
+			envoyer_convocation(fiche.name)
+		elif old_doc.candidature_status == STATUT_AUTORISE and not frappe.flags.admission_par_jury:
+			retirer_candidat(self)
+
 		if self.candidature_status == "Accepté":
 			_send_confirmation_email(self)
+		elif self.candidature_status == STATUT_LISTE_ATTENTE:
+			envoyer_resultat_liste_attente(self.name)
 		elif self.candidature_status == "Refusé":
 			_send_rejection_email(self, (self.status_comment or "").strip())
 		elif self.candidature_status == "Inscrit":
@@ -126,6 +228,9 @@ class SessionInscriptionCandidate(Document):
 		if not old_doc:
 			return
 		old_status = old_doc.candidature_status
+		# Seul le désistement d'un admis au concours (géré par le concours) rouvre un « Accepté ».
+		if old_status == "Accepté" and self.candidature_status == "Désisté" and frappe.flags.admission_par_jury:
+			return
 		if old_status in ("Accepté", "Inscrit") and self.candidature_status != old_status:
 			frappe.throw(
 				_(
@@ -350,8 +455,11 @@ def get_candidate_dashboard_stats(
 		("total", None),
 		("en_attente", "En attente"),
 		("en_cours", "Dossier en cours d'examen"),
+		("autorise", "Autorisé à concourir"),
+		("liste_attente", "Liste d'attente"),
 		("accepte", "Accepté"),
 		("refuse", "Refusé"),
+		("desiste", "Désisté"),
 		("inscrit", "Inscrit"),
 	]:
 		if status_val:
@@ -452,6 +560,8 @@ def get_candidate_detail(name):
 		"id_photo": doc.id_photo or "",
 		"remittance_receipt": doc.remittance_receipt or "",
 		"candidature_status": doc.candidature_status or "En attente",
+		"mode_admission": doc.mode_admission or "Dossier",
+		"concours": doc.concours or "",
 		"status_updated_on": (
 			frappe.utils.format_datetime(doc.status_updated_on, "dd/MM/yyyy HH:mm")
 			if doc.status_updated_on else ""
@@ -469,7 +579,15 @@ def update_candidate_status(name, new_status, comment=None):
 
 	securite.exiger_personnel()
 	doc = frappe.get_doc("Session Inscription Candidate", name)
+	# Droit d'écriture vérifié AVANT tout changement, désistement compris.
 	securite.exiger_permission("Session Inscription Candidate", "write", doc=doc)
+
+	if new_status == STATUT_DESISTE:
+		from udshed.api.concours_finalisation import desister_candidature
+
+		old_status = doc.candidature_status
+		desister_candidature(name, comment)
+		return {"ok": True, "old_status": old_status, "new_status": new_status}
 	old_status = doc.candidature_status
 
 	doc.candidature_status = new_status
@@ -525,6 +643,8 @@ def _send_confirmation_email(doc):
 				"filiere": filiere_label,
 				"niveau": doc.niveau or "",
 				"centre": doc.examination_centre or "",
+				"date_limite": frappe.utils.format_date(doc.finaliser_avant) if doc.get("finaliser_avant") else "",
+				"lien_admission": frappe.utils.get_url("/mon-admission"),
 				"logo_url": get_school_logo_url(),
 			},
 			now=True,

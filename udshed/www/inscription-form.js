@@ -34,6 +34,10 @@ $(document).ready(function() {
             $("#candidat-authentifie").text("Candidat : " + candidate.nom_prenom);
             $("#filiere").val(candidate.filiere || "");
             $("#classe").val(candidate.classe || "");
+            if (candidate.finaliser_avant) {
+                $("#date-limite").html("Finalisez votre inscription <strong>avant le " + escapeHtml(candidate.finaliser_avant)
+                    + "</strong>. Passé cette date, votre place sera attribuée à un autre candidat.").show();
+            }
             $("#stepper-wrapper").show();
         },
         error: function(r) {
@@ -44,6 +48,33 @@ $(document).ready(function() {
             show_error(String(message));
             $("#btn_enregistrer").prop("disabled", false);
         }
+    });
+
+    /* ---- Renoncement à la place ---- */
+    $("#lien-renoncer").on("click", function(e) {
+        e.preventDefault();
+        var motif = window.prompt(
+            "Vous allez renoncer définitivement à votre place : elle sera proposée à un autre candidat.\n\n"
+            + "Motif (facultatif) :", "");
+        if (motif === null) {
+            return;
+        }
+        if (!window.confirm("Confirmez-vous renoncer à votre admission ? Cette action est définitive.")) {
+            return;
+        }
+        frappe.call({
+            method: "udshed.api.concours_finalisation.renoncer_admission",
+            args: { numero_dossier: numero, nom_candidat: nom, token: token, motif: motif },
+            callback: function(r) {
+                if (r.message && r.message.status === "ok") {
+                    $("#date-limite").hide();
+                    $("#bloc-renoncer").hide();
+                    $("#stepper-wrapper").html(
+                        '<div class="alert alert-secondary text-center">Votre renoncement est enregistré : '
+                        + 'votre place a été libérée. Nous vous souhaitons une bonne continuation.</div>');
+                }
+            }
+        });
     });
 
     /* ---- Religion : champ texte pour "AUTRE" ---- */

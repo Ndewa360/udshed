@@ -263,6 +263,7 @@ def _infos_candidat(dossier):
         "date_naissance": dossier.birthdate,
         "lieu_naissance": dossier.birth_place,
         "telephone": dossier.phone,
+        "finaliser_avant": frappe.utils.format_date(dossier.get("finaliser_avant")) if dossier.get("finaliser_avant") else "",
     }
 
 
@@ -368,6 +369,11 @@ def _finaliser_inscription_complete(dossier, donnees):
             "pdf_url": _pdf_url(deja_inscrit.matricule),
             "already_registered": True,
         }
+
+    # Une admission non confirmée dans le délai n'ouvre plus droit au matricule.
+    from udshed.api.concours_finalisation import verifier_delai
+
+    verifier_delai(dossier)
 
     # Transaction atomique : tout ou rien
     with _transaction_ou_erreur():
@@ -701,7 +707,7 @@ def _get_dossier(numero_dossier, nom_candidat):
         [
             "name", "first_name", "last_name", "full_name", "email", "filiere",
             "niveau", "birthdate", "birth_place", "phone", "candidature_status",
-            "sexe", "father_phone", "email_parent", "id_photo",
+            "sexe", "father_phone", "email_parent", "id_photo", "finaliser_avant",
         ],
         as_dict=True,
     )
@@ -729,6 +735,9 @@ def _verifier_candidature_validee(dossier):
             _("Votre candidature n'est pas encore validée. Statut actuel : {0}. "
               "Vous ne pouvez confirmer votre inscription qu'une fois votre candidature acceptée.").format(statut)
         )
+    from udshed.api.concours_finalisation import verifier_delai
+
+    verifier_delai(dossier)
 
 
 def _normaliser_texte(valeur):
@@ -1087,7 +1096,7 @@ def get_inscription_report(filiere=None, candidature_status=None):
 
 
 @frappe.whitelist()
-def get_liste_inscriptions(filiere=None, annee_academique=None, niveau=None, statut=None):
+def get_liste_inscriptions(filiere=None, annee_academique=None, niveau=None, statut=None, origine=None, cycle=None):
     """Liste des inscrits (page « Liste des inscriptions »).
 
     Construite à partir des Inscription Academique (candidatures ET
@@ -1098,7 +1107,8 @@ def get_liste_inscriptions(filiere=None, annee_academique=None, niveau=None, sta
 
     securite.exiger_acces_page("liste-des-inscriptions")
     return lister_inscriptions(
-        filiere=filiere, annee_academique=annee_academique, niveau=niveau, statut=statut
+        filiere=filiere, annee_academique=annee_academique, niveau=niveau, statut=statut,
+        origine=origine, cycle=cycle,
     )
 
 

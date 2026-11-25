@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "creation": "2026-11-09 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "choix",
+  "filiere",
+  "niveau",
+  "moyenne",
+  "rang",
+  "elimine",
+  "motif",
+  "ex_aequo",
+  "proposition",
+  "decision"
+ ],
+ "fields": [
+  {
+   "columns": 1,
+   "fieldname": "choix",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Choix",
+   "options": "1er choix\n2nd Choix\n3ieme Choix",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Filière",
+   "options": "Field of study",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "niveau",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Niveau",
+   "options": "Field of study Level",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "moyenne",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Moyenne",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "rang",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Rang",
+   "read_only": 1
+  },
+  {
+   "fieldname": "elimine",
+   "fieldtype": "Check",
+   "label": "Éliminé",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "motif",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Motif",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ex_aequo",
+   "fieldtype": "Check",
+   "label": "Ex æquo à départager",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "proposition",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Proposition (classement)",
+   "options": "\nAdmis\nListe d'attente\nNon admis",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "description": "Arrêtée lors de la délibération (phase 4).",
+   "fieldname": "decision",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Décision du jury",
+   "options": "\nAdmis\nListe d'attente\nNon admis\nDésisté"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-16 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Candidat Concours Resultat",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

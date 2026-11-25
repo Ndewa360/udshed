@@ -5,6 +5,30 @@ from frappe.utils import getdate, nowdate
 def daily():
 	"""Daily scheduled task to update session statuses based on dates."""
 	update_session_statuses()
+	update_reinscription_session_statuses()
+	relancer_admissions()
+
+
+def relancer_admissions():
+	"""Concours : relance les admis qui n'ont pas finalisé et libère les places
+	expirées au profit de la liste d'attente (udshed/api/concours_finalisation.py).
+
+	Déplacé depuis udshed/tasks.py, que le hook « daily » n'appelait pas :
+	la tâche n'aurait jamais tourné.
+	"""
+	try:
+		from udshed.api.concours_finalisation import relancer_et_liberer
+
+		relancer_et_liberer()
+	except Exception:
+		frappe.log_error(title="Tâche quotidienne : relance / libération des admissions")
+
+
+def update_reinscription_session_statuses():
+	"""Ouvre / ferme les Session Reinscription selon leurs dates."""
+	from udshed.udshed.doctype.session_reinscription.session_reinscription import mettre_a_jour_statuts
+
+	mettre_a_jour_statuts()
 
 
 def update_session_statuses():

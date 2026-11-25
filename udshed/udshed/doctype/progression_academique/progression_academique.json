@@ -1,0 +1,336 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:PROG-{student}-{annee_source}",
+ "creation": "2026-10-27 09:00:00.000000",
+ "description": "Progression académique d'un étudiant calculée à la publication officielle des résultats (une seule par étudiant et par année source).",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "nom_etudiant",
+  "column_break_id",
+  "annee_source",
+  "annee_cible",
+  "decision_section",
+  "statut",
+  "motif",
+  "column_break_dec",
+  "decision_notes",
+  "credits_valides",
+  "credits_total",
+  "credits_dette",
+  "cible_section",
+  "filiere_cible",
+  "column_break_cible",
+  "niveau_cible",
+  "source_section",
+  "type_inscription_source",
+  "inscription_source",
+  "column_break_src",
+  "filiere_source",
+  "niveau_source",
+  "publication_section",
+  "session_publication",
+  "column_break_pub",
+  "date_calcul",
+  "correction_section",
+  "motif_correction",
+  "column_break_cor",
+  "corrigee",
+  "corrigee_par",
+  "date_correction",
+  "reinscription_section",
+  "reinscription"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Étudiant",
+   "options": "Student",
+   "reqd": 1,
+   "search_index": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "nom_etudiant",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nom de l'étudiant",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_id",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "annee_source",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Année des résultats",
+   "options": "Academic Year",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "annee_cible",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Année de réinscription",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "decision_section",
+   "fieldtype": "Section Break",
+   "label": "Décision"
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Statut",
+   "options": "En attente de publication\nAdmis au niveau supérieur\nRedoublement\nFin de parcours\nDécision administrative requise",
+   "reqd": 1
+  },
+  {
+   "fieldname": "motif",
+   "fieldtype": "Small Text",
+   "label": "Motif (calcul automatique)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_dec",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "decision_notes",
+   "fieldtype": "Data",
+   "label": "Décision annuelle (module de notes)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "credits_valides",
+   "fieldtype": "Float",
+   "label": "Crédits validés",
+   "read_only": 1
+  },
+  {
+   "fieldname": "credits_total",
+   "fieldtype": "Float",
+   "label": "Crédits du niveau",
+   "read_only": 1
+  },
+  {
+   "fieldname": "credits_dette",
+   "fieldtype": "Float",
+   "label": "Crédits en dette",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cible_section",
+   "fieldtype": "Section Break",
+   "label": "Inscription préparée pour l'année suivante"
+  },
+  {
+   "fieldname": "filiere_cible",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Filière",
+   "options": "Field of study"
+  },
+  {
+   "fieldname": "column_break_cible",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Libellé d'un niveau existant de la filière (ex. Licence 2).",
+   "fieldname": "niveau_cible",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Niveau"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "source_section",
+   "fieldtype": "Section Break",
+   "label": "Inscription source"
+  },
+  {
+   "fieldname": "type_inscription_source",
+   "fieldtype": "Link",
+   "label": "Type d'inscription source",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "inscription_source",
+   "fieldtype": "Dynamic Link",
+   "label": "Inscription source",
+   "options": "type_inscription_source",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_src",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "filiere_source",
+   "fieldtype": "Link",
+   "label": "Filière suivie",
+   "options": "Field of study",
+   "read_only": 1
+  },
+  {
+   "fieldname": "niveau_source",
+   "fieldtype": "Data",
+   "label": "Niveau suivi",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "publication_section",
+   "fieldtype": "Section Break",
+   "label": "Publication"
+  },
+  {
+   "fieldname": "session_publication",
+   "fieldtype": "Link",
+   "label": "Dernière publication prise en compte",
+   "options": "Session Examen",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pub",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "date_calcul",
+   "fieldtype": "Datetime",
+   "label": "Date du calcul",
+   "read_only": 1
+  },
+  {
+   "fieldname": "correction_section",
+   "fieldtype": "Section Break",
+   "label": "Correction par la scolarité"
+  },
+  {
+   "description": "Obligatoire pour toute modification du statut, de la filière ou du niveau. La modification est historisée.",
+   "fieldname": "motif_correction",
+   "fieldtype": "Small Text",
+   "label": "Motif de la correction"
+  },
+  {
+   "fieldname": "column_break_cor",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "corrigee",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Corrigée manuellement",
+   "read_only": 1
+  },
+  {
+   "fieldname": "corrigee_par",
+   "fieldtype": "Link",
+   "label": "Corrigée par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "date_correction",
+   "fieldtype": "Datetime",
+   "label": "Date de la correction",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reinscription_section",
+   "fieldtype": "Section Break",
+   "label": "Réinscription"
+  },
+  {
+   "fieldname": "reinscription",
+   "fieldtype": "Link",
+   "label": "Réinscription enregistrée",
+   "options": "Academic Reregistration",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-27 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Progression Academique",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Coordonateur",
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Agent de scolarité",
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Registration Manager",
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Comptable"
+  },
+  {
+   "read": 1,
+   "role": "Student"
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "nom_etudiant",
+ "track_changes": 1
+}

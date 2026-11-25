@@ -1,0 +1,55 @@
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; border-radius: 12px; overflow: hidden; border: 1px solid #e2e4e9;">
+
+  <div style="background: #1e2025; padding: 32px; text-align: center;">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="Udshed" style="display: block; max-height: 72px; max-width: 200px; margin: 0 auto 12px;" />
+    {% endif %}
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0; letter-spacing: -0.02em;">Udshed</h1>
+    <p style="color: #9ca0a8; font-size: 13px; margin: 6px 0 0 0;">Finalisation de l'inscription</p>
+  </div>
+
+  <div style="padding: 32px; background: #ffffff;">
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Bonjour <strong>{{ first_name }} {{ last_name }}</strong>,
+    </p>
+
+    {% if expiree %}
+    <h2 style="color: #b02a37; font-size: 18px; margin: 0 0 16px 0;">Votre place n'a pas été confirmée</h2>
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Vous étiez admis(e){% if filiere %} en <strong>{{ filiere }}</strong>{% if niveau %} ({{ niveau }}){% endif %}{% endif %},
+      mais votre inscription n'a pas été finalisée avant le <strong>{{ date_limite }}</strong>.
+      Conformément au règlement, la place a été libérée et proposée au candidat suivant.
+    </p>
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Si vous pensez qu'il s'agit d'une erreur, contactez la scolarité en indiquant votre numéro de dossier
+      <strong>{{ doc_name }}</strong>.
+    </p>
+    {% else %}
+    <h2 style="color: #b8860b; font-size: 18px; margin: 0 0 16px 0;">Rappel : votre place vous attend</h2>
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      Vous êtes admis(e){% if filiere %} en <strong>{{ filiere }}</strong>{% if niveau %} ({{ niveau }}){% endif %}{% endif %}.
+      Pour confirmer votre place, finalisez votre inscription <strong>avant le {{ date_limite }}</strong>
+      sur la page <strong>Mon admission</strong> de la plateforme. Passé cette date, la place sera attribuée à un autre candidat.
+    </p>
+    {% if lien_admission %}
+    <p style="text-align: center; margin: 20px 0;">
+      <a href="{{ lien_admission }}" style="display: inline-block; padding: 12px 24px; background: #1e3a8a; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold;">Confirmer ma place</a>
+    </p>
+    {% endif %}
+    <p style="color: #3c3e44; font-size: 15px; line-height: 1.6;">
+      <strong>Identifiant :</strong> {{ doc_name }}
+    </p>
+    <p style="color: #6b6d7a; font-size: 13px; line-height: 1.6;">
+      Vous ne souhaitez plus rejoindre l'établissement ? Vous pouvez renoncer à votre place depuis la même page :
+      elle sera aussitôt proposée à un autre candidat.
+    </p>
+    {% endif %}
+  </div>
+
+  <div style="padding: 20px 32px; background: #f5f6f8; border-top: 1px solid #e2e4e9; text-align: center;">
+    <p style="color: #9ca0a8; font-size: 12px; margin: 0;">
+      Udshed — Plateforme de gestion des inscriptions académiques
+    </p>
+  </div>
+
+</div>

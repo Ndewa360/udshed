@@ -16,8 +16,11 @@ frappe.pages["rapport-general"].on_page_load = function (wrapper) {
 	const CANDIDATURE_STATUTS = [
 		"En attente",
 		"Dossier en cours d'examen",
+		"Autorisé à concourir",
+		"Liste d'attente",
 		"Accepté",
 		"Refusé",
+		"Désisté",
 		"Inscrit",
 	];
 	const REINSCRIPTION_STATUTS = ["Validée"];

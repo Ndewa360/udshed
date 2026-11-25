@@ -1,0 +1,50 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-10-27 09:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "filiere",
+  "column_break_cible",
+  "niveau"
+ ],
+ "fields": [
+  {
+   "description": "Vide = toutes les filières",
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Filière",
+   "options": "Field of study"
+  },
+  {
+   "fieldname": "column_break_cible",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Niveau suivi par l'étudiant l'année précédente. Vide = tous les niveaux",
+   "fieldname": "niveau",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Niveau suivi",
+   "options": "\nLicence 1\nLicence 2\nLicence 3\nBTS 1\nBTS 2\nMaster 1\nMaster 2\nDoctorat 1\nDoctorat 2\nDoctorat 3\nDoctorat 4\nDoctorat 5\nDoctorat 6\nDoctorat 7"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-27 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Session Reinscription Cible",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

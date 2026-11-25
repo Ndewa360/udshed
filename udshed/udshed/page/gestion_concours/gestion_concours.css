@@ -1,0 +1,343 @@
+/* Gestion des concours : même langage visuel que « Liste des inscriptions »
+   (cartes, indicateurs, tableau + panneau), avec un fil d'étapes en tête. */
+.gc-vue {
+	--gc-navy: #003B6F;
+	--gc-orange: #F08000;
+	--gc-navy-soft: #EAF1F8;
+	--gc-vert: #1f8a4c;
+	--gc-rouge: #c0392b;
+	display: grid;
+	gap: 16px;
+	padding-bottom: 32px;
+}
+[data-theme="dark"] .gc-vue {
+	--gc-navy: #8fb8e8;
+	--gc-orange: #ffab3d;
+	--gc-navy-soft: #1d2c3f;
+}
+
+/* Sélecteur de concours */
+.gc-barre {
+	display: grid;
+	grid-template-columns: minmax(0, 420px) 1fr auto;
+	gap: 12px;
+	align-items: end;
+	margin-bottom: 16px;
+	padding: 12px 14px 4px;
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 12px;
+}
+.gc-barre .frappe-control { margin-bottom: 8px; }
+.gc-barre .control-label,
+.gc-label {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+.gc-barre-info {
+	margin-bottom: 12px;
+	font-size: 13px;
+	color: var(--text-muted);
+}
+
+/* En-tête : titre + étapes */
+.gc-tete {
+	display: grid;
+	gap: 14px;
+	padding: 18px 20px;
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 12px;
+}
+.gc-tete-haut {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+.gc-tete h3 {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+}
+.gc-tete .gc-meta { margin-top: 2px; font-size: 13px; color: var(--text-muted); }
+.gc-etapes {
+	display: grid;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.gc-etape {
+	position: relative;
+	display: grid;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+.gc-etape::before {
+	content: "";
+	height: 6px;
+	border-radius: 3px;
+	background: var(--border-color);
+}
+.gc-etape.gc-faite::before { background: var(--gc-navy); }
+.gc-etape.gc-courante::before { background: var(--gc-orange); }
+.gc-etape.gc-courante { color: var(--text-color); font-weight: 600; }
+.gc-etape.gc-faite { color: var(--gc-navy); }
+
+/* Indicateurs */
+.gc-kpis {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 12px;
+}
+.gc-kpi {
+	display: grid;
+	gap: 2px;
+	padding: 12px 14px;
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 12px;
+}
+.gc-kpi-v {
+	font-size: 24px;
+	font-weight: 700;
+	line-height: 1.15;
+	color: var(--gc-navy);
+	font-variant-numeric: tabular-nums;
+}
+.gc-kpi-l { font-size: 12px; color: var(--text-muted); }
+.gc-kpi-alerte { border-left: 4px solid var(--gc-orange); }
+.gc-kpi-bon { border-left: 4px solid var(--gc-vert); }
+
+/* Onglets */
+.gc-onglets {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	border-bottom: 1px solid var(--border-color);
+}
+.gc-onglet {
+	padding: 8px 14px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--text-muted);
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+}
+.gc-onglet:hover { color: var(--text-color); }
+.gc-onglet.gc-actif { color: var(--gc-navy); border-bottom-color: var(--gc-navy); }
+.gc-onglet .gc-badge {
+	margin-left: 6px;
+	padding: 1px 7px;
+	font-size: 11px;
+	border-radius: 10px;
+	background: var(--subtle-fg);
+}
+.gc-onglet.gc-actif .gc-badge { background: var(--gc-navy-soft); }
+
+/* Cartes, tableaux, panneau */
+.gc-main {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 340px;
+	gap: 16px;
+	align-items: start;
+}
+.gc-main.gc-plein { grid-template-columns: minmax(0, 1fr); }
+.gc-card {
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 12px;
+	overflow: hidden;
+}
+.gc-card-corps { padding: 16px; display: grid; gap: 12px; }
+.gc-card h5 {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+}
+.gc-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 12px;
+	border-bottom: 1px solid var(--border-color);
+}
+.gc-toolbar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.gc-search { position: relative; flex: 1 1 240px; }
+.gc-search svg {
+	position: absolute;
+	left: 10px;
+	top: 50%;
+	width: 15px;
+	height: 15px;
+	transform: translateY(-50%);
+	color: var(--text-muted);
+}
+.gc-search-input {
+	width: 100%;
+	padding: 7px 10px 7px 32px;
+	font-size: 13px;
+	color: var(--text-color);
+	background: var(--control-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+}
+.gc-search-input:focus { outline: none; border-color: var(--gc-navy); }
+.gc-filtres-rapides { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px 0; }
+.gc-chip {
+	padding: 4px 10px;
+	font-size: 12px;
+	color: var(--text-muted);
+	background: var(--subtle-fg);
+	border: 1px solid transparent;
+	border-radius: 14px;
+}
+.gc-chip.gc-actif { color: var(--gc-navy); background: var(--gc-navy-soft); border-color: var(--gc-navy); }
+.gc-table-wrap { overflow-x: auto; }
+.gc-table { width: 100%; border-collapse: collapse; }
+.gc-table th {
+	padding: 10px 12px;
+	text-align: left;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	white-space: nowrap;
+	color: var(--text-muted);
+	background: var(--subtle-fg);
+	border-bottom: 1px solid var(--border-color);
+}
+.gc-table td {
+	padding: 9px 12px;
+	white-space: nowrap;
+	border-bottom: 1px solid var(--border-color);
+	font-size: 13px;
+}
+.gc-table td.gc-num, .gc-table th.gc-num { text-align: right; font-variant-numeric: tabular-nums; }
+.gc-table tbody tr[data-name] { cursor: pointer; }
+.gc-table tbody tr[data-name]:hover { background: var(--subtle-fg); }
+.gc-table tbody tr.gc-sel { background: var(--gc-navy-soft); }
+.gc-table tbody tr:focus-visible { outline: 2px solid var(--gc-orange); outline-offset: -2px; }
+.gc-table tr.gc-groupe td {
+	padding-top: 14px;
+	font-weight: 600;
+	color: var(--gc-navy);
+	background: var(--card-bg);
+}
+.gc-table select.gc-decision {
+	padding: 3px 6px;
+	font-size: 12px;
+	color: var(--text-color);
+	background: var(--control-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+}
+.gc-qui { display: flex; align-items: center; gap: 10px; }
+.gc-qui small { display: block; font-size: 12px; color: var(--text-muted); }
+.gc-av {
+	display: grid;
+	place-items: center;
+	flex: none;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	font-size: 11px;
+	font-weight: 700;
+	color: var(--gc-navy);
+	background: var(--gc-navy-soft);
+}
+.gc-av-grand { width: 42px; height: 42px; font-size: 14px; }
+.gc-vide { padding: 28px 12px; text-align: center; color: var(--text-muted); }
+.gc-tag {
+	display: inline-block;
+	margin-left: 4px;
+	padding: 0 6px;
+	font-size: 11px;
+	border-radius: 4px;
+	background: var(--subtle-fg);
+	color: var(--text-muted);
+}
+.gc-tag-rouge { color: var(--gc-rouge); }
+.gc-tag-orange { color: var(--gc-orange); }
+
+.gc-detail {
+	position: sticky;
+	top: 70px;
+	display: grid;
+	gap: 12px;
+	padding: 16px;
+}
+.gc-detail h4 { margin: 0; font-size: 16px; font-weight: 600; }
+.gc-detail h6 {
+	margin: 4px 0 0;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+.gc-dl {
+	display: grid;
+	grid-template-columns: 110px minmax(0, 1fr);
+	gap: 6px 10px;
+	margin: 0;
+	font-size: 13px;
+}
+.gc-dl dt { font-weight: 400; color: var(--text-muted); }
+.gc-dl dd { margin: 0; overflow-wrap: anywhere; }
+.gc-actions { display: grid; gap: 8px; }
+.gc-vue .btn-primary { background: var(--gc-navy); border-color: var(--gc-navy); }
+
+/* Épreuves (avancement de la saisie) */
+.gc-epreuves { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.gc-epreuve {
+	display: grid;
+	gap: 6px;
+	padding: 12px 14px;
+	border: 1px solid var(--border-color);
+	border-radius: 10px;
+}
+.gc-epreuve-nom { font-weight: 600; font-size: 13px; }
+.gc-barre-prog { height: 6px; border-radius: 3px; overflow: hidden; background: var(--border-color); }
+.gc-barre-prog span { display: block; height: 100%; background: var(--gc-navy); }
+.gc-epreuve.gc-validee .gc-barre-prog span { background: var(--gc-vert); }
+.gc-epreuve small { font-size: 12px; color: var(--text-muted); }
+
+/* Étape suivante : encart d'aide */
+.gc-guide {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 12px 16px;
+	font-size: 13px;
+	border-radius: 10px;
+	background: var(--gc-navy-soft);
+	color: var(--text-color);
+}
+.gc-guide.gc-alerte { background: #fff4e5; }
+[data-theme="dark"] .gc-guide.gc-alerte { background: #3a2a12; }
+.gc-problemes { margin: 0; padding-left: 18px; font-size: 13px; color: var(--gc-rouge); }
+
+.gc-jury { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.gc-jury .frappe-control { margin-bottom: 10px; }
+
+@media (max-width: 1100px) {
+	.gc-main { grid-template-columns: 1fr; }
+	.gc-detail { position: static; }
+	.gc-barre { grid-template-columns: 1fr; }
+	.gc-etapes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.gc-jury { grid-template-columns: 1fr; }
+}

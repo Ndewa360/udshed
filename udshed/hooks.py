@@ -185,16 +185,21 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # -----------
 # Un compte uniquement « Student » ne voit que SA fiche et SON inscription
 # (voir udshed/permissions.py). Le personnel n'est pas concerné.
+# Réinscriptions et progression : périmètre par rôle (udshed/api/permission.py).
 permission_query_conditions = {
 	"Student": "udshed.permissions.student_query",
 	"Inscription Academique": "udshed.permissions.inscription_query",
 	"Resultat Academique": "udshed.permissions.resultat_query",
+	"Academic Reregistration": "udshed.api.permission.academic_reregistration_query",
+	"Progression Academique": "udshed.api.permission.progression_query",
 }
 
 has_permission = {
 	"Student": "udshed.permissions.student_has_permission",
 	"Inscription Academique": "udshed.permissions.inscription_has_permission",
 	"Resultat Academique": "udshed.permissions.resultat_has_permission",
+	"Academic Reregistration": "udshed.api.permission.academic_reregistration_has_permission",
+	"Progression Academique": "udshed.api.permission.progression_has_permission",
 }
 
 # Boot Session

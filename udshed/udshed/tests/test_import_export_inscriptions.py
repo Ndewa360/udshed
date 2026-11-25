@@ -298,6 +298,38 @@ class TestImportExportInscriptions(IntegrationTestCase):
         self.assertEqual((student.nom, student.prenom), (ia.nom_prenom.split()[0], "Paul"))
         self.assertTrue(frappe.db.exists("Academic Reregistration", {"student": student.name}))
 
+    def test_filtre_origine_inscrits_en_cours_d_annee(self):
+        """Page « Inscriptions en cours d'année » : seulement les inscriptions hors candidature."""
+        ia = self._ia_manuelle()
+        hors = [r["inscription"] for r in lister_inscriptions(origine=module.ORIGINE_HORS_CANDIDATURE)["rows"]]
+        candid = [r["inscription"] for r in lister_inscriptions(origine=module.ORIGINE_CANDIDATURE)["rows"]]
+        self.assertIn(ia.name, hors)
+        self.assertNotIn(ia.name, candid)
+        self.assertTrue(all(
+            r["origine"] == module.ORIGINE_HORS_CANDIDATURE
+            for r in lister_inscriptions(origine=module.ORIGINE_HORS_CANDIDATURE)["rows"]
+        ))
+        self.assertTrue(all(r["dossier_origine"] for r in lister_inscriptions(origine=module.ORIGINE_CANDIDATURE)["rows"]))
+
+    def test_filtres_cycle_et_etudiants_par_annee(self):
+        """Filtre « Cycle » de la liste et filtre « Année / Niveau » de la liste Student."""
+        from udshed.udshed.doctype.student.student import etudiants_par_annee
+
+        bilan = self._importer([self._ligne()])
+        matricule = bilan["lignes"][0]["matricule"]
+        ia = frappe.db.get_value("Inscription Academique", {"matricule": matricule}, "name")
+        self.assertIn(ia, [r["inscription"] for r in lister_inscriptions(cycle="Licence")["rows"]])
+        self.assertNotIn(ia, [r["inscription"] for r in lister_inscriptions(cycle="Master")["rows"]])
+        self.assertTrue(all(r["niveau"].startswith("Licence") for r in lister_inscriptions(cycle="Licence")["rows"]))
+
+        student = frappe.db.get_value("Student", {"matricule": matricule}, "name")
+        self.assertIn(student, etudiants_par_annee(self.annee.name))
+        self.assertIn(student, etudiants_par_annee(self.annee.name, "Licence 1"))
+        self.assertNotIn(student, etudiants_par_annee(self.annee.name, "Licence 2"))
+        self.assertIn(student, etudiants_par_annee(niveau="Licence 1"))
+        autre = "2024-2025" if self.annee.name != "2024-2025" else "2023-2024"
+        self.assertNotIn(student, etudiants_par_annee(autre))
+
     def test_saisie_manuelle_niveau_invalide(self):
         with self.assertRaises(frappe.ValidationError):
             self._ia_manuelle(classe="Niveau inexistant")
