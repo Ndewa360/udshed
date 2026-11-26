@@ -1,5 +1,5 @@
 // Liste unique de tous les inscrits : inscriptions de début d'année
-// (candidature) et inscriptions en cours d'année (hors candidature, 25Z…).
+// (candidature) et inscriptions en cours d'année (hors candidature).
 frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 	let page = frappe.ui.make_app_page({
 		parent: wrapper,
@@ -10,6 +10,7 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 	const ORIGINE_HORS_CANDIDATURE = "Hors candidature";
 	const API = "udshed.api.inscription_import_export";
 	let filters = { filiere: null, annee_academique: null, cycle: null, niveau: null, statut: null, origine: null };
+	const annee_session = window.Udshed && Udshed.Session && Udshed.Session.annee();
 	// Niveaux par cycle (même référence que udshed/utils/niveaux.py)
 	const NIVEAUX_PAR_CYCLE = {
 		"Licence": ["Licence 1", "Licence 2", "Licence 3"],
@@ -61,6 +62,12 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 
 	function setup_filters() {
 		champ_filtre({ fieldtype: "Link", fieldname: "annee_academique", label: __("Année académique"), options: "Academic Year" });
+		// Année de la session : appliquée d'office et non modifiable.
+		if (annee_session) {
+			filters.annee_academique = annee_session;
+			champs.annee_academique.set_input(annee_session);
+			if (champs.annee_academique.$input) champs.annee_academique.$input.prop("disabled", true);
+		}
 		champ_filtre({ fieldtype: "Link", fieldname: "filiere", label: __("Filière"), options: "Field of study" });
 		champ_filtre(
 			{ fieldtype: "Select", fieldname: "cycle", label: __("Cycle"), options: ["", ...Object.keys(NIVEAUX_PAR_CYCLE)] },
@@ -115,6 +122,7 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 	function reinitialiser_filtres() {
 		reinitialisation = true;
 		Promise.all(Object.keys(filters).map(cle => {
+			if (cle === "annee_academique" && annee_session) return null;  // l'année de la session reste
 			filters[cle] = null;
 			return champs[cle] ? champs[cle].set_value("") : null;
 		})).then(() => {
@@ -256,7 +264,7 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 				</div>
 			</div>
 			<div class="li-kpi"><span class="li-kpi-v">${debut}</span><span class="li-kpi-l">${__("Début d'année (candidature)")}</span></div>
-			<div class="li-kpi"><span class="li-kpi-v">${en_cours}</span><span class="li-kpi-l">${__("En cours d'année (25Z…)")}</span></div>
+			<div class="li-kpi"><span class="li-kpi-v">${en_cours}</span><span class="li-kpi-l">${__("En cours d'année (hors candidature)")}</span></div>
 			<div class="li-kpi ${attente ? "li-kpi-alerte" : ""}"><span class="li-kpi-v">${attente}</span><span class="li-kpi-l">${__("En attente de matricule")}</span></div>`);
 	}
 

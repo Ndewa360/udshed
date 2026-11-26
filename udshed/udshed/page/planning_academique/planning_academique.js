@@ -281,6 +281,8 @@ frappe.pages["planning-academique"].on_page_load = function (wrapper) {
         }
 
         applyUserRestrictions();
+        // Année de la session, filtres à valeur unique choisis et verrouillés.
+        if (Udshed.Filtres) await Udshed.Filtres.verrouiller(page);
         await updateAcademicYearMonths();
         initializing = false;
         await refreshAll();

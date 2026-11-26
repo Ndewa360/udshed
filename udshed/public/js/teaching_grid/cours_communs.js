@@ -111,8 +111,9 @@ window.Udshed.TeachingGrid.CoursCommuns = {
                 return;
             }
             frappe.call({
-                method: "udshed.api.course.get_levels_for_field",
-                args: { field_of_study: filiere },
+                // Niveaux de n'importe quelle filière : on peut comparer sa grille à une autre.
+                method: "udshed.api.reference.niveaux_filiere",
+                args: { filiere: filiere },
                 callback: (r) => {
                     niveauxParFiliere[s] = r.message || [];
                     majExclusions(valeurInitiale && s === "g" ? valeurInitiale : null, s);
@@ -187,7 +188,7 @@ window.Udshed.TeachingGrid.CoursCommuns = {
             $zone.html(`
                 <div class="cc-resume">
                     ${__("{0} cours en tronc commun · {1} liaison(s) · {2} suggestion(s)", [nbTronc, nbLies, data.suggestions.length])}
-                    ${data.peut_lier ? "" : `<span class="text-warning"> — ${__("lecture seule : il faut gérer les deux classes pour créer ou supprimer une liaison")}</span>`}
+                    ${data.peut_lier ? "" : `<span class="text-warning"> — ${__("lecture seule : il faut gérer au moins une des deux classes pour créer ou supprimer une liaison")}</span>`}
                 </div>
                 <div class="cc-zone">
                     ${colonne("g", data.gauche)}

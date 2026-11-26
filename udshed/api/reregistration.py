@@ -881,6 +881,7 @@ def get_all_levels(faculty=None, filiere=None):
 			"filiere_name": fos.name,
 			"filiere_label": fos.name_of_field,
 			"faculte": fos.faculte,
+			"faculte_label": frappe.db.get_value("Faculty", fos.faculte, "faculty_name") if fos.faculte else "",
 			"levels": [
 				{
 					"name": l.name,

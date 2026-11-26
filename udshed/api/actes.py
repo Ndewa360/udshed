@@ -27,7 +27,7 @@ from frappe.utils import now_datetime
 from udshed.utils import actes as moteur
 
 ROLES_ACTES = {"System Manager", "Responsable Diplomation", "Registration Manager", "Agent de scolarité"}
-ROLES_MODELES = {"System Manager", "Responsable Diplomation"}
+ROLES_MODELES = {"System Manager", "Responsable Diplomation", "Responsable des partenariats"}
 
 
 def _exiger(roles):
@@ -69,7 +69,7 @@ def _figer(acte):
 @frappe.whitelist()
 def mes_documents():
 	s = _mon_etudiant()
-	modeles = frappe.get_all("Modele Acte", filters={"actif": 1},
+	modeles = frappe.get_all("Modele Acte", filters={"actif": 1, "sujet": ["!=", moteur.SUJET_ENSEIGNANT]},
 							 fields=["name", "titre", "type_acte", "libre_service", "mode_signature", "condition"],
 							 order_by="libre_service desc, titre asc")
 	res = []
@@ -86,7 +86,7 @@ def mes_documents():
 def obtenir(modele, motif=None):
 	s = _mon_etudiant()
 	m = frappe.get_doc("Modele Acte", modele)
-	if not m.actif:
+	if not m.actif or m.get("sujet") == moteur.SUJET_ENSEIGNANT:
 		frappe.throw(_("Ce document n'est plus délivré."))
 	possible, message = moteur.verifier_condition(m, s.name)
 	if not possible:
@@ -206,6 +206,18 @@ def verifier(code=None):
 	acte = frappe.db.get_value("Acte Academique", {"code_verification": code},
 							   ["name", "student", "type_acte", "statut", "traite_le", "academic_year", "donnees"],
 							   as_dict=True) if code else None
+	if not acte and code and frappe.db.table_exists("Document Enseignant"):
+		doc = frappe.db.get_value("Document Enseignant", {"code_verification": code},
+								  ["name", "type_document", "academic_year", "genere_le", "donnees"], as_dict=True)
+		if doc:
+			donnees = json.loads(doc.donnees or "{}")
+			return {
+				"valide": True, "numero": doc.name, "type": doc.type_document,
+				"etudiant": (donnees.get("enseignant") or {}).get("nom_complet"), "matricule": "",
+				"formation": "", "titulaire": "enseignant",
+				"date": frappe.utils.format_date(doc.genere_le) if doc.genere_le else "",
+				"annee": doc.academic_year or "", "etablissement": (donnees.get("etablissement") or {}).get("nom"),
+			}
 	if not acte or acte.statut not in ("Disponible", "Prêt à retirer", "Retiré"):
 		securite.enregistrer_echec("verifier-acte", ip, 15 * 60)
 		return {"valide": False}
@@ -225,9 +237,10 @@ def verifier(code=None):
 #  Éditeur de modèles
 # ---------------------------------------------------------------------- #
 @frappe.whitelist()
-def variables_modele():
+def variables_modele(modele=None):
 	_exiger(ROLES_MODELES)
-	return [{"cle": c, "libelle": l} for c, l in moteur.catalogue_variables()]
+	sujet = frappe.db.get_value("Modele Acte", modele, "sujet") if modele else None
+	return [{"cle": c, "libelle": l} for c, l in moteur.catalogue_variables(sujet or moteur.SUJET_ETUDIANT)]
 
 
 @frappe.whitelist()
@@ -248,6 +261,11 @@ def apercu_modele(modele, student=None, layout=None):
 	m = frappe.get_doc("Modele Acte", modele)
 	if layout:
 		m.layout = layout
+	if m.get("sujet") == moteur.SUJET_ENSEIGNANT:
+		student = student or frappe.db.get_value("Course Teacher Item", {"parenttype": "Teaching Unit"}, "enseignant",
+												 order_by="creation desc") or frappe.db.get_value("Teacher", {}, "name")
+		if not student:
+			frappe.throw(_("Aucun enseignant pour l'aperçu."))
 	student = student or frappe.db.get_value("Student", {}, "name", order_by="creation desc")
 	if not student:
 		frappe.throw(_("Aucun étudiant pour l'aperçu."))

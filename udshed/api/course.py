@@ -92,7 +92,8 @@ def get_teaching_units(
 			if not c.filiere or not c.niveau:
 				continue
 			level = frappe.get_doc("Field of study Level", c.niveau)
-			classes.append(f"{c.filiere} {level.level}")
+			nom_filiere = frappe.db.get_value("Field of study", c.filiere, "name_of_field") or c.filiere
+			classes.append(f"{nom_filiere} — {level.level}")
 		
 
 		# =========================

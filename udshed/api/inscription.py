@@ -383,7 +383,7 @@ def _finaliser_inscription_complete(dossier, donnees):
     with _transaction_ou_erreur():
         # 1. Générer matricule UNIQUE (atomique avec lock), série de la campagne
         matricule = _generer_matricule_atomique(
-            academic_year=annee, session_name=dossier.get("session_inscription")
+            academic_year=annee, session_name=dossier.get("session_inscription"), filiere=dossier.filiere
         )
 
         # 2. Créer Inscription Academique
@@ -604,48 +604,18 @@ def _cree_compte_utilisateur(student_name, dossier=None):
 	return assurer_compte(student_name)
 
 
-def _generer_matricule_atomique(lettre=None, academic_year=None, session_name=None):
-    """
-    Génère un matricule unique de façon ATOMIQUE (avec verrou SQL nommé).
-    Évite les doublons sous concurrence.
+def _generer_matricule_atomique(lettre=None, academic_year=None, session_name=None, filiere=None):
+    """Matricule unique selon le format des réglages (udshed.utils.matricule), sous verrou SQL.
 
-    Frappe 16 n'expose pas frappe.db.lock : on utilise GET_LOCK() MariaDB,
-    qui est lié à la session SQL de la requête HTTP.
-
-    `lettre` force la série (ex. « Z » pour les inscriptions hors candidature :
-    25Z001, 25Z002…) sur l'année académique courante ; le maximum tient alors
-    aussi compte des matricules déjà portés par un Student (import d'étudiants
-    avec leur matricule).
+    `lettre` force la lettre ; sinon la règle des réglages s'applique (suite des campagnes,
+    lettre fixe ou lettre de la filière). Même règle pour les admissions et les imports.
     """
+    from udshed.utils import matricule
+
     annee = academic_year or _annee_academique_courante()
-    lock_key = f"udshed_matricule:{_matricule_annee(annee)}"
-
-    lignes = frappe.db.sql("SELECT GET_LOCK(%s, 10)", (lock_key,))
-    if not lignes or lignes[0][0] != 1:
-        frappe.throw(_("Impossible de générer le matricule (concurrence). Réessayez."))
-
-    try:
-        if lettre:
-            if not annee:
-                frappe.throw(_("Aucune année académique n'est définie pour générer le matricule."))
-            prefix = _matricule_annee(annee) + lettre
-            doctypes = ("Inscription Academique", "Student")
-        else:
-            session, lettre = _session_et_lettre(session_name)
-            annee_session = (session.get("academic_year") if session else None) or annee
-            prefix = _matricule_annee(annee_session) + lettre
-            doctypes = ("Inscription Academique",)
-
-        # Le verrou nominal sérialise déjà l'accès ; le max est calculé en SQL
-        # (pas de transfert de l'ensemble des lignes vers Python).
-        max_numero = max(_max_numero_matricule(doctype, prefix) for doctype in doctypes)
-
-        return prefix + str(max_numero + 1).zfill(3)
-    finally:
-        try:
-            frappe.db.sql("SELECT RELEASE_LOCK(%s)", (lock_key,))
-        except Exception:
-            pass
+    if not annee:
+        frappe.throw(_("Aucune année académique n'est définie pour générer le matricule."))
+    return matricule.generer(annee, session_name=session_name, filiere=filiere, lettre_forcee=lettre)
 
 
 def _max_numero_matricule(doctype, prefix):

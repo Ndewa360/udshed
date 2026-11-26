@@ -344,7 +344,7 @@ frappe.pages["gestion-des-niveaux"].on_page_load = function (wrapper) {
 		let map = {};
 		filtered_data.forEach((fos) => {
 			let fac = fos.faculte || __("Non assigné");
-			if (!map[fac]) map[fac] = { name: fac, label: fac, filieres: [] };
+			if (!map[fac]) map[fac] = { name: fac, label: fos.faculte_label || fac, filieres: [] };
 			if (!fos.filiere_name) return;
 			map[fac].filieres.push({
 				name: fos.filiere_name,

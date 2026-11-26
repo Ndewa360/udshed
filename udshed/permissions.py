@@ -108,7 +108,9 @@ def _coordonnateur_seul(user):
 
 
 def filieres_coordonnees(user):
-	teacher = frappe.db.get_value("Teacher", {"email": user}, "name")
+	from udshed.api.planning_permission import _teacher_name
+
+	teacher = _teacher_name(user)
 	if not teacher:
 		return []
 	return sorted(set(frappe.get_all(

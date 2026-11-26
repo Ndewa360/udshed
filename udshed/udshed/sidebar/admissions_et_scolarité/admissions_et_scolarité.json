@@ -1,6 +1,6 @@
 {
  "app": "udshed",
- "creation": "2026-11-26 12:30:00.000000",
+ "creation": "2026-11-26 22:00:00.000000",
  "docstatus": 0,
  "doctype": "Sidebar",
  "header_icon": "user-plus",
@@ -58,23 +58,6 @@
   },
   {
    "type": "Link",
-   "label": "Dossiers candidats",
-   "link_type": "DocType",
-   "icon": "users",
-   "child": 1,
-   "indent": 0,
-   "collapsible": 1,
-   "keep_closed": 0,
-   "show_arrow": 0,
-   "hidden": 0,
-   "added": 0,
-   "is_default_module": 0,
-   "open_in_new_tab": 0,
-   "link_to": "Session Inscription Candidate",
-   "idx": 4
-  },
-  {
-   "type": "Link",
    "label": "Gestion des concours",
    "link_type": "Page",
    "icon": "award",
@@ -88,24 +71,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "gestion-concours",
-   "idx": 5
-  },
-  {
-   "type": "Link",
-   "label": "Concours",
-   "link_type": "DocType",
-   "icon": "trophy",
-   "child": 1,
-   "indent": 0,
-   "collapsible": 1,
-   "keep_closed": 0,
-   "show_arrow": 0,
-   "hidden": 0,
-   "added": 0,
-   "is_default_module": 0,
-   "open_in_new_tab": 0,
-   "link_to": "Concours",
-   "idx": 6
+   "idx": 4
   },
   {
    "type": "Section Break",
@@ -121,7 +87,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_type": "DocType",
-   "idx": 7
+   "idx": 5
   },
   {
    "type": "Link",
@@ -138,24 +104,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "liste-des-inscriptions",
-   "idx": 8
-  },
-  {
-   "type": "Link",
-   "label": "Inscriptions académiques",
-   "link_type": "DocType",
-   "icon": "file-text",
-   "child": 1,
-   "indent": 0,
-   "collapsible": 1,
-   "keep_closed": 0,
-   "show_arrow": 0,
-   "hidden": 0,
-   "added": 0,
-   "is_default_module": 0,
-   "open_in_new_tab": 0,
-   "link_to": "Inscription Academique",
-   "idx": 9
+   "idx": 6
   },
   {
    "type": "Link",
@@ -172,7 +121,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Session Reinscription",
-   "idx": 10
+   "idx": 7
   },
   {
    "type": "Link",
@@ -189,7 +138,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Academic Reregistration",
-   "idx": 11
+   "idx": 8
   },
   {
    "type": "Link",
@@ -206,13 +155,13 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Progression Academique",
-   "idx": 12
+   "idx": 9
   },
   {
    "type": "Link",
    "label": "Rapports de réinscription",
    "link_type": "Page",
-   "icon": "bar-chart",
+   "icon": "chart-column",
    "child": 1,
    "indent": 0,
    "collapsible": 1,
@@ -223,13 +172,13 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "report-reinscription",
-   "idx": 13
+   "idx": 10
   },
   {
    "type": "Link",
    "label": "Rapport général",
    "link_type": "Page",
-   "icon": "bar-chart-2",
+   "icon": "chart-column-big",
    "child": 1,
    "indent": 0,
    "collapsible": 1,
@@ -240,7 +189,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "rapport-general",
-   "idx": 14
+   "idx": 11
   },
   {
    "type": "Section Break",
@@ -256,7 +205,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_type": "DocType",
-   "idx": 15
+   "idx": 12
   },
   {
    "type": "Link",
@@ -273,7 +222,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Requete Etudiant",
-   "idx": 16
+   "idx": 13
   },
   {
    "type": "Link",
@@ -290,41 +239,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Acte Academique",
-   "idx": 17
-  },
-  {
-   "type": "Link",
-   "label": "Modèles d'actes",
-   "link_type": "DocType",
-   "icon": "layout",
-   "child": 1,
-   "indent": 0,
-   "collapsible": 1,
-   "keep_closed": 0,
-   "show_arrow": 0,
-   "hidden": 0,
-   "added": 0,
-   "is_default_module": 0,
-   "open_in_new_tab": 0,
-   "link_to": "Modele Acte",
-   "idx": 18
-  },
-  {
-   "type": "Link",
-   "label": "Éditeur de modèles",
-   "link_type": "Page",
-   "icon": "pen-tool",
-   "child": 1,
-   "indent": 0,
-   "collapsible": 1,
-   "keep_closed": 0,
-   "show_arrow": 0,
-   "hidden": 0,
-   "added": 0,
-   "is_default_module": 0,
-   "open_in_new_tab": 0,
-   "link_to": "editeur-modele-acte",
-   "idx": 19
+   "idx": 14
   },
   {
    "type": "Link",
@@ -341,7 +256,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Jury Diplomation",
-   "idx": 20
+   "idx": 15
   },
   {
    "type": "Link",
@@ -358,10 +273,10 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Diplome Etudiant",
-   "idx": 21
+   "idx": 16
   }
  ],
- "modified": "2026-11-26 12:30:00.000000",
+ "modified": "2026-11-26 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Admissions et scolarité",

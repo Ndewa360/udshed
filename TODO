@@ -1,33 +1,21 @@
-- resoudre les problemes de droit dans la planification
-- Resoudre le probleme lors de l'envoi des emails: 
-03:33:50 web.1         | Traceback (most recent call last):
-03:33:50 web.1         |   File "apps/frappe/frappe/app.py", line 121, in application
-03:33:50 web.1         |     response = frappe.api.handle(request)
-03:33:50 web.1         |   File "apps/frappe/frappe/api/__init__.py", line 63, in handle
-03:33:50 web.1         |     data = endpoint(**arguments)
-03:33:50 web.1         |   File "apps/frappe/frappe/api/v1.py", line 40, in handle_rpc_call
-03:33:50 web.1         |     return frappe.handler.handle()
-03:33:50 web.1         |            ~~~~~~~~~~~~~~~~~~~~~^^
-03:33:50 web.1         |   File "apps/frappe/frappe/handler.py", line 53, in handle
-03:33:50 web.1         |     data = execute_cmd(cmd)
-03:33:50 web.1         |   File "apps/frappe/frappe/handler.py", line 86, in execute_cmd
-03:33:50 web.1         |     return frappe.call(method, **frappe.form_dict)
-03:33:50 web.1         |            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-03:33:50 web.1         |   File "apps/frappe/frappe/__init__.py", line 1124, in call
-03:33:50 web.1         |     return fn(*args, **newargs)
-03:33:50 web.1         |   File "apps/frappe/frappe/utils/typing_validations.py", line 36, in wrapper
-03:33:50 web.1         |     return func(*args, **kwargs)
-03:33:50 web.1         |   File "apps/udshed/udshed/api/planning_calendar_email.py", line 118, in send_planning_to_mail
-03:33:50 web.1         |     frappe.publish_progress(50, title=_("Préparation des destinataires"))
-03:33:50 web.1         |                                       ~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-03:33:50 web.1         | TypeError: 'datetime.date' object is not callable
-03:33:50 web.1         |
-03:33:51 web.1         | 127.0.0.1 - - [24/Nov/2026 03:33:51] "POST /api/method/udshed.api.planning_calendar_email.send_planning_to_mail HTTP/1.1" 500 -
 
-- Avoir la possibilité de dupliquer le planning d'une semaine a une autre. l'idée c'est que parfois c'est le même planing pour une classe entre 2 semaine. et donc l'idée est de pouvoir dupliquer le planning d'une semaine précédente a la semaine en cours choisi. et cela doit donc être faite en tenant compte du fait que lors de la duplication, certaine plage horaire peuvent déjà être occupé par d'autre cours tronc commun. et donc qu'on planifi donc les plage vide et que l'on fasse un recapitulatif des plages libres et des plages occupé par des enseignement de tonc commun et tout.
-- ne pas permettre aussi bien sur la grille frontend que sur la grille backend de pouvoir mettre 2 cours sur une même plage horaire de la même date précice pour une même classe (même année académique, même faculté, même filiére, même niveau)
-- Permettre la modification de la grille. suele les code ne doivent pas être modifier. mais toute la grille peut modifier. c'est a dire, les heures, l'intitulé de la matiére et tout. sauf que je veux qu'il y'a une cohérence. normalement 1 crédit vaut entre 10-15h de temps et donc qu'on vois a peut pret la regles qui doit être appliqué lors de la modification des quota. mais n'empeche qu'on doit egalement avoir la possibilité de modification des crédits. on doit aussi pouvoir ajouter et supprimer les élements de la grille a volonté, saut qu'on doit se rassurer qu'en supprimer il y'a pas de dépendance caché avec autre chose
-- Bien analyser le processus d'importation de la grille. il semble y avoir des bugs. et aussi quand on importe on doit avoir une prévisualisation des données importer avant l'importation réelle. donc il faut egalement prendre cela en compte
-- Avoir aussi la possibilité de faire des liéaison manuelle entre les cours. Ce qui se passe déjà c'est que en fait, pour une matiére en fonction des classes qui la font, en fait le crédit est différent. c'est bon sauf que parfois le même cours porte 2 appellation différente en fonction de la grille. c'est a dire que un cours en réalité porte un nom sur une grille, et un autre sur une autre grille mais en fait, c'est exactement le même cours et doit donc être concidérer comme cours commun. et donc en fait je le dis pour la gestion des cours simultanté pour toujours éviter de programmer un cours pour une classe alors que l'autre classe sencé egalement faire ce cours est déjà occupé ailleur.
-- Il faut que quand on crée une année académique contrairement a ce qui se passe actuellement, la création d'une année académique est normalement un processus beaucoup plus complexe. normalement, on doit si on le veux dupliquer les grilles d'enseignement. et donc quand on est dans le processus de création, on doit donc a un moment donné avoir la liste des salles de classes et de voir cocher les classes dont les grilles doivent être importer. cela évite qu'a chaque nouvelle année, toutes les grilles soit de nouveau importer alors que en réalité il y'a les grilles de l'anné précédente.
-- Avoir une landing page complete, qui présente toutes les fonctionnalité de Udshed, et qui presente un formulaire de contact pour la démo. avoir un bon CTA, avoir les pages legals, et bien travailler le reférencement. dire, que l'application a été développer par Ndewa360 et egalement préciser que le contact de cette application passe par contact@ndewa-360.com
+--- Document académique (word, pdf) en version rempli et le modele ---
+- Fiche de progresison de cours d'enseignant vacataire (générer automatiquement en fonction de l'évolution des cours) on doit egalement pouvoir télécharger le model par defaut.
+- Fiche de réglement des vacations pour vacataire. (on doit pouvoir télécharger le model par defaut ou même générer la fiche pour chaque vacataire. donc chaque vacataire qui sont des enseignants avec des comptes doivent pouvoir s'y connecter et télécharger eux même leurs fiche de vacation et il ne restera plusque la signature physique)
+- Fiche de convention des vacations signé et ainsi que les contrat. il y'a par exemple pour chaque enseignant un endroit ou sa se met, mais j'ai pas l'impressoin que sa se fait au bon endroit. en fait il y'a dans certaines université un responsable de tout ce qui est convention avec les enseignant, suivi financier, contrat attestation et tout ce qui est des partenariat avec les enseignant surtout ceux qui sont vacataire.
+- Attestation d'enseignement fait egalement par le service responsable des partenariats et tout
+- On ne doit plus avoir besoin de choisir l'année académique lors des différents filtre et tout. que cette année la soit choisi soit l'ors de la connexion, soit apres connexion directement pour toute la session de l'utilisateur au points ou s'il faut changer d'année académique on doit se reconnecter. Pour la faculté, que l'on ai pa a changer cela et que ce ne soit pas changeable si on a les role que dans une seule faculté. et pour ce qui est des filiére pareil si on a les role que dans une seule filiére que ce soit déjà fiché et qu'on ai pas a changer et ainsi que pour le niveau. Bref qu'on n'ai la possibilité de changer le filtre que si et seulement si plusieurs options sont possible.  il y'a plein de document qui depende des années académiques. comme: les sessions d'examen,les anonymat,les resultat académique, les progressions des cours bref. tout ces élements la, doivent donc être charger en fonction de l'année académique et tou
+
+- Tout ses documents, on doit pouvoir monter les modeles directements dans le systeme. et quand on choisi ses modeles, puis on choisi ceux utiliser par defaut et la directement chaque enseignant ou personnel qui vient pour les utilisers, utilise directement ceux par defaut. et il doit déjà y avoir des modeles par defaut.
+ il y'a déjà un éditeur de modele pour les actes. je pense qu'on peux le réutiliser pour tous les autres document et tout.
+
+ Et aussi, il faut donc te rassurer que tous les documents par defaut vienne lorsqu'on installe l'application
+
+- Plusieurs page qui sont customiser semble avoir des problemes de design. revoir cela pour etre sur d'avoir des pages bien designer, simple et professionnel sans couleurs trop vive qui vas fatiguer les yeux puisque ceux sont des personnes agés qui vont l'utiliser. et donc avoir quelque chose de tres professoinelle et simple a la fois.
+
+- Probleme d'autorisation. par exemple lors de la liaison d'un cours d'une grille a une autre grille, le coordonateur doit pouvoir relier un cours de sa propre grille a une autre cours d'une grille différente même si ce n'est pas dans son périmetre. a certains. dans la déliberation de jury, une erreur d'autorisation survient sur le champs niveau.
+
+- Certaines pages ne semble pas avoir beaucoup de sens. les trucs comme "Etudiants a rattraper" ne sont comprenne pas. il faut te rassurer que chaque page ai du sens. donc soit on le change et on le modifi, soit on le supprime completement. il faut completement te rassurer de ca.
+
+- Sur la liste des inscrits. j'ai remarquer que quand on importe une liste des inscrit, il sont affecté au matricule avec Z. il faut dire qu'il y'a 2 sénario. le premier sénario est que les matricules ne sont pas fournir pour chaque étudiant. alors il faut dans ce cas, générer les matricules selons la format configurer. et si ce n'est pas fait alors il faut donc que dans la configuration des parametres de l'université, qu'on puisse fournir un format des matricules. comme par exemple (Dernierchiffedelanne+Lettre+3Chiffre exemple: 26C095). le second cas, c'est qu'on importe les étudiants déjà inscrit avec leurs matricule. et egalement 
+

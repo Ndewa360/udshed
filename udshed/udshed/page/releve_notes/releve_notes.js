@@ -1,7 +1,7 @@
 frappe.pages['releve_notes'].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __('Relevé de notes'),
+		title: __("Relevé d'un étudiant"),
 		single_column: true
 	});
 

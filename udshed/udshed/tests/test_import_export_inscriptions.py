@@ -5,7 +5,7 @@
 
 Couvre :
   - import Excel et CSV (simulation puis validation) ;
-  - matricules générés (série Z) et matricules existants conservés ;
+  - matricules générés (format des réglages) et matricules existants conservés ;
   - doublons (fichier, matricule, e-mail, identité), dossiers réutilisés,
     inscriptions déjà présentes ou d'une autre année ;
   - bilan (importées / ignorées / rejetées + motif) ;
@@ -136,7 +136,9 @@ class TestImportExportInscriptions(IntegrationTestCase):
         return doc
 
     def _prefixe(self):
-        return self.annee.name.split("-")[0][-2:] + "Z"
+        from udshed.utils import matricule
+
+        return matricule.gabarit(self.annee.name, filiere=self.fos.name)[0]
 
     # ------------------------------------------------------------------ #
     #  Import

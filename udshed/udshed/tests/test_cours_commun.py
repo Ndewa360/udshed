@@ -85,12 +85,40 @@ class TestCoursCommun(IntegrationTestCase):
 		self.planifier(self.algebre_a)
 		self.planifier(self.autre_b)  # B est libre : plus de lien
 
-	def test_coordinateur_ne_peut_pas_lier_hors_perimetre(self):
+	def coordinateur_a(self):
 		user = make_user_with_role("Coordonateur")
 		frappe.db.set_value("Teacher", self.coord_a.name, "email", user.name)
 		frappe.set_user(user.name)
+		return user.name
+
+	def test_coordinateur_relie_son_cours_a_une_autre_grille(self):
+		self.coordinateur_a()
+		cours_commun.lier_cours([self.algebre_a.name, self.maths_b.name])
+		groupe = frappe.db.get_value("Teaching Unit", self.algebre_a.name, "groupe_cours_commun")
+		self.assertTrue(groupe)
+		self.assertEqual(frappe.db.get_value("Teaching Unit", self.maths_b.name, "groupe_cours_commun"), groupe)
+		# Il compare sa grille à l'autre et peut lier ; il peut aussi défaire la liaison.
+		data = cours_commun.comparer_grilles(self.annee.name, self.fil_a.name, self.niv_a.name, self.fil_b.name, self.niv_b.name)
+		self.assertTrue(data["peut_lier"])
+		cours_commun.delier_cours(self.maths_b.name)
+		self.assertFalse(frappe.db.get_value("Teaching Unit", self.maths_b.name, "groupe_cours_commun"))
+
+	def test_coordinateur_ne_peut_pas_lier_deux_cours_hors_perimetre(self):
+		self.coordinateur_a()
 		with self.assertRaises(frappe.PermissionError):
-			cours_commun.lier_cours([self.algebre_a.name, self.maths_b.name])
+			cours_commun.lier_cours([self.maths_b.name, self.autre_b.name])
+
+	def test_niveaux_d_une_autre_filiere_et_recherche_standard(self):
+		from udshed.api import reference
+
+		self.coordinateur_a()
+		self.assertEqual([n["name"] for n in reference.niveaux_filiere(self.fil_b.name)], [self.niv_b.name])
+		# Recherche d'un champ Link « niveau » (ex. délibération), filtrée par filière.
+		from frappe.desk.search import search_widget
+
+		res = search_widget("Field of study Level", txt="", filters={"parent": self.fil_b.name, "parenttype": "Field of study"},
+							 as_dict=False)
+		self.assertEqual([r[0] for r in res], [self.niv_b.name])
 
 	def test_annees_differentes_refusees(self):
 		autre_annee = make_academic_year("2027", "2028")

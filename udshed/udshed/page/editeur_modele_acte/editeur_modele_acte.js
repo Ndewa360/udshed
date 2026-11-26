@@ -1,26 +1,41 @@
-// Éditeur visuel des modèles d'actes académiques.
+// Éditeur visuel des modèles de documents (actes des étudiants, documents des enseignants).
 // La page dessine le document à l'échelle (positions en mm) ; chaque élément
 // se déplace, se redimensionne et se règle dans le panneau de propriétés.
 // Le rendu final (PDF) est fait côté serveur : udshed/utils/actes.py.
 frappe.pages["editeur-modele-acte"].on_page_load = function (wrapper) {
-	const page = frappe.ui.make_app_page({ parent: wrapper, title: __("Éditeur de modèle d'acte"), single_column: true });
+	const page = frappe.ui.make_app_page({ parent: wrapper, title: __("Éditeur de modèles de documents"), single_column: true });
 	new EditeurActe(page);
 };
 
 const FORMATS = {
 	"A4 portrait": [210, 297], "A4 paysage": [297, 210], "A5 paysage": [210, 148], "Carte (85,6 × 54 mm)": [85.6, 54],
 };
-const OUTILS = [
+const OUTILS_COMMUNS = [
 	["texte", __("Texte"), { w: 120, h: 10, contenu: __("Nouveau texte"), taille: 11 }],
 	["logo", __("Logo"), { w: 25, h: 25 }],
 	["image", __("Image"), { w: 40, h: 30 }],
-	["photo", __("Photo étudiant"), { w: 25, h: 32 }],
 	["qr", __("QR code"), { w: 28, h: 28 }],
 	["signature", __("Signature"), { w: 45, h: 22 }],
 	["cachet", __("Cachet"), { w: 32, h: 32 }],
 	["cadre", __("Cadre / ligne"), { w: 120, h: 30, bordure: 0.5, couleur: "#1f3c88" }],
-	["tableau_notes", __("Tableau des notes"), { w: 180, h: 120, taille: 8 }],
 ];
+// Éléments propres au sujet du modèle (documents d'étudiant ou d'enseignant).
+const OUTILS_SUJET = {
+	"Étudiant": [
+		["photo", __("Photo étudiant"), { w: 25, h: 32 }],
+		["tableau_notes", __("Tableau des notes"), { w: 180, h: 120, taille: 8 }],
+	],
+	"Enseignant": [
+		["tableau_progression", __("Tableau de progression"), { w: 180, h: 120, taille: 8 }],
+		["tableau_vacations", __("Tableau des vacations"), { w: 180, h: 110, taille: 8 }],
+		["tableau_enseignements", __("Tableau des enseignements"), { w: 180, h: 60, taille: 8 }],
+	],
+};
+const NOMS_ELEMENTS = {
+	photo: __("Photo"), qr: "QR", image: __("Image"), logo: __("Logo"), signature: __("Signature"), cachet: __("Cachet"),
+	tableau_notes: __("Tableau des notes"), tableau_progression: __("Tableau de progression"),
+	tableau_vacations: __("Tableau des vacations"), tableau_enseignements: __("Tableau des enseignements"),
+};
 
 class EditeurActe {
 	constructor(page) {
@@ -40,6 +55,10 @@ class EditeurActe {
 		p.set_primary_action(__("Enregistrer"), () => this.enregistrer());
 		p.add_button(__("Aperçu PDF"), () => this.apercu());
 		p.add_button(__("Ouvrir un autre modèle"), () => this.choisirModele());
+		// Point de départ Word (variables {{ … }}) à retoucher puis déposer sur le modèle.
+		p.add_button(__("Modèle Word"), () => {
+			if (this.modele) open_url_post("/api/method/udshed.api.documents_enseignant.modele_vierge", { modele: this.modele }, true);
+		});
 		$(`<style>
 			.ea { display: grid; grid-template-columns: 190px 1fr 280px; gap: 12px; align-items: start; }
 			.ea-outils button { display: block; width: 100%; margin-bottom: 6px; text-align: left; }
@@ -63,16 +82,21 @@ class EditeurActe {
 			<div class="ea-zone"><div class="ea-page"></div></div>
 			<div class="ea-props"><div class="text-muted">${__("Sélectionnez un élément pour le régler.")}</div></div>
 		</div>`).appendTo(p.main);
-		OUTILS.forEach(([type, libelle, defaut]) => {
-			$(`<button class="btn btn-default btn-sm">${libelle}</button>`)
-				.on("click", () => this.ajouter(type, defaut))
-				.appendTo(this.$racine.find(".ea-outils"));
-		});
+		this.$boutons = $(`<div class="ea-boutons"></div>`).appendTo(this.$racine.find(".ea-outils"));
+		this.afficherOutils("Étudiant");
 		$(`<div class="text-muted small mt-3">${__("Astuce : flèches du clavier pour déplacer (Maj = 5 mm), Suppr pour effacer.")}</div>`)
 			.appendTo(this.$racine.find(".ea-outils"));
 		this.$page = this.$racine.find(".ea-page");
 		$(document).on("keydown.editeur_acte", (e) => this.clavier(e));
-		frappe.call("udshed.api.actes.variables_modele").then((r) => (this.variables = r.message || []));
+	}
+
+	afficherOutils(sujet) {
+		this.$boutons.empty();
+		OUTILS_COMMUNS.concat(OUTILS_SUJET[sujet] || OUTILS_SUJET["Étudiant"]).forEach(([type, libelle, defaut]) => {
+			$(`<button class="btn btn-default btn-sm">${libelle}</button>`)
+				.on("click", () => this.ajouter(type, defaut))
+				.appendTo(this.$boutons);
+		});
 	}
 
 	choisirModele() {
@@ -89,6 +113,11 @@ class EditeurActe {
 			this.doc = doc;
 			this.modele = nom;
 			this.page.set_title(__("Modèle : {0}", [nom]));
+			this.afficherOutils(doc.sujet || "Étudiant");
+			frappe.call("udshed.api.actes.variables_modele", { modele: nom }).then((r) => {
+				this.variables = r.message || [];
+				this.proprietes();
+			});
 			const [l, h] = FORMATS[doc.format] || FORMATS["A4 portrait"];
 			this.echelle = l < 100 ? 7 : 3;
 			this.largeur = l; this.hauteur = h;
@@ -132,9 +161,7 @@ class EditeurActe {
 			else if (el.type === "signature" && this.doc.image_signature) $el.append(`<img src="${this.doc.image_signature}">`);
 			else if (el.type === "cachet" && this.doc.image_cachet) $el.append(`<img src="${this.doc.image_cachet}">`);
 			else {
-				const noms = { photo: __("Photo"), qr: "QR", tableau_notes: __("Tableau des notes"), image: __("Image"),
-					logo: __("Logo"), signature: __("Signature"), cachet: __("Cachet") };
-				$el.append(`<div class="ea-ph">${noms[el.type] || el.type}</div>`);
+				$el.append(`<div class="ea-ph">${NOMS_ELEMENTS[el.type] || el.type}</div>`);
 			}
 			$el.append(`<div class="ea-poignee"></div>`);
 			this.brancherSouris($el, el);
@@ -173,7 +200,7 @@ class EditeurActe {
 		if (!el) return $p.append(`<div class="text-muted">${__("Sélectionnez un élément pour le régler.")}</div>`);
 		const champ = (cle, libelle, type = "number", pas = 0.5) =>
 			`<div class="form-group"><label class="small">${libelle}</label><input class="form-control input-sm" data-cle="${cle}" type="${type}" step="${pas}" value="${frappe.utils.escape_html(el[cle] ?? "")}"></div>`;
-		let html = `<div class="small text-muted mb-2">${__("Élément")} : <b>${el.type}</b></div>
+		let html = `<div class="small text-muted mb-2">${__("Élément")} : <b>${NOMS_ELEMENTS[el.type] || el.type}</b></div>
 			<div class="row"><div class="col-6">${champ("x", "X (mm)")}</div><div class="col-6">${champ("y", "Y (mm)")}</div>
 			<div class="col-6">${champ("w", __("Largeur (mm)"))}</div><div class="col-6">${champ("h", __("Hauteur (mm)"))}</div></div>`;
 		if (el.type === "texte") {
@@ -182,7 +209,12 @@ class EditeurActe {
 				<div class="ea-vars border rounded p-2 mb-2">${(this.variables || []).map((v) =>
 					`<a href="#" data-var="${v.cle}">+ ${frappe.utils.escape_html(v.libelle)}</a>`).join("")}</div>`;
 		}
-		if (["texte", "tableau_notes"].includes(el.type)) html += champ("taille", __("Taille du texte (pt)"));
+		if (el.type === "texte" || el.type.startsWith("tableau_")) html += champ("taille", __("Taille du texte (pt)"));
+		if (el.type.startsWith("tableau_")) {
+			html += `<div class="form-group"><label class="small">${__("Texte après le tableau (suit sa longueur réelle)")}</label>
+				<textarea class="form-control" rows="4" data-cle="texte_apres">${frappe.utils.escape_html(el.texte_apres || "")}</textarea></div>`
+				+ champ("taille_apres", __("Taille de ce texte (pt)"));
+		}
 		if (el.type === "texte") {
 			html += `<div class="form-group"><label class="small">${__("Alignement")}</label><select class="form-control input-sm" data-cle="align">
 				${["left", "center", "right", "justify"].map((a) => `<option value="${a}" ${el.align === a ? "selected" : ""}>${a}</option>`).join("")}</select></div>

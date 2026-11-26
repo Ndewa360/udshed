@@ -9,6 +9,9 @@ frappe.query_reports["PV par UE"] = {
 			fieldtype: "Link",
 			options: "Academic Year",
 			reqd: 1,
+			// Année de la session (non modifiable).
+			default: (window.Udshed && Udshed.Session && Udshed.Session.annee()) || frappe.defaults.get_user_default("academic_year"),
+			read_only: (window.Udshed && Udshed.Session && Udshed.Session.annee()) ? 1 : 0,
 		},
 		{
 			fieldname: "semestre",

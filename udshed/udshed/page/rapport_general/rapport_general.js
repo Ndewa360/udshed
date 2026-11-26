@@ -109,7 +109,6 @@ frappe.pages["rapport-general"].on_page_load = function (wrapper) {
 				$(".bureau-search-results").empty().hide();
 			}
 		});
-		render_quick_links();
 		render_inscription_section();
 		render_reinscription_section();
 	}

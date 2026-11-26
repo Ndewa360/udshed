@@ -186,5 +186,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
         }
 
         applyRestrictions();
+        // Année de la session, filtres à valeur unique choisis et verrouillés.
+        if (Udshed.Filtres) await Udshed.Filtres.verrouiller(page);
     });
 }

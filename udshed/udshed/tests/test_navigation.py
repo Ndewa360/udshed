@@ -16,20 +16,23 @@ from frappe.tests import IntegrationTestCase
 from udshed.udshed._fixture_factory import suppress_commits
 from udshed.utils.navigation import BARRES, matrice_visibilite
 
-ADMISSIONS, EXAMENS, PLANNING, INSIGHT, CONFIGURATION, ETUDIANT = BARRES
+ADMISSIONS, EXAMENS, PLANNING, INSIGHT, CONFIGURATION, ETUDIANT, PARTENARIATS, ESPACE_ENSEIGNANT, ACCUEIL = BARRES
 PERSONNEL = {ADMISSIONS, EXAMENS, PLANNING, INSIGHT, CONFIGURATION}
 
 ATTENDU = {
-	"System Manager": PERSONNEL,
-	"Registration Manager": {ADMISSIONS, EXAMENS},
-	"Agent de scolarité": {ADMISSIONS, EXAMENS},
+	"System Manager": PERSONNEL | {PARTENARIATS},
+	# Configuration : « Modèles de documents » (actes des étudiants).
+	"Registration Manager": {ADMISSIONS, EXAMENS, CONFIGURATION},
+	"Agent de scolarité": {ADMISSIONS, EXAMENS, CONFIGURATION},
 	"Coordonateur": PERSONNEL,
-	"Responsable Diplomation": {ADMISSIONS, EXAMENS},
-	"Comptable": {ADMISSIONS, EXAMENS, INSIGHT},
+	"Responsable Diplomation": {ADMISSIONS, EXAMENS, CONFIGURATION},
+	"Comptable": {ADMISSIONS, EXAMENS, INSIGHT, PARTENARIATS},
 	"Planning Manager": {EXAMENS, PLANNING, INSIGHT},
-	"Teacher": {EXAMENS, PLANNING, INSIGHT},
+	"Teacher": {EXAMENS, PLANNING, INSIGHT, ESPACE_ENSEIGNANT},
 	"Correcteur": {EXAMENS},
 	"Student": {ETUDIANT},
+	# Planning académique : « Enseignants » (fiches des enseignants).
+	"Responsable des partenariats": {PARTENARIATS, CONFIGURATION, PLANNING},
 }
 
 APP = Path(frappe.get_app_path("udshed"))
@@ -53,7 +56,17 @@ class TestNavigation(IntegrationTestCase):
 	def test_barres_par_role(self):
 		for role, barres in ATTENDU.items():
 			with self.subTest(role=role):
-				self.assertEqual(set(self.matrice[role]), barres)
+				# Tout le personnel a l'accueil ; l'étudiant arrive directement dans son espace.
+				attendu = barres if role == "Student" else barres | {ACCUEIL}
+				self.assertEqual(set(self.matrice[role]), attendu)
+
+	def test_arrivee_apres_connexion(self):
+		from udshed import hooks
+
+		for role in ATTENDU:
+			with self.subTest(role=role):
+				attendu = "/app/mon-espace-etudiant" if role == "Student" else "/desk/accueil-udshed"
+				self.assertEqual(hooks.role_home_page.get(role), attendu)
 
 	def test_etudiant_ne_voit_que_son_espace(self):
 		self.assertEqual(self.matrice["Student"], {ETUDIANT: ["Mon espace", "Ma réinscription"]})
@@ -67,7 +80,10 @@ class TestNavigation(IntegrationTestCase):
 		self.assertNotIn("Délibérations du jury", teacher[EXAMENS])
 
 	def test_roles_metier_ont_leurs_ecrans(self):
-		self.assertIn("Éditeur de modèles", self.matrice["Responsable Diplomation"][ADMISSIONS])
+		self.assertIn("Éditeur de modèles", self.matrice["Responsable Diplomation"][CONFIGURATION])
+		self.assertIn("Éditeur de modèles", self.matrice["Responsable des partenariats"][CONFIGURATION])
+		self.assertIn("Tableau des enseignants", self.matrice["Responsable des partenariats"][PARTENARIATS])
+		self.assertEqual(self.matrice["Teacher"][ESPACE_ENSEIGNANT], ["Mes documents"])
 		self.assertIn("Sessions de réinscription", self.matrice["Registration Manager"][ADMISSIONS])
 		self.assertIn("Rapports de réinscription", self.matrice["Registration Manager"][ADMISSIONS])
 		self.assertIn("Planning", self.matrice["Planning Manager"][PLANNING])
@@ -88,7 +104,8 @@ class TestNavigation(IntegrationTestCase):
 		self.assertEqual(titres, set(BARRES))
 
 		dock = json.loads((APP / "dock" / "udshed" / "udshed.json").read_text(encoding="utf-8"))
-		self.assertEqual([i["link_to"] for i in dock["items"]], BARRES)
+		self.assertEqual(sorted(i["link_to"] for i in dock["items"]), sorted(BARRES))
+		self.assertEqual(dock["items"][0]["link_to"], ACCUEIL)  # la tuile Udshed mène à l'accueil
 		self.assertTrue(all(i["link_type"] == "Sidebar" for i in dock["items"]))
 
 	def test_etudiant_sans_acces_aux_dossiers_du_personnel(self):

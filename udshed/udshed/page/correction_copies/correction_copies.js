@@ -74,13 +74,13 @@ frappe.pages["correction-copies"].on_page_load = function (wrapper) {
 	// ----------------------------------------------------------------------
 	// construction de l'interface
 	// ----------------------------------------------------------------------
-	$(wrapper).empty();
-
-	$page = $(wrapper);
+	// Page du desk (en-tête, menu, marges) : le contenu va dans page.main.
+	const page = frappe.ui.make_app_page({ parent: wrapper, title: __("Correction des copies"), single_column: true });
+	$page = $(page.main);
 	$page
 		.append(
 			'<div class="row" style="padding:8px 0">'
-			+ '  <div class="col-sm-3 text-muted" style="padding-top:6px">Correction des copies d\'examen — anonymat préservé (aucune identité affichée)</div>'
+			+ '  <div class="col-sm-3 text-muted" style="padding-top:6px">Anonymat préservé : aucune identité n\'est affichée.</div>'
 			+ '  <div class="col-sm-2">'
 			+ '    <select class="form-control" data-field="academic_year"><option value="">Année académique…</option></select>'
 			+ '  </div>'
@@ -308,7 +308,14 @@ frappe.pages["correction-copies"].on_page_load = function (wrapper) {
 	// initialisation
 	// ----------------------------------------------------------------------
 	api("obtenir_sessions", {}, __("Chargement des sessions...")).then((r) => {
-		fill_select($academic_year, r.years, (y) => y, state.academic_year);
+		// Année de la session : seule année proposée, non modifiable.
+		const annee = window.Udshed && Udshed.Session && Udshed.Session.annee();
+		fill_select($academic_year, annee ? [annee] : r.years, (y) => y, annee || state.academic_year);
 		fill_select($session, r.sessions, (s) => (s.name || "") + " — " + (s.type_dexamen || ""), state.session);
+		if (annee) {
+			$academic_year.find('option[value=""]').remove();
+			$academic_year.val(annee).prop("disabled", true);
+			if (state.academic_year !== annee) on_select_change($academic_year);
+		}
 	});
 };

@@ -174,7 +174,7 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 	function load_stats() {
 		var args = Object.assign({}, state.filters);
 		frappe.call({
-			method: 'api/method/' + API + 'get_candidate_dashboard_stats',
+			method: API + 'get_candidate_dashboard_stats',
 			args: args,
 			callback: function (r) {
 				if (r && r.message) {
@@ -225,7 +225,7 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 			limit: state.per_page
 		});
 		frappe.call({
-			method: 'api/method/' + API + 'get_candidates_list',
+			method: API + 'get_candidates_list',
 			args: args,
 			callback: function (r) {
 				if (r && r.message) {
@@ -305,7 +305,7 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 	// ─── Détail (modal) ─────────────────────────────────────────
 	function open_detail(name) {
 		frappe.call({
-			method: 'api/method/' + API + 'get_candidate_detail',
+			method: API + 'get_candidate_detail',
 			args: { name: name },
 			callback: function (r) {
 				if (r && r.message) {
@@ -464,7 +464,7 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 
 	function call_update_status(doc_name, new_status, comment) {
 		frappe.call({
-			method: 'api/method/' + API + 'update_candidate_status',
+			method: API + 'update_candidate_status',
 			args: { name: doc_name, new_status: new_status, comment: comment },
 			callback: function (r) {
 				if (r && r.message && r.message.ok) {

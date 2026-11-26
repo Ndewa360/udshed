@@ -1,22 +1,29 @@
 {
-	"content": null,
-	"creation": "2026-11-25 20:00:00.000000",
-	"docstatus": 0,
-	"doctype": "Page",
-	"idx": 0,
-	"modified": "2026-11-25 20:00:00.000000",
-	"modified_by": "Administrator",
-	"module": "Udshed",
-	"name": "editeur-modele-acte",
-	"owner": "Administrator",
-	"page_name": "editeur-modele-acte",
-	"roles": [
-		{"role": "System Manager"},
-		{"role": "Responsable Diplomation"}
-	],
-	"script": null,
-	"standard": "Yes",
-	"style": null,
-	"system_page": 0,
-	"title": "Éditeur de modèle d'acte"
+ "content": null,
+ "creation": "2026-11-25 20:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-11-26 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "editeur-modele-acte",
+ "owner": "Administrator",
+ "page_name": "editeur-modele-acte",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Responsable Diplomation"
+  },
+  {
+   "role": "Responsable des partenariats"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Éditeur de modèles de documents"
 }

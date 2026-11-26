@@ -10,7 +10,16 @@ DOCTYPES_WITH_PLANNING_PERMISSION = ("Planning Item", "Teaching Unit")
 
 
 def _teacher_name(user):
-	return frappe.db.get_value("Teacher", {"email": user}, "name")
+	"""Fiche enseignant d'un compte : champ « Utilisateur » d'abord, puis e-mail de la fiche."""
+	if not user or user in ("Administrator", "Guest"):
+		return None
+	nom = frappe.db.get_value("Teacher", {"user": user}, "name") or frappe.db.get_value(
+		"Teacher", {"email": user}, "name")
+	if not nom:
+		email = frappe.db.get_value("User", user, "email")
+		if email and email != user:
+			nom = frappe.db.get_value("Teacher", {"email": email}, "name")
+	return nom
 
 
 def _add_unique(target, value):
@@ -148,6 +157,11 @@ def get_scope(user=None):
 			for unit in parents:
 				_add_unique(scope["teaching_units"], unit)
 			if scope["teaching_units"]:
+				# Cours liés (tronc commun entre grilles) : leurs enseignants donnent cours à ces
+				# classes ; le planificateur doit pouvoir consulter et envoyer leur planning.
+				from udshed.utils.planning_conflits import groupe_du_cours
+
+				lies = sorted({u for unit in scope["teaching_units"] for u in groupe_du_cours(unit)})
 				for year in frappe.get_all(
 					"Teaching Unit",
 					filters={"name": ["in", scope["teaching_units"]]},
@@ -157,7 +171,7 @@ def get_scope(user=None):
 					_add_unique(scope["academic_years"], year)
 				for name in frappe.get_all(
 					"Course Teacher Item",
-					filters={"parent": ["in", scope["teaching_units"]]},
+					filters={"parent": ["in", lies]},
 					pluck="enseignant",
 					distinct=True,
 				):
@@ -238,7 +252,7 @@ def _normalize_filters(scope, academic_year, faculty, filiere, niveau, teacher, 
 			frappe.throw(_("Accès refusé : vous ne pouvez consulter que votre propre planning."), frappe.PermissionError)
 		if not filters["teacher"] and scope["teacher"]:
 			filters["teacher"] = scope["teacher"]
-	elif filters["teacher"] and scope["teachers"]:
+	elif filters["teacher"] and scope["teachers"] and filters["teacher"] != scope["teacher"]:
 		_check_value(_("Enseignant"), filters["teacher"], scope["teachers"])
 
 	if require_filters:

@@ -1,5 +1,6 @@
 [pre_model_sync]
 udshed.patches.creer_role_responsable_diplomation
+udshed.patches.creer_role_responsable_partenariats
 # Patches added in this section will be executed before doctypes are migrated
 udshed.patches.colonnes_parent_planning_period
 # Read docs to understand patches: https://docs.frappe.io/framework/user/en/database-migrations
@@ -18,3 +19,4 @@ udshed.patches.depublier_web_form_reinscription
 udshed.patches.campagne_admission
 udshed.patches.compte_etudiant_matricule
 udshed.patches.actes_academiques
+udshed.patches.documents_enseignants

@@ -6,15 +6,17 @@
  "module": "Udshed",
  "name": "Modele Acte",
  "owner": "Administrator",
- "modified": "2026-11-25 20:00:00.000000",
+ "modified": "2026-11-26 18:00:00.000000",
  "modified_by": "Administrator",
  "field_order": [
   "section_general",
   "titre",
+  "sujet",
   "type_acte",
   "format",
   "column_break_general",
   "actif",
+  "par_defaut",
   "libre_service",
   "condition",
   "section_signature",
@@ -26,6 +28,7 @@
   "image_cachet",
   "section_dessin",
   "image_fond",
+  "modele_word",
   "layout"
  ],
  "fields": [
@@ -43,10 +46,21 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "sujet",
+   "fieldtype": "Select",
+   "label": "Document de",
+   "options": "Étudiant\nEnseignant",
+   "default": "Étudiant",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Déduit du type de document (documents enseignants : progression, vacations, convention, attestation)."
+  },
+  {
    "fieldname": "type_acte",
    "fieldtype": "Select",
    "label": "Type d'acte",
-   "options": "Certificat de scolarité\nAttestation d'inscription\nCarte d'étudiant\nRelevé de notes\nAttestation de réussite\nDiplôme\nAutre",
+   "options": "Certificat de scolarité\nAttestation d'inscription\nCarte d'étudiant\nRelevé de notes\nAttestation de réussite\nDiplôme\nFiche de progression des cours\nFiche de règlement des vacations\nConvention de vacation\nAttestation d'enseignement\nAutre",
    "reqd": 1,
    "in_list_view": 1,
    "in_standard_filter": 1
@@ -69,6 +83,13 @@
    "label": "Actif",
    "default": "1",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "par_defaut",
+   "fieldtype": "Check",
+   "label": "Modèle par défaut pour ce type",
+   "in_list_view": 1,
+   "description": "Utilisé automatiquement par tous pour ce type de document (un seul par type)."
   },
   {
    "fieldname": "libre_service",
@@ -133,6 +154,12 @@
    "label": "Image de fond (optionnelle)"
   },
   {
+   "fieldname": "modele_word",
+   "fieldtype": "Attach",
+   "label": "Modèle Word (facultatif)",
+   "description": "Fichier .docx avec les mêmes variables que l'éditeur, par ex. {{ enseignant.nom_complet }}. Sans fichier, la version Word est construite depuis le modèle dessiné. Le bouton « Modèle Word » fournit un point de départ à retoucher puis déposer ici."
+  },
+  {
    "fieldname": "layout",
    "fieldtype": "Code",
    "label": "Disposition (JSON)",
@@ -179,6 +206,16 @@
    "read": 1,
    "report": 1,
    "role": "Agent de scolarité"
+  },
+  {
+   "role": "Responsable des partenariats",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
   }
  ],
  "sort_field": "modified",

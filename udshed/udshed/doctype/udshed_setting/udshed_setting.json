@@ -10,6 +10,12 @@
   "column_break_lpdk",
   "school_name",
   "school_logo",
+  "section_matricules",
+  "format_matricule",
+  "mode_lettre_matricule",
+  "column_break_matricules",
+  "lettre_matricule_fixe",
+  "apercu_matricule",
   "section_break_bsrn",
   "section_break_emails",
   "email_coordinateur",
@@ -18,6 +24,13 @@
   "email_candidature_subject",
   "devise",
   "configuration_des_paiements_par_grade",
+  "section_vacations",
+  "base_paiement_vacations",
+  "taux_retenue_vacations",
+  "column_break_vacations",
+  "coef_vacation_cm",
+  "coef_vacation_td",
+  "coef_vacation_tp",
   "tab_2_tab",
   "seuil_validation_licence",
   "seuil_validation_bts_",
@@ -61,6 +74,42 @@
    "fieldtype": "Attach Image",
    "label": "Logo",
    "permlevel": 1
+  },
+  {
+   "fieldname": "section_matricules",
+   "fieldtype": "Section Break",
+   "label": "Matricules des étudiants",
+   "description": "Repères : {AAAA} année de rentrée (2026), {AA} deux derniers chiffres (26), {A} dernier chiffre (6), {L} lettre, {FIL} code de la filière, {###} numéro d'ordre (un # par chiffre). Exemple : {AA}{L}{###} donne 26C095. Un matricule déjà fourni à l'import est toujours conservé."
+  },
+  {
+   "fieldname": "format_matricule",
+   "fieldtype": "Data",
+   "label": "Format des matricules",
+   "default": "{AA}{L}{###}"
+  },
+  {
+   "fieldname": "mode_lettre_matricule",
+   "fieldtype": "Select",
+   "label": "Lettre des matricules",
+   "options": "Suite des campagnes (A, B, C…)\nLettre fixe\nLettre de la filière",
+   "default": "Suite des campagnes (A, B, C…)",
+   "description": "Suite des campagnes : A pour la 1re campagne d'admission, B pour la 2e… Lettre de la filière : à renseigner sur chaque filière (repli : lettre fixe)."
+  },
+  {
+   "fieldname": "column_break_matricules",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "lettre_matricule_fixe",
+   "fieldtype": "Data",
+   "label": "Lettre fixe",
+   "length": 3,
+   "depends_on": "eval:doc.mode_lettre_matricule!='Suite des campagnes (A, B, C…)'"
+  },
+  {
+   "fieldname": "apercu_matricule",
+   "fieldtype": "HTML",
+   "label": "Prochain matricule"
   },
   {
    "fieldname": "column_break_ecole",
@@ -147,6 +196,47 @@
    "options": "Financial Payment Grade Config"
   },
   {
+   "fieldname": "section_vacations",
+   "fieldtype": "Section Break",
+   "label": "Vacations (enseignants vacataires)",
+   "description": "Montant d'une fiche de vacations = heures payées × tarif horaire du grade (tableau ci-dessus) × coefficient du type de séance. Seuls les vacataires sont rémunérés."
+  },
+  {
+   "fieldname": "base_paiement_vacations",
+   "fieldtype": "Select",
+   "label": "Séances payées",
+   "options": "Séances pointées « Fait »\nSéances passées (prévues au planning)",
+   "default": "Séances pointées « Fait »"
+  },
+  {
+   "fieldname": "taux_retenue_vacations",
+   "fieldtype": "Percent",
+   "label": "Retenue à la source (%)",
+   "description": "Déduite du montant brut sur la fiche de règlement (0 = aucune)."
+  },
+  {
+   "fieldname": "column_break_vacations",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "coef_vacation_cm",
+   "fieldtype": "Float",
+   "label": "Coefficient CM",
+   "default": "1"
+  },
+  {
+   "fieldname": "coef_vacation_td",
+   "fieldtype": "Float",
+   "label": "Coefficient TD",
+   "default": "1"
+  },
+  {
+   "fieldname": "coef_vacation_tp",
+   "fieldtype": "Float",
+   "label": "Coefficient TP",
+   "default": "1"
+  },
+  {
    "fieldname": "seuil_validation_licence",
    "fieldtype": "Percent",
    "label": "Seuil validation Licence (%)"
@@ -202,7 +292,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-25 21:00:00.000000",
+ "modified": "2026-11-26 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Udshed Setting",

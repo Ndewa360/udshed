@@ -91,18 +91,18 @@ function render_cards(teaching_units, $cards_container) {
 				<div class="card" style="margin-bottom: 20px;">
 					<div class="card-body">
 						<h5 class="card-title">
-							📘 ${tu.course_title}
+							${tu.course_title}
 						</h5>
 						<p class="text-muted">${tu.course_code || ''}</p>
 
 						<hr>
 
-						<strong>🎓 Classes</strong>
+						<strong>${__("Classes")}</strong>
 						<ul class="small">
 							${tu.classes.map(c => `<li>${c}</li>`).join('')}
 						</ul>
 
-						<strong>👨‍🏫 Sections</strong>
+						<strong>${__("Enseignants")}</strong>
 						<ul class="small">
 							${tu.sections.map(s =>
 								`<li>${s.type} : ${s.teacher}</li>`
@@ -110,7 +110,7 @@ function render_cards(teaching_units, $cards_container) {
 						</ul>
 
 						<div class="mt-3">
-							<button class="btn btn-sm btn-secondary btn-edit">
+							<button class="btn btn-sm btn-default btn-edit">
 								Modifier
 							</button>
 							<button class="btn btn-sm btn-primary btn-planning">
@@ -172,7 +172,7 @@ frappe.pages['course-management'].on_page_load = function(wrapper) {
 
 	const $empty_state = $(`
 		<div class="text-muted text-center" style="padding: 60px;">
-			<h4>📘 Gestion des cours</h4>
+			<h4>${__("Gestion des cours")}</h4>
 			<p>Sélectionnez une année académique, une faculté et une filiére ainsi que le niveau pour afficher les cours.</p>
 		</div>
 	`).appendTo($content);
@@ -260,7 +260,12 @@ frappe.pages['course-management'].on_page_load = function(wrapper) {
 	// =========================
 	// Initial
 	// =========================
-	refresh($cards_container,$empty_state,filters);
+	// Année de la session, filtres à valeur unique choisis et verrouillés.
+	if (window.Udshed && Udshed.Filtres) {
+		Udshed.Filtres.verrouiller(page).then(() => refresh($cards_container,$empty_state,filters));
+	} else {
+		refresh($cards_container,$empty_state,filters);
+	}
 
 
 

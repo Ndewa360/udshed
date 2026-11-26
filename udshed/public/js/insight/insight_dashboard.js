@@ -43,7 +43,10 @@ window.Udshed.Insight.Dashboard = class {
                     { value: "TP", label: "TP" }, { value: "CC", label: __("Contrôle continu") },
                     { value: "EXAMEN", label: __("Examen") }, { value: "RATTRAPAGE", label: __("Rattrapage") }] }),
         };
-        frappe.xcall("udshed.api.reference.annee_courante").then((annee) => {
+        // Année de la session (non modifiable) ; à défaut, l'année courante des réglages.
+        const annee_session = window.Udshed && Udshed.Session && Udshed.Session.annee();
+        if (annee_session && this.champs.academic_year.$input) this.champs.academic_year.$input.prop("disabled", true);
+        Promise.resolve(annee_session || frappe.xcall("udshed.api.reference.annee_courante")).then((annee) => {
             if (annee) this.appliquer({ academic_year: annee });
             else this.afficher_message(__("Choisissez une année académique."));
         });
@@ -187,7 +190,7 @@ window.Udshed.Insight.Dashboard = class {
                 : `<a href="#" data-filtre='${this.esc(JSON.stringify({ ...{ faculty: null, filiere: null, niveau: null, teacher: null }, ...f.filtre }))}'>${this.esc(f.libelle)}</a>`;
         });
         return `<div class="ui-ariane">${items.join(" › ")}
-            <span class="text-muted small ml-2">· ${this.esc(data.filtres.academic_year)}${data.filtres.semestre ? " · " + this.esc(data.filtres.semestre) : ""} · ${__("au {0}", [frappe.datetime.str_to_user(data.date)])}</span></div>`;
+            <span class="text-muted small ml-2">· ${this.esc(data.filtres.academic_year)}${data.filtres.semestre ? " · " + this.esc(data.filtres.semestre) : ""} · ${__("au {0}", [new Date(data.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })])}</span></div>`;
     }
 
     carte(label, valeur, sous, couleur) {

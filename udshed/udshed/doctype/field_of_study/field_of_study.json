@@ -14,6 +14,7 @@
   "has_uv_in_grid",
   "column_break_fzsk",
   "field_of_study_code",
+  "lettre_matricule",
   "description",
   "levels",
   "field_of_study_level"
@@ -52,6 +53,13 @@
    "unique": 1
   },
   {
+   "description": "Utilis\u00e9e si les r\u00e9glages choisissent \u00ab Lettre de la fili\u00e8re \u00bb.",
+   "fieldname": "lettre_matricule",
+   "fieldtype": "Data",
+   "label": "Lettre des matricules",
+   "length": 3
+  },
+  {
    "fieldname": "department_coordinator",
    "fieldtype": "Link",
    "label": "Chefs de d\u00e9partement",
@@ -82,7 +90,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-25 21:00:00.000000",
+ "modified": "2026-11-26 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Field of study",

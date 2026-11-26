@@ -1,0 +1,163 @@
+{
+ "actions": [],
+ "creation": "2026-11-26 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Document Enseignant",
+ "owner": "Administrator",
+ "modified": "2026-11-26 18:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "teacher",
+  "nom_enseignant",
+  "type_document",
+  "modele",
+  "column_break_doc",
+  "academic_year",
+  "periode",
+  "convention",
+  "section_trace",
+  "code_verification",
+  "signe_electroniquement",
+  "column_break_trace",
+  "genere_par",
+  "genere_le",
+  "donnees"
+ ],
+ "fields": [
+  {
+   "fieldname": "teacher",
+   "fieldtype": "Link",
+   "label": "Enseignant",
+   "options": "Teacher",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "nom_enseignant",
+   "fieldtype": "Data",
+   "label": "Nom de l'enseignant",
+   "fetch_from": "teacher.full_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "type_document",
+   "fieldtype": "Data",
+   "label": "Document",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "modele",
+   "fieldtype": "Link",
+   "label": "Modèle",
+   "options": "Modele Acte",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_doc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "periode",
+   "fieldtype": "Data",
+   "label": "Période"
+  },
+  {
+   "fieldname": "convention",
+   "fieldtype": "Link",
+   "label": "Convention",
+   "options": "Convention Vacation"
+  },
+  {
+   "fieldname": "section_trace",
+   "fieldtype": "Section Break",
+   "label": "Traçabilité"
+  },
+  {
+   "fieldname": "code_verification",
+   "fieldtype": "Data",
+   "label": "Code de vérification",
+   "unique": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "signe_electroniquement",
+   "fieldtype": "Check",
+   "label": "Signé électroniquement",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_trace",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "genere_par",
+   "fieldtype": "Link",
+   "label": "Généré par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "genere_le",
+   "fieldtype": "Datetime",
+   "label": "Généré le",
+   "read_only": 1
+  },
+  {
+   "fieldname": "donnees",
+   "fieldtype": "Code",
+   "label": "Données imprimées",
+   "options": "JSON",
+   "read_only": 1,
+   "hidden": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Responsable des partenariats",
+   "permlevel": 0,
+   "read": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Comptable",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "format:DOC-{academic_year}-{#####}",
+ "naming_rule": "Expression",
+ "title_field": "type_document",
+ "in_create": 1
+}

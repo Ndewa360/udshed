@@ -625,3 +625,157 @@ body[data-route="gestion-des-niveaux"] .layout-side-section,
 @media (prefers-reduced-motion: reduce) {
 	.gn-layout *, .gn-sidebar, .gn-actions-panel { transition: none !important; animation: none !important; }
 }
+
+/* ==========================================================================
+   UDSHED — CADRE COMMUN DES ÉCRANS
+   Sobre et lisible (public souvent âgé) : marges latérales, texte un peu plus
+   grand, couleurs neutres ; les actions sensibles restent visibles sans couleur
+   criarde.
+   ========================================================================== */
+:is(.page-container[data-page-route="accueil-udshed"],
+.page-container[data-page-route="consultation-candidatures"],
+.page-container[data-page-route="gestion-concours"],
+.page-container[data-page-route="liste-des-inscriptions"],
+.page-container[data-page-route="report-reinscription"],
+.page-container[data-page-route="rapport-general"],
+.page-container[data-page-route="correction-copies"],
+.page-container[data-page-route="note-udshed"],
+.page-container[data-page-route="saisie-notes-concours"],
+.page-container[data-page-route="resultats-academiques"],
+.page-container[data-page-route="releve_notes"],
+.page-container[data-page-route="planning-academique"],
+.page-container[data-page-route="grille-denseignement"],
+.page-container[data-page-route="course-management"],
+.page-container[data-page-route="insight-academique"],
+.page-container[data-page-route="insight-financier"],
+.page-container[data-page-route="gestion-des-niveaux"],
+.page-container[data-page-route="editeur-modele-acte"],
+.page-container[data-page-route="partenariats-enseignants"],
+.page-container[data-page-route="mes-documents-enseignant"],
+.page-container[data-page-route="mon-espace-etudiant"],
+.page-container[data-page-route="reinscription_etudiant"]) .layout-main-section {
+	padding-left: 16px;
+	padding-right: 16px;
+	font-size: 15px;
+}
+:is(.page-container[data-page-route="accueil-udshed"],
+.page-container[data-page-route="consultation-candidatures"],
+.page-container[data-page-route="gestion-concours"],
+.page-container[data-page-route="liste-des-inscriptions"],
+.page-container[data-page-route="report-reinscription"],
+.page-container[data-page-route="rapport-general"],
+.page-container[data-page-route="correction-copies"],
+.page-container[data-page-route="note-udshed"],
+.page-container[data-page-route="saisie-notes-concours"],
+.page-container[data-page-route="resultats-academiques"],
+.page-container[data-page-route="releve_notes"],
+.page-container[data-page-route="planning-academique"],
+.page-container[data-page-route="grille-denseignement"],
+.page-container[data-page-route="course-management"],
+.page-container[data-page-route="insight-academique"],
+.page-container[data-page-route="insight-financier"],
+.page-container[data-page-route="gestion-des-niveaux"],
+.page-container[data-page-route="editeur-modele-acte"],
+.page-container[data-page-route="partenariats-enseignants"],
+.page-container[data-page-route="mes-documents-enseignant"],
+.page-container[data-page-route="mon-espace-etudiant"],
+.page-container[data-page-route="reinscription_etudiant"]) .layout-main-section .btn {
+	font-size: 14px;
+}
+:is(.page-container[data-page-route="accueil-udshed"],
+.page-container[data-page-route="consultation-candidatures"],
+.page-container[data-page-route="gestion-concours"],
+.page-container[data-page-route="liste-des-inscriptions"],
+.page-container[data-page-route="report-reinscription"],
+.page-container[data-page-route="rapport-general"],
+.page-container[data-page-route="correction-copies"],
+.page-container[data-page-route="note-udshed"],
+.page-container[data-page-route="saisie-notes-concours"],
+.page-container[data-page-route="resultats-academiques"],
+.page-container[data-page-route="releve_notes"],
+.page-container[data-page-route="planning-academique"],
+.page-container[data-page-route="grille-denseignement"],
+.page-container[data-page-route="course-management"],
+.page-container[data-page-route="insight-academique"],
+.page-container[data-page-route="insight-financier"],
+.page-container[data-page-route="gestion-des-niveaux"],
+.page-container[data-page-route="editeur-modele-acte"],
+.page-container[data-page-route="partenariats-enseignants"],
+.page-container[data-page-route="mes-documents-enseignant"],
+.page-container[data-page-route="mon-espace-etudiant"],
+.page-container[data-page-route="reinscription_etudiant"]) .layout-main-section .btn-danger {
+	background: var(--bg-color);
+	color: var(--red-600, #b42318);
+	border: 1px solid var(--red-200, #f4c7c3);
+}
+:is(.page-container[data-page-route="accueil-udshed"],
+.page-container[data-page-route="consultation-candidatures"],
+.page-container[data-page-route="gestion-concours"],
+.page-container[data-page-route="liste-des-inscriptions"],
+.page-container[data-page-route="report-reinscription"],
+.page-container[data-page-route="rapport-general"],
+.page-container[data-page-route="correction-copies"],
+.page-container[data-page-route="note-udshed"],
+.page-container[data-page-route="saisie-notes-concours"],
+.page-container[data-page-route="resultats-academiques"],
+.page-container[data-page-route="releve_notes"],
+.page-container[data-page-route="planning-academique"],
+.page-container[data-page-route="grille-denseignement"],
+.page-container[data-page-route="course-management"],
+.page-container[data-page-route="insight-academique"],
+.page-container[data-page-route="insight-financier"],
+.page-container[data-page-route="gestion-des-niveaux"],
+.page-container[data-page-route="editeur-modele-acte"],
+.page-container[data-page-route="partenariats-enseignants"],
+.page-container[data-page-route="mes-documents-enseignant"],
+.page-container[data-page-route="mon-espace-etudiant"],
+.page-container[data-page-route="reinscription_etudiant"]) .layout-main-section .btn-danger:hover {
+	background: var(--red-50, #fdf3f2);
+}
+:is(.page-container[data-page-route="accueil-udshed"],
+.page-container[data-page-route="consultation-candidatures"],
+.page-container[data-page-route="gestion-concours"],
+.page-container[data-page-route="liste-des-inscriptions"],
+.page-container[data-page-route="report-reinscription"],
+.page-container[data-page-route="rapport-general"],
+.page-container[data-page-route="correction-copies"],
+.page-container[data-page-route="note-udshed"],
+.page-container[data-page-route="saisie-notes-concours"],
+.page-container[data-page-route="resultats-academiques"],
+.page-container[data-page-route="releve_notes"],
+.page-container[data-page-route="planning-academique"],
+.page-container[data-page-route="grille-denseignement"],
+.page-container[data-page-route="course-management"],
+.page-container[data-page-route="insight-academique"],
+.page-container[data-page-route="insight-financier"],
+.page-container[data-page-route="gestion-des-niveaux"],
+.page-container[data-page-route="editeur-modele-acte"],
+.page-container[data-page-route="partenariats-enseignants"],
+.page-container[data-page-route="mes-documents-enseignant"],
+.page-container[data-page-route="mon-espace-etudiant"],
+.page-container[data-page-route="reinscription_etudiant"]) input:disabled, :is(.page-container[data-page-route="accueil-udshed"],
+.page-container[data-page-route="consultation-candidatures"],
+.page-container[data-page-route="gestion-concours"],
+.page-container[data-page-route="liste-des-inscriptions"],
+.page-container[data-page-route="report-reinscription"],
+.page-container[data-page-route="rapport-general"],
+.page-container[data-page-route="correction-copies"],
+.page-container[data-page-route="note-udshed"],
+.page-container[data-page-route="saisie-notes-concours"],
+.page-container[data-page-route="resultats-academiques"],
+.page-container[data-page-route="releve_notes"],
+.page-container[data-page-route="planning-academique"],
+.page-container[data-page-route="grille-denseignement"],
+.page-container[data-page-route="course-management"],
+.page-container[data-page-route="insight-academique"],
+.page-container[data-page-route="insight-financier"],
+.page-container[data-page-route="gestion-des-niveaux"],
+.page-container[data-page-route="editeur-modele-acte"],
+.page-container[data-page-route="partenariats-enseignants"],
+.page-container[data-page-route="mes-documents-enseignant"],
+.page-container[data-page-route="mon-espace-etudiant"],
+.page-container[data-page-route="reinscription_etudiant"]) select:disabled {
+	opacity: 1;
+	color: var(--text-color);
+	cursor: not-allowed;
+}

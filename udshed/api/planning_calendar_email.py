@@ -109,20 +109,17 @@ def _destinataires(filters, items, to_all_teacher, to_teacher, to_me):
 			ajouter_enseignant(name)
 
 	if to_me:
+		# « M'envoyer » : la vue affichée à l'écran (classe ou enseignant), à l'adresse du compte.
 		user = frappe.session.user
-		teacher_name = planning_permission._teacher_name(user)
-		if teacher_name:
-			ajouter_enseignant(teacher_name)
-		else:
-			email = frappe.db.get_value("User", user, "email")
-			if not email:
-				frappe.throw(_("Adresse email introuvable pour l'utilisateur courant."), frappe.ValidationError)
-			destinataires.setdefault(email, {
-				"email": email,
-				"label": frappe.utils.get_fullname(user) or user,
-				"teacher": None,
-				"filters": dict(filters),
-			})
+		email = frappe.db.get_value("User", user, "email")
+		if not email:
+			frappe.throw(_("Adresse email introuvable pour l'utilisateur courant."), frappe.ValidationError)
+		destinataires.setdefault(email, {
+			"email": email,
+			"label": frappe.utils.get_fullname(user) or user,
+			"teacher": filters.get("teacher"),
+			"filters": dict(filters),
+		})
 
 	return destinataires, sans_email
 

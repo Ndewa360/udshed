@@ -166,7 +166,9 @@ def _get_enseignant_courant():
     """Enseignant (Teacher) lié à l'utilisateur connecté, ou None."""
     if frappe.session.user == "Administrator":
         return None
-    return frappe.db.get_value("Teacher", {"email": frappe.session.user}, "name")
+    from udshed.api.planning_permission import _teacher_name
+
+    return _teacher_name(frappe.session.user)
 
 
 def _get_enseignant_full_name(enseignant):

@@ -13,6 +13,13 @@ def get_user_context():
 		'Academic Year',
 		filters={'name': ['in', scope['academic_years']]} if scope['academic_years'] else None,
 	)
+	# Année de travail fixée pour la session : seule année proposée aux écrans.
+	from udshed.utils.session_academique import annee_choisie
+
+	annee_session = annee_choisie()
+	if annee_session:
+		default_academic_year = annee_session
+		academic_year_list = [{"name": annee_session}]
 	roles = frappe.get_roles(user)
 	data_result = []
 

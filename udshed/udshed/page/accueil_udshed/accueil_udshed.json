@@ -1,0 +1,50 @@
+{
+	"content": null,
+	"creation": "2026-11-26 21:00:00.000000",
+	"docstatus": 0,
+	"doctype": "Page",
+	"idx": 0,
+	"modified": "2026-11-26 21:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "Udshed",
+	"name": "accueil-udshed",
+	"owner": "Administrator",
+	"page_name": "accueil-udshed",
+	"roles": [
+		{
+			"role": "System Manager"
+		},
+		{
+			"role": "Coordonateur"
+		},
+		{
+			"role": "Planning Manager"
+		},
+		{
+			"role": "Registration Manager"
+		},
+		{
+			"role": "Agent de scolarité"
+		},
+		{
+			"role": "Comptable"
+		},
+		{
+			"role": "Correcteur"
+		},
+		{
+			"role": "Responsable Diplomation"
+		},
+		{
+			"role": "Responsable des partenariats"
+		},
+		{
+			"role": "Teacher"
+		}
+	],
+	"script": null,
+	"standard": "Yes",
+	"style": null,
+	"system_page": 0,
+	"title": "Accueil"
+}

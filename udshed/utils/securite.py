@@ -24,6 +24,7 @@ ROLES_PERSONNEL = frozenset(
 		"Comptable",
 		"Correcteur",
 		"Responsable Diplomation",
+		"Responsable des partenariats",
 		"Teacher",
 	}
 )

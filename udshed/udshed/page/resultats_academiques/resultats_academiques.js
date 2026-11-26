@@ -181,6 +181,8 @@ frappe.pages["resultats-academiques"].on_page_load = function (wrapper) {
 			$year.append(`<option value="${esc(y)}">${esc(y)}</option>`);
 		});
 		$year.val(state.filters.academic_year);
+		// Année de la session : une seule année proposée, non modifiable.
+		$year.prop("disabled", (state.academic_years || []).length <= 1);
 	}
 
 	function load_classes() {
@@ -211,6 +213,13 @@ frappe.pages["resultats-academiques"].on_page_load = function (wrapper) {
 			$classe.append(`<option value="${esc(c.filiere)}|${esc(c.niveau)}">${esc(c.label)}</option>`);
 		});
 		$classe.val(state.filters.classe || "");
+		// Une seule classe dans le périmètre : déjà choisie, non modifiable.
+		if (state.classes.length === 1) {
+			$classe.find('option[value=""]').remove();
+			state.filters.classe = state.classes[0].filiere + "|" + state.classes[0].niveau;
+			$classe.val(state.filters.classe);
+		}
+		$classe.prop("disabled", state.classes.length === 1);
 	}
 
 	function load_data() {

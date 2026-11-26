@@ -33,18 +33,19 @@ def _exiger_migration():
 
 
 def _verifier_droit(teaching_units):
+	"""Un coordinateur relie un cours de SA grille à un cours de n'importe quelle autre grille :
+	il suffit qu'un des cours concernés appartienne à une classe de son périmètre."""
 	scope = planning_permission.get_scope()
 	if scope["is_admin"]:
 		return
 	if not scope["can_plan"]:
 		frappe.throw(_("Accès refusé : réservé aux coordinateurs et gestionnaires de planning."), frappe.PermissionError)
 	niveaux = {str(n) for n in scope["niveaux"]}
-	for tu in teaching_units:
-		if not any(str(n) in niveaux for _f, n in grille.classes_du_cours(tu)):
-			frappe.throw(
-				_("Accès refusé : le cours {0} n'appartient à aucune classe de votre périmètre.").format(tu),
-				frappe.PermissionError,
-			)
+	if not any(str(n) in niveaux for tu in teaching_units for _f, n in grille.classes_du_cours(tu)):
+		frappe.throw(
+			_("Accès refusé : au moins un des cours doit appartenir à une classe de votre périmètre."),
+			frappe.PermissionError,
+		)
 
 
 def _verifier_classes_distinctes(membres):
@@ -121,7 +122,8 @@ def delier_cours(teaching_unit):
 	tu = _cours(teaching_unit)
 	if not tu.groupe_cours_commun:
 		return {"groupe": None, "cours": []}
-	_verifier_droit([teaching_unit])
+	membres = frappe.get_all("Teaching Unit", filters={"groupe_cours_commun": tu.groupe_cours_commun}, pluck="name")
+	_verifier_droit(membres or [teaching_unit])
 	frappe.db.set_value("Teaching Unit", teaching_unit, "groupe_cours_commun", None)
 	restants = frappe.get_all("Teaching Unit", filters={"groupe_cours_commun": tu.groupe_cours_commun}, pluck="name")
 	if len(restants) == 1:
@@ -259,7 +261,7 @@ def comparer_grilles(academic_year, filiere_gauche, niveau_gauche, filiere_droit
 				suggestions.append({"gauche": tg, "droite": td})
 
 	niveaux = {str(n) for n in scope["niveaux"]}
-	peut_lier = scope["is_admin"] or (str(niveau_gauche) in niveaux and str(niveau_droite) in niveaux)
+	peut_lier = scope["is_admin"] or str(niveau_gauche) in niveaux or str(niveau_droite) in niveaux
 	return {
 		"annee": academic_year,
 		"semestre": semestre,

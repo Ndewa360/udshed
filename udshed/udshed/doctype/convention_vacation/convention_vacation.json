@@ -1,0 +1,200 @@
+{
+ "actions": [],
+ "creation": "2026-11-26 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Convention Vacation",
+ "owner": "Administrator",
+ "modified": "2026-11-26 22:30:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "section_convention",
+  "teacher",
+  "nom_enseignant",
+  "academic_year",
+  "column_break_conv",
+  "statut",
+  "date_debut",
+  "date_fin",
+  "date_signature",
+  "section_synthese",
+  "synthese",
+  "section_remuneration",
+  "volume_horaire",
+  "taux_horaire",
+  "column_break_rem",
+  "montant_previsionnel",
+  "devise",
+  "section_documents",
+  "convention_signee",
+  "observations"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_convention",
+   "fieldtype": "Section Break",
+   "label": "Convention"
+  },
+  {
+   "fieldname": "teacher",
+   "fieldtype": "Link",
+   "label": "Enseignant",
+   "options": "Teacher",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "nom_enseignant",
+   "fieldtype": "Data",
+   "label": "Nom de l'enseignant",
+   "fetch_from": "teacher.full_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_conv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Statut",
+   "options": "Brouillon\nEnvoyée à l'enseignant\nSignée\nRésiliée",
+   "default": "Brouillon",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "date_debut",
+   "fieldtype": "Date",
+   "label": "Début"
+  },
+  {
+   "fieldname": "date_fin",
+   "fieldtype": "Date",
+   "label": "Fin"
+  },
+  {
+   "fieldname": "date_signature",
+   "fieldtype": "Date",
+   "label": "Date de signature"
+  },
+  {
+   "fieldname": "section_synthese",
+   "fieldtype": "Section Break",
+   "label": "Vue d'ensemble"
+  },
+  {
+   "fieldname": "synthese",
+   "fieldtype": "HTML",
+   "label": "Synthèse"
+  },
+  {
+   "fieldname": "section_remuneration",
+   "fieldtype": "Section Break",
+   "label": "Volume et rémunération",
+   "description": "Laissés vides, le volume reprend les heures prévues des cours de l'enseignant et le taux celui de son grade (réglages)."
+  },
+  {
+   "fieldname": "volume_horaire",
+   "fieldtype": "Float",
+   "label": "Volume horaire convenu (h)",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "taux_horaire",
+   "fieldtype": "Currency",
+   "label": "Taux horaire",
+   "options": "devise"
+  },
+  {
+   "fieldname": "column_break_rem",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "montant_previsionnel",
+   "fieldtype": "Currency",
+   "label": "Montant prévisionnel",
+   "read_only": 1,
+   "in_list_view": 1,
+   "options": "devise"
+  },
+  {
+   "fieldname": "devise",
+   "fieldtype": "Link",
+   "label": "Devise",
+   "options": "Currency",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "section_documents",
+   "fieldtype": "Section Break",
+   "label": "Convention signée"
+  },
+  {
+   "fieldname": "convention_signee",
+   "fieldtype": "Attach",
+   "label": "Convention signée (scan)"
+  },
+  {
+   "fieldname": "observations",
+   "fieldtype": "Small Text",
+   "label": "Observations"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Responsable des partenariats",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Comptable",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "format:CONV-{academic_year}-{####}",
+ "naming_rule": "Expression",
+ "title_field": "nom_enseignant"
+}

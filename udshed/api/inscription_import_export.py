@@ -8,7 +8,7 @@ Page « Liste des inscriptions » :
 
 Formulaire « Inscription Academique » :
   - un responsable saisit un étudiant arrivé en cours d'année ; son
-    matricule (série Z : 25Z001…) est généré au téléchargement de la fiche.
+    matricule (format des réglages, ex. 26C095) est généré au téléchargement de la fiche.
 
 Les deux parcours partagent `finaliser_inscription_hors_candidature` :
 matricule unique, Student, inscription aux UE, compte utilisateur, e-mail —
@@ -37,7 +37,6 @@ from udshed.api.inscription import (
 )
 
 ROLES_GESTION = ("System Manager", "Registration Manager", "Agent de scolarité")
-LETTRE_HORS_CANDIDATURE = "Z"
 VERROU = "udshed_inscription_hors_candidature"
 MAX_LIGNES_IMPORT = 2000
 
@@ -53,7 +52,7 @@ _RE_MATRICULE = re.compile(r"^[A-Z0-9][A-Z0-9/_-]{2,29}$")
 # (clé, en-tête du modèle, obligatoire, aide)
 COLONNES = [
     ("matricule", "Matricule", False,
-     "Laisser vide pour un nouvel étudiant : son matricule (série Z, ex. 25Z001) est "
+     "Laisser vide pour un nouvel étudiant : son matricule (format des réglages, ex. 26C095) est "
      "généré à l'import. Renseigner uniquement pour un étudiant qui possède déjà un matricule."),
     ("nom", "Nom", True, "Nom de famille."),
     ("prenom", "Prénom", True, "Prénom(s)."),
@@ -806,7 +805,7 @@ def _planifier(v, deja_vus, numero):
     elif matricule:
         motif = _("Nouvel étudiant — matricule du fichier conservé")
     else:
-        motif = _("Nouvel étudiant — matricule généré à la validation (série {0})").format(LETTRE_HORS_CANDIDATURE)
+        motif = _("Nouvel étudiant — matricule généré à la validation (format des réglages)")
     return {"action": "creer", "motif": motif, "student": student, "matricule": matricule}
 
 
@@ -879,7 +878,7 @@ def _inscription_meme_annee(email, identite, annee):
 def generer_matricule_et_fiche(inscription):
     """Bouton « Générer le matricule et télécharger la fiche ».
 
-    Au premier appel : matricule (série Z), Student, UE, compte, e-mail.
+    Au premier appel : matricule (format des réglages), Student, UE, compte, e-mail.
     Aux appels suivants : rien n'est régénéré, seule l'URL de la fiche est
     renvoyée.
     """
@@ -921,7 +920,7 @@ def finaliser_inscription_hors_candidature(ia, nom=None, prenom=None, student=No
     - étudiant déjà enregistré (matricule, e-mail ou identité) : son dossier
       et son matricule sont réutilisés, jamais modifiés ;
     - sinon : matricule de l'inscription s'il est fourni, ou nouveau
-      matricule de la série Z, puis création du Student (+ compte utilisateur
+      matricule au format des réglages, puis création du Student (+ compte utilisateur
       via Student.after_insert) ;
     - inscription aux UE de l'année courante (si pas déjà faite) ;
     - e-mail du matricule (asynchrone, après commit).
@@ -963,7 +962,7 @@ def finaliser_inscription_hors_candidature(ia, nom=None, prenom=None, student=No
     else:
         if not ia.matricule:
             ia.db_set("matricule", _generer_matricule_atomique(
-                lettre=LETTRE_HORS_CANDIDATURE, academic_year=ia.annee_academique))
+                academic_year=ia.annee_academique, filiere=ia.filiere))
             nouveau_matricule = True
         student_name = _creer_student(ia, nom, prenom)
 

@@ -1,6 +1,6 @@
 {
  "app": "udshed",
- "creation": "2026-11-26 12:30:00.000000",
+ "creation": "2026-11-26 22:00:00.000000",
  "docstatus": 0,
  "doctype": "Sidebar",
  "header_icon": "file-pen-line",
@@ -60,7 +60,7 @@
    "type": "Link",
    "label": "Correction des copies",
    "link_type": "Page",
-   "icon": "check-square",
+   "icon": "square-check",
    "child": 1,
    "indent": 0,
    "collapsible": 1,
@@ -110,7 +110,7 @@
   {
    "type": "Section Break",
    "label": "Résultats",
-   "icon": "bar-chart",
+   "icon": "chart-column",
    "child": 0,
    "indent": 1,
    "collapsible": 1,
@@ -142,40 +142,6 @@
   },
   {
    "type": "Link",
-   "label": "Résultats par UE",
-   "link_type": "DocType",
-   "icon": "layers",
-   "child": 1,
-   "indent": 0,
-   "collapsible": 1,
-   "keep_closed": 0,
-   "show_arrow": 0,
-   "hidden": 0,
-   "added": 0,
-   "is_default_module": 0,
-   "open_in_new_tab": 0,
-   "link_to": "Resultat UE",
-   "idx": 9
-  },
-  {
-   "type": "Link",
-   "label": "Résultats semestriels",
-   "link_type": "DocType",
-   "icon": "calendar-check",
-   "child": 1,
-   "indent": 0,
-   "collapsible": 1,
-   "keep_closed": 0,
-   "show_arrow": 0,
-   "hidden": 0,
-   "added": 0,
-   "is_default_module": 0,
-   "open_in_new_tab": 0,
-   "link_to": "Resultat Semestre",
-   "idx": 10
-  },
-  {
-   "type": "Link",
    "label": "Procès-verbal récapitulatif",
    "link_type": "Report",
    "icon": "file-spreadsheet",
@@ -189,7 +155,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Proces Verbal Recapitulatif",
-   "idx": 11
+   "idx": 9
   },
   {
    "type": "Link",
@@ -206,13 +172,13 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "PV par UE",
-   "idx": 12
+   "idx": 10
   },
   {
    "type": "Link",
-   "label": "Étudiants à rattraper",
+   "label": "Admis au rattrapage (par matière)",
    "link_type": "Report",
-   "icon": "alert-triangle",
+   "icon": "triangle-alert",
    "child": 1,
    "indent": 0,
    "collapsible": 1,
@@ -223,11 +189,11 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Liste Etudiants A Rattraper",
-   "idx": 13
+   "idx": 11
   },
   {
    "type": "Link",
-   "label": "Relevé de notes",
+   "label": "Relevé d'un étudiant",
    "link_type": "Page",
    "icon": "file-text",
    "child": 1,
@@ -240,7 +206,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "releve_notes",
-   "idx": 14
+   "idx": 12
   },
   {
    "type": "Section Break",
@@ -256,7 +222,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_type": "DocType",
-   "idx": 15
+   "idx": 13
   },
   {
    "type": "Link",
@@ -273,7 +239,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Deliberation Jury",
-   "idx": 16
+   "idx": 14
   },
   {
    "type": "Link",
@@ -290,7 +256,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Correction Note",
-   "idx": 17
+   "idx": 15
   },
   {
    "type": "Link",
@@ -307,27 +273,10 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Equivalence UE",
-   "idx": 18
-  },
-  {
-   "type": "Link",
-   "label": "Formules de calcul",
-   "link_type": "DocType",
-   "icon": "sigma",
-   "child": 1,
-   "indent": 0,
-   "collapsible": 1,
-   "keep_closed": 0,
-   "show_arrow": 0,
-   "hidden": 0,
-   "added": 0,
-   "is_default_module": 0,
-   "open_in_new_tab": 0,
-   "link_to": "Grade Formula",
-   "idx": 19
+   "idx": 16
   }
  ],
- "modified": "2026-11-26 12:30:00.000000",
+ "modified": "2026-11-26 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Examens et notes",

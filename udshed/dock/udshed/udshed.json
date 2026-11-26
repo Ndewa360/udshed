@@ -8,6 +8,14 @@
   {
    "added": 0,
    "hidden": 0,
+   "icon": "house",
+   "link_to": "Accueil",
+   "link_type": "Sidebar",
+   "title": "Accueil"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
    "icon": "user-plus",
    "link_to": "Admissions et scolarité",
    "link_type": "Sidebar",
@@ -52,9 +60,25 @@
    "link_to": "Mon espace étudiant",
    "link_type": "Sidebar",
    "title": "Mon espace étudiant"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "handshake",
+   "link_to": "Partenariats enseignants",
+   "link_type": "Sidebar",
+   "title": "Partenariats enseignants"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "briefcase",
+   "link_to": "Mon espace enseignant",
+   "link_type": "Sidebar",
+   "title": "Mon espace enseignant"
   }
  ],
- "modified": "2026-11-26 12:30:00.000000",
+ "modified": "2026-11-26 22:00:00.000000",
  "modified_by": "Administrator",
  "name": "udshed",
  "owner": "Administrator",

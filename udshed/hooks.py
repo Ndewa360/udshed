@@ -29,17 +29,20 @@ add_to_apps_screen = [
 	}
 ]
 
+# Personnel : page « Accueil » (tuiles des espaces que ses droits lui ouvrent).
 role_home_page = {
-	"System Manager": "/desk",
+	"System Manager": "/desk/accueil-udshed",
 	"Workspace Manager": "/desk",
 	"Script Manager": "/desk",
-	"Coordonateur": "/desk",
-	"Teacher": "/desk",
-	"Planning Manager": "/desk",
-	"Registration Manager": "/desk",
-	"Comptable": "/desk",
-	"Agent de scolarité": "/desk",
-	"Correcteur": "/desk",
+	"Coordonateur": "/desk/accueil-udshed",
+	"Planning Manager": "/desk/accueil-udshed",
+	"Registration Manager": "/desk/accueil-udshed",
+	"Agent de scolarité": "/desk/accueil-udshed",
+	"Comptable": "/desk/accueil-udshed",
+	"Correcteur": "/desk/accueil-udshed",
+	"Responsable Diplomation": "/desk/accueil-udshed",
+	"Responsable des partenariats": "/desk/accueil-udshed",
+	"Teacher": "/desk/accueil-udshed",
 	# Étudiant : directement son espace ; ses droits ne lui ouvrent que la barre « Mon espace étudiant ».
 	"Student": "/app/mon-espace-etudiant",
 }
@@ -51,7 +54,7 @@ fixtures = [
     {
         "dt" : "Role",
         "filters": [
-            ["name","in",["System Manager","Workspace Manager","Script Manager","Teacher","Student","Guest","Desk User","Coordonateur","Planning Manager","Registration Manager","Agent de scolarité","Comptable","Correcteur","Responsable Diplomation"]]
+            ["name","in",["System Manager","Workspace Manager","Script Manager","Teacher","Student","Guest","Desk User","Coordonateur","Planning Manager","Registration Manager","Agent de scolarité","Comptable","Correcteur","Responsable Diplomation","Responsable des partenariats"]]
         ]
     },
     {
@@ -202,6 +205,16 @@ has_permission = {
 	"Academic Reregistration": "udshed.api.permission.academic_reregistration_has_permission",
 	"Progression Academique": "udshed.api.permission.progression_has_permission",
 }
+
+# Recherche des niveaux (table enfant de la filière) pour tous les champs Link qui y pointent :
+# sans elle, Frappe refuse la recherche aux utilisateurs non administrateurs.
+standard_queries = {"Field of study Level": "udshed.api.reference.niveaux_query"}
+
+# Année académique de travail, fixée pour la session (udshed.utils.session_academique).
+# extend_bootinfo (recalculé à chaque chargement) et non boot_session : Frappe met le boot en
+# cache par utilisateur, alors que l'année dépend de la session.
+extend_bootinfo = ["udshed.utils.session_academique.boot"]
+on_logout = "udshed.utils.session_academique.effacer_session"
 
 # Navigation du desk (Frappe 16.6x) : barres latérales udshed/udshed/sidebar/ et dock
 # udshed/dock/ ; chaque rôle ne voit que les entrées que ses droits lui ouvrent

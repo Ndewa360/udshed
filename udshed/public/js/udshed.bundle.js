@@ -1,3 +1,5 @@
+import "./udshed/session_academique.js";
+
 window.Udshed = window.Udshed || {};
 
 window.Udshed.Loading = (function () {

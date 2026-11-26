@@ -355,3 +355,78 @@ class TestPlanning(IntegrationTestCase):
 		items = planning_calendar.get_week_planning(self.annee.name, "2026-11-02", teacher=self.prof1.name)
 		self.assertEqual([i.cours for i in items], [cours_b.name])
 		self.assertEqual(len(items[0]["classes"]), 2)
+
+	# ------------------------------------------------------------------ #
+	#  Envoi par mail : droits du personnel (pas seulement Administrator)
+	# ------------------------------------------------------------------ #
+	def gestionnaire_planning(self, niveau):
+		"""Utilisateur « Planning Manager » gestionnaire du planning de `niveau`."""
+		user = make_user_with_role("Planning Manager")
+		teacher = make_teacher()
+		frappe.db.set_value("Teacher", teacher.name, "email", user.name)
+		frappe.db.set_value("Field of study Level", niveau.name, "gestionnaire_de_planning", teacher.name)
+		return user.name
+
+	def envoyer_pdf_reel(self, user, filtres, **options):
+		"""Envoi avec la vraie génération du planning (seul le rendu PDF et l'envoi sont simulés)."""
+		from udshed.api import planning_calendar_pdf
+
+		frappe.set_user(user)
+		try:
+			with (
+				patch.object(planning_calendar_pdf, "_pdf", side_effect=lambda html: b"%PDF"),
+				patch.object(planning_calendar_email.frappe, "sendmail") as sendmail,
+			):
+				resultat = planning_calendar_email.send_planning_to_mail(filtres, **options)
+		finally:
+			frappe.set_user("Administrator")
+		return resultat, sendmail
+
+	def preparer_semaine_avec_classe_b(self):
+		cours_b = make_teaching_unit(make_course(), self.annee, self.filiere_b, self.niveau_b)
+		cours_b.append("table_enseignant", {"enseignant": self.prof2.name, "type_de_cours": "Cours Magistral (CM)"})
+		cours_b.save(ignore_permissions=True)
+		self.seance(self.cours_a1)
+		self.seance(self.cours_a2, period=self.soir)
+		self.seance(self.tronc, jour="2026-11-03")
+		self.seance(cours_b, jour="2026-11-04")
+		return {"academic_year": self.annee.name, "week_start": "2026-11-02",
+				"filiere": self.filiere_a.name, "niveau": self.niveau_a.name}
+
+	def test_responsable_planning_envoie_aux_enseignants(self):
+		filtres = self.preparer_semaine_avec_classe_b()
+		user = self.gestionnaire_planning(self.niveau_a)
+		resultat, sendmail = self.envoyer_pdf_reel(user, filtres, to_all_teacher=1)
+		self.assertEqual(resultat["sent"], 2, resultat)
+		self.assertEqual({c.kwargs["recipients"][0] for c in sendmail.call_args_list}, {self.prof1.email, self.prof2.email})
+
+	def test_coordinateur_envoie_aux_enseignants(self):
+		filtres = self.preparer_semaine_avec_classe_b()
+		user = self.coordinateur(self.coord_a)
+		resultat, _sendmail = self.envoyer_pdf_reel(user, filtres, to_all_teacher=1)
+		self.assertEqual(resultat["sent"], 2, resultat)
+
+	def test_responsable_planning_envoie_un_enseignant_et_lui_meme(self):
+		filtres = self.preparer_semaine_avec_classe_b()
+		user = self.gestionnaire_planning(self.niveau_a)
+		resultat, _sendmail = self.envoyer_pdf_reel(user, {**filtres, "teacher": self.prof2.name}, to_teacher=1)
+		self.assertEqual(resultat["sent"], 1, resultat)
+		resultat, sendmail = self.envoyer_pdf_reel(user, filtres, to_me=1)
+		self.assertEqual(sendmail.call_args.kwargs["recipients"], [user])
+
+	def test_responsable_planning_hors_perimetre_refuse(self):
+		filtres = self.preparer_semaine_avec_classe_b()
+		user = self.gestionnaire_planning(self.niveau_a)
+		with self.assertRaises(frappe.PermissionError):
+			self.envoyer_pdf_reel(user, {**filtres, "filiere": self.filiere_b.name, "niveau": self.niveau_b.name},
+								  to_all_teacher=1)
+
+	def test_responsable_planning_lie_par_compte_utilisateur(self):
+		"""Fiche enseignant reliée par le champ « Utilisateur » (e-mail de la fiche différent)."""
+		filtres = self.preparer_semaine_avec_classe_b()
+		user = make_user_with_role("Planning Manager")
+		teacher = make_teacher()
+		frappe.db.set_value("Teacher", teacher.name, {"user": user.name, "email": "autre-" + user.name})
+		frappe.db.set_value("Field of study Level", self.niveau_a.name, "gestionnaire_de_planning", teacher.name)
+		resultat, _sendmail = self.envoyer_pdf_reel(user.name, filtres, to_all_teacher=1)
+		self.assertEqual(resultat["sent"], 2, resultat)

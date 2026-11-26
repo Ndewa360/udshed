@@ -2,12 +2,22 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 CHAMPS_IDENTITE = ("school_name", "school_logo")
 
 
 class UdshedSetting(Document):
+	def validate(self):
+		from udshed.utils import matricule
+
+		self.format_matricule = (self.format_matricule or matricule.FORMAT_DEFAUT).strip().upper()
+		matricule.valider_format(self.format_matricule)
+		self.lettre_matricule_fixe = (self.lettre_matricule_fixe or "").strip().upper()
+		if self.lettre_matricule_fixe and not self.lettre_matricule_fixe.isalpha():
+			frappe.throw(_("La lettre fixe des matricules ne doit contenir que des lettres."))
+
 	def on_update(self):
 		if any(self.has_value_changed(champ) for champ in CHAMPS_IDENTITE):
 			synchroniser_identite_site()

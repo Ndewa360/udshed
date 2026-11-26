@@ -510,6 +510,11 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		update_filiere_query();
 		read_filters();
 		if (ctx.filieres.length === 1) load_levels();
+		// Année de la session, filtres à valeur unique choisis et verrouillés.
+		if (Udshed.Filtres && !state.filtres_verrouilles) {
+			state.filtres_verrouilles = true;
+			Udshed.Filtres.verrouiller(page).then(() => read_filters());
+		}
 	}
 
 	function load_context() {

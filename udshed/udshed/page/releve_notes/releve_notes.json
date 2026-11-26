@@ -3,7 +3,7 @@
  "doctype": "Page",
  "icon": "fa-solid fa-file-lines",
  "idx": 0,
- "modified": "2026-11-25 21:30:00.000000",
+ "modified": "2026-11-26 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "releve_notes",
@@ -29,5 +29,5 @@
  "script": null,
  "standard": "Yes",
  "system_page": 0,
- "title": "Relevé de notes"
+ "title": "Relevé d'un étudiant"
 }
