@@ -123,8 +123,36 @@ class TestNavigation(IntegrationTestCase):
 				self.assertFalse(frappe.permissions.has_permission(doctype, "read", user=user, print_logs=False))
 		self.assertFalse(frappe.permissions.has_permission("Udshed Setting", "read", user=user, print_logs=False))
 
+	def test_rapports_du_menu_utilisables(self):
+		"""Un rapport présent dans le menu d'un rôle s'ouvre sans « You don't have permission to get a report »."""
+		rapports = {}
+		for fichier in (APP / "udshed" / "sidebar").glob("*/*.json"):
+			barre = json.loads(fichier.read_text(encoding="utf-8"))
+			for item in barre["items"]:
+				if item.get("link_type") == "Report" and item["type"] == "Link":
+					rapports[(barre["title"], item["label"])] = item["link_to"]
+		for role in ATTENDU:
+			user = self._utilisateur(role)
+			for (barre, libelle), rapport in rapports.items():
+				if libelle not in self.matrice[role].get(barre, []):
+					continue
+				ref = frappe.db.get_value("Report", rapport, "ref_doctype")
+				with self.subTest(role=role, rapport=rapport):
+					self.assertTrue(frappe.permissions.has_permission(ref, "report", user=user, print_logs=False))
+
+	def test_personnel_selectionne_les_referentiels(self):
+		"""Les listes sont filtrées sur l'année de la session : tout le personnel doit pouvoir la sélectionner."""
+		for role in ATTENDU:
+			if role == "Student":
+				continue
+			user = self._utilisateur(role)
+			for doctype in ("Academic Year", "Faculty", "Field of study"):
+				with self.subTest(role=role, doctype=doctype):
+					self.assertTrue(frappe.permissions.has_permission(doctype, "select", user=user, print_logs=False))
+
 	def _utilisateur(self, role):
-		email = f"nav-{frappe.scrub(role)}@udshed.invalid"
+		# Index du rôle : une adresse valide même pour « Agent de scolarité » (accent).
+		email = f"nav-{list(ATTENDU).index(role)}@udshed.invalid"
 		if not frappe.db.exists("User", email):
 			with suppress_commits():
 				frappe.get_doc({"doctype": "User", "email": email, "first_name": f"Nav {role}",

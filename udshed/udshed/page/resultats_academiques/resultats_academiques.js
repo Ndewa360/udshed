@@ -1,4 +1,7 @@
 frappe.pages["resultats-academiques"].on_page_load = function (wrapper) {
+	// Calcul des résultats : scolarité et coordination seulement (contrôlé aussi côté serveur).
+	const peut_calculer = ["System Manager", "Coordonateur", "Registration Manager", "Agent de scolarité"]
+		.some((r) => frappe.user.has_role(r));
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
 		title: __("Résultats académiques"),
@@ -86,9 +89,9 @@ frappe.pages["resultats-academiques"].on_page_load = function (wrapper) {
 					<p class="ra-subtitle">${__("Consultez et analysez les résultats des étudiants")}</p>
 				</div>
 				<div class="ra-header-actions">
-					<button type="button" class="btn btn-default btn-sm ra-btn-calculer">
+					${peut_calculer ? `<button type="button" class="btn btn-default btn-sm ra-btn-calculer">
 						${frappe.utils.icon("refresh", "sm")} ${__("Calculer les résultats")}
-					</button>
+					</button>` : ""}
 					<button type="button" class="btn btn-default btn-sm ra-btn-filter">
 						${frappe.utils.icon("filter", "sm")} ${__("Filtrer")}
 					</button>

@@ -38,6 +38,9 @@ ROLES_RESULTATS = (
     # Mêmes rôles que la page « Résultats académiques » (jurys de diplomation).
     "Responsable Diplomation",
 )
+# Le calcul enregistre les résultats : réservé à la scolarité et à la coordination
+# (comptabilité, planning et diplomation consultent seulement).
+ROLES_CALCUL = ("System Manager", "Coordonateur", "Registration Manager", "Agent de scolarité")
 
 
 # ---------------------------------------------------------------------- #
@@ -805,6 +808,9 @@ def calculer_resultats_classe(
         frappe.throw(_("Critères requis : année académique, filière et niveau."))
 
     _verifier_acces_resultats(filiere)
+    if frappe.session.user != "Administrator" and not set(frappe.get_roles()) & set(ROLES_CALCUL):
+        frappe.throw(_("Le calcul des résultats est réservé à la scolarité et à la coordination."),
+                     frappe.PermissionError)
     if not frappe.db.exists("Field of study", filiere):
         frappe.throw(_("La filière <b>{0}</b> est introuvable.").format(filiere))
 
