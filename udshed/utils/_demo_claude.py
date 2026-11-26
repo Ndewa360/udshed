@@ -130,6 +130,30 @@ def installation_terminee():
 	print("installation marquée terminée")
 
 
+COMPTES_ROLES = {
+	"demo-rm@udshed.demo": ["Registration Manager"],
+	"demo-compta@udshed.demo": ["Comptable"],
+	"demo-pm@udshed.demo": ["Planning Manager"],
+	"demo-correcteur@udshed.demo": ["Correcteur"],
+	"demo-diplo@udshed.demo": ["Responsable Diplomation"],
+}
+
+
+def comptes_roles():
+	"""Un compte par rôle (contrôle des autorisations) ; le gestionnaire de planning gère Informatique L1."""
+	for email, roles in COMPTES_ROLES.items():
+		_user(email, roles[0], roles)
+	pm = frappe.get_all("Teacher", filters={"email": "demo-pm@udshed.demo"}, pluck="name")
+	if not pm:
+		pm = [frappe.get_doc({"doctype": "Teacher", "grade": "M.", "first_name": "Gestion", "last_name": "Planning",
+							  "email": "demo-pm@udshed.demo", "status": "Permanent"}).insert(ignore_permissions=True).name]
+	niveau = frappe.db.get_value("Field of study Level", {"parent": "INFDEMO", "level": "Licence 1"}, "name")
+	if niveau:
+		frappe.db.set_value("Field of study Level", niveau, "gestionnaire_de_planning", pm[0])
+	frappe.db.commit()
+	print("comptes par rôle créés")
+
+
 def supprimer():
 	if not TRACE.exists():
 		print("aucune démo")
@@ -152,7 +176,7 @@ def supprimer():
 		for nom in frappe.get_all(dt, filters={"creation": [">=", debut]}, pluck="name"):
 			frappe.delete_doc(dt, nom, force=True, ignore_permissions=True, delete_permanently=True)
 	for email in ("demo-coord@udshed.demo", "demo-scol@udshed.demo", "demo-admin@udshed.demo",
-				  "demo-part@udshed.demo", "aline.fotso@udshed.demo"):
+				  "demo-part@udshed.demo", "aline.fotso@udshed.demo", *COMPTES_ROLES):
 		if frappe.db.exists("User", email):
 			frappe.delete_doc("User", email, force=True, ignore_permissions=True, delete_permanently=True)
 	TRACE.unlink()

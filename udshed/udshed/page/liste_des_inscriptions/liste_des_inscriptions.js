@@ -338,7 +338,9 @@ frappe.pages["liste-des-inscriptions"].on_page_load = function (wrapper) {
 			actions.push(`<button class="btn btn-default btn-sm li-inscription">${__("Ouvrir l'inscription")}</button>`);
 		}
 		if (r.dossier_origine) {
-			actions.push(`<button class="btn btn-default btn-sm li-dossier">${__("Ouvrir le dossier candidat")}</button>`);
+			// Seulement si le rôle peut ouvrir les dossiers de candidature.
+			if (frappe.model.can_read("Session Inscription Candidate"))
+				actions.push(`<button class="btn btn-default btn-sm li-dossier">${__("Ouvrir le dossier candidat")}</button>`);
 		}
 
 		$d.html(`

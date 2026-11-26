@@ -91,7 +91,7 @@ frappe.pages["partenariats-enseignants"].on_page_load = function (wrapper) {
 			<th>${__("Enseignant")}</th><th>${__("Statut")}</th><th class="n">${__("Prévu (h)")}</th><th class="n">${__("Fait (h)")}</th>
 			<th class="n">${__("Avancement")}</th><th class="n">${__("Net à payer")}</th><th>${__("Convention")}</th><th></th>
 		</tr></thead><tbody>${lignes.map((l) => `<tr>
-			<td><a href="/desk/teacher/${encodeURIComponent(l.enseignant)}">${esc(l.nom)}</a>
+			<td>${frappe.model.can_read("Teacher") ? `<a href="/desk/teacher/${encodeURIComponent(l.enseignant)}">${esc(l.nom)}</a>` : esc(l.nom)}
 				${l.alerte_tarif ? `<div class="alerte">${__("Tarif manquant pour « {0} »", [esc(l.alerte_tarif)])}</div>` : ""}</td>
 			<td>${esc(l.statut)}</td>
 			<td class="n">${nombre(l.heures_prevues)}</td><td class="n">${nombre(l.heures_faites)}</td>

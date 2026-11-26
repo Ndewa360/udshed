@@ -35,6 +35,8 @@ ROLES_RESULTATS = (
     "Registration Manager",
     "Agent de scolarité",
     "Comptable",
+    # Mêmes rôles que la page « Résultats académiques » (jurys de diplomation).
+    "Responsable Diplomation",
 )
 
 

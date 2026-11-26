@@ -1042,7 +1042,8 @@ window.udshed_reinscription = function(opts) {
 	}
 
 	function view_fiche(name) {
-		if (opts.desk && frappe.set_route) {
+		// Formulaire pour le personnel ; l'étudiant télécharge sa fiche.
+		if (opts.desk && frappe.set_route && frappe.model.can_read('Academic Reregistration')) {
 			frappe.set_route('Form', 'Academic Reregistration', name);
 		} else {
 			download_fiche(name);

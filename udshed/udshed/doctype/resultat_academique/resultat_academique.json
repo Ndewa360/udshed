@@ -214,7 +214,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-25 21:00:00.000000",
+ "modified": "2026-11-27 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Resultat Academique",
@@ -243,6 +243,12 @@
    "role": "Coordonateur",
    "share": 1,
    "write": 1
+  },
+  {
+   "permlevel": 0,
+   "report": 1,
+   "role": "Teacher",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",

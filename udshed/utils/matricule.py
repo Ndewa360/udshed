@@ -161,7 +161,8 @@ def generer(academic_year, session_name=None, filiere=None, lettre_forcee=None):
 @frappe.whitelist()
 def apercu(format_matricule=None, mode_lettre_matricule=None, lettre_matricule_fixe=None):
 	"""Prochain matricule avec les réglages saisis (formulaire des réglages, avant enregistrement)."""
-	frappe.only_for("System Manager")
+	if not frappe.has_permission("Udshed Setting", "read"):
+		frappe.throw(_("Réservé aux personnes qui gèrent les réglages."), frappe.PermissionError)
 	fmt = (format_matricule or FORMAT_DEFAUT).strip()
 	valider_format(fmt)
 	annee = frappe.db.get_single_value("Udshed Setting", "current_year") or ""
