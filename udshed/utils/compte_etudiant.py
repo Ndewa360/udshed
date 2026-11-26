@@ -3,7 +3,8 @@
 - identifiant : le MATRICULE (nom d'utilisateur Frappe), ou l'email ;
 - mot de passe : choisi par l'étudiant via le lien d'activation envoyé avec
   son matricule (« Mot de passe oublié » de Frappe ensuite) ;
-- rôle « Student » : desk restreint à « Mon espace étudiant » (boot_student).
+- rôle « Student » : ses droits ne lui ouvrent que la barre « Mon espace étudiant »
+  (ses données passent par udshed.api.etudiant / actes / requetes).
 La connexion par nom d'utilisateur est activée dans System Settings
 (allow_login_using_user_name) par l'installation et le patch de migration.
 """
@@ -61,8 +62,19 @@ def assurer_compte(student):
 	return user_name
 
 
+def notifier_etudiant(user, sujet, message=None):
+	"""Alerte dans le desk de l'étudiant, ouvrant son espace (et non un formulaire du personnel)."""
+	if not user or user in ("Administrator", "Guest") or not frappe.db.get_value("User", user, "enabled"):
+		return
+	frappe.get_doc({"doctype": "Notification Log", "for_user": user, "type": "Alert", "subject": sujet,
+					"email_content": message, "link": "/app/mon-espace-etudiant"}).insert(ignore_permissions=True)
+
+
 def lien_activation(user_name):
 	"""Lien « choisir mon mot de passe » (clé à usage unique de Frappe)."""
 	if not user_name or not frappe.db.exists("User", user_name):
 		return ""
-	return frappe.get_doc("User", user_name).reset_password(send_email=False)
+	user = frappe.get_doc("User", user_name)
+	# Frappe 16.6x a renommé User.reset_password en _reset_password (même contrat : renvoie le lien).
+	reinit = getattr(user, "reset_password", None) or user._reset_password
+	return reinit(send_email=False)

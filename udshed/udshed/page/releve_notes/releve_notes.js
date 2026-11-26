@@ -89,8 +89,8 @@ frappe.pages['releve_notes'].on_page_load = function (wrapper) {
 			}
 
 			if (filiere) {
-				frappe.db.get_value('Field of study', filiere, 'name_of_field').then(function (res) {
-					var label = (res.message && res.message.name_of_field) || filiere;
+				frappe.xcall('udshed.api.reference.libelle_filiere', { filiere: filiere }).then(function (res) {
+					var label = res || filiere;
 					fill(label);
 				});
 			} else {

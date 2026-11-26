@@ -8,33 +8,33 @@
   {
    "added": 0,
    "hidden": 0,
-   "icon": "graduation-cap",
-   "link_to": "Gestion des Notes",
-   "link_type": "Workspace",
-   "title": "Gestion des Notes"
+   "icon": "user-plus",
+   "link_to": "Admissions et scolarité",
+   "link_type": "Sidebar",
+   "title": "Admissions et scolarité"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "file-pen-line",
+   "link_to": "Examens et notes",
+   "link_type": "Sidebar",
+   "title": "Examens et notes"
   },
   {
    "added": 0,
    "hidden": 0,
    "icon": "calendar",
-   "link_to": "Planning Académique",
-   "link_type": "Workspace",
-   "title": "Planning Académique"
-  },
-  {
-   "added": 0,
-   "hidden": 0,
-   "icon": "user-plus",
-   "link_to": "Inscription - Reinscription",
-   "link_type": "Workspace",
-   "title": "Inscription - Reinscription"
+   "link_to": "Planning académique",
+   "link_type": "Sidebar",
+   "title": "Planning académique"
   },
   {
    "added": 0,
    "hidden": 0,
    "icon": "chart-column-big",
    "link_to": "Insight",
-   "link_type": "Workspace",
+   "link_type": "Sidebar",
    "title": "Insight"
   },
   {
@@ -42,11 +42,19 @@
    "hidden": 0,
    "icon": "settings",
    "link_to": "Configuration",
-   "link_type": "Workspace",
+   "link_type": "Sidebar",
    "title": "Configuration"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "graduation-cap",
+   "link_to": "Mon espace étudiant",
+   "link_type": "Sidebar",
+   "title": "Mon espace étudiant"
   }
  ],
- "modified": "2026-11-20 12:00:00.000000",
+ "modified": "2026-11-26 12:30:00.000000",
  "modified_by": "Administrator",
  "name": "udshed",
  "owner": "Administrator",

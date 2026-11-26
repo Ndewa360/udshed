@@ -330,10 +330,10 @@ def notifier_etudiant(doc, note):
 	if not student:
 		return
 	matiere = frappe.db.get_value("Teaching Unit", note.teaching_unit, "intitule_cours") or note.teaching_unit
-	if student.utilisateur:
-		_notifier_utilisateurs([student.utilisateur], _("Note corrigée : {0}").format(matiere),
-							   _("{0} : {1} → {2}/20").format(matiere, doc.note_finale_avant, note.note_finale),
-							   DOCTYPE, doc.name)
+	from udshed.utils.compte_etudiant import notifier_etudiant
+
+	notifier_etudiant(student.utilisateur, _("Note corrigée : {0}").format(matiere),
+					  _("{0} : {1} → {2}/20").format(matiere, doc.note_finale_avant, note.note_finale))
 	if not student.email:
 		return
 	try:

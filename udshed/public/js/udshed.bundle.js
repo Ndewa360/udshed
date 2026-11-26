@@ -154,20 +154,17 @@ window.Udshed.Loading = (function () {
 $(document).on('app_ready', function() {
     frappe.router.on('change', () => {
         const route = frappe.get_route();
-        const [doctype, name] = route;
+        const [doctype] = route;
 
-        if (doctype === 'app' && name === 'inscription___reinscription') {
-            frappe.set_route('app', 'rapport-general');
-            return;
-        }
-
-        if (doctype === 'workspace-sidebar' && name === 'inscription___reinscription') {
-            frappe.set_route('app', 'rapport-general');
-            return;
-        }
-
-        if (route[1] === 'planning-academique' && frappe.desk.sidebar) {
-            frappe.desk.sidebar.set_item_active("Planning Academique");
+        // Anciens espaces (Workspaces retirés en 16.6x) : favoris et liens d'e-mails.
+        const anciens = {
+            'inscription___reinscription': 'liste-des-inscriptions',
+            'inscription-reinscription': 'liste-des-inscriptions',
+            'gestion-des-notes': 'note-udshed',
+            'insight': 'insight-academique',
+        };
+        if (route.length === 1 && anciens[doctype]) {
+            frappe.set_route(anciens[doctype]);
         }
     });
 });

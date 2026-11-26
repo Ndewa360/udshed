@@ -48,7 +48,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-22 07:44:08.120199",
+ "modified": "2026-11-25 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Calendar Planing",
@@ -85,6 +85,18 @@
    "read": 1,
    "report": 1,
    "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "permlevel": 0,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Planning Manager",
    "share": 1,
    "write": 1
   }

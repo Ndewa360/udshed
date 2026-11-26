@@ -82,9 +82,8 @@ def create_releve_notes_pf():
 
 
 def after_install():
-    # Workspaces et sidebars sont synchronisés par Frappe depuis les dossiers
-    # standard de l'app (workspace/, workspace_sidebar/, desktop_icon/) :
-    # aucun chargement manuel n'est nécessaire ici.
+    # Barres latérales et dock sont synchronisés par Frappe depuis les dossiers
+    # standard de l'app (udshed/sidebar/, dock/) : aucun chargement manuel ici.
     create_default_data()
     create_releve_notes_pf()
     # Étudiants : connexion Frappe avec le matricule comme identifiant.

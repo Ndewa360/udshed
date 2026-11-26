@@ -79,17 +79,17 @@
    "label": "Ciblage (facultatif)"
   },
   {
-   "description": "Laisser vide pour une session générale (tous les étudiants). Sinon, seuls les étudiants correspondant à au moins une ligne peuvent se réinscrire.",
+   "description": "Laisser vide pour une session g\u00e9n\u00e9rale (tous les \u00e9tudiants). Sinon, seuls les \u00e9tudiants correspondant \u00e0 au moins une ligne peuvent se r\u00e9inscrire.",
    "fieldname": "cibles",
    "fieldtype": "Table",
-   "label": "Filières / niveaux concernés",
+   "label": "Fili\u00e8res / niveaux concern\u00e9s",
    "options": "Session Reinscription Cible"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-27 09:00:00.000000",
+ "modified": "2026-11-25 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Reinscription",
@@ -125,7 +125,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Agent de scolarité",
+   "role": "Agent de scolarit\u00e9",
    "share": 1
   },
   {
@@ -134,19 +134,22 @@
    "print": 1,
    "read": 1,
    "report": 1,
-"role": "Comptable",
-    "share": 1
-   },
-   {
-    "email": 1,
-    "export": 1,
-    "print": 1,
-    "read": 1,
-    "report": 1,
-    "role": "Student",
-    "share": 1
-   }
-  ],
+   "role": "Comptable",
+   "share": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "permlevel": 0,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Registration Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",

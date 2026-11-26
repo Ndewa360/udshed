@@ -357,7 +357,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-25 14:00:00.000000",
+ "modified": "2026-11-25 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Inscription Academique",
@@ -415,11 +415,6 @@
    "report": 1,
    "role": "Comptable",
    "share": 1
-  },
-  {
-   "print": 1,
-   "read": 1,
-   "role": "Student"
   }
  ],
  "row_format": "Dynamic",

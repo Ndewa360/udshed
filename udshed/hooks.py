@@ -19,7 +19,8 @@ add_to_apps_screen = [
 		"name": "udshed",
 		"logo": "/assets/udshed/images/logo1.png",
 		"title": "Udshed",
-		"route": "/app/gestion-des-notes",
+		# Route du desk : Frappe ouvre la première barre latérale du dock que l'utilisateur peut voir.
+		"route": "/desk",
 		"has_permission": "udshed.api.permission.has_app_permission",
 		"role_home_page": {
 			"All": "desk"
@@ -39,7 +40,7 @@ role_home_page = {
 	"Comptable": "/desk",
 	"Agent de scolarité": "/desk",
 	"Correcteur": "/desk",
-	# Étudiant : directement son espace (desk restreint, voir boot_student.py).
+	# Étudiant : directement son espace ; ses droits ne lui ouvrent que la barre « Mon espace étudiant ».
 	"Student": "/app/mon-espace-etudiant",
 }
 
@@ -60,12 +61,6 @@ fixtures = [
             # anciennes pages du dépôt en plusieurs étapes sont dépubliées
             # (patch campagne_admission).
             ["route", "in", ["index"]]
-        ]
-    },
-    {
-        "dt": "Desktop Icon",
-        "filters": [
-            ["name","in",["Inscription - Reinscription","Gestion Des Notes","Insight","Planning Académique","Configuration"]]
         ]
     },
     {
@@ -208,10 +203,9 @@ has_permission = {
 	"Progression Academique": "udshed.api.permission.progression_has_permission",
 }
 
-# Boot Session
-# ------------
-# Restreint le desk des étudiants à l'espace « Inscription - Reinscription ».
-boot_session = ["udshed.boot_student.configure_student_desk"]
+# Navigation du desk (Frappe 16.6x) : barres latérales udshed/udshed/sidebar/ et dock
+# udshed/dock/ ; chaque rôle ne voit que les entrées que ses droits lui ouvrent
+# (audit : udshed.utils.navigation.afficher_matrice).
 
 # Document Events
 # ---------------

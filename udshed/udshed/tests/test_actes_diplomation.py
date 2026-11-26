@@ -167,7 +167,8 @@ class TestActesDiplomation(IntegrationTestCase):
 			self.en_tant_que(self.user, requetes.repondre, res["name"], "ok")
 		self.en_tant_que(agent.name, requetes.repondre, res["name"], "Corrigé dans votre dossier.")
 		self.assertEqual(frappe.db.get_value("Requete Etudiant", res["name"], "statut"), "Répondue")
-		self.assertTrue(frappe.db.exists("Notification Log", {"for_user": self.user, "document_name": res["name"]}))
+		# L'étudiant est notifié vers son espace (il n'ouvre pas le formulaire du personnel).
+		self.assertTrue(frappe.db.exists("Notification Log", {"for_user": self.user, "link": "/app/mon-espace-etudiant"}))
 
 	def test_reclamation_exige_une_matiere(self):
 		with self.assertRaises(frappe.ValidationError):

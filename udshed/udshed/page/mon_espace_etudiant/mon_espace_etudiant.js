@@ -3,6 +3,9 @@
 frappe.pages["mon-espace-etudiant"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({ parent: wrapper, title: __("Mon espace étudiant"), single_column: true });
 	const API = "udshed.api.etudiant.";
+	// Babillard public des résultats : lien de page (un lien URL dans la barre latérale
+	// serait montré à tous les rôles, Frappe ne filtrant pas les URL).
+	page.set_secondary_action(__("Babillard des résultats"), () => window.open("/babillard", "_blank"), "external-link");
 	const $racine = $(`
 		<div class="mee">
 			<div class="mee-profil"></div>

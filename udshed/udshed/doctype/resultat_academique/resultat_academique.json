@@ -146,13 +146,13 @@
   {
    "fieldname": "type_resultat",
    "fieldtype": "Data",
-   "label": "Type de résultat",
+   "label": "Type de r\u00e9sultat",
    "read_only": 1
   },
   {
    "fieldname": "capitalise",
    "fieldtype": "Check",
-   "label": "Crédits capitalisés",
+   "label": "Cr\u00e9dits capitalis\u00e9s",
    "read_only": 1
   },
   {
@@ -214,7 +214,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-24 12:00:00.000000",
+ "modified": "2026-11-25 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Resultat Academique",
@@ -240,16 +240,11 @@
    "print": 1,
    "read": 1,
    "report": 1,
-"role": "Coordonateur",
-    "share": 1,
-    "write": 1
-   },
-   {
-    "print": 1,
-    "read": 1,
-    "role": "Student"
-   }
-  ],
+   "role": "Coordonateur",
+   "share": 1,
+   "write": 1
+  }
+ ],
  "row_format": "Dynamic",
  "search_fields": "student_name,ue_name,grade,mention",
  "sort_field": "creation",

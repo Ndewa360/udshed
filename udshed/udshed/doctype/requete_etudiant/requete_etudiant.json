@@ -191,11 +191,6 @@
    "share": 1,
    "write": 1,
    "role": "Responsable Diplomation"
-  },
-  {
-   "read": 1,
-   "create": 1,
-   "role": "Student"
   }
  ],
  "sort_field": "modified",

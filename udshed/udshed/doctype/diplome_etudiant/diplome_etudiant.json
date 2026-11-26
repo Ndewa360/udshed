@@ -151,11 +151,6 @@
    "read": 1,
    "report": 1,
    "role": "Agent de scolarité"
-  },
-  {
-   "read": 1,
-   "print": 1,
-   "role": "Student"
   }
  ],
  "sort_field": "modified",

@@ -82,11 +82,9 @@ def repondre(requete, reponse, statut="Répondue"):
 	doc = frappe.get_doc("Requete Etudiant", requete)
 	doc.db_set({"reponse": reponse, "statut": statut, "traite_par": frappe.session.user, "traite_le": now_datetime()})
 	user = frappe.db.get_value("Student", doc.student, "utilisateur")
-	if user:
-		frappe.get_doc({"doctype": "Notification Log", "for_user": user, "type": "Alert",
-						"subject": _("Réponse à votre requête « {0} » : {1}").format(doc.objet, statut),
-						"email_content": reponse, "document_type": "Requete Etudiant", "document_name": doc.name}
-					   ).insert(ignore_permissions=True)
+	from udshed.utils.compte_etudiant import notifier_etudiant
+
+	notifier_etudiant(user, _("Réponse à votre requête « {0} » : {1}").format(doc.objet, statut), reponse)
 	return {"statut": statut}
 
 

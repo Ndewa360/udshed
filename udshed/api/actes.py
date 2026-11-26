@@ -174,10 +174,9 @@ def marquer_retire(acte):
 
 def _notifier_etudiant(acte, message):
 	user = frappe.db.get_value("Student", acte.student, "utilisateur")
-	if user:
-		frappe.get_doc({"doctype": "Notification Log", "for_user": user, "type": "Alert",
-						"subject": message, "document_type": "Acte Academique", "document_name": acte.name}
-					   ).insert(ignore_permissions=True)
+	from udshed.utils.compte_etudiant import notifier_etudiant
+
+	notifier_etudiant(user, message)
 
 
 def _notifier_responsables(acte):

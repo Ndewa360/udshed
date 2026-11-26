@@ -46,7 +46,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-21 06:32:59.489030",
+ "modified": "2026-11-25 21:00:00.000000",
  "modified_by": "admin@udshed.com",
  "module": "Udshed",
  "name": "Faculty",
@@ -75,13 +75,9 @@
    "share": 1
   },
   {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
+   "permlevel": 0,
    "role": "Teacher",
-   "share": 1
+   "select": 1
   }
  ],
  "row_format": "Dynamic",

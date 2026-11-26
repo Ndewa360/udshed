@@ -43,7 +43,7 @@ window.Udshed.Insight.Dashboard = class {
                     { value: "TP", label: "TP" }, { value: "CC", label: __("Contrôle continu") },
                     { value: "EXAMEN", label: __("Examen") }, { value: "RATTRAPAGE", label: __("Rattrapage") }] }),
         };
-        frappe.db.get_single_value("Udshed Setting", "current_year").then((annee) => {
+        frappe.xcall("udshed.api.reference.annee_courante").then((annee) => {
             if (annee) this.appliquer({ academic_year: annee });
             else this.afficher_message(__("Choisissez une année académique."));
         });

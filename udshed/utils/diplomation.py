@@ -13,6 +13,7 @@
 
 import frappe
 
+from udshed.utils.compte_etudiant import notifier_etudiant
 from udshed.utils.etablissement import nom_etudiant
 from frappe import _
 from frappe.utils import flt
@@ -121,10 +122,7 @@ def proclamer(jury):
 		}).insert(ignore_permissions=True)
 		diplomes += 1
 		user = frappe.db.get_value("Student", c.student, "utilisateur")
-		if user:
-			frappe.get_doc({"doctype": "Notification Log", "for_user": user, "type": "Alert",
-							"subject": _("Félicitations : vous êtes diplômé(e) — {0}").format(intitule(jury)),
-							"document_type": "Jury Diplomation", "document_name": jury.name}).insert(ignore_permissions=True)
+		notifier_etudiant(user, _("Félicitations : vous êtes diplômé(e) — {0}").format(intitule(jury)))
 	bilan = _("{0} diplômé(s) sur {1} candidat(s).").format(diplomes, len(jury.candidats))
 	jury.db_set({"statut": "Proclamé", "bilan": bilan})
 	return {"diplomes": diplomes, "bilan": bilan}

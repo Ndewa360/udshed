@@ -381,13 +381,17 @@ class TestReinscriptionProgression(IntegrationTestCase):
 		):
 			with self.assertRaises(REFUS):
 				appel()
-		self.assertNotIn(rer_a, frappe.get_list("Academic Reregistration", pluck="name"))
+		# Un compte étudiant n'ouvre plus du tout les listes du personnel (navigation 16.6x).
+		for doctype in ("Academic Reregistration", "Progression Academique"):
+			with self.assertRaises(frappe.PermissionError):
+				frappe.get_list(doctype, pluck="name")
 		self.assertFalse(frappe.has_permission("Academic Reregistration", doc=rer_a))
-		self.assertFalse(frappe.get_list("Progression Academique", filters={"student": a.student.name}))
 
+		# Navigation 16.6x : l'étudiant n'ouvre plus les listes du personnel ; il suit sa
+		# réinscription par les API de son espace.
 		frappe.set_user(a.user.name)
-		self.assertEqual(frappe.get_list("Academic Reregistration", pluck="name"), [rer_a])
-		self.assertTrue(frappe.has_permission("Academic Reregistration", doc=rer_a))
+		self.assertFalse(frappe.has_permission("Academic Reregistration", "read"))
+		self.assertIn(rer_a, str(rr.get_student_registrations(a.student.name)))
 
 		# Ancien Web Form public : un invité ne peut rien créer
 		frappe.set_user("Guest")
