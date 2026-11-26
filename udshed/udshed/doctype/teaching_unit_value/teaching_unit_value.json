@@ -16,7 +16,9 @@
   {
    "fieldname": "academic_year",
    "fieldtype": "Link",
+   "in_filter": 1,
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Ann\u00e9e academique",
    "options": "Academic Year",
    "reqd": 1
@@ -31,6 +33,7 @@
   {
    "fieldname": "intitule",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Intitul\u00e9"
   },
   {
@@ -41,6 +44,9 @@
    "default": "Semestre 1",
    "fieldname": "semestre",
    "fieldtype": "Select",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Semestre",
    "options": "Semestre 1\nSemestre 2",
    "reqd": 1
@@ -48,9 +54,10 @@
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "link_display_mode": "Search",
  "links": [],
- "modified": "2026-11-25 21:00:00.000000",
- "modified_by": "Administrator",
+ "modified": "2026-11-26 05:42:54.262474",
+ "modified_by": "admin@udshed.com",
  "module": "Udshed",
  "name": "Teaching Unit Value",
  "naming_rule": "Expression (old style)",
@@ -81,7 +88,6 @@
    "write": 1
   },
   {
-   "permlevel": 0,
    "role": "Teacher",
    "select": 1
   }

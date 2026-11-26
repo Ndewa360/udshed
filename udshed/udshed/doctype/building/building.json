@@ -47,6 +47,7 @@
   {
    "fieldname": "campus",
    "fieldtype": "Data",
+   "in_filter": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Campus"
@@ -54,9 +55,10 @@
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "link_display_mode": "Search",
  "links": [],
- "modified": "2026-11-25 21:00:00.000000",
- "modified_by": "Administrator",
+ "modified": "2026-11-26 06:02:27.263680",
+ "modified_by": "admin@udshed.com",
  "module": "Udshed",
  "name": "Building",
  "naming_rule": "Expression (old style)",

@@ -1,8 +1,8 @@
 app_name = "udshed"
 app_title = "Udshed"
-app_publisher = "Cédric Nguendap Bedjama"
+app_publisher = "Ndewa360"
 app_description = "Gestion académique : candidatures, inscriptions et réinscriptions, planning, notes et résultats"
-app_email = "c.nguendap@ndewa-360.com"
+app_email = "contact@ndewa-360.com"
 app_license = "mit"
 
 # App logo for login page and navbar
