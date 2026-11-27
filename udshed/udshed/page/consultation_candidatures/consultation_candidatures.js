@@ -4,6 +4,11 @@ frappe.pages['consultation-candidatures'].on_page_load = function (wrapper) {
 		title: __('Consultation des candidatures'),
 		single_column: true
 	});
+	// Export CSV des candidatures affichées (repris de l'ancien « Rapport général »).
+	page.set_secondary_action(__('Exporter CSV'), function () {
+		open_url_post('/api/method/udshed.udshed.doctype.session_inscription_candidate.session_inscription_candidate.exporter_candidatures',
+			Object.assign({}, (typeof state !== 'undefined' && state.filters) || {}), true);
+	}, 'download');
 
 	var API = 'udshed.udshed.doctype.session_inscription_candidate.session_inscription_candidate.';
 

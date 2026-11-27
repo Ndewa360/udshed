@@ -127,9 +127,18 @@ def get_single_teaching_unit(cours,academic_year):
 	teaching_unit = frappe.get_doc("Teaching Unit",{"name":cours,"academic_year":academic_year})
 	return teaching_unit
 
+LECTEURS_NIVEAUX = {"Agent de scolarité", "Registration Manager", "Doyen", "Vice-Doyen",
+					"Directeur des Affaires Académiques"}
+
+
 @frappe.whitelist()
 def get_levels_for_field(field_of_study):
-	planning_permission.assert_can_view_planning(filiere=field_of_study, require_filters=False)
+	# Les niveaux d'une filière ne sont pas confidentiels : la scolarité et la direction les lisent
+	# dans leur périmètre (saisie des notes, résultats) sans avoir accès au planning.
+	from udshed.utils import perimetre
+
+	if not (set(frappe.get_roles()) & LECTEURS_NIVEAUX and perimetre.autorisee(field_of_study)):
+		planning_permission.assert_can_view_planning(filiere=field_of_study, require_filters=False)
 	doc = frappe.get_doc("Field of study", field_of_study)
 	return [{"level":row.level,"name":row.name} for row in doc.field_of_study_level]
 

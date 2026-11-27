@@ -536,6 +536,16 @@ def make_role(role):
     return doc
 
 
+def make_agent_scolarite(*filieres, email=None):
+    """Agent de scolarité rattaché aux filières données (fiche filière, tableau des agents)."""
+    user = make_user_with_role("Agent de scolarité", email)
+    for filiere in filieres:
+        fos = frappe.get_doc("Field of study", getattr(filiere, "name", filiere))
+        fos.append("agents_scolarite", {"utilisateur": user.name})
+        fos.save(ignore_permissions=True)
+    return user
+
+
 def make_user_with_role(role, email=None):
     """Crée un utilisateur portant un rôle donné (les deux si absents).
 

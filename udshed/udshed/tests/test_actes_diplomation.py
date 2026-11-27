@@ -9,6 +9,7 @@ from frappe.tests import IntegrationTestCase
 
 from udshed.api import actes, babillard, requetes
 from udshed.udshed._fixture_factory import (
+	make_agent_scolarite,
 	make_academic_year,
 	make_calendar_planing,
 	make_course,
@@ -159,7 +160,7 @@ class TestActesDiplomation(IntegrationTestCase):
 
 	# ------------------------------------------------------------------ requêtes
 	def test_requete_soumise_puis_repondue(self):
-		agent = make_user_with_role("Agent de scolarité")
+		agent = make_agent_scolarite(self.fos)
 		res = self.en_tant_que(self.user, requetes.soumettre, "Correction d'état civil", "Erreur de prénom",
 							   "Mon prénom est mal orthographié.")
 		self.assertTrue(frappe.db.exists("Notification Log", {"for_user": agent.name, "document_name": res["name"]}))
@@ -194,5 +195,5 @@ class TestActesDiplomation(IntegrationTestCase):
 		from udshed.api.saisie_notes import _verifier_acces_enseignant
 
 		tu = make_teaching_unit(make_course(), self.annee, self.fos, self.l3)
-		agent = make_user_with_role("Agent de scolarité")
+		agent = make_agent_scolarite(self.fos)
 		self.en_tant_que(agent.name, _verifier_acces_enseignant, tu.name)  # ne lève pas

@@ -7,6 +7,17 @@ def daily():
 	update_session_statuses()
 	update_reinscription_session_statuses()
 	relancer_admissions()
+	rappeler_saisie_notes()
+
+
+def rappeler_saisie_notes():
+	"""Rappel aux enseignants dont la saisie n'est pas confirmée, 3 jours avant la date limite."""
+	try:
+		from udshed.utils.periode_saisie import rappel_saisie
+
+		rappel_saisie()
+	except Exception:
+		frappe.log_error(title="udshed: rappel de saisie des notes")
 
 
 def relancer_admissions():

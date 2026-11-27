@@ -10,11 +10,11 @@ repose donc sur les permissions ; `matrice_visibilite()` les vérifie.
 import frappe
 
 BARRES = ["Admissions et scolarité", "Examens et notes", "Planning académique", "Insight", "Configuration",
-		  "Mon espace étudiant", "Partenariats enseignants", "Mon espace enseignant", "Accueil"]
+		  "Mon espace étudiant", "Partenariats enseignants", "Mon espace enseignant", "Accueil", "Ma faculté", "Direction académique"]
 
 ROLES_UDSHED = ["System Manager", "Registration Manager", "Agent de scolarité", "Coordonateur", "Responsable Diplomation",
 				"Comptable", "Planning Manager", "Teacher", "Correcteur", "Student",
-				"Responsable des partenariats"]
+				"Responsable des partenariats", "Doyen", "Vice-Doyen", "Directeur des Affaires Académiques"]
 
 
 def visibilite(user, toutes=False):

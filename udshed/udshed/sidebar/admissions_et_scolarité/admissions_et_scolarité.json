@@ -1,6 +1,6 @@
 {
  "app": "udshed",
- "creation": "2026-11-26 22:00:00.000000",
+ "creation": "2026-11-27 14:00:00.000000",
  "docstatus": 0,
  "doctype": "Sidebar",
  "header_icon": "user-plus",
@@ -175,23 +175,6 @@
    "idx": 10
   },
   {
-   "type": "Link",
-   "label": "Rapport général",
-   "link_type": "Page",
-   "icon": "chart-column-big",
-   "child": 1,
-   "indent": 0,
-   "collapsible": 1,
-   "keep_closed": 0,
-   "show_arrow": 0,
-   "hidden": 0,
-   "added": 0,
-   "is_default_module": 0,
-   "open_in_new_tab": 0,
-   "link_to": "rapport-general",
-   "idx": 11
-  },
-  {
    "type": "Section Break",
    "label": "Actes et diplomation",
    "icon": "file-text",
@@ -205,7 +188,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_type": "DocType",
-   "idx": 12
+   "idx": 11
   },
   {
    "type": "Link",
@@ -222,7 +205,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Requete Etudiant",
-   "idx": 13
+   "idx": 12
   },
   {
    "type": "Link",
@@ -239,7 +222,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Acte Academique",
-   "idx": 14
+   "idx": 13
   },
   {
    "type": "Link",
@@ -256,7 +239,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Jury Diplomation",
-   "idx": 15
+   "idx": 14
   },
   {
    "type": "Link",
@@ -273,10 +256,10 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Diplome Etudiant",
-   "idx": 16
+   "idx": 15
   }
  ],
- "modified": "2026-11-26 22:00:00.000000",
+ "modified": "2026-11-27 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Admissions et scolarité",

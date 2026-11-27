@@ -20,6 +20,7 @@ from udshed.api import reregistration as rr
 from udshed.api.progression import STATUT_ADMIS
 from udshed.api.saisie_notes import publier_session
 from udshed.udshed._fixture_factory import (
+	make_agent_scolarite,
 	make_academic_year,
 	make_calendar_planing,
 	make_course,
@@ -145,7 +146,7 @@ class TestParcoursComplet(IntegrationTestCase):
 		self.assertEqual(cand.mode_admission, "Dossier")
 
 		# 2. Admission sur dossier (agent de scolarité).
-		frappe.set_user(make_user_with_role("Agent de scolarité").name)
+		frappe.set_user(make_agent_scolarite(cand.filiere).name)
 		try:
 			from udshed.udshed.doctype.session_inscription_candidate.session_inscription_candidate import (
 				update_candidate_status,

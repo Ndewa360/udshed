@@ -1,6 +1,6 @@
 {
  "app": "udshed",
- "creation": "2026-11-26 22:00:00.000000",
+ "creation": "2026-11-27 14:00:00.000000",
  "docstatus": 0,
  "doctype": "Sidebar",
  "header_icon": "file-pen-line",
@@ -210,6 +210,73 @@
   },
   {
    "type": "Section Break",
+   "label": "Saisie des notes",
+   "icon": "calendar-clock",
+   "child": 0,
+   "indent": 1,
+   "collapsible": 1,
+   "keep_closed": 0,
+   "show_arrow": 1,
+   "hidden": 0,
+   "added": 0,
+   "is_default_module": 0,
+   "open_in_new_tab": 0,
+   "link_type": "DocType",
+   "idx": 13
+  },
+  {
+   "type": "Link",
+   "label": "Périodes de saisie",
+   "link_type": "DocType",
+   "icon": "calendar-clock",
+   "child": 1,
+   "indent": 0,
+   "collapsible": 1,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "hidden": 0,
+   "added": 0,
+   "is_default_module": 0,
+   "open_in_new_tab": 0,
+   "link_to": "Periode Saisie Notes",
+   "idx": 14
+  },
+  {
+   "type": "Link",
+   "label": "Dérogations de saisie",
+   "link_type": "DocType",
+   "icon": "unlock",
+   "child": 1,
+   "indent": 0,
+   "collapsible": 1,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "hidden": 0,
+   "added": 0,
+   "is_default_module": 0,
+   "open_in_new_tab": 0,
+   "link_to": "Derogation Saisie",
+   "idx": 15
+  },
+  {
+   "type": "Link",
+   "label": "Saisies confirmées",
+   "link_type": "DocType",
+   "icon": "circle-check",
+   "child": 1,
+   "indent": 0,
+   "collapsible": 1,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "hidden": 0,
+   "added": 0,
+   "is_default_module": 0,
+   "open_in_new_tab": 0,
+   "link_to": "Confirmation Saisie",
+   "idx": 16
+  },
+  {
+   "type": "Section Break",
    "label": "Délibérations et corrections",
    "icon": "gavel",
    "child": 0,
@@ -222,7 +289,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_type": "DocType",
-   "idx": 13
+   "idx": 17
   },
   {
    "type": "Link",
@@ -239,7 +306,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Deliberation Jury",
-   "idx": 14
+   "idx": 18
   },
   {
    "type": "Link",
@@ -256,7 +323,7 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Correction Note",
-   "idx": 15
+   "idx": 19
   },
   {
    "type": "Link",
@@ -273,10 +340,10 @@
    "is_default_module": 0,
    "open_in_new_tab": 0,
    "link_to": "Equivalence UE",
-   "idx": 16
+   "idx": 20
   }
  ],
- "modified": "2026-11-26 22:00:00.000000",
+ "modified": "2026-11-27 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Examens et notes",

@@ -1,0 +1,50 @@
+{
+ "app": "udshed",
+ "creation": "2026-11-27 14:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Sidebar",
+ "header_icon": "school",
+ "idx": 0,
+ "items": [
+  {
+   "type": "Section Break",
+   "label": "Direction académique",
+   "icon": "school",
+   "child": 0,
+   "indent": 1,
+   "collapsible": 1,
+   "keep_closed": 0,
+   "show_arrow": 1,
+   "hidden": 0,
+   "added": 0,
+   "is_default_module": 0,
+   "open_in_new_tab": 0,
+   "link_type": "DocType",
+   "idx": 1
+  },
+  {
+   "type": "Link",
+   "label": "Tableau de bord de l'établissement",
+   "link_type": "Page",
+   "icon": "layout-dashboard",
+   "child": 1,
+   "indent": 0,
+   "collapsible": 1,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "hidden": 0,
+   "added": 0,
+   "is_default_module": 0,
+   "open_in_new_tab": 0,
+   "link_to": "direction-academique",
+   "idx": 2
+  }
+ ],
+ "modified": "2026-11-27 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Udshed",
+ "name": "Direction académique",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Direction académique"
+}

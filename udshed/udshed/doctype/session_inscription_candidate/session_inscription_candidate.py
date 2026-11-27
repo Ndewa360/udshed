@@ -457,7 +457,49 @@ def _build_filters(session=None, filiere=None, niveau=None, centre=None, statut=
 		filters["examination_centre"] = centre
 	if statut:
 		filters["candidature_status"] = statut
+	# Périmètre : un coordonnateur ne voit que ses filières, un agent de scolarité / un doyen les
+	# siennes (ces API lisent la base directement : les hooks de liste ne s'appliquent pas).
+	from udshed import permissions
+	from udshed.utils import perimetre
+
+	if permissions._coordonnateur_seul(frappe.session.user):
+		coordonnees = permissions.filieres_coordonnees(frappe.session.user)
+		if filiere and filiere not in coordonnees:
+			frappe.throw(_("Cette filière n'est pas dans votre périmètre."), frappe.PermissionError)
+		if not filiere:
+			filters["filiere"] = ["in", coordonnees or ["∅"]]
+	perimetre.filtre(filters)
 	return filters
+
+
+@frappe.whitelist()
+def exporter_candidatures(session=None, filiere=None, niveau=None, centre=None, statut=None):
+	"""Export CSV des candidatures (filtres de la page « Consultation des candidatures »)."""
+	import csv
+	import io
+
+	securite.exiger_personnel()
+	securite.exiger_permission("Session Inscription Candidate", "export")
+	filters = _build_filters(session, filiere, niveau, centre, statut)
+	meta = frappe.get_meta("Session Inscription Candidate")
+	colonnes = [(c, l) for c, l in (
+		("name", "N° dossier"), ("last_name", "Nom"), ("first_name", "Prénom"), ("email", "Email"),
+		("phone", "Téléphone"), ("telephone", "Téléphone"), ("filiere", "Filière"), ("niveau", "Niveau"),
+		("examination_centre", "Centre"), ("session_inscription", "Campagne"),
+		("candidature_status", "Statut"), ("creation", "Soumis le"),
+	) if c in ("name", "creation") or meta.has_field(c)]
+	lignes = frappe.get_all("Session Inscription Candidate", filters=filters, fields=[c for c, _l in colonnes],
+							order_by="creation desc")
+	sortie = io.StringIO()
+	ecrivain = csv.writer(sortie, delimiter=";")
+	ecrivain.writerow([l for _c, l in colonnes])
+	for r in lignes:
+		ecrivain.writerow([frappe.utils.format_datetime(r.get(c), "dd/MM/yyyy") if c == "creation" else (r.get(c) or "")
+							for c, _l in colonnes])
+	frappe.response["filename"] = f"candidatures_{frappe.utils.nowdate()}.csv"
+	frappe.response["filecontent"] = sortie.getvalue().encode("utf-8-sig")
+	frappe.response["type"] = "download"
+	frappe.response["content_type"] = "text/csv"
 
 
 @frappe.whitelist()

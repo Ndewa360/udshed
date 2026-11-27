@@ -1044,9 +1044,11 @@ def get_reregistrations_by_session(reinscription_session):
 	avec leurs statuts — pour le tableau de bord du coordonateur
 	"""
 	_exiger_rapport_reinscription()
+	from udshed.utils import perimetre
+
 	reregistrations = frappe.get_all(
 		"Academic Reregistration",
-		filters={"reinscription_session": reinscription_session},
+		filters=perimetre.filtre({"reinscription_session": reinscription_session}),
 		fields=[
 			"name", "student", "academic_year",
 			"filiere", "niveau", "semestre", "statut"
@@ -1089,6 +1091,9 @@ def get_reregistration_report(reinscription_session=None, filiere=None, statut=N
 		filters["filiere"] = filiere
 	if statut:
 		filters["statut"] = statut
+	from udshed.utils import perimetre
+
+	perimetre.filtre(filters)  # agent de scolarité / doyen : ses filières
 
 	reregistrations = frappe.get_all(
 		"Academic Reregistration",

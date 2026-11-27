@@ -17,7 +17,9 @@
   "lettre_matricule",
   "description",
   "levels",
-  "field_of_study_level"
+  "field_of_study_level",
+  "section_scolarite",
+  "agents_scolarite"
  ],
  "fields": [
   {
@@ -72,6 +74,18 @@
    "options": "Field of study Level"
   },
   {
+   "description": "Agents de scolarit\u00e9 qui g\u00e8rent cette fili\u00e8re : ils ne voient et ne traitent que les \u00e9tudiants, candidatures, inscriptions, notes et actes des fili\u00e8res o\u00f9 ils figurent.",
+   "fieldname": "section_scolarite",
+   "fieldtype": "Section Break",
+   "label": "Scolarit\u00e9 de la fili\u00e8re"
+  },
+  {
+   "fieldname": "agents_scolarite",
+   "fieldtype": "Table",
+   "label": "Agents de scolarit\u00e9",
+   "options": "Agent Scolarite Filiere"
+  },
+  {
    "fieldname": "faculte",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -90,7 +104,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-27 09:00:00.000000",
+ "modified": "2026-11-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Field of study",
@@ -159,6 +173,21 @@
   {
    "permlevel": 0,
    "role": "Responsable des partenariats",
+   "select": 1
+  },
+  {
+   "permlevel": 0,
+   "role": "Doyen",
+   "select": 1
+  },
+  {
+   "permlevel": 0,
+   "role": "Vice-Doyen",
+   "select": 1
+  },
+  {
+   "permlevel": 0,
+   "role": "Directeur des Affaires Acad\u00e9miques",
    "select": 1
   }
  ],

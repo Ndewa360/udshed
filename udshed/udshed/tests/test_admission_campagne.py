@@ -24,6 +24,7 @@ from frappe.utils import add_days, today
 
 from udshed.api import etudiant, inscription
 from udshed.udshed._fixture_factory import (
+	make_agent_scolarite,
 	make_academic_year,
 	make_course,
 	make_faculty,
@@ -159,8 +160,8 @@ class TestAdmissionCampagne(IntegrationTestCase):
 			campagne.exiger_inscription_ouverte(dossier)
 
 	def test_classe_sans_grille_alerte_la_scolarite(self):
-		agent = make_user_with_role("Agent de scolarité")
 		dossier = self.admettre(self.candidature())
+		agent = make_agent_scolarite(dossier.filiere)
 		res = inscription._finaliser_inscription_complete(dossier, {})
 		self.assertEqual(res["enrolled_count"], 0)
 		self.assertTrue(frappe.db.exists("Notification Log", {"for_user": agent.name, "document_type": "Inscription Academique"}))
@@ -179,7 +180,7 @@ class TestAdmissionCampagne(IntegrationTestCase):
 	# ------------------------------------------------------------------ droits
 	def test_droits_par_role(self):
 		doc = frappe.get_doc("Session Inscription Candidate", self.candidature().name)
-		agent = make_user_with_role("Agent de scolarité")
+		agent = make_agent_scolarite(doc.filiere)
 		frappe.set_user(agent.name)
 		d = droits_candidature(doc)
 		self.assertTrue(d["accepter"] and d["rejeter"])

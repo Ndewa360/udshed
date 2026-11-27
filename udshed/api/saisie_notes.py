@@ -1253,6 +1253,9 @@ def charger_data(academic_year, filiere, niveau, semestre, teaching_unit, type_d
     des notes (enregistrer_cc, enregistrer_examen, etc.).
     """
     _verifier_acces_enseignant(teaching_unit)
+    from udshed.utils import perimetre
+
+    perimetre.exiger_filiere(filiere)
     config = _get_config()
 
     if config["exiger_programmation"] and not _verifier_programmation(academic_year, teaching_unit):
@@ -1322,6 +1325,7 @@ def charger_data(academic_year, filiere, niveau, semestre, teaching_unit, type_d
 
     return {
         "config": config,
+        "saisie": _etats_saisie(academic_year, semestre_effectif, teaching_unit, filiere, niveau, session_examen),
         "ue_info": ue_info,
         "formule": _formule_detectee(teaching_unit, filiere, niveau, notes, students),
         "students": students,
@@ -1556,10 +1560,33 @@ def calculer_apercu(student, teaching_unit, notes_cc=None, note_examen=None, not
     }
 
 
+def _controle_saisie(academic_year, filiere, semestre, teaching_unit, mode, session_examen=None):
+    """Filière dans le périmètre de l'utilisateur et saisie ouverte (période / dérogation)."""
+    from udshed.utils import perimetre, periode_saisie
+
+    perimetre.exiger_filiere(filiere)
+    semestre = _semestre_effectif({"semestre": semestre, "teaching_unit": teaching_unit})
+    periode_saisie.exiger_saisie_ouverte(academic_year, semestre, teaching_unit, filiere, mode, session_examen)
+
+
+def _etats_saisie(academic_year, semestre, teaching_unit, filiere, niveau, session_examen=None):
+    """État de la saisie par évaluation (bandeau de l'écran)."""
+    from udshed.utils import periode_saisie
+
+    etats = {}
+    for mode in ("cc", "examen", "rattrapage"):
+        e = periode_saisie.etat(academic_year, semestre, teaching_unit, filiere, mode, session_examen, niveau)
+        c = e.pop("confirmation", None)
+        e["confirmation"] = {"par": frappe.utils.get_fullname(c.confirme_par), "le": c.confirme_le} if c else None
+        etats[mode] = e
+    return etats
+
+
 @frappe.whitelist()
 def enregistrer_cc(academic_year, filiere, niveau, semestre, teaching_unit, rows):
     """Enregistre les notes de contrôle continu pour tous les étudiants."""
     _verifier_acces_enseignant(teaching_unit)
+    _controle_saisie(academic_year, filiere, semestre, teaching_unit, "cc")
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     n = _sauvegarder_cc(args, rows)
     return {"saved": n}
@@ -1586,6 +1613,7 @@ def enregistrer_evaluations(academic_year, filiere, niveau, semestre, teaching_u
         return enregistrer_rattrapage(
             academic_year, filiere, niveau, semestre, teaching_unit, rows, session_examen=session_examen
         )
+    _controle_saisie(academic_year, filiere, semestre, teaching_unit, "cc" if mode == "cc" else "examen", session_examen)
     rows = _valider_lignes(rows)
     _verifier_programmation_requise(args["academic_year"], args["teaching_unit"])
     session = _get_or_create_session(args, TYPE_NORMALE, args.get("session_examen"))
@@ -1619,6 +1647,7 @@ def enregistrer_evaluations(academic_year, filiere, niveau, semestre, teaching_u
 def enregistrer_examen(academic_year, filiere, niveau, semestre, teaching_unit, rows):
     """Enregistre les notes de l'examen de session normale."""
     _verifier_acces_enseignant(teaching_unit)
+    _controle_saisie(academic_year, filiere, semestre, teaching_unit, "examen")
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     n = _sauvegarder_examen(args, rows)
     return {"saved": n}
@@ -1628,6 +1657,7 @@ def enregistrer_examen(academic_year, filiere, niveau, semestre, teaching_unit, 
 def enregistrer_tp(academic_year, filiere, niveau, semestre, teaching_unit, rows):
     """Enregistre les notes de travaux pratiques."""
     _verifier_acces_enseignant(teaching_unit)
+    _controle_saisie(academic_year, filiere, semestre, teaching_unit, "cc")
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit}
     n = _sauvegarder_tp(args, rows)
     return {"saved": n}
@@ -1637,6 +1667,7 @@ def enregistrer_tp(academic_year, filiere, niveau, semestre, teaching_unit, rows
 def enregistrer_rattrapage(academic_year, filiere, niveau, semestre, teaching_unit, rows, session_examen=None):
     """Enregistre les notes de rattrapage."""
     _verifier_acces_enseignant(teaching_unit)
+    _controle_saisie(academic_year, filiere, semestre, teaching_unit, "rattrapage", session_examen)
     args = {"academic_year": academic_year, "filiere": filiere, "niveau": niveau, "semestre": _semestre_effectif({"academic_year": academic_year, "semestre": semestre, "teaching_unit": teaching_unit}), "teaching_unit": teaching_unit, "session_examen": session_examen}
     n = _sauvegarder_rattrapage(args, rows)
     return {"saved": n}

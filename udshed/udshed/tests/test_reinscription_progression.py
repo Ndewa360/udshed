@@ -23,6 +23,7 @@ from udshed.api.progression import (
 )
 from udshed.api.saisie_notes import publier_session
 from udshed.udshed._fixture_factory import (
+	make_agent_scolarite,
 	make_academic_year,
 	make_calendar_planing,
 	make_course,
@@ -413,7 +414,7 @@ class TestReinscriptionProgression(IntegrationTestCase):
 		with self.assertRaises(frappe.PermissionError):
 			prog.save()
 
-		agent = make_user_with_role("Agent de scolarité")
+		agent = make_agent_scolarite(p.fos)
 		frappe.set_user(agent.name)
 		prog = frappe.get_doc("Progression Academique", prog.name)
 		prog.statut, prog.niveau_cible, prog.filiere_cible = STATUT_REDOUBLEMENT, "Licence 1", p.fos.name

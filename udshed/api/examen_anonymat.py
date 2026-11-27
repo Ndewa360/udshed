@@ -57,6 +57,18 @@ def _verifier_correcteur():
         frappe.throw(_("Accès refusé : réservé à la correction des copies d'examen."))
 
 
+def _exiger_session_perimetre(session):
+    """Agent de scolarité / doyen : la session ne doit concerner que des filières de son périmètre."""
+    from udshed.utils import perimetre
+
+    if not perimetre.restreint():
+        return
+    filieres = set(frappe.get_all("Session Examen Field of study Level", filters={"parent": session}, pluck="filiere"))
+    if not filieres or any(not perimetre.autorisee(f) for f in filieres):
+        frappe.throw(_("Cette session concerne des filières hors de votre périmètre : opération réservée à la "
+                       "scolarité centrale ou à la coordination."), frappe.PermissionError)
+
+
 def _verifier_responsable():
     """Bloque si l'utilisateur connecté n'est pas un responsable autorisé."""
     roles = set(frappe.get_roles(frappe.session.user))
@@ -173,6 +185,7 @@ def generer_codes(session):
     conservées, seules les combinaisons manquantes sont créées.
     """
     _verifier_responsable()
+    _exiger_session_perimetre(session)
     session_doc = frappe.get_doc("Session Examen", session)
     if not session_doc.classes_concernees:
         frappe.throw(_("La session d'examen n'a aucune classe concernée."))
@@ -400,6 +413,7 @@ def enregistrer_correction(copie, note=None, observation=None, absent=None):
 def valider_corrections(session, teaching_unit=None):
     """Valide les corrections terminées d'une session (avant levée)."""
     _verifier_responsable()
+    _exiger_session_perimetre(session)
     filters = {"session_examen": session}
     if teaching_unit:
         filters["teaching_unit"] = teaching_unit
@@ -448,6 +462,7 @@ def lever_anonymat(session):
     résultats académiques.
     """
     _verifier_responsable()
+    _exiger_session_perimetre(session)
     session_doc = frappe.get_doc("Session Examen", session)
     est_rattrapage = session_doc.type_dexamen == TYPE_RATTRAPAGE
 

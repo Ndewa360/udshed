@@ -1,0 +1,222 @@
+{
+ "actions": [],
+ "creation": "2026-11-27 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Derogation Saisie",
+ "owner": "Administrator",
+ "modified": "2026-11-27 12:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "section_demande",
+  "teaching_unit",
+  "intitule",
+  "type_evaluation",
+  "academic_year",
+  "semestre",
+  "session_examen",
+  "filiere",
+  "niveau",
+  "faculte",
+  "column_break_demande",
+  "statut",
+  "enseignant",
+  "demande_par",
+  "demande_le",
+  "motif",
+  "section_decision",
+  "valable_jusqu_au",
+  "commentaire",
+  "column_break_decision",
+  "decide_par",
+  "decide_le"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_demande",
+   "fieldtype": "Section Break",
+   "label": "Demande"
+  },
+  {
+   "fieldname": "teaching_unit",
+   "fieldtype": "Link",
+   "label": "Matière",
+   "options": "Teaching Unit",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "intitule",
+   "fieldtype": "Data",
+   "label": "Intitulé",
+   "fetch_from": "teaching_unit.intitule_cours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "type_evaluation",
+   "fieldtype": "Select",
+   "label": "Évaluation",
+   "options": "Contrôle continu\nExamen de session normale\nRattrapage",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "semestre",
+   "fieldtype": "Select",
+   "label": "Semestre",
+   "options": "Semestre 1\nSemestre 2"
+  },
+  {
+   "fieldname": "session_examen",
+   "fieldtype": "Link",
+   "label": "Session d'examen",
+   "options": "Session Examen"
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "label": "Filière",
+   "options": "Field of study",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "niveau",
+   "fieldtype": "Link",
+   "label": "Niveau",
+   "options": "Field of study Level"
+  },
+  {
+   "fieldname": "faculte",
+   "fieldtype": "Link",
+   "label": "Faculté",
+   "options": "Faculty",
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_demande",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Statut",
+   "options": "Demandée\nAccordée\nRefusée",
+   "default": "Demandée",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "enseignant",
+   "fieldtype": "Link",
+   "label": "Enseignant",
+   "options": "Teacher",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "demande_par",
+   "fieldtype": "Link",
+   "label": "Demandée par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "demande_le",
+   "fieldtype": "Datetime",
+   "label": "Demandée le",
+   "read_only": 1
+  },
+  {
+   "fieldname": "motif",
+   "fieldtype": "Small Text",
+   "label": "Motif de la demande",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_decision",
+   "fieldtype": "Section Break",
+   "label": "Décision du doyen / vice-doyen"
+  },
+  {
+   "fieldname": "valable_jusqu_au",
+   "fieldtype": "Datetime",
+   "label": "Saisie autorisée jusqu'au"
+  },
+  {
+   "fieldname": "commentaire",
+   "fieldtype": "Small Text",
+   "label": "Commentaire"
+  },
+  {
+   "fieldname": "column_break_decision",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "decide_par",
+   "fieldtype": "Link",
+   "label": "Décidée par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "decide_le",
+   "fieldtype": "Datetime",
+   "label": "Décidée le",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Vice-Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Directeur des Affaires Académiques",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:DER-{YYYY}-{#####}",
+ "naming_rule": "Expression",
+ "track_changes": 1,
+ "title_field": "intitule"
+}

@@ -95,7 +95,8 @@ class TestSessionAcademique(IntegrationTestCase):
 		self.assertEqual([f["value"] for f in ctx["filieres"]], [self.fil_a.name])
 
 	def test_scolarite_voit_tout(self):
-		user = make_user_with_role("Agent de scolarité").name
+		# Scolarité centrale (Registration Manager) : tout l'établissement.
+		user = make_user_with_role("Registration Manager").name
 		with self.en_session(user):
 			ctx = sa.contexte_filtres()
 		self.assertTrue(ctx["global"])

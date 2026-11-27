@@ -147,6 +147,15 @@ def comptes_roles():
 	if not pm:
 		pm = [frappe.get_doc({"doctype": "Teacher", "grade": "M.", "first_name": "Gestion", "last_name": "Planning",
 							  "email": "demo-pm@udshed.demo", "status": "Permanent"}).insert(ignore_permissions=True).name]
+	# Gouvernance : doyen et vice-doyen de la faculté, DAA, agent de scolarité rattaché à Informatique.
+	for email, roles in (("demo-doyen@udshed.demo", ["Doyen"]), ("demo-vdoyen@udshed.demo", ["Vice-Doyen"]),
+						 ("demo-daa@udshed.demo", ["Directeur des Affaires Académiques"])):
+		_user(email, roles[0], roles)
+	frappe.db.set_value("Faculty", "FSDEMO", {"doyen": "demo-doyen@udshed.demo", "vice_doyen": "demo-vdoyen@udshed.demo"})
+	fos = frappe.get_doc("Field of study", "INFDEMO")
+	if not any(a.utilisateur == "demo-scol@udshed.demo" for a in fos.get("agents_scolarite") or []):
+		fos.append("agents_scolarite", {"utilisateur": "demo-scol@udshed.demo"})
+		fos.save(ignore_permissions=True)
 	niveau = frappe.db.get_value("Field of study Level", {"parent": "INFDEMO", "level": "Licence 1"}, "name")
 	if niveau:
 		frappe.db.set_value("Field of study Level", niveau, "gestionnaire_de_planning", pm[0])
@@ -176,7 +185,8 @@ def supprimer():
 		for nom in frappe.get_all(dt, filters={"creation": [">=", debut]}, pluck="name"):
 			frappe.delete_doc(dt, nom, force=True, ignore_permissions=True, delete_permanently=True)
 	for email in ("demo-coord@udshed.demo", "demo-scol@udshed.demo", "demo-admin@udshed.demo",
-				  "demo-part@udshed.demo", "aline.fotso@udshed.demo", *COMPTES_ROLES):
+				  "demo-part@udshed.demo", "aline.fotso@udshed.demo", *COMPTES_ROLES,
+				  "demo-doyen@udshed.demo", "demo-vdoyen@udshed.demo", "demo-daa@udshed.demo"):
 		if frappe.db.exists("User", email):
 			frappe.delete_doc("User", email, force=True, ignore_permissions=True, delete_permanently=True)
 	TRACE.unlink()

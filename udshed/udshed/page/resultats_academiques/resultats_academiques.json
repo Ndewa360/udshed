@@ -4,7 +4,7 @@
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2026-11-25 21:00:00.000000",
+ "modified": "2026-11-27 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "resultats-academiques",
@@ -31,6 +31,15 @@
   },
   {
    "role": "Responsable Diplomation"
+  },
+  {
+   "role": "Doyen"
+  },
+  {
+   "role": "Vice-Doyen"
+  },
+  {
+   "role": "Directeur des Affaires Académiques"
   }
  ],
  "script": null,

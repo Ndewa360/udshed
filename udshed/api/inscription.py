@@ -1040,68 +1040,6 @@ def _get_sender():
 
 
 @frappe.whitelist()
-def get_inscription_report(filiere=None, candidature_status=None):
-    # Données nominatives des candidats : mêmes rôles que la page « rapport-general ».
-    securite.exiger_acces_page("rapport-general")
-    filters = {}
-    if filiere:
-        filters["filiere"] = filiere
-    if candidature_status:
-        filters["candidature_status"] = candidature_status
-
-    candidates = frappe.get_all(
-        "Session Inscription Candidate",
-        filters=filters,
-        fields=[
-            "name", "first_name", "last_name", "full_name", "email",
-            "phone", "filiere", "niveau", "candidature_status", "examination_centre",
-            "creation",
-        ],
-        order_by="creation desc",
-    )
-
-    filiere_map = {
-        field_of_study: frappe.db.get_value(
-            "Field of study", field_of_study, "name_of_field"
-        ) or field_of_study
-        for field_of_study in {c.get("filiere") for c in candidates if c.get("filiere")}
-    }
-    rows = []
-    for candidate in candidates:
-        rows.append({
-            "name": candidate.get("name"),
-            "nom_complet": candidate.get("full_name") or (
-                f"{candidate.get('first_name', '')} {candidate.get('last_name', '')}"
-            ).strip(),
-            "email": candidate.get("email") or "",
-            "phone": candidate.get("phone") or candidate.get("telephone") or "",
-            "filiere_label": filiere_map.get(
-                candidate.get("filiere"), candidate.get("filiere") or "Non défini"
-            ),
-            "niveau": candidate.get("niveau") or "Non défini",
-            "candidature_status": candidate.get("candidature_status") or "En attente",
-            "examination_centre": candidate.get("examination_centre") or "Non défini",
-            "creation": str(candidate.get("creation") or ""),
-        })
-
-    par_statut = {}
-    par_filiere = {}
-    par_niveau = {}
-    for row in rows:
-        par_statut[row["candidature_status"]] = par_statut.get(row["candidature_status"], 0) + 1
-        par_filiere[row["filiere_label"]] = par_filiere.get(row["filiere_label"], 0) + 1
-        par_niveau[row["niveau"]] = par_niveau.get(row["niveau"], 0) + 1
-
-    return {
-        "rows": rows,
-        "total": len(rows),
-        "par_statut": par_statut,
-        "par_filiere": par_filiere,
-        "par_niveau": par_niveau,
-    }
-
-
-@frappe.whitelist()
 def get_liste_inscriptions(filiere=None, annee_academique=None, niveau=None, statut=None, origine=None, cycle=None):
     """Liste des inscrits (page « Liste des inscriptions »).
 

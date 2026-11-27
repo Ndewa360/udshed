@@ -265,6 +265,15 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 	const infoBar = $('<div class="sn-info"></div>').css("display", "none").appendTo(content);
 	const formuleBar = $('<div class="sn-ue-formule sn-formule-bar"></div>').css("display", "none").appendTo(content);
 	const toolbar = $('<div class="sn-toolbar"></div>').css("display", "none").appendTo(content);
+	// Période de saisie (bandeau) : avant la barre d'outils.
+	const saisieBar = $('<div class="sn-saisie"></div>').css("display", "none").insertBefore(toolbar);
+	$(`<style>
+		.sn-saisie { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+			padding: 10px 14px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); }
+		.sn-saisie .sn-saisie-msg { font-size: 14px; }
+		.sn-saisie .sn-saisie-msg.ferme b { color: var(--red-600, #b42318); }
+		.sn-saisie .sn-saisie-actions { display: flex; gap: 8px; align-items: center; }
+	</style>`).appendTo(content);
 	const anonBar = $('<div class="sn-anonbar"></div>').css("display", "none").appendTo(content);
 	const tableWrap = $('<div class="sn-table-wrap"></div>').css("display", "none").appendTo(content);
 	const emptyEl = $('<div class="sn-empty"></div>').css("display", "none").appendTo(content);
@@ -809,6 +818,71 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 		render_anonymat();
 		if (selected_mode() === "rattrapage") render_rattrapage();
 		else render_ev(selected_mode());
+		render_saisie();
+	}
+
+	// ------------------------------------------------------------------
+	// période de saisie : bandeau, confirmation, demande de réouverture
+	// ------------------------------------------------------------------
+	function etat_saisie() {
+		const s = state.data && state.data.saisie;
+		return s ? s[selected_mode()] || s.examen : null;
+	}
+
+	function args_saisie() {
+		const types = { cc: "CC", examen: "Examen", rattrapage: "Rattrapage" };
+		return {
+			academic_year: state.filters.academic_year, filiere: state.filters.filiere, niveau: state.filters.niveau,
+			semestre: state.filters.semestre, teaching_unit: state.filters.cours, type_dexamen: types[selected_mode()],
+			session_examen: state.filters.session_examen || null,
+		};
+	}
+
+	function render_saisie() {
+		const e = etat_saisie();
+		if (!e) {
+			saisieBar.hide();
+			return;
+		}
+		const ferme = !e.ouverte;
+		let actions = "";
+		if (e.soumis && e.ouverte)
+			actions += `<button type="button" class="btn btn-default btn-sm sn-confirmer">${e.confirmation ? __("Confirmer à nouveau") : __("Confirmer ma saisie")}</button>`;
+		if (e.soumis && e.fermee_apres_limite && !e.derogation)
+			actions += e.demande
+				? `<span class="text-muted">${__("Demande de réouverture en attente ({0})", [esc(e.demande)])}</span>`
+				: `<button type="button" class="btn btn-default btn-sm sn-demander">${__("Demander une réouverture")}</button>`;
+		const conf = e.confirmation
+			? `<div class="text-muted small">${__("Saisie confirmée par {0} le {1}", [esc(e.confirmation.par), esc(frappe.datetime.str_to_user(e.confirmation.le))])}</div>`
+			: "";
+		saisieBar.show().html(`<div class="sn-saisie-msg ${ferme ? "ferme" : ""}"><b>${esc(e.message)}</b>${conf}</div>
+			<div class="sn-saisie-actions">${actions}</div>`);
+		// Saisie fermée : la grille passe en lecture seule.
+		tableWrap.find("input, select, textarea").prop("disabled", ferme);
+		toolbar.find(".sn-btn-save").prop("disabled", ferme);
+		saisieBar.find(".sn-confirmer").on("click", confirmer_saisie);
+		saisieBar.find(".sn-demander").on("click", demander_reouverture);
+	}
+
+	function confirmer_saisie() {
+		frappe.confirm(__("Confirmer que la saisie de cette évaluation est terminée ? Vous pourrez encore la modifier jusqu'à la date limite."), () => {
+			frappe.xcall("udshed.api.saisie_periode.confirmer_saisie", args_saisie()).then(() => {
+				toast(__("Saisie confirmée"));
+				load_data();
+			});
+		});
+	}
+
+	function demander_reouverture() {
+		frappe.prompt(
+			[{ fieldtype: "Small Text", fieldname: "motif", label: __("Motif de la demande"), reqd: 1 }],
+			(v) => frappe.xcall("udshed.api.saisie_periode.demander_derogation", { ...args_saisie(), motif: v.motif }).then(() => {
+				toast(__("Demande envoyée au doyen et au vice-doyen"));
+				load_data();
+			}),
+			__("Demander une réouverture de la saisie"),
+			__("Envoyer la demande")
+		);
 	}
 
 	function render_info() {
@@ -1235,6 +1309,8 @@ frappe.pages["note-udshed"].on_page_load = function (wrapper) {
 
 	function schedule_autosave() {
 		clearTimeout(autosave_timer);
+		const periode = etat_saisie();
+		if (periode && !periode.ouverte) return;  // saisie fermée : pas d'enregistrement automatique
 		if (state.busy || autosave_running || !state.data || !state.filters.cours) return;
 		autosave_timer = setTimeout(run_autosave, AUTOSAVE_DELAY);
 	}

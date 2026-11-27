@@ -16,7 +16,7 @@ from frappe import _
 
 CLE = "udshed:annee_session"
 # Rôles qui travaillent sur tout l'établissement (pas de périmètre par classe).
-ROLES_GLOBAUX = {"System Manager", "Registration Manager", "Agent de scolarité", "Comptable",
+ROLES_GLOBAUX = {"System Manager", "Registration Manager", "Directeur des Affaires Académiques", "Comptable",
 				 "Responsable Diplomation", "Responsable des partenariats"}
 
 
@@ -90,9 +90,13 @@ def contexte_filtres():
 
 	if not est_personnel():
 		frappe.throw(_("Réservé au personnel."), frappe.PermissionError)
+	from udshed.utils import perimetre
+
 	user = frappe.session.user
 	roles = set(frappe.get_roles(user))
-	global_ = user == "Administrator" or bool(roles & ROLES_GLOBAUX)
+	# Agent de scolarité / doyen : filières de son périmètre ; rôles d'établissement : tout.
+	liste = perimetre.filieres(user)
+	global_ = liste is None and (user == "Administrator" or bool(roles & ROLES_GLOBAUX))
 	niveau = frappe.qb.DocType("Field of study Level")
 	filiere = frappe.qb.DocType("Field of study")
 	faculte = frappe.qb.DocType("Faculty")
@@ -105,7 +109,9 @@ def contexte_filtres():
 		.where(niveau.parenttype == "Field of study")
 		.orderby(filiere.name_of_field).orderby(niveau.idx)
 	)
-	if not global_:
+	if liste is not None:
+		requete = requete.where(filiere.name.isin(liste or ["∅"]))
+	elif not global_:
 		scope = planning_permission.get_scope(user)
 		niveaux = scope.get("niveaux") or []
 		if not niveaux:

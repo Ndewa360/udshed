@@ -9,6 +9,10 @@
   "faculty_name",
   "column_break_wtov",
   "faculty_code",
+  "section_direction",
+  "doyen",
+  "column_break_direction",
+  "vice_doyen",
   "section_break_janr",
   "description"
  ],
@@ -41,12 +45,34 @@
    "label": "Code",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "description": "Le doyen et le vice-doyen dirigent la faculté : tableau de bord, périodes de saisie, dérogations, délibérations et actes de leurs filières.",
+   "fieldname": "section_direction",
+   "fieldtype": "Section Break",
+   "label": "Direction de la faculté"
+  },
+  {
+   "fieldname": "doyen",
+   "fieldtype": "Link",
+   "label": "Doyen",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_direction",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "vice_doyen",
+   "fieldtype": "Link",
+   "label": "Vice-doyen",
+   "options": "User"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-27 09:00:00.000000",
+ "modified": "2026-11-27 12:00:00.000000",
  "modified_by": "admin@udshed.com",
  "module": "Udshed",
  "name": "Faculty",
@@ -112,6 +138,21 @@
   {
    "permlevel": 0,
    "role": "Responsable Diplomation",
+   "select": 1
+  },
+  {
+   "permlevel": 0,
+   "role": "Doyen",
+   "select": 1
+  },
+  {
+   "permlevel": 0,
+   "role": "Vice-Doyen",
+   "select": 1
+  },
+  {
+   "permlevel": 0,
+   "role": "Directeur des Affaires Académiques",
    "select": 1
   }
  ],

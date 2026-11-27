@@ -25,8 +25,10 @@ from frappe import _
 from frappe.utils import now_datetime
 
 from udshed.utils import actes as moteur
+from udshed.utils import perimetre
 
-ROLES_ACTES = {"System Manager", "Responsable Diplomation", "Registration Manager", "Agent de scolarité"}
+ROLES_ACTES = {"System Manager", "Responsable Diplomation", "Registration Manager", "Agent de scolarité",
+			   "Doyen", "Vice-Doyen"}
 ROLES_MODELES = {"System Manager", "Responsable Diplomation", "Responsable des partenariats"}
 
 
@@ -116,6 +118,8 @@ def obtenir(modele, motif=None):
 def telecharger(acte):
 	doc = frappe.get_doc("Acte Academique", acte)
 	staff = bool(set(frappe.get_roles()) & ROLES_ACTES)
+	if staff:
+		perimetre.exiger_etudiant(doc.student)
 	if not staff:
 		if doc.student != _mon_etudiant().name:
 			frappe.throw(_("Ce document ne vous appartient pas."), frappe.PermissionError)
@@ -132,6 +136,7 @@ def telecharger(acte):
 def delivrer(acte):
 	_exiger(ROLES_ACTES)
 	doc = frappe.get_doc("Acte Academique", acte)
+	perimetre.exiger_etudiant(doc.student)
 	if doc.statut != "Demandé":
 		frappe.throw(_("Seule une demande peut être délivrée (statut : {0}).").format(doc.statut))
 	modele = frappe.get_doc("Modele Acte", doc.modele)
@@ -156,6 +161,7 @@ def refuser(acte, motif):
 	if not (motif or "").strip():
 		frappe.throw(_("Indiquez le motif du refus."))
 	doc = frappe.get_doc("Acte Academique", acte)
+	perimetre.exiger_etudiant(doc.student)
 	if doc.statut != "Demandé":
 		frappe.throw(_("Seule une demande peut être refusée."))
 	doc.db_set({"statut": "Refusé", "motif_refus": motif, "traite_par": frappe.session.user, "traite_le": now_datetime()})
@@ -166,6 +172,7 @@ def refuser(acte, motif):
 def marquer_retire(acte):
 	_exiger(ROLES_ACTES)
 	doc = frappe.get_doc("Acte Academique", acte)
+	perimetre.exiger_etudiant(doc.student)
 	if doc.statut != "Prêt à retirer":
 		frappe.throw(_("Le document n'est pas prêt à être retiré."))
 	doc.db_set("statut", "Retiré")
@@ -180,9 +187,9 @@ def _notifier_etudiant(acte, message):
 
 
 def _notifier_responsables(acte):
-	users = set()
-	for role in ("Responsable Diplomation", "Agent de scolarité"):
-		users.update(frappe.get_all("Has Role", filters={"role": role, "parenttype": "User"}, pluck="parent"))
+	# Responsables des actes dont le périmètre couvre la filière de l'étudiant.
+	users = set(perimetre.destinataires(("Responsable Diplomation", "Agent de scolarité", "Doyen", "Vice-Doyen"),
+										 perimetre.filiere_etudiant(acte.student)))
 	nom = nom_etudiant(acte.student)
 	for user in users:
 		if user in ("Administrator", "Guest") or not frappe.db.get_value("User", user, "enabled"):

@@ -1,0 +1,142 @@
+{
+ "actions": [],
+ "creation": "2026-11-27 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Confirmation Saisie",
+ "owner": "Administrator",
+ "modified": "2026-11-27 12:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "teaching_unit",
+  "type_evaluation",
+  "academic_year",
+  "semestre",
+  "filiere",
+  "niveau",
+  "column_break_conf",
+  "enseignant",
+  "confirme_par",
+  "confirme_le"
+ ],
+ "fields": [
+  {
+   "fieldname": "teaching_unit",
+   "fieldtype": "Link",
+   "label": "Matière",
+   "options": "Teaching Unit",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "type_evaluation",
+   "fieldtype": "Select",
+   "label": "Évaluation",
+   "options": "Contrôle continu\nExamen de session normale\nRattrapage",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "semestre",
+   "fieldtype": "Select",
+   "label": "Semestre",
+   "options": "Semestre 1\nSemestre 2"
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "label": "Filière",
+   "options": "Field of study",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "niveau",
+   "fieldtype": "Link",
+   "label": "Niveau",
+   "options": "Field of study Level"
+  },
+  {
+   "fieldname": "column_break_conf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "enseignant",
+   "fieldtype": "Link",
+   "label": "Enseignant",
+   "options": "Teacher",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "confirme_par",
+   "fieldtype": "Link",
+   "label": "Confirmée par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "confirme_le",
+   "fieldtype": "Datetime",
+   "label": "Confirmée le",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "in_create": 1,
+ "autoname": "hash",
+ "track_changes": 1,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Vice-Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Directeur des Affaires Académiques",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Coordonateur",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ]
+}

@@ -42,6 +42,9 @@ role_home_page = {
 	"Correcteur": "/desk/accueil-udshed",
 	"Responsable Diplomation": "/desk/accueil-udshed",
 	"Responsable des partenariats": "/desk/accueil-udshed",
+	"Doyen": "/desk/accueil-udshed",
+	"Vice-Doyen": "/desk/accueil-udshed",
+	"Directeur des Affaires Académiques": "/desk/accueil-udshed",
 	"Teacher": "/desk/accueil-udshed",
 	# Étudiant : directement son espace ; ses droits ne lui ouvrent que la barre « Mon espace étudiant ».
 	"Student": "/app/mon-espace-etudiant",
@@ -54,7 +57,7 @@ fixtures = [
     {
         "dt" : "Role",
         "filters": [
-            ["name","in",["System Manager","Workspace Manager","Script Manager","Teacher","Student","Guest","Desk User","Coordonateur","Planning Manager","Registration Manager","Agent de scolarité","Comptable","Correcteur","Responsable Diplomation","Responsable des partenariats"]]
+            ["name","in",["System Manager","Workspace Manager","Script Manager","Teacher","Student","Guest","Desk User","Coordonateur","Planning Manager","Registration Manager","Agent de scolarité","Comptable","Correcteur","Responsable Diplomation","Responsable des partenariats","Doyen","Vice-Doyen","Directeur des Affaires Académiques"]]
         ]
     },
     {
@@ -182,28 +185,51 @@ before_uninstall = "udshed.scripts.uninstall.before_uninstall"
 # Un compte uniquement « Student » ne voit que SA fiche et SON inscription
 # (voir udshed/permissions.py). Le personnel n'est pas concerné.
 # Réinscriptions et progression : périmètre par rôle (udshed/api/permission.py).
+# Permissions : un étudiant ne voit que ses documents, un coordonnateur les candidatures de ses
+# filières, un agent de scolarité / un doyen uniquement son périmètre (udshed/perimetre_hooks.py).
 permission_query_conditions = {
-	"Student": "udshed.permissions.student_query",
-	"Inscription Academique": "udshed.permissions.inscription_query",
-	"Resultat Academique": "udshed.permissions.resultat_query",
-	"Session Inscription Candidate": "udshed.permissions.candidature_query",
-	"Acte Academique": "udshed.permissions.acte_query",
-	"Diplome Etudiant": "udshed.permissions.diplome_query",
-	"Requete Etudiant": "udshed.permissions.requete_query",
-	"Academic Reregistration": "udshed.api.permission.academic_reregistration_query",
-	"Progression Academique": "udshed.api.permission.progression_query",
+	"Student": "udshed.perimetre_hooks.query_student",
+	"Inscription Academique": "udshed.perimetre_hooks.query_inscription_academique",
+	"Academic Reregistration": "udshed.perimetre_hooks.query_academic_reregistration",
+	"Progression Academique": "udshed.perimetre_hooks.query_progression_academique",
+	"Session Inscription Candidate": "udshed.perimetre_hooks.query_session_inscription_candidate",
+	"Session Examen Note": "udshed.perimetre_hooks.query_session_examen_note",
+	"Examen Anonymat": "udshed.perimetre_hooks.query_examen_anonymat",
+	"Equivalence UE": "udshed.perimetre_hooks.query_equivalence_ue",
+	"Deliberation Jury": "udshed.perimetre_hooks.query_deliberation_jury",
+	"Jury Diplomation": "udshed.perimetre_hooks.query_jury_diplomation",
+	"Diplome Etudiant": "udshed.perimetre_hooks.query_diplome_etudiant",
+	"Derogation Saisie": "udshed.perimetre_hooks.query_derogation_saisie",
+	"Confirmation Saisie": "udshed.perimetre_hooks.query_confirmation_saisie",
+	"Resultat Academique": "udshed.perimetre_hooks.query_resultat_academique",
+	"Resultat UE": "udshed.perimetre_hooks.query_resultat_ue",
+	"Resultat Semestre": "udshed.perimetre_hooks.query_resultat_semestre",
+	"Acte Academique": "udshed.perimetre_hooks.query_acte_academique",
+	"Requete Etudiant": "udshed.perimetre_hooks.query_requete_etudiant",
+	"Correction Note": "udshed.perimetre_hooks.query_correction_note",
+	"Periode Saisie Notes": "udshed.perimetre_hooks.query_periode_saisie_notes",
 }
 
 has_permission = {
-	"Student": "udshed.permissions.student_has_permission",
-	"Inscription Academique": "udshed.permissions.inscription_has_permission",
-	"Resultat Academique": "udshed.permissions.resultat_has_permission",
-	"Session Inscription Candidate": "udshed.permissions.candidature_has_permission",
-	"Acte Academique": "udshed.permissions.acte_has_permission",
-	"Diplome Etudiant": "udshed.permissions.diplome_has_permission",
-	"Requete Etudiant": "udshed.permissions.requete_has_permission",
-	"Academic Reregistration": "udshed.api.permission.academic_reregistration_has_permission",
-	"Progression Academique": "udshed.api.permission.progression_has_permission",
+	"Student": "udshed.perimetre_hooks.has_student",
+	"Inscription Academique": "udshed.perimetre_hooks.has_inscription_academique",
+	"Academic Reregistration": "udshed.perimetre_hooks.has_academic_reregistration",
+	"Progression Academique": "udshed.perimetre_hooks.has_progression_academique",
+	"Session Inscription Candidate": "udshed.perimetre_hooks.has_session_inscription_candidate",
+	"Session Examen Note": "udshed.perimetre_hooks.has_session_examen_note",
+	"Examen Anonymat": "udshed.perimetre_hooks.has_examen_anonymat",
+	"Equivalence UE": "udshed.perimetre_hooks.has_equivalence_ue",
+	"Deliberation Jury": "udshed.perimetre_hooks.has_deliberation_jury",
+	"Jury Diplomation": "udshed.perimetre_hooks.has_jury_diplomation",
+	"Diplome Etudiant": "udshed.perimetre_hooks.has_diplome_etudiant",
+	"Derogation Saisie": "udshed.perimetre_hooks.has_derogation_saisie",
+	"Confirmation Saisie": "udshed.perimetre_hooks.has_confirmation_saisie",
+	"Resultat Academique": "udshed.perimetre_hooks.has_resultat_academique",
+	"Resultat UE": "udshed.perimetre_hooks.has_resultat_ue",
+	"Resultat Semestre": "udshed.perimetre_hooks.has_resultat_semestre",
+	"Acte Academique": "udshed.perimetre_hooks.has_acte_academique",
+	"Requete Etudiant": "udshed.perimetre_hooks.has_requete_etudiant",
+	"Correction Note": "udshed.perimetre_hooks.has_correction_note",
 }
 
 # Recherche des niveaux (table enfant de la filière) pour tous les champs Link qui y pointent :

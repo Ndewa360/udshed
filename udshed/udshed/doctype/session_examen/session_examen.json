@@ -12,6 +12,10 @@
   "column_break_ctlg",
   "date_debut",
   "date_de_fin",
+  "section_saisie",
+  "saisie_ouverture",
+  "column_break_saisie",
+  "saisie_fermeture",
   "semestre",
   "statut",
   "date_publication",
@@ -36,6 +40,26 @@
    "in_list_view": 1,
    "label": "Date de fin",
    "reqd": 1
+  },
+  {
+   "fieldname": "section_saisie",
+   "fieldtype": "Section Break",
+   "label": "Saisie des notes",
+   "description": "Facultatif : période propre à cette session. Sinon s'applique la période de la faculté, puis celle de l'établissement (Calendrier de saisie)."
+  },
+  {
+   "fieldname": "saisie_ouverture",
+   "fieldtype": "Datetime",
+   "label": "Ouverture de la saisie"
+  },
+  {
+   "fieldname": "column_break_saisie",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "saisie_fermeture",
+   "fieldtype": "Datetime",
+   "label": "Date limite de saisie"
   },
   {
    "fieldname": "section_break_kmhq",
@@ -93,7 +117,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-27 09:00:00.000000",
+ "modified": "2026-11-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Examen",
@@ -177,6 +201,32 @@
    "role": "Comptable",
    "permlevel": 0,
    "select": 1
+  },
+  {
+   "role": "Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1
+  },
+  {
+   "role": "Vice-Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1
+  },
+  {
+   "role": "Directeur des Affaires Académiques",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
   }
  ],
  "row_format": "Dynamic",

@@ -16,11 +16,12 @@ from frappe.tests import IntegrationTestCase
 from udshed.udshed._fixture_factory import suppress_commits
 from udshed.utils.navigation import BARRES, matrice_visibilite
 
-ADMISSIONS, EXAMENS, PLANNING, INSIGHT, CONFIGURATION, ETUDIANT, PARTENARIATS, ESPACE_ENSEIGNANT, ACCUEIL = BARRES
+(ADMISSIONS, EXAMENS, PLANNING, INSIGHT, CONFIGURATION, ETUDIANT, PARTENARIATS, ESPACE_ENSEIGNANT, ACCUEIL,
+ MA_FACULTE, DIRECTION) = BARRES
 PERSONNEL = {ADMISSIONS, EXAMENS, PLANNING, INSIGHT, CONFIGURATION}
 
 ATTENDU = {
-	"System Manager": PERSONNEL | {PARTENARIATS},
+	"System Manager": PERSONNEL | {PARTENARIATS, DIRECTION},
 	# Configuration : « Modèles de documents » (actes des étudiants).
 	"Registration Manager": {ADMISSIONS, EXAMENS, CONFIGURATION},
 	"Agent de scolarité": {ADMISSIONS, EXAMENS, CONFIGURATION},
@@ -33,6 +34,10 @@ ATTENDU = {
 	"Student": {ETUDIANT},
 	# Planning académique : « Enseignants » (fiches des enseignants).
 	"Responsable des partenariats": {PARTENARIATS, CONFIGURATION, PLANNING},
+	# Direction : son tableau de bord ; consultation des inscriptions, examens et délibérations ; enseignants.
+	"Doyen": {MA_FACULTE, ADMISSIONS, EXAMENS, PLANNING},
+	"Vice-Doyen": {MA_FACULTE, ADMISSIONS, EXAMENS, PLANNING},
+	"Directeur des Affaires Académiques": {DIRECTION, ADMISSIONS, EXAMENS, PLANNING},
 }
 
 APP = Path(frappe.get_app_path("udshed"))

@@ -37,6 +37,9 @@ ROLES_RESULTATS = (
     "Comptable",
     # Mêmes rôles que la page « Résultats académiques » (jurys de diplomation).
     "Responsable Diplomation",
+    "Doyen",
+    "Vice-Doyen",
+    "Directeur des Affaires Académiques",
 )
 # Le calcul enregistre les résultats : réservé à la scolarité et à la coordination
 # (comptabilité, planning et diplomation consultent seulement).
@@ -68,6 +71,9 @@ def _filieres_coordonnateur(user):
 
 def _verifier_acces_resultats(filiere=None):
     """Contrôle l'accès aux résultats côté backend (jamais côté frontend)."""
+    from udshed.utils import perimetre
+
+    perimetre.exiger_filiere(filiere)  # agent de scolarité / doyen : ses filières
     user = frappe.session.user
     if user == "Administrator":
         return
@@ -126,7 +132,11 @@ def get_classes(academic_year=None):
         niveaux_par_classe.setdefault(l.filiere, set()).add(l.niveau)
 
     classes = []
+    from udshed.utils import perimetre
+
     for filiere, niveaux in sorted(niveaux_par_classe.items()):
+        if not perimetre.autorisee(filiere):
+            continue
         if filieres_autorisees is not None and filiere not in filieres_autorisees:
             continue
         filiere_name = frappe.get_cached_value("Field of study", filiere, "name_of_field") or filiere

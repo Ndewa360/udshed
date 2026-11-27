@@ -67,6 +67,9 @@ def _exiger_traitement():
 def prendre_en_charge(requete):
 	_exiger_traitement()
 	doc = frappe.get_doc("Requete Etudiant", requete)
+	from udshed.utils import perimetre
+
+	perimetre.exiger_etudiant(doc.student)
 	if doc.statut == "Soumise":
 		doc.db_set({"statut": "En traitement", "traite_par": frappe.session.user})
 	return {"statut": doc.statut}
@@ -80,6 +83,9 @@ def repondre(requete, reponse, statut="Répondue"):
 	if not (reponse or "").strip():
 		frappe.throw(_("Rédigez la réponse à l'étudiant."))
 	doc = frappe.get_doc("Requete Etudiant", requete)
+	from udshed.utils import perimetre
+
+	perimetre.exiger_etudiant(doc.student)
 	doc.db_set({"reponse": reponse, "statut": statut, "traite_par": frappe.session.user, "traite_le": now_datetime()})
 	user = frappe.db.get_value("Student", doc.student, "utilisateur")
 	from udshed.utils.compte_etudiant import notifier_etudiant
@@ -117,9 +123,11 @@ def lier_correction(correction):
 
 
 def _notifier_traitants(doc):
-	users = set()
-	for role in ("Agent de scolarité", "Registration Manager"):
-		users.update(frappe.get_all("Has Role", filters={"role": role, "parenttype": "User"}, pluck="parent"))
+	from udshed.utils import perimetre
+
+	# Agents de scolarité de la filière de l'étudiant (et scolarité centrale).
+	users = set(perimetre.destinataires(("Agent de scolarité", "Registration Manager"),
+										 perimetre.filiere_etudiant(doc.student)))
 	nom = nom_etudiant(doc.student)
 	for user in users:
 		if user in ("Administrator", "Guest") or not frappe.db.get_value("User", user, "enabled"):
