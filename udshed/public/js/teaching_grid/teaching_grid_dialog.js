@@ -139,6 +139,147 @@ update_teacher_preview_from_grid(courseDocName,teachingUnitName, dialog) {
     )
 },
    	 
+open_course_editor(filters, cours, onDone = () => {}) {
+    const esc = frappe.utils.escape_html;
+    const TYPES = ["Cours Magistral (CM)", "Travaux Dirigés (TD)", "Travaux Pratique (TP)"];
+    Promise.all([
+        frappe.call({ method: "udshed.api.grille_edition.infos_cours", args: { ...filters, teaching_unit: cours.teaching_unit } }),
+        frappe.call({ method: "udshed.api.teaching_grid.lister_ues", args: { ...filters } }),
+    ]).then(([r1, r2]) => {
+        const info = r1.message;
+        const ues = (r2.message || []).filter((u) => !u.semestre || u.semestre === filters.semestre)
+            .map((u) => ({ value: u.code, label: `${u.code} — ${u.intitule || ""}` }));
+        ues.push({ value: "__nouvelle__", label: __("+ Nouvelle UE") });
+        const partage = (info.autres_classes || []).length;
+        const alertes = [
+            partage ? `<div class="alert alert-info small mb-2">${__("Tronc commun avec {0} : code, intitulé, heures, UE et enseignants valent pour toutes ces classes ; les crédits restent propres à chaque classe.", [esc(info.autres_classes.join(", "))])}</div>` : "",
+            info.donnees ? `<div class="alert alert-warning small mb-2">${__("Ce cours a déjà des données ({0}). Un changement de code est répercuté partout (notes, résultats, planning, délibérations…).", [esc(info.donnees)])}</div>` : "",
+        ].join("");
+
+        const d = new frappe.ui.Dialog({
+            title: __("Modifier le cours {0}", [info.code]),
+            size: "large",
+            fields: [
+                { fieldtype: "HTML", options: alertes },
+                { fieldtype: "Data", fieldname: "code", label: __("Code du cours"), reqd: 1, default: info.code },
+                { fieldtype: "Data", fieldname: "intitule_cours", label: __("Intitulé"), reqd: 1, default: info.intitule_cours },
+                { fieldtype: "Float", fieldname: "credits", label: __("Crédits (pour cette classe)"), default: info.credits },
+                { fieldtype: "Column Break" },
+                { fieldtype: "Select", fieldname: "ue_code", label: __("UE"), options: ues, default: info.ue_code, hidden: !info.avec_ue },
+                { fieldtype: "Data", fieldname: "ue_nouveau_code", label: __("Code de la nouvelle UE"), depends_on: "eval:doc.ue_code==='__nouvelle__'" },
+                { fieldtype: "Data", fieldname: "ue_intitule", label: __("Intitulé de la nouvelle UE"), depends_on: "eval:doc.ue_code==='__nouvelle__'" },
+                { fieldtype: "Section Break", label: __("Volume horaire") },
+                { fieldtype: "Int", fieldname: "nombre_dheure_cm", label: "CM", default: info.nombre_dheure_cm },
+                { fieldtype: "Int", fieldname: "nombre_dheure_td", label: "TD", default: info.nombre_dheure_td },
+                { fieldtype: "Column Break" },
+                { fieldtype: "Int", fieldname: "nombre_dheure_tp", label: "TP", default: info.nombre_dheure_tp },
+                { fieldtype: "Int", fieldname: "nombre_dheure_tpe", label: "TPE", default: info.nombre_dheure_tpe },
+                { fieldtype: "Section Break", label: __("Enseignants") },
+                {
+                    fieldtype: "Table", fieldname: "enseignants", label: __("Enseignants"), cannot_add_rows: false,
+                    data: (info.enseignants || []).map((e) => ({ ...e })),
+                    fields: [
+                        { fieldtype: "Link", fieldname: "enseignant", label: __("Enseignant"), options: "Teacher", in_list_view: 1, reqd: 1, columns: 6 },
+                        { fieldtype: "Select", fieldname: "type_de_cours", label: __("Type"), options: TYPES, default: TYPES[0], in_list_view: 1, columns: 4 },
+                    ],
+                },
+            ],
+            primary_action_label: __("Enregistrer"),
+            primary_action(v) {
+                const nouvelleUe = v.ue_code === "__nouvelle__";
+                if (nouvelleUe && !(v.ue_nouveau_code || "").trim()) {
+                    Udshed.Messages.validation(__("Indiquez le code de la nouvelle UE."));
+                    return;
+                }
+                const valeurs = {
+                    code: (v.code || "").trim(),
+                    intitule_cours: (v.intitule_cours || "").trim(),
+                    credits: v.credits,
+                    nombre_dheure_cm: v.nombre_dheure_cm, nombre_dheure_td: v.nombre_dheure_td,
+                    nombre_dheure_tp: v.nombre_dheure_tp, nombre_dheure_tpe: v.nombre_dheure_tpe,
+                    enseignants: (v.enseignants || []).filter((e) => e.enseignant)
+                        .map((e) => ({ enseignant: e.enseignant, type_de_cours: e.type_de_cours || TYPES[0] })),
+                };
+                if (info.avec_ue) {
+                    valeurs.ue_code = nouvelleUe ? v.ue_nouveau_code.trim() : v.ue_code;
+                    if (nouvelleUe) valeurs.ue_intitule = (v.ue_intitule || "").trim();
+                }
+                const cle = (l) => l.map((e) => `${e.enseignant}|${e.type_de_cours}`).sort().join(",");
+                const communModifie = valeurs.code !== info.code || valeurs.intitule_cours !== info.intitule_cours
+                    || ["nombre_dheure_cm", "nombre_dheure_td", "nombre_dheure_tp", "nombre_dheure_tpe"].some((k) => (valeurs[k] || 0) !== (info[k] || 0))
+                    || (info.avec_ue && valeurs.ue_code !== info.ue_code)
+                    || cle(valeurs.enseignants) !== cle(info.enseignants || []);
+                const envoyer = (confirme) => frappe.call({
+                    method: "udshed.api.grille_edition.enregistrer_cours",
+                    args: { ...filters, teaching_unit: info.teaching_unit, valeurs, appliquer_au_tronc_commun: confirme ? 1 : 0 },
+                    freeze: true,
+                    freeze_message: __("Enregistrement du cours…"),
+                    callback: (r) => {
+                        const res = r.message || {};
+                        d.hide();
+                        Udshed.Messages.success(__("Cours enregistré."));
+                        (res.avertissements || []).forEach((a) => Udshed.Messages.warning(a));
+                        onDone();
+                    },
+                    error: (err) => Udshed.Messages.error(err, __("Modification refusée")),
+                });
+                const messages = [];
+                if (partage && communModifie) messages.push(__("Les modifications vaudront pour toutes les classes du tronc commun."));
+                if (valeurs.code !== info.code) messages.push(__("Le code {0} deviendra {1} partout où ce cours est utilisé.", [esc(info.code), esc(valeurs.code)]));
+                if (messages.length) {
+                    frappe.confirm(messages.join("<br>") + "<br>" + __("Continuer ?"), () => envoyer(Boolean(partage)));
+                } else {
+                    envoyer(false);
+                }
+            },
+        });
+        d.show();
+    });
+},
+
+open_ue_editor(filters, ueCode, onDone = () => {}) {
+    const esc = frappe.utils.escape_html;
+    frappe.call({
+        method: "udshed.api.grille_edition.infos_ue",
+        args: { ...filters, ue_code: ueCode },
+        callback: (r) => {
+            const info = r.message;
+            const autres = info.autres_classes || [];
+            const alertes = [
+                autres.length ? `<div class="alert alert-info small mb-2">${__("UE aussi utilisée par {0} : la modification vaudra pour ces classes.", [esc(autres.join(", "))])}</div>` : "",
+                info.resultats ? `<div class="alert alert-warning small mb-2">${__("{0} résultat(s) d'UE déjà calculé(s) : ils suivront le nouveau code.", [info.resultats])}</div>` : "",
+                `<div class="text-muted small mb-2">${__("Pour déplacer des cours entre UE, utilisez « Organiser les UE » ou la fiche du cours.")}</div>`,
+            ].join("");
+            const d = new frappe.ui.Dialog({
+                title: __("Modifier l'UE {0}", [info.code]),
+                fields: [
+                    { fieldtype: "HTML", options: alertes },
+                    { fieldtype: "Data", fieldname: "code", label: __("Code de l'UE"), reqd: 1, default: info.code },
+                    { fieldtype: "Data", fieldname: "intitule", label: __("Intitulé"), reqd: 1, default: info.intitule },
+                ],
+                primary_action_label: __("Enregistrer"),
+                primary_action(v) {
+                    const envoyer = () => frappe.call({
+                        method: "udshed.api.grille_edition.enregistrer_ue",
+                        args: { ...filters, ue_code: info.code, code: (v.code || "").trim(), intitule: (v.intitule || "").trim(),
+                                appliquer_aux_autres_classes: autres.length ? 1 : 0 },
+                        freeze: true,
+                        callback: () => { d.hide(); Udshed.Messages.success(__("UE enregistrée.")); onDone(); },
+                        error: (err) => Udshed.Messages.error(err, __("Modification refusée")),
+                    });
+                    const change = (v.code || "").trim() !== info.code || (v.intitule || "").trim() !== info.intitule;
+                    if (autres.length && change) {
+                        frappe.confirm(__("Cette UE est partagée avec {0}. Continuer ?", [esc(autres.join(", "))]), envoyer);
+                    } else {
+                        envoyer();
+                    }
+                },
+            });
+            d.show();
+        },
+    });
+},
+
 open_add_course_dialog(filters, onDone = () => {}) {
     const d = new frappe.ui.Dialog({
         title: __("Ajouter un cours à la grille"),
@@ -300,15 +441,19 @@ show_import_dialog(filters, onAfterImported = (data) => {}) {
                 <tr class="tg-prev-ue"><td>${esc(ue.code)}</td><td colspan="4">${esc(ue.intitule)}</td>
                 <td>${ue.statut === "nouvelle" ? `<span class="indicator-pill green">${__("Nouvelle UE")}</span>` : ""}</td></tr>`;
             const cours = ue.cours.map((c) => {
-                const [couleur, libelle] = STATUTS[c.statut] || ["gray", c.statut];
+                let [couleur, libelle] = STATUTS[c.statut] || ["gray", c.statut];
+                if (c.statut === "mis_a_jour" && !(c.changements || []).length) [couleur, libelle] = ["gray", __("Inchangé")];
                 const heures = (c.nombre_dheure_cm || 0) + (c.nombre_dheure_td || 0) + (c.nombre_dheure_tp || 0);
                 const avert = (c.avertissements || []).map((a) => `<div class="text-warning small">⚠ ${esc(a)}</div>`).join("");
+                const changements = (c.changements || []).map((x) =>
+                    `<div class="small tg-prev-diff"><span class="text-muted">${esc(x.champ)} :</span> <s>${esc(x.avant === null || x.avant === "" ? "—" : x.avant)}</s> → <strong>${esc(x.apres === null || x.apres === "" ? "—" : x.apres)}</strong></div>`
+                ).join("");
                 return `<tr>
                     <td class="text-muted">${c.ligne}</td>
-                    <td><strong>${esc(c.code)}</strong> ${esc(c.intitule_cours)}${avert}</td>
+                    <td><strong>${esc(c.code)}</strong> ${esc(c.intitule_cours)}${changements}${avert}</td>
                     <td class="text-right">${fmt(c.credits)}</td>
                     <td class="text-right">${fmt(heures)} h</td>
-                    <td>${(c.enseignants || []).length}</td>
+                    <td>${(c.enseignants || []).length}${(c.enseignants_ignores || []).length ? ` <span class="text-warning" title="${__("Enseignant(s) inconnu(s) : case laissée vide")}">+${c.enseignants_ignores.length} ?</span>` : ""}</td>
                     <td><span class="indicator-pill ${couleur}">${libelle}</span></td>
                 </tr>`;
             }).join("");
@@ -324,9 +469,10 @@ show_import_dialog(filters, onAfterImported = (data) => {}) {
                 <div class="tg-prev-cards">
                     ${card(s.ues_nouvelles + s.ues_existantes, __("UE"))}
                     ${card(s.cours_nouveaux, __("Cours nouveaux"), "green")}
-                    ${card(s.cours_mis_a_jour + s.cours_ajoutes_a_la_classe, __("Cours mis à jour"), "blue")}
+                    ${card(s.cours_modifies + s.cours_ajoutes_a_la_classe, __("Cours modifiés"), "blue")}
                     ${card(s.cours_retires, __("Retirés"), s.cours_retires ? "orange" : "")}
                     ${card(fmt(s.total_credits), __("Crédits"))}
+                    ${card(s.enseignants_ignores, __("Enseignants inconnus"), s.enseignants_ignores ? "orange" : "")}
                     ${card(s.avertissements, __("Avertissements"), s.avertissements ? "orange" : "")}
                 </div>
                 ${data.colonnes ? `<div class="small text-muted mb-2"><strong>${__("Colonnes reconnues")}</strong>
@@ -341,7 +487,7 @@ show_import_dialog(filters, onAfterImported = (data) => {}) {
                 ${retraits}
             </div>
             <style>
-                .tg-prev-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px}
+                .tg-prev-cards{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:12px}.tg-prev-diff s{color:var(--text-muted)}
                 .tg-prev-card{border:1px solid var(--border-color);border-radius:8px;padding:8px;text-align:center}
                 .tg-prev-card .v{font-size:18px;font-weight:700}.tg-prev-card .l{font-size:11px;color:var(--text-muted)}
                 .tg-prev-card.green .v{color:var(--green-600)}.tg-prev-card.blue .v{color:var(--blue-600)}.tg-prev-card.orange .v{color:var(--orange-600)}
@@ -410,8 +556,8 @@ show_import_dialog(filters, onAfterImported = (data) => {}) {
             const r = data.data;
             Udshed.Messages.dialog({
                 title: __('Import réussi'),
-                message: __("UE créées : {0}\nCours créés : {1}\nCours mis à jour : {2}\nCours retirés : {3}\nCours conservés (données existantes) : {4}",
-                    [r.ues_created, r.courses_created, r.courses_updated, r.courses_deleted, r.courses_kept]),
+                message: __("UE créées : {0}\nCours créés : {1}\nCours mis à jour : {2}\nCours retirés : {3}\nCours conservés (données existantes) : {4}\nEnseignants inconnus (cases laissées vides) : {5}",
+                    [r.ues_created, r.courses_created, r.courses_updated, r.courses_deleted, r.courses_kept, (data.analyse || {}).enseignants_ignores || 0]),
                 type: 'success'
             });
             onAfterImported(data);

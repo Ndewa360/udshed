@@ -296,17 +296,61 @@ def _meme_valeur(actuelle, importee):
     return str(actuelle or "").strip() == str(importee or "").strip()
 
 
-def _resoudre_enseignant(entree):
-    """(nom du Teacher, None) ou (None, message d'erreur) — sans lever d'exception."""
-    if "@" in entree:
-        teacher = frappe.db.get_value("Teacher", {"email": entree}, "name")
-    else:
-        teacher = frappe.db.exists("Teacher", entree) or frappe.db.get_value(
-            "Teacher", {"full_name": entree}, "name"
+# Titres ignorés quand on compare des noms (« Dr Aline Fotso » = « FOTSO Aline »).
+_TITRES = {"dr", "pr", "prof", "professeur", "docteur", "m", "mr", "mme", "mlle", "monsieur", "madame",
+           "mademoiselle", "ing", "me"}
+
+
+def _jetons(texte):
+    texte = unicodedata.normalize("NFKD", str(texte or "")).encode("ascii", "ignore").decode().lower()
+    return [j for j in re.split(r"[^a-z0-9]+", texte) if j]
+
+
+def _cle_nom(texte, titres):
+    return tuple(sorted(j for j in _jetons(texte) if j not in titres))
+
+
+def _index_enseignants():
+    """Index des enseignants par e-mail et par nom normalisé (une seule requête par analyse)."""
+    titres = set(_TITRES)
+    champ_grade = frappe.get_meta("Teacher").get_field("grade")
+    for option in (champ_grade.options or "").split("\n") if champ_grade else []:
+        titres.update(_jetons(option))
+    emails, noms = {}, {}
+    for t in frappe.get_all("Teacher", fields=["name", "email", "autres_emails", "first_name", "last_name"]):
+        for adresse in [t.email, *re.split(r"[,;\s]+", t.autres_emails or "")]:
+            if adresse and "@" in adresse:
+                emails.setdefault(adresse.strip().lower(), t.name)
+        cle = _cle_nom(f"{t.first_name or ''} {t.last_name or ''}", titres)
+        if cle:
+            noms.setdefault(cle, []).append(t.name)
+    return {"emails": emails, "noms": noms, "titres": titres}
+
+
+def _resoudre_enseignant(entree, index=None):
+    """(nom du Teacher, None) ou (None, message) — sans lever d'exception.
+
+    Accepte l'adresse e-mail, l'identifiant de la fiche (« Dr Aline Fotso ») ou le
+    nom seul, avec ou sans titre, dans n'importe quel ordre, sans tenir compte des
+    majuscules ni des accents. Un nom porté par plusieurs enseignants n'est pas deviné.
+    """
+    index = index or _index_enseignants()
+    texte = " ".join(str(entree or "").split())
+    if "@" in texte:
+        teacher = index["emails"].get(texte.lower())
+        if teacher:
+            return teacher, None
+        return None, _("Enseignant « {0} » introuvable : case laissée vide (à assigner dans la grille).").format(texte)
+    if frappe.db.exists("Teacher", texte):
+        return frappe.db.get_value("Teacher", texte, "name"), None
+    candidats = index["noms"].get(_cle_nom(texte, index["titres"]), [])
+    if len(candidats) == 1:
+        return candidats[0], None
+    if candidats:
+        return None, _("Plusieurs enseignants s'appellent « {0} » ({1}) : indiquez l'adresse e-mail. Case laissée vide.").format(
+            texte, ", ".join(sorted(candidats))
         )
-    if teacher:
-        return teacher, None
-    return None, _("Enseignant « {0} » introuvable (adresse email ou nom exact attendu).").format(entree)
+    return None, _("Enseignant « {0} » introuvable : case laissée vide (à assigner dans la grille).").format(texte)
 
 
 def _cours_classe_actuels(academic_year, filiere, niveau, semestre):
@@ -431,6 +475,7 @@ def _analyser_grille(data_grid, academic_year, filiere, niveau, semestre, entete
     codes_vus = {}
     largeur = max((len(d) for d in data_grid), default=0)
     carte, mode = _carte_colonnes(entetes, largeur)
+    index_enseignants = _index_enseignants()
 
     def cellule(data, role):
         index = carte.get(role)
@@ -500,18 +545,20 @@ def _analyser_grille(data_grid, academic_year, filiere, niveau, semestre, entete
                 # Colonne « Enseignant » unique : type déduit des heures du cours.
                 cellules_enseignants.append((_type_par_heures(valeurs), _cell_texte(cellule(data, "ens"))))
 
-        enseignants = []
+        enseignants, ignores = [], []
         for type_cours, cellule_ens in cellules_enseignants:
             for entree in [e.strip() for e in re.split(r"[,;/]", cellule_ens or "") if e.strip()]:
-                teacher, erreur = _resoudre_enseignant(entree)
-                if erreur:
-                    erreurs.append({"ligne": ligne, "message": erreur})
+                teacher, message = _resoudre_enseignant(entree, index_enseignants)
+                if message:
+                    # L'enseignant n'existe pas (encore) : le cours est importé, la case reste vide.
+                    ignores.append(message)
                 else:
                     enseignants.append({"enseignant": teacher, "type_de_cours": type_cours})
 
         existant = frappe.db.get_value("Teaching Unit", {"course": code_cours, "academic_year": academic_year}, "name")
         element = {"ligne": ligne, "code": code_cours, "ue": ue_courante["code"], "teaching_unit": existant,
-                   "enseignants": enseignants, "avertissements": [], "autres_classes": [], **valeurs}
+                   "enseignants": enseignants, "enseignants_ignores": ignores, "avertissements": list(ignores),
+                   "autres_classes": [], "changements": [], **valeurs}
         avertissement = grille.coherence_credits(valeurs["credits"], valeurs)
         if avertissement:
             element["avertissements"].append(avertissement)
@@ -523,6 +570,8 @@ def _analyser_grille(data_grid, academic_year, filiere, niveau, semestre, entete
             autres = sorted(c for c in classes if c != (filiere, str(niveau)))
             element["autres_classes"] = [f"{f} {grille.libelle_niveau(n)}" for f, n in autres]
             element["statut"] = "mis_a_jour" if (filiere, str(niveau)) in classes else "ajout_classe"
+            if element["statut"] == "mis_a_jour":
+                element["changements"] = _changements(existant, element, filiere, niveau, bool(autres))
             if autres:
                 tu = frappe.get_doc("Teaching Unit", existant)
                 differences = [
@@ -562,6 +611,8 @@ def _analyser_grille(data_grid, academic_year, filiere, niveau, semestre, entete
         "cours_retires": sum(1 for r in retraits if not r["bloque"]),
         "retraits_bloques": sum(1 for r in retraits if r["bloque"]),
         "avertissements": sum(len(c["avertissements"]) for c in cours),
+        "enseignants_ignores": sum(len(c["enseignants_ignores"]) for c in cours),
+        "cours_modifies": sum(1 for c in cours if c["changements"]),
         "erreurs": len(erreurs),
         "total_credits": sum(c["credits"] for c in cours),
         "total_heures": sum(grille.heures_face_a_face(c) + c["nombre_dheure_tpe"] for c in cours),
@@ -576,6 +627,36 @@ def _analyser_grille(data_grid, academic_year, filiere, niveau, semestre, entete
     }
     return {"ues": ues, "cours": cours, "retraits": retraits, "erreurs": erreurs, "stats": stats,
             "colonnes": colonnes, "mode_colonnes": mode}
+
+
+def _changements(teaching_unit, element, filiere, niveau, partage):
+    """Avant / après d'un cours déjà dans la grille (ce que l'import va réellement changer)."""
+    tu = frappe.get_doc("Teaching Unit", teaching_unit)
+    ligne = next((r for r in tu.course_levels if r.filiere == filiere and str(r.niveau) == str(niveau)), None)
+    resultat = []
+
+    def comparer(libelle, avant, apres):
+        if not _meme_valeur(avant, apres):
+            resultat.append({"champ": libelle, "avant": avant, "apres": apres})
+
+    comparer(_("Crédits"), ligne.course_poid if ligne else None, element["credits"])
+    if partage:
+        return resultat  # tronc commun : seuls les crédits de la classe sont importés
+    comparer(_("Intitulé"), tu.intitule_cours, element["intitule_cours"])
+    for champ, libelle in (("nombre_dheure_cm", "CM"), ("nombre_dheure_td", "TD"), ("nombre_dheure_tp", "TP"),
+                           ("nombre_dheure_tpe", "TPE")):
+        comparer(libelle, tu.get(champ), element[champ])
+    ue_actuelle = frappe.db.get_value("Teaching Unit Value", tu.unite_de_valeur, "code") if tu.unite_de_valeur else ""
+    if element["ue"] != "UNKNOW":
+        comparer(_("UE"), ue_actuelle, element["ue"])
+    court = {"Cours Magistral (CM)": "CM", "Travaux Dirigés (TD)": "TD", "Travaux Pratique (TP)": "TP"}
+
+    def liste(lignes):
+        return ", ".join(sorted(f"{e['enseignant']} ({court.get(e['type_de_cours'], e['type_de_cours'])})" for e in lignes))
+
+    comparer(_("Enseignants"), liste([{"enseignant": r.enseignant, "type_de_cours": r.type_de_cours} for r in tu.table_enseignant]),
+             liste(element["enseignants"]))
+    return resultat
 
 
 @frappe.whitelist()
@@ -714,7 +795,7 @@ def export_grid(academic_year,faculty,filiere,niveau,semestre):
         exel_grid = []
         headers = [
                 'Code UE', 'Code Cours', 'Intitulés', 'Crédits', 'TYPE', 
-                'CM', 'TD', 'TP', 'TPE',"Total", 'Email Enseignant (CM)', 'Email Enseignant (TD)', 'Email Enseignant (TP)'
+                'CM', 'TD', 'TP', 'TPE',"Total", 'Enseignant (CM)', 'Enseignant (TD)', 'Enseignant (TP)'
         ]
         exel_grid.append(headers)
         for ue in grid_to_export["grid"]:
@@ -782,7 +863,7 @@ def download_template():
                 
         headers = [
             'Code UE', 'Code Cours', 'Intitulés', 'Crédits', 'TYPE', 
-            'CM', 'TD', 'TP', 'TPE', 'Email Enseignant (CM)', 'Email Enseignant (TD)', 'Email Enseignant (TP)'
+            'CM', 'TD', 'TP', 'TPE', 'Enseignant (CM)', 'Enseignant (TD)', 'Enseignant (TP)'
         ]
         template_data.append(headers)
         
@@ -795,7 +876,7 @@ def download_template():
         # Exemple de ligne cours
         template_data.append([
             '', 'IGL111a', 'Analyse Mathématiques I (exemple)', '3', 'ENS',
-            '25', '15', '0', '40', 'enseignantcm@test.com', 'enseignanttd@test.com', 'enseignanttp@test.com', 
+            '25', '15', '0', '40', 'Dr Paul Mbarga', 'Aline Fotso', 'jean.kamga@exemple.cm', 
         ])
         
         # Ligne vide pour séparer
@@ -812,8 +893,8 @@ def download_template():
         template_data.append(['4. Les codes cours doivent être dans la colonne B (ex: IGL111a)', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
         template_data.append(['5. Les lignes UE doivent avoir TYPE = UE', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
         template_data.append(['6. Les lignes cours doivent avoir TYPE = ENS', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
-        template_data.append(['7. Remplissez les heures, crédits et emails enseignants', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
-        template_data.append(['6. Si plusieurs enseignants donnes le même type (CM, TP, TD), séparrez leurs emails par des virgules', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
+        template_data.append(['7. Enseignants : nom (avec ou sans titre, dans n\'importe quel ordre) ou adresse e-mail. Un enseignant inconnu est ignoré : la case reste vide', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
+        template_data.append(['8. Plusieurs enseignants pour un même type (CM, TD, TP) : séparez-les par des virgules', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
         
         # Créer le DataFrame
         df = pd.DataFrame(template_data)
@@ -844,7 +925,7 @@ def download_template():
 
 
 # ====================================================================== #
-#  Édition de la grille (le code d'un cours / d'une UE n'est jamais modifié)
+#  Édition de la grille (codes et déplacements : voir api/grille_edition.py)
 # ====================================================================== #
 _CHAMPS_HEURES = ("nombre_dheure_cm", "nombre_dheure_td", "nombre_dheure_tp", "nombre_dheure_tpe")
 

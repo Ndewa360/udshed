@@ -84,8 +84,15 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
         // Préparer les données pour le DataTable
         var rows = [];
         var columns = [
-            { name: 'Code UE', editable: false },
-            { name: 'Code Cours', editable: false },
+            // Codes cliquables : fiche complète de l'UE ou du cours (code, intitulé, UE, enseignants…).
+            { name: 'Code UE', editable: false,
+                format: (v) => (v && me.canEdit && v !== 'UNKNOW')
+                    ? `<a class="tg-edit-ue" data-ue="${frappe.utils.escape_html(v)}" title="${__("Modifier l'UE")}">${frappe.utils.escape_html(v)} <span class="tg-crayon">${frappe.utils.icon("edit", "xs")}</span></a>`
+                    : (v || '') },
+            { name: 'Code Cours', editable: false,
+                format: (v) => (v && me.canEdit)
+                    ? `<a class="tg-edit-cours" data-code="${frappe.utils.escape_html(v)}" title="${__('Modifier le cours')}">${frappe.utils.escape_html(v)} <span class="tg-crayon">${frappe.utils.icon("edit", "xs")}</span></a>`
+                    : (v || '') },
             { name: 'Intitulés', editable: me.canEdit, fieldtype: 'Data' },
             { name: 'Crédits', editable: me.canEdit, fieldtype: 'Float' },
             { name: 'Type', editable: false },
@@ -463,6 +470,16 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
         });
     }
 
+    ouvrir_fiche_cours(code) {
+        const { ueIndex, courseIndex } = this.getUeByCourseCode(code);
+        if (ueIndex < 0 || courseIndex < 0) return;
+        Udshed.TeachingGrid.Dialog.open_course_editor(this.filters, this.data[ueIndex].courses[courseIndex], () => this.refresh());
+    }
+
+    ouvrir_fiche_ue(code) {
+        Udshed.TeachingGrid.Dialog.open_ue_editor(this.filters, code, () => this.refresh());
+    }
+
     courses_list() {
         return (this.data || []).flatMap((ue) => ue.courses.map((c) => ({ ...c, ue_code: ue.ue_code })));
     }
@@ -540,10 +557,11 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
                 </div>
                 
                 <div class="panel panel-default">
-                    <div class="panel-heading">
+                    <div class="panel-heading tg-heading">
                         <div class="panel-title">
                             Grille d'enseignement 
                         </div>
+                        ${me.canEdit ? `<div class="tg-aide">${__("Cliquez sur un code pour modifier tout le cours ou l'UE ; les intitulés, crédits et heures se modifient aussi directement dans le tableau.")}</div>` : ""}
                     </div>
                     <div class="panel-body">
                         <div class="table-area" style="min-height: 300px;">
@@ -608,6 +626,39 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
 .panel-title {
     font-weight: 600;
     color: #334455;
+}
+
+.tg-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.tg-aide {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.tg-edit-cours, .tg-edit-ue {
+    cursor: pointer;
+    color: inherit;
+    font-weight: 600;
+}
+
+.tg-edit-cours:hover, .tg-edit-ue:hover {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.tg-crayon {
+    font-size: 10px;
+    opacity: .35;
+}
+
+.tg-edit-cours:hover .tg-crayon, .tg-edit-ue:hover .tg-crayon {
+    opacity: 1;
 }
 
 .table-area {
@@ -736,7 +787,16 @@ window.Udshed.TeachingGrid.DataGrid = class TeachingGrid {
 </style>
         `);
         
-        // Charger les données initiales
-        // this.refresh();
+        // Fiches d'édition (délégation : le tableau est redessiné à chaque chargement).
+        $(this.wrapper).on('click', '.tg-edit-cours', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            me.ouvrir_fiche_cours($(e.currentTarget).attr('data-code'));
+        });
+        $(this.wrapper).on('click', '.tg-edit-ue', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            me.ouvrir_fiche_ue($(e.currentTarget).attr('data-ue'));
+        });
     }
 }

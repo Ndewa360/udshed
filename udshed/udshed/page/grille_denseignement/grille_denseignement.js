@@ -9,6 +9,7 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
 		'/assets/udshed/js/teaching_grid/teaching_grid_dialog.js',
 		'/assets/udshed/js/teaching_grid/teaching_grid.js',
 		'/assets/udshed/js/teaching_grid/cours_communs.js',
+		'/assets/udshed/js/teaching_grid/teaching_grid_organiser.js',
 	]).then(async () => {
         const rawUserContext = await Udshed.UtilsQueries.get_data_of_user();
         const userContext = Udshed.Perms.normalizeUserContext(rawUserContext);
@@ -55,6 +56,10 @@ frappe.pages['grille-denseignement'].on_page_load = function(wrapper) {
                 Udshed.TeachingGrid.CoursCommuns.open({ ...filters }, () => {
                     if (Udshed.TeachingGrid.UtilsUi.isValideFilterForGrid(filters)) teaching_grid.refresh();
                 });
+            });
+            // Glisser-déposer des cours entre UE.
+            page.add_inner_button(__("Organiser les UE"), () => {
+                if (grilleChoisie()) Udshed.TeachingGrid.Organiser.open(filters, teaching_grid.data, () => teaching_grid.refresh());
             });
             page.add_inner_button(__("Retirer un cours"), () => {
                 if (grilleChoisie()) {
