@@ -92,9 +92,17 @@
    "link_to": "Mon espace enseignant",
    "link_type": "Sidebar",
    "title": "Mon espace enseignant"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "wallet",
+   "link_to": "Finances étudiantes",
+   "link_type": "Sidebar",
+   "title": "Finances étudiantes"
   }
  ],
- "modified": "2026-11-27 14:00:00.000000",
+ "modified": "2026-11-28 12:00:00.000000",
  "modified_by": "Administrator",
  "name": "udshed",
  "owner": "Administrator",

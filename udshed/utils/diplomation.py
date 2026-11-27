@@ -122,7 +122,8 @@ def proclamer(jury):
 		}).insert(ignore_permissions=True)
 		diplomes += 1
 		user = frappe.db.get_value("Student", c.student, "utilisateur")
-		notifier_etudiant(user, _("Félicitations : vous êtes diplômé(e) — {0}").format(intitule(jury)))
+		notifier_etudiant(user, _("Félicitations : vous êtes diplômé(e) — {0}").format(intitule(jury)),
+						  code="diplome_proclame", reference=("Jury Diplomation", jury.name))
 	bilan = _("{0} diplômé(s) sur {1} candidat(s).").format(diplomes, len(jury.candidats))
 	jury.db_set({"statut": "Proclamé", "bilan": bilan})
 	return {"diplomes": diplomes, "bilan": bilan}

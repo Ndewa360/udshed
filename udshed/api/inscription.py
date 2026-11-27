@@ -475,18 +475,10 @@ def _alerter_inscription_sans_ue(inscription, matricule, dossier, annee):
         destinataires.update(
             frappe.get_all("Has Role", filters={"role": role, "parenttype": "User"}, pluck="parent")
         )
-    for user in destinataires:
-        if user in ("Administrator", "Guest") or not frappe.db.get_value("User", user, "enabled"):
-            continue
-        frappe.get_doc({
-            "doctype": "Notification Log",
-            "for_user": user,
-            "type": "Alert",
-            "subject": _("Inscription sans UE : {0}").format(matricule),
-            "email_content": message,
-            "document_type": "Inscription Academique",
-            "document_name": inscription,
-        }).insert(ignore_permissions=True)
+    from udshed.notifications import emettre
+
+    emettre("inscription_sans_ue", sorted(destinataires), _("Inscription sans UE : {0}").format(matricule), message,
+            reference=("Inscription Academique", inscription), cle=f"sans-ue:{inscription}")
 
 
 def _creer_ou_maj_student(dossier, matricule, donnees):
@@ -680,10 +672,13 @@ def _envoyer_email_matricule(email, nom_prenom, numero_dossier, matricule, nom_i
 
         etab = etablissement()
         student = frappe.db.get_value("Student", {"matricule": matricule}, ["name", "utilisateur"], as_dict=True)
-        frappe.sendmail(
-            recipients=[email],
+        from udshed.notifications import emettre
+
+        emettre(
+            "compte_etudiant_cree",
+            [email],
+            _("Votre matricule et votre compte étudiant - {0}").format(etab.nom),
             sender=sender,
-            subject=_("Votre matricule et votre compte étudiant - {0}").format(etab.nom),
             template="inscription_matricule_email",
             args={
                 "matricule": matricule,

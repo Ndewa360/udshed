@@ -113,11 +113,16 @@ def _journaliser(session, teaching_unit, student, email, statut, erreur=None):
 # ------------------------------------------------------------------ #
 #  Envoi / traitement
 # ------------------------------------------------------------------ #
-def _envoyer(email, nom_etudiant, matiere, babillard_url):
-    frappe.sendmail(
-        recipients=[email],
+def _envoyer(email, nom_etudiant, matiere, babillard_url, student=None):
+    from udshed.notifications import emettre, regle
+
+    user = frappe.db.get_value("Student", student, "utilisateur") if student else None
+    envoyes = emettre(
+        "notes_publiees",
+        [{"user": user, "email": email}],
+        _("Les notes de la matière {0} sont disponibles").format(matiere),
         sender=_get_sender(),
-        subject=_("Les notes de la matière {0} sont disponibles").format(matiere),
+        lien=babillard_url,
         template="note_publication",
         args={
             "nom_etudiant": nom_etudiant,
@@ -128,6 +133,9 @@ def _envoyer(email, nom_etudiant, matiere, babillard_url):
         },
         now=True,
     )
+    r = regle("notes_publiees")
+    if r and r.actif and not envoyes:
+        raise Exception(_("Aucun envoi effectué (voir le journal des notifications)."))
 
 
 def _traiter_etudiant(session_doc, student, teaching_unit):
@@ -160,6 +168,7 @@ def _traiter_etudiant(session_doc, student, teaching_unit):
             _nom_etudiant(student),
             _libelle_matiere(teaching_unit),
             _lien_babillard(session_doc, student),
+            student=student,
         )
         _journaliser(session_doc.name, teaching_unit, student, email, "Envoyé")
         frappe.logger().info(

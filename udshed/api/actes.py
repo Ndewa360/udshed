@@ -93,6 +93,9 @@ def obtenir(modele, motif=None):
 	possible, message = moteur.verifier_condition(m, s.name)
 	if not possible:
 		frappe.throw(message)
+	from udshed.utils import frais
+
+	frais.exiger_aucun_blocage(s.name, _("La délivrance de documents"))
 	annee = frappe.db.get_single_value("Udshed Setting", "current_year")
 	if not m.libre_service:
 		en_cours = frappe.db.get_value("Acte Academique", {"student": s.name, "modele": m.name,
@@ -125,6 +128,9 @@ def telecharger(acte):
 			frappe.throw(_("Ce document ne vous appartient pas."), frappe.PermissionError)
 		if doc.statut != "Disponible":
 			frappe.throw(_("Ce document n'est pas encore disponible (statut : {0}).").format(doc.statut))
+		from udshed.utils import frais
+
+		frais.exiger_aucun_blocage(doc.student, _("Le téléchargement de documents"))
 	modele = frappe.get_doc("Modele Acte", doc.modele)
 	_repondre_pdf(moteur.pdf(modele, doc.student, doc), f"{doc.type_acte}-{doc.name}.pdf".replace(" ", "_"))
 
@@ -183,7 +189,7 @@ def _notifier_etudiant(acte, message):
 	user = frappe.db.get_value("Student", acte.student, "utilisateur")
 	from udshed.utils.compte_etudiant import notifier_etudiant
 
-	notifier_etudiant(user, message)
+	notifier_etudiant(user, message, code="acte_decision", reference=("Acte Academique", acte.name))
 
 
 def _notifier_responsables(acte):
@@ -191,12 +197,11 @@ def _notifier_responsables(acte):
 	users = set(perimetre.destinataires(("Responsable Diplomation", "Agent de scolarité", "Doyen", "Vice-Doyen"),
 										 perimetre.filiere_etudiant(acte.student)))
 	nom = nom_etudiant(acte.student)
-	for user in users:
-		if user in ("Administrator", "Guest") or not frappe.db.get_value("User", user, "enabled"):
-			continue
-		frappe.get_doc({"doctype": "Notification Log", "for_user": user, "type": "Alert",
-						"subject": _("Demande de {0} : {1}").format(acte.type_acte, nom),
-						"document_type": "Acte Academique", "document_name": acte.name}).insert(ignore_permissions=True)
+	from udshed.notifications import emettre
+
+	emettre("acte_demande", sorted(users), _("Demande de {0} : {1}").format(acte.type_acte, nom),
+			_("À délivrer ou à refuser depuis la liste des actes."), reference=("Acte Academique", acte.name),
+			cle=f"demande:{acte.name}")
 
 
 # ---------------------------------------------------------------------- #

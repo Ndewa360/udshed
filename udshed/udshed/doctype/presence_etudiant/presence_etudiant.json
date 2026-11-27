@@ -1,0 +1,61 @@
+{
+ "actions": [],
+ "creation": "2026-11-28 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Presence Etudiant",
+ "owner": "Administrator",
+ "modified": "2026-11-28 11:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "student",
+  "nom",
+  "statut",
+  "justification"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Étudiant",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "nom",
+   "fieldtype": "Data",
+   "label": "Nom",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Présence",
+   "options": "Présent\nAbsent\nRetard\nExcusé",
+   "default": "Présent",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "justification",
+   "fieldtype": "Data",
+   "label": "Justification",
+   "in_list_view": 1,
+   "columns": 2
+  }
+ ],
+ "permissions": [],
+ "links": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0,
+ "istable": 1,
+ "editable_grid": 1
+}

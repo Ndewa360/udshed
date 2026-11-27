@@ -1,0 +1,196 @@
+{
+ "actions": [],
+ "creation": "2026-11-28 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Echeance Etudiant",
+ "owner": "Administrator",
+ "modified": "2026-11-28 11:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "student",
+  "nom_etudiant",
+  "filiere",
+  "academic_year",
+  "frais",
+  "libelle",
+  "cb_ech",
+  "montant",
+  "montant_paye",
+  "reste",
+  "date_echeance",
+  "statut",
+  "sb_derog",
+  "blocage_leve",
+  "exoneree",
+  "motif_derogation"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Étudiant",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "nom_etudiant",
+   "fieldtype": "Data",
+   "label": "Nom",
+   "fetch_from": "student.nom",
+   "read_only": 1
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "label": "Filière",
+   "options": "Field of study",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "frais",
+   "fieldtype": "Link",
+   "label": "Frais",
+   "options": "Frais Scolarite"
+  },
+  {
+   "fieldname": "libelle",
+   "fieldtype": "Data",
+   "label": "Libellé",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb_ech",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "montant",
+   "fieldtype": "Currency",
+   "label": "Montant dû",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "montant_paye",
+   "fieldtype": "Currency",
+   "label": "Montant payé",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reste",
+   "fieldtype": "Currency",
+   "label": "Reste à payer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "date_echeance",
+   "fieldtype": "Date",
+   "label": "Échéance",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Statut",
+   "options": "À payer\nPayée\nEn retard\nExonérée",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sb_derog",
+   "fieldtype": "Section Break",
+   "label": "Dérogation"
+  },
+  {
+   "fieldname": "blocage_leve",
+   "fieldtype": "Check",
+   "label": "Ne pas bloquer l'étudiant",
+   "description": "Décision du comptable : l'impayé ne bloque ni les actes, ni les relevés, ni la réinscription."
+  },
+  {
+   "fieldname": "exoneree",
+   "fieldtype": "Check",
+   "label": "Exonérée"
+  },
+  {
+   "fieldname": "motif_derogation",
+   "fieldtype": "Small Text",
+   "label": "Motif",
+   "mandatory_depends_on": "eval:doc.blocage_leve || doc.exoneree"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Comptable",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Registration Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Agent de scolarité",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Directeur des Affaires Académiques",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "format:ECH-{YYYY}-{#####}",
+ "naming_rule": "Expression",
+ "title_field": "libelle",
+ "show_title_field_in_link": 1
+}

@@ -13,6 +13,28 @@ frappe.ui.form.on("Session Examen", {
 		if (frm.is_new() || frm.doc.statut !== "Brouillon") {
 			return;
 		}
+		// Publication programmée : décision prise d'avance, exécutée à l'heure dite.
+		if (frm.doc.publier_le) {
+			frm.dashboard.set_headline_alert(__("Publication programmée le {0}.", [frappe.datetime.str_to_user(frm.doc.publier_le)]), "blue");
+		}
+		frm.add_custom_button(frm.doc.publier_le ? __("Modifier la programmation") : __("Programmer la publication"), () => {
+			const d = new frappe.ui.Dialog({
+				title: __("Programmer la publication"),
+				fields: [
+					{ fieldtype: "HTML", options: `<p class="text-muted small">${__("La session sera publiée automatiquement à la date choisie, si toutes ses notes sont alors validées. Sinon, vous serez prévenu.")}</p>` },
+					{ fieldtype: "Datetime", fieldname: "publier_le", label: __("Publier le"), default: frm.doc.publier_le },
+				],
+				primary_action_label: __("Programmer"),
+				primary_action(v) {
+					frappe.call("udshed.notifications.api.programmer_publication", { session: frm.doc.name, publier_le: v.publier_le || "" })
+						.then(() => { d.hide(); frm.reload_doc(); });
+				},
+				secondary_action_label: frm.doc.publier_le ? __("Annuler la programmation") : null,
+				secondary_action: frm.doc.publier_le ? () => frappe.call("udshed.notifications.api.programmer_publication", { session: frm.doc.name, publier_le: "" })
+					.then(() => { d.hide(); frm.reload_doc(); }) : null,
+			});
+			d.show();
+		});
 		frm.add_custom_button(__("Valider les notes"), function() {
 			frappe.confirm(
 				__("Valider toutes les notes de la session {0} ? Elles seront ensuite publiables.", [frm.doc.name]),

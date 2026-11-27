@@ -1,0 +1,173 @@
+{
+ "actions": [],
+ "creation": "2026-11-28 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Appel Seance",
+ "owner": "Administrator",
+ "modified": "2026-11-28 11:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "planning_item",
+  "teaching_unit",
+  "intitule",
+  "date_seance",
+  "cb_app",
+  "academic_year",
+  "filiere",
+  "niveau",
+  "fait_par",
+  "absents",
+  "sb_presences",
+  "presences"
+ ],
+ "fields": [
+  {
+   "fieldname": "planning_item",
+   "fieldtype": "Link",
+   "label": "Séance",
+   "options": "Planning Item",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "teaching_unit",
+   "fieldtype": "Link",
+   "label": "Matière",
+   "options": "Teaching Unit",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "intitule",
+   "fieldtype": "Data",
+   "label": "Intitulé",
+   "fetch_from": "teaching_unit.intitule_cours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "date_seance",
+   "fieldtype": "Date",
+   "label": "Date",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb_app",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year",
+   "read_only": 1
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "label": "Filière",
+   "options": "Field of study",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "niveau",
+   "fieldtype": "Link",
+   "label": "Niveau",
+   "options": "Field of study Level",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fait_par",
+   "fieldtype": "Link",
+   "label": "Appel fait par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "absents",
+   "fieldtype": "Int",
+   "label": "Absents",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sb_presences",
+   "fieldtype": "Section Break",
+   "label": "Présences"
+  },
+  {
+   "fieldname": "presences",
+   "fieldtype": "Table",
+   "label": "Présences",
+   "options": "Presence Etudiant"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Teacher",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Coordonateur",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Agent de scolarité",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Vice-Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "format:APP-{YYYY}-{#####}",
+ "naming_rule": "Expression",
+ "title_field": "intitule",
+ "show_title_field_in_link": 1
+}

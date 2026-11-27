@@ -1,0 +1,158 @@
+{
+ "actions": [],
+ "creation": "2026-11-28 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Journal Notification",
+ "owner": "Administrator",
+ "modified": "2026-11-28 11:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "regle",
+  "canal",
+  "destinataire",
+  "utilisateur",
+  "statut",
+  "cb_j",
+  "sujet",
+  "cle",
+  "relance",
+  "reference_doctype",
+  "reference_name",
+  "lien",
+  "sb_msg",
+  "message",
+  "erreur"
+ ],
+ "fields": [
+  {
+   "fieldname": "regle",
+   "fieldtype": "Link",
+   "label": "Notification",
+   "options": "Regle Notification",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "canal",
+   "fieldtype": "Select",
+   "label": "Canal",
+   "options": "Application\nE-mail\nSMS",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "destinataire",
+   "fieldtype": "Data",
+   "label": "Destinataire",
+   "in_list_view": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "utilisateur",
+   "fieldtype": "Link",
+   "label": "Utilisateur",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Statut",
+   "options": "Envoyé\nÉchec\nEn attente du résumé\nRegroupé",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_j",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sujet",
+   "fieldtype": "Data",
+   "label": "Sujet",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cle",
+   "fieldtype": "Data",
+   "label": "Clé",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "relance",
+   "fieldtype": "Int",
+   "label": "Relance n°",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Type de document",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Document",
+   "options": "reference_doctype",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lien",
+   "fieldtype": "Data",
+   "label": "Lien",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_msg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Text Editor",
+   "label": "Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erreur",
+   "fieldtype": "Small Text",
+   "label": "Erreur",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Directeur des Affaires Académiques",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "hash",
+ "naming_rule": "Random",
+ "title_field": "sujet",
+ "show_title_field_in_link": 1,
+ "in_create": 1
+}

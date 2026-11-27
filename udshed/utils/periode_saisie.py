@@ -144,6 +144,13 @@ def exiger_saisie_ouverte(academic_year, semestre, teaching_unit, filiere, mode,
 # Rappel quotidien : enseignants sans confirmation, période qui ferme sous 3 jours
 # ---------------------------------------------------------------------------
 def rappel_saisie():
+	"""Rappels J-3 et J-1 : voir udshed.notifications.taches.saisie_rappels."""
+	from udshed.notifications.taches import saisie_rappels
+
+	return saisie_rappels()
+
+
+def _ancien_rappel_saisie():
 	maintenant = now_datetime()
 	periodes = frappe.get_all("Periode Saisie Notes", filters={"fermeture": ["between", [maintenant, add_days(maintenant, 3)]]},
 							  fields=["academic_year", "semestre", "type_evaluation", "faculte", "fermeture"])

@@ -39,7 +39,12 @@
   "nb_meilleures_notes_cc",
   "exiger_programmation",
   "formule_notes",
-  "grille_grades"
+  "grille_grades",
+  "section_automatisations",
+  "activer_blocage_frais",
+  "seuil_absences",
+  "column_break_automatisations",
+  "envoi_planning_automatique"
  ],
  "fields": [
   {
@@ -281,6 +286,33 @@
    "options": "Grade Config"
   },
   {
+   "fieldname": "section_automatisations",
+   "fieldtype": "Section Break",
+   "label": "Automatisations"
+  },
+  {
+   "fieldname": "activer_blocage_frais",
+   "fieldtype": "Check",
+   "label": "Bloquer les étudiants en retard de paiement",
+   "description": "Une échéance de frais en retard suspend la délivrance d'actes, les relevés et la réinscription (sauf décision du comptable sur l'échéance)."
+  },
+  {
+   "fieldname": "seuil_absences",
+   "fieldtype": "Int",
+   "label": "Seuil d'absences par matière",
+   "description": "Nombre d'absences non justifiées qui déclenche une alerte à l'étudiant et à la coordination. 0 = désactivé."
+  },
+  {
+   "fieldname": "column_break_automatisations",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "envoi_planning_automatique",
+   "fieldtype": "Check",
+   "label": "Envoyer le planning chaque vendredi",
+   "description": "Le planning de la semaine suivante part automatiquement aux enseignants de chaque classe."
+  },
+  {
    "fieldname": "seuil_validation_bts_",
    "fieldtype": "Percent",
    "label": "Seuil validation BTS (%)",
@@ -292,7 +324,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-26 18:00:00.000000",
+ "modified": "2026-11-28 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Udshed Setting",

@@ -272,10 +272,14 @@ class SessionInscriptionCandidate(Document):
 		sender = _get_sender()
 
 		try:
-			frappe.sendmail(
-				recipients=[self.email],
+			from udshed.notifications import emettre
+
+			emettre(
+				"candidature_deposee",
+				[{"email": self.email, "phone": self.phone}],
+				_(subject),
 				sender=sender,
-				subject=_(subject),
+				reference=("Session Inscription Candidate", self.name),
 				template="candidature_receipt",
 				args={
 					"first_name": self.first_name,
@@ -329,12 +333,16 @@ class SessionInscriptionCandidate(Document):
 			choix_text = "<ul>" + "".join(lignes) + "</ul>"
 
 		try:
-			frappe.sendmail(
-				recipients=destinataires,
-				sender=sender,
-				subject=_("Nouvelle candidature reçue - {0} {1} ({2})").format(
+			from udshed.notifications import emettre
+
+			emettre(
+				"candidature_coordination",
+				destinataires,
+				_("Nouvelle candidature reçue - {0} {1} ({2})").format(
 					self.first_name, self.last_name, self.name
 				),
+				sender=sender,
+				reference=("Session Inscription Candidate", self.name),
 				template="candidature_notification_coordinator",
 				args={
 					"first_name": self.first_name,
@@ -742,10 +750,15 @@ def _send_confirmation_email(doc):
 	filiere_label = frappe.db.get_value("Field of study", doc.filiere, "name_of_field") if doc.filiere else ""
 
 	try:
-		frappe.sendmail(
-			recipients=[doc.email],
+		from udshed.notifications import emettre
+
+		emettre(
+			"candidature_decision",
+			[{"email": doc.email, "phone": doc.phone}],
+			_("Félicitations, votre candidature a été acceptée - {0}").format(_nom_etablissement()),
 			sender=sender,
-			subject=_("Félicitations, votre candidature a été acceptée - {0}").format(_nom_etablissement()),
+			reference=("Session Inscription Candidate", doc.name),
+			lien="/mon-dossier",
 			template="candidature_confirmation",
 			args={
 				"first_name": doc.first_name,
@@ -783,10 +796,14 @@ def _send_rejection_email(doc, motif=None):
 	motif = (motif or doc.status_comment or "").strip()
 
 	try:
-		frappe.sendmail(
-			recipients=[doc.email],
+		from udshed.notifications import emettre
+
+		emettre(
+			"candidature_decision",
+			[{"email": doc.email, "phone": doc.phone}],
+			_("Résultat de votre candidature - {0}").format(_nom_etablissement()),
 			sender=sender,
-			subject=_("Résultat de votre candidature - {0}").format(_nom_etablissement()),
+			reference=("Session Inscription Candidate", doc.name),
 			template="candidature_rejection",
 			args={
 				"first_name": doc.first_name,

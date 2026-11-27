@@ -17,17 +17,17 @@ from udshed.udshed._fixture_factory import suppress_commits
 from udshed.utils.navigation import BARRES, matrice_visibilite
 
 (ADMISSIONS, EXAMENS, PLANNING, INSIGHT, CONFIGURATION, ETUDIANT, PARTENARIATS, ESPACE_ENSEIGNANT, ACCUEIL,
- MA_FACULTE, DIRECTION) = BARRES
+ MA_FACULTE, DIRECTION, FINANCES) = BARRES
 PERSONNEL = {ADMISSIONS, EXAMENS, PLANNING, INSIGHT, CONFIGURATION}
 
 ATTENDU = {
-	"System Manager": PERSONNEL | {PARTENARIATS, DIRECTION},
+	"System Manager": PERSONNEL | {PARTENARIATS, DIRECTION, FINANCES},
 	# Configuration : « Modèles de documents » (actes des étudiants).
-	"Registration Manager": {ADMISSIONS, EXAMENS, CONFIGURATION},
-	"Agent de scolarité": {ADMISSIONS, EXAMENS, CONFIGURATION},
+	"Registration Manager": {ADMISSIONS, EXAMENS, CONFIGURATION, FINANCES},
+	"Agent de scolarité": {ADMISSIONS, EXAMENS, CONFIGURATION, FINANCES},
 	"Coordonateur": PERSONNEL,
 	"Responsable Diplomation": {ADMISSIONS, EXAMENS, CONFIGURATION},
-	"Comptable": {ADMISSIONS, EXAMENS, INSIGHT, PARTENARIATS},
+	"Comptable": {ADMISSIONS, EXAMENS, INSIGHT, PARTENARIATS, FINANCES},
 	"Planning Manager": {EXAMENS, PLANNING, INSIGHT},
 	"Teacher": {EXAMENS, PLANNING, INSIGHT, ESPACE_ENSEIGNANT},
 	"Correcteur": {EXAMENS},
@@ -37,7 +37,7 @@ ATTENDU = {
 	# Direction : son tableau de bord ; consultation des inscriptions, examens et délibérations ; enseignants.
 	"Doyen": {MA_FACULTE, ADMISSIONS, EXAMENS, PLANNING},
 	"Vice-Doyen": {MA_FACULTE, ADMISSIONS, EXAMENS, PLANNING},
-	"Directeur des Affaires Académiques": {DIRECTION, ADMISSIONS, EXAMENS, PLANNING},
+	"Directeur des Affaires Académiques": {DIRECTION, ADMISSIONS, EXAMENS, PLANNING, FINANCES, CONFIGURATION},
 }
 
 APP = Path(frappe.get_app_path("udshed"))

@@ -90,7 +90,8 @@ def repondre(requete, reponse, statut="Répondue"):
 	user = frappe.db.get_value("Student", doc.student, "utilisateur")
 	from udshed.utils.compte_etudiant import notifier_etudiant
 
-	notifier_etudiant(user, _("Réponse à votre requête « {0} » : {1}").format(doc.objet, statut), reponse)
+	notifier_etudiant(user, _("Réponse à votre requête « {0} » : {1}").format(doc.objet, statut), reponse,
+					  code="requete_reponse", reference=("Requete Etudiant", doc.name))
 	return {"statut": statut}
 
 
@@ -129,9 +130,9 @@ def _notifier_traitants(doc):
 	users = set(perimetre.destinataires(("Agent de scolarité", "Registration Manager"),
 										 perimetre.filiere_etudiant(doc.student)))
 	nom = nom_etudiant(doc.student)
-	for user in users:
-		if user in ("Administrator", "Guest") or not frappe.db.get_value("User", user, "enabled"):
-			continue
-		frappe.get_doc({"doctype": "Notification Log", "for_user": user, "type": "Alert",
-						"subject": _("Nouvelle requête ({0}) : {1} — {2}").format(doc.type_requete, nom, doc.objet),
-						"document_type": "Requete Etudiant", "document_name": doc.name}).insert(ignore_permissions=True)
+	from udshed.notifications import emettre
+
+	emettre("requete_soumise", sorted(users),
+			_("Nouvelle requête ({0}) : {1} — {2}").format(doc.type_requete, nom, doc.objet),
+			frappe.utils.escape_html(doc.description or ""),
+			reference=("Requete Etudiant", doc.name), cle=f"soumise:{doc.name}")

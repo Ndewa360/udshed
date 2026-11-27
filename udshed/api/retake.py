@@ -334,8 +334,12 @@ def _creer_session_rattrapage_impl(session_normale, date_debut, date_fin):
 
     resultats = _identifier_rattrapages_impl(session_normale)
 
-    return {
+    resultat = {
         "session_rattrapage": rattrapage.name,
         "nb_etudiants_concernes": resultats["total_eligibles"],
         "etudiants": resultats["etudiants_eligibles"],
     }
+    from udshed.notifications.evenements import rattrapage_cree
+
+    rattrapage_cree(resultat)
+    return resultat

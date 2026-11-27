@@ -1756,6 +1756,10 @@ def publier_session(session):
     echecs = _declencher_calcul_resultats_post_publication(doc)
     progressions = _declencher_progression_post_publication(doc)
     _declencher_notification_publication(doc)
+    # Fin d'année : délibération préparée en brouillon, doyen prévenu (le jury décide).
+    from udshed.notifications.evenements import apres_publication
+
+    apres_publication(doc)
 
     if echecs:
         # La publication reste valide (les notes sont visibles au babillard),

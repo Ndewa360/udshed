@@ -30,19 +30,11 @@ def _faculte(filiere):
 	return frappe.db.get_value("Field of study", filiere, "faculte") if filiere else None
 
 
-def _notifier(users, sujet, message, nom):
-	for user in {u for u in users if u and u not in ("Administrator", "Guest")}:
-		frappe.get_doc({"doctype": "Notification Log", "for_user": user, "type": "Alert", "subject": sujet,
-						"email_content": message, "document_type": "Derogation Saisie",
-						"document_name": nom}).insert(ignore_permissions=True)
-		email = frappe.db.get_value("User", user, "email")
-		if email:
-			# L'e-mail est un plus : sans compte d'envoi configuré, la notification suffit.
-			try:
-				frappe.sendmail(recipients=[email], subject=sujet, message=f"<p>{frappe.utils.escape_html(message)}</p>",
-								reference_doctype="Derogation Saisie", reference_name=nom, delayed=True)
-			except Exception:
-				frappe.log_error(title="udshed: e-mail de dérogation de saisie")
+def _notifier(users, sujet, message, nom, code="derogation_demandee"):
+	from udshed.notifications import emettre
+
+	emettre(code, [u for u in users if u], sujet, frappe.utils.escape_html(message),
+			reference=("Derogation Saisie", nom), cle=f"{code}:{nom}")
 
 
 @frappe.whitelist()
@@ -105,5 +97,6 @@ def decider_derogation(name, accorder, valable_jusqu_au=None, commentaire=None):
 			   if accorder else _("Votre demande de réouverture ({0}) a été refusée.").format(doc.type_evaluation.lower()))
 	if commentaire:
 		message += " " + commentaire
-	_notifier([user], _("Dérogation de saisie : {0}").format(doc.intitule or doc.teaching_unit), message, doc.name)
+	_notifier([user], _("Dérogation de saisie : {0}").format(doc.intitule or doc.teaching_unit), message, doc.name,
+			  code="derogation_decidee")
 	return {"statut": doc.statut}

@@ -1,0 +1,191 @@
+{
+ "actions": [],
+ "creation": "2026-11-28 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Soutenance",
+ "owner": "Administrator",
+ "modified": "2026-11-28 11:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "stage",
+  "student",
+  "sujet",
+  "filiere",
+  "cb_sou",
+  "date_soutenance",
+  "salle",
+  "statut",
+  "sb_jury",
+  "jury",
+  "sb_resultat",
+  "note",
+  "mention",
+  "observations"
+ ],
+ "fields": [
+  {
+   "fieldname": "stage",
+   "fieldtype": "Link",
+   "label": "Stage ou mémoire",
+   "options": "Stage Etudiant",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Étudiant",
+   "options": "Student",
+   "fetch_from": "stage.student",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sujet",
+   "fieldtype": "Data",
+   "label": "Sujet",
+   "fetch_from": "stage.sujet",
+   "read_only": 1
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "label": "Filière",
+   "options": "Field of study",
+   "fetch_from": "stage.filiere",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "cb_sou",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "date_soutenance",
+   "fieldtype": "Datetime",
+   "label": "Date et heure",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "salle",
+   "fieldtype": "Link",
+   "label": "Salle",
+   "options": "Room"
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Statut",
+   "options": "Programmée\nTenue\nReportée",
+   "default": "Programmée",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sb_jury",
+   "fieldtype": "Section Break",
+   "label": "Jury"
+  },
+  {
+   "fieldname": "jury",
+   "fieldtype": "Table",
+   "label": "Membres du jury",
+   "options": "Membre Jury Soutenance"
+  },
+  {
+   "fieldname": "sb_resultat",
+   "fieldtype": "Section Break",
+   "label": "Résultat"
+  },
+  {
+   "fieldname": "note",
+   "fieldtype": "Float",
+   "label": "Note sur 20",
+   "depends_on": "eval:doc.statut=='Tenue'"
+  },
+  {
+   "fieldname": "mention",
+   "fieldtype": "Select",
+   "label": "Mention",
+   "options": "\nPassable\nAssez bien\nBien\nTrès bien\nExcellent",
+   "depends_on": "eval:doc.statut=='Tenue'"
+  },
+  {
+   "fieldname": "observations",
+   "fieldtype": "Small Text",
+   "label": "Observations"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Coordonateur",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Agent de scolarité",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Vice-Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Registration Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "format:SOU-{YYYY}-{####}",
+ "naming_rule": "Expression",
+ "title_field": "sujet",
+ "show_title_field_in_link": 1
+}

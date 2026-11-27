@@ -32,6 +32,11 @@ REGLES = {
 	"Acte Academique": ("student", "student"),
 	"Requete Etudiant": ("student", "student"),
 	"Correction Note": ("student", "student"),
+	"Echeance Etudiant": ("student", "student"),
+	"Paiement Etudiant": ("student", "student"),
+	"Appel Seance": ("filiere", "filiere"),
+	"Stage Etudiant": ("filiere", "filiere"),
+	"Soutenance": ("filiere", "filiere"),
 }
 # Règles existantes à conserver (hooks précédents).
 EXISTANTS = {

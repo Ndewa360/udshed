@@ -19,6 +19,8 @@
   "semestre",
   "statut",
   "date_publication",
+  "publier_le",
+  "programme_par",
   "section_break_kmhq",
   "classes_concernees"
  ],
@@ -101,6 +103,21 @@
    "read_only": 1
   },
   {
+   "fieldname": "publier_le",
+   "fieldtype": "Datetime",
+   "label": "Publication programmée le",
+   "read_only": 1,
+   "description": "Fixée par « Programmer la publication » : la session sera publiée automatiquement à cette date."
+  },
+  {
+   "fieldname": "programme_par",
+   "fieldtype": "Link",
+   "label": "Programmée par",
+   "options": "User",
+   "read_only": 1,
+   "depends_on": "eval:doc.publier_le"
+  },
+  {
    "fieldname": "classes_concernees",
    "fieldtype": "Table",
    "label": "Classes concernées",
@@ -117,7 +134,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-27 12:00:00.000000",
+ "modified": "2026-11-28 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Session Examen",

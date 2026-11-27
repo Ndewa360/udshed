@@ -1,0 +1,188 @@
+{
+ "actions": [],
+ "creation": "2026-11-28 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Regle Notification",
+ "owner": "Administrator",
+ "modified": "2026-11-28 11:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "code",
+  "libelle",
+  "categorie",
+  "destinataires",
+  "cb_regle",
+  "actif",
+  "obligatoire",
+  "sb_canaux",
+  "canal_application",
+  "canal_email",
+  "canal_sms",
+  "cb_canaux",
+  "email_en_resume",
+  "sb_relance",
+  "delai_relance_jours",
+  "max_relances",
+  "cb_relance",
+  "escalade_jours",
+  "sb_gabarit",
+  "sujet_personnalise",
+  "message_personnalise"
+ ],
+ "fields": [
+  {
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "label": "Code",
+   "reqd": 1,
+   "unique": 1,
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "libelle",
+   "fieldtype": "Data",
+   "label": "Notification",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "categorie",
+   "fieldtype": "Select",
+   "label": "Catégorie",
+   "options": "Admission\nScolarité\nEnseignement\nÉvaluations\nRésultats\nPilotage\nFinances\nAssiduité\nStages",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "destinataires",
+   "fieldtype": "Small Text",
+   "label": "Destinataires",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_regle",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "actif",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "obligatoire",
+   "fieldtype": "Check",
+   "label": "Obligatoire",
+   "description": "Décision ou échéance : l'utilisateur ne peut pas la désactiver."
+  },
+  {
+   "fieldname": "sb_canaux",
+   "fieldtype": "Section Break",
+   "label": "Canaux"
+  },
+  {
+   "fieldname": "canal_application",
+   "fieldtype": "Check",
+   "label": "Dans l'application"
+  },
+  {
+   "fieldname": "canal_email",
+   "fieldtype": "Check",
+   "label": "E-mail"
+  },
+  {
+   "fieldname": "canal_sms",
+   "fieldtype": "Check",
+   "label": "SMS",
+   "description": "Utilise la passerelle configurée dans « SMS Settings » (SMS ou WhatsApp selon le prestataire)."
+  },
+  {
+   "fieldname": "cb_canaux",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "email_en_resume",
+   "fieldtype": "Check",
+   "label": "E-mail regroupé dans le résumé quotidien",
+   "description": "Pour le personnel : un seul e-mail par jour au lieu d'un e-mail par événement."
+  },
+  {
+   "fieldname": "sb_relance",
+   "fieldtype": "Section Break",
+   "label": "Relances et escalade",
+   "description": "Une relance n'est envoyée que si l'action attendue n'est toujours pas faite."
+  },
+  {
+   "fieldname": "delai_relance_jours",
+   "fieldtype": "Int",
+   "label": "Relancer tous les (jours)",
+   "description": "0 = pas de relance."
+  },
+  {
+   "fieldname": "max_relances",
+   "fieldtype": "Int",
+   "label": "Nombre maximal de relances"
+  },
+  {
+   "fieldname": "cb_relance",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "escalade_jours",
+   "fieldtype": "Int",
+   "label": "Prévenir le responsable après (jours)",
+   "description": "0 = pas d'escalade."
+  },
+  {
+   "fieldname": "sb_gabarit",
+   "fieldtype": "Section Break",
+   "label": "Texte personnalisé",
+   "description": "Laisser vide pour garder le texte d'origine. Variables : {{ sujet }}, {{ message }}, {{ lien }}, {{ destinataire }} et celles propres à chaque notification."
+  },
+  {
+   "fieldname": "sujet_personnalise",
+   "fieldtype": "Data",
+   "label": "Sujet"
+  },
+  {
+   "fieldname": "message_personnalise",
+   "fieldtype": "Text Editor",
+   "label": "Message"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Directeur des Affaires Académiques",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "report": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "categorie",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "field:code",
+ "naming_rule": "By fieldname",
+ "title_field": "libelle",
+ "show_title_field_in_link": 1
+}

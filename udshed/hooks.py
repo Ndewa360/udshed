@@ -159,6 +159,8 @@ jinja = {
 
 # before_install = "udshed.install.before_install"
 after_install = "udshed.scripts.install.after_install"
+# Règles de notification du catalogue créées si absentes (jamais écrasées).
+after_migrate = ["udshed.notifications.synchroniser_catalogue"]
 
 # Uninstallation
 # ------------
@@ -208,6 +210,11 @@ permission_query_conditions = {
 	"Requete Etudiant": "udshed.perimetre_hooks.query_requete_etudiant",
 	"Correction Note": "udshed.perimetre_hooks.query_correction_note",
 	"Periode Saisie Notes": "udshed.perimetre_hooks.query_periode_saisie_notes",
+	"Echeance Etudiant": "udshed.perimetre_hooks.query_echeance_etudiant",
+	"Paiement Etudiant": "udshed.perimetre_hooks.query_paiement_etudiant",
+	"Appel Seance": "udshed.perimetre_hooks.query_appel_seance",
+	"Stage Etudiant": "udshed.perimetre_hooks.query_stage_etudiant",
+	"Soutenance": "udshed.perimetre_hooks.query_soutenance",
 }
 
 has_permission = {
@@ -230,6 +237,11 @@ has_permission = {
 	"Acte Academique": "udshed.perimetre_hooks.has_acte_academique",
 	"Requete Etudiant": "udshed.perimetre_hooks.has_requete_etudiant",
 	"Correction Note": "udshed.perimetre_hooks.has_correction_note",
+	"Echeance Etudiant": "udshed.perimetre_hooks.has_echeance_etudiant",
+	"Paiement Etudiant": "udshed.perimetre_hooks.has_paiement_etudiant",
+	"Appel Seance": "udshed.perimetre_hooks.has_appel_seance",
+	"Stage Etudiant": "udshed.perimetre_hooks.has_stage_etudiant",
+	"Soutenance": "udshed.perimetre_hooks.has_soutenance",
 }
 
 # Recherche des niveaux (table enfant de la filière) pour tous les champs Link qui y pointent :
@@ -259,14 +271,45 @@ on_logout = "udshed.utils.session_academique.effacer_session"
 # Scheduled Tasks
 # ---------------
 
+# Automatisations (udshed/notifications) : réactions aux événements métier.
+doc_events = {
+	"Teaching Unit": {"on_update": "udshed.notifications.evenements.teaching_unit_modifie"},
+	"Planning Item": {"on_update": "udshed.notifications.evenements.seance_modifiee"},
+	"Convention Vacation": {"after_insert": "udshed.notifications.evenements.convention_creee"},
+	"Confirmation Saisie": {"on_update": "udshed.notifications.evenements.saisie_confirmee"},
+	"Deliberation Jury": {
+		"on_update": ["udshed.notifications.evenements.deliberation_modifiee",
+					  "udshed.notifications.evenements.synchroniser_jalon"],
+		"on_trash": "udshed.notifications.evenements.supprimer_jalon",
+	},
+	"Periode Saisie Notes": {"on_update": "udshed.notifications.evenements.synchroniser_jalon",
+							 "on_trash": "udshed.notifications.evenements.supprimer_jalon"},
+	"Session Inscription": {"on_update": "udshed.notifications.evenements.synchroniser_jalon",
+							"on_trash": "udshed.notifications.evenements.supprimer_jalon"},
+	"Session Reinscription": {"on_update": "udshed.notifications.evenements.synchroniser_jalon",
+							  "on_trash": "udshed.notifications.evenements.supprimer_jalon"},
+	"Session Examen": {"on_update": "udshed.notifications.evenements.synchroniser_jalon",
+					   "on_trash": "udshed.notifications.evenements.supprimer_jalon"},
+	"Inscription Academique": {"after_insert": "udshed.utils.frais.apres_inscription"},
+	"Academic Reregistration": {"after_insert": "udshed.utils.frais.apres_reinscription"},
+}
+
 scheduler_events = {
 	"daily": [
 		"udshed.udshed.tasks.daily"
+	],
+	"hourly": [
+		# Publications programmées (décision prise d'avance par la scolarité ou le doyen).
+		"udshed.notifications.taches.horaire"
 	],
 	"cron": {
 		# Chaque dimanche à 23 h : les séances de la semaine non déclarées
 		# « Non fait » à la main passent à « Fait » (udshed/utils/pointage.py).
 		"0 23 * * 0": ["udshed.utils.pointage.tache_dimanche"],
+		# Lundi 7 h : résumés hebdomadaires de la direction.
+		"0 7 * * 1": ["udshed.notifications.taches.hebdomadaire"],
+		# Vendredi 17 h : planning de la semaine suivante (si l'envoi automatique est activé).
+		"0 17 * * 5": ["udshed.notifications.taches.planning_hebdomadaire"],
 	},
 }
 
@@ -292,7 +335,8 @@ scheduler_events = {
 
 # auto_cancel_exempted_doctypes = ["Auto Repeat"]
 
-# ignore_links_on_delete = ["Communication", "ToDo"]
+# Le journal des notifications et le calendrier gardent une trace ; ils ne bloquent jamais une suppression.
+ignore_links_on_delete = ["Journal Notification", "Jalon Academique"]
 
 # Request Events
 # ----------------

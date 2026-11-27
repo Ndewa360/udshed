@@ -144,10 +144,12 @@ def envoyer_resultat_liste_attente(candidature):
 			formations.append({"libelle": f"{libelle} — {niveau}", "rang": r.rang or "—"})
 	concours = frappe.db.get_value("Concours", fiche.concours, ["titre", "academic_year"], as_dict=True)
 	try:
-		frappe.sendmail(
-			recipients=[cand.email],
-			sender=_get_sender(),
-			subject=_("Résultats du concours {0} : liste d'attente").format(concours.titre),
+		from udshed.notifications import emettre
+
+		return bool(emettre(
+			"concours_resultat", [{"email": cand.email, "phone": cand.phone}],
+			_("Résultats du concours {0} : liste d'attente").format(concours.titre),
+			sender=_get_sender(), reference=("Session Inscription Candidate", cand.name),
 			template="concours_liste_attente",
 			args={
 				"first_name": cand.first_name, "last_name": cand.last_name, "doc_name": cand.name,
@@ -155,8 +157,7 @@ def envoyer_resultat_liste_attente(candidature):
 				"formations": formations, "logo_url": get_school_logo_url(),
 			},
 			now=True,
-		)
-		return True
+		))
 	except Exception as e:
 		frappe.log_error(message=str(e), title=f"Échec e-mail liste d'attente {cand.name}")
 		return False
@@ -250,15 +251,16 @@ def envoyer_convocation(fiche_name):
 		return False
 	args["logo_url"] = get_school_logo_url()
 	try:
-		frappe.sendmail(
-			recipients=[candidature.email],
-			sender=_get_sender(),
-			subject=_("Convocation au concours {0} - {1}").format(args["concours"], _nom_etablissement()),
+		from udshed.notifications import emettre
+
+		return bool(emettre(
+			"concours_convocation", [{"email": candidature.email, "phone": candidature.phone}],
+			_("Convocation au concours {0} - {1}").format(args["concours"], _nom_etablissement()),
+			sender=_get_sender(), reference=("Session Inscription Candidate", candidature.name),
 			template="concours_convocation",
 			args=args,
 			now=True,
-		)
-		return True
+		))
 	except Exception as e:
 		frappe.log_error(message=str(e), title=f"Échec convocation concours {fiche.name}")
 		return False

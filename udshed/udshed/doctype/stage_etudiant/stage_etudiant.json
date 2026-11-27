@@ -1,0 +1,230 @@
+{
+ "actions": [],
+ "creation": "2026-11-28 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Stage Etudiant",
+ "owner": "Administrator",
+ "modified": "2026-11-28 11:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "student",
+  "nom_etudiant",
+  "filiere",
+  "academic_year",
+  "type_travail",
+  "sujet",
+  "cb_stg",
+  "statut",
+  "encadrant_academique",
+  "encadrant_professionnel",
+  "entreprise",
+  "sb_dates",
+  "date_debut",
+  "date_fin",
+  "cb_dates",
+  "convention",
+  "sb_decision",
+  "valide_par",
+  "valide_le",
+  "commentaire"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Étudiant",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "nom_etudiant",
+   "fieldtype": "Data",
+   "label": "Nom",
+   "fetch_from": "student.nom",
+   "read_only": 1
+  },
+  {
+   "fieldname": "filiere",
+   "fieldtype": "Link",
+   "label": "Filière",
+   "options": "Field of study",
+   "fetch_from": "student.filiere",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "type_travail",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Stage\nMémoire\nProjet de fin d'études",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sujet",
+   "fieldtype": "Data",
+   "label": "Sujet",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb_stg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Statut",
+   "options": "Proposé\nValidé\nRefusé\nEn cours\nTerminé\nSoutenu",
+   "default": "Proposé",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "encadrant_academique",
+   "fieldtype": "Link",
+   "label": "Encadrant académique",
+   "options": "Teacher"
+  },
+  {
+   "fieldname": "encadrant_professionnel",
+   "fieldtype": "Data",
+   "label": "Encadrant en entreprise"
+  },
+  {
+   "fieldname": "entreprise",
+   "fieldtype": "Data",
+   "label": "Entreprise ou structure d'accueil"
+  },
+  {
+   "fieldname": "sb_dates",
+   "fieldtype": "Section Break",
+   "label": "Période et convention"
+  },
+  {
+   "fieldname": "date_debut",
+   "fieldtype": "Date",
+   "label": "Début"
+  },
+  {
+   "fieldname": "date_fin",
+   "fieldtype": "Date",
+   "label": "Fin"
+  },
+  {
+   "fieldname": "cb_dates",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "convention",
+   "fieldtype": "Attach",
+   "label": "Convention signée"
+  },
+  {
+   "fieldname": "sb_decision",
+   "fieldtype": "Section Break",
+   "label": "Validation"
+  },
+  {
+   "fieldname": "valide_par",
+   "fieldtype": "Link",
+   "label": "Décidé par",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "valide_le",
+   "fieldtype": "Datetime",
+   "label": "Décidé le",
+   "read_only": 1
+  },
+  {
+   "fieldname": "commentaire",
+   "fieldtype": "Small Text",
+   "label": "Commentaire",
+   "mandatory_depends_on": "eval:doc.statut=='Refusé'"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Coordonateur",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Agent de scolarité",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Vice-Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Registration Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "format:STG-{YYYY}-{####}",
+ "naming_rule": "Expression",
+ "title_field": "sujet",
+ "show_title_field_in_link": 1
+}

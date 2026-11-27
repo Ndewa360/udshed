@@ -1,0 +1,204 @@
+{
+ "actions": [],
+ "creation": "2026-11-28 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Jalon Academique",
+ "owner": "Administrator",
+ "modified": "2026-11-28 11:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "academic_year",
+  "type_jalon",
+  "libelle",
+  "semestre",
+  "cb_jal",
+  "date_debut",
+  "date_fin",
+  "faculte",
+  "statut",
+  "sb_lien",
+  "reference_doctype",
+  "reference_name",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Année académique",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "type_jalon",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Campagne d'admission\nRéinscription\nCours\nSaisie des notes\nSession d'examen\nRattrapage\nDélibération\nPublication des résultats\nDiplomation\nAutre",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "libelle",
+   "fieldtype": "Data",
+   "label": "Libellé",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "semestre",
+   "fieldtype": "Select",
+   "label": "Semestre",
+   "options": "\nSemestre 1\nSemestre 2"
+  },
+  {
+   "fieldname": "cb_jal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "date_debut",
+   "fieldtype": "Date",
+   "label": "Début",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "date_fin",
+   "fieldtype": "Date",
+   "label": "Fin"
+  },
+  {
+   "fieldname": "faculte",
+   "fieldtype": "Link",
+   "label": "Faculté",
+   "options": "Faculty",
+   "description": "Vide : tout l'établissement.",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "statut",
+   "fieldtype": "Select",
+   "label": "Préparation",
+   "options": "À préparer\nPréparé\nTerminé",
+   "default": "À préparer",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sb_lien",
+   "fieldtype": "Section Break",
+   "label": "Objet lié"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Type d'objet",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Objet",
+   "options": "reference_doctype",
+   "read_only": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Directeur des Affaires Académiques",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Vice-Doyen",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Registration Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Coordonateur",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Agent de scolarité",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Planning Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Teacher",
+   "permlevel": 0,
+   "read": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "date_debut",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "format:JAL-{academic_year}-{####}",
+ "naming_rule": "Expression",
+ "title_field": "libelle",
+ "show_title_field_in_link": 1,
+ "is_calendar_and_gantt": 1
+}

@@ -122,6 +122,16 @@ def demander_correction(note, lignes, motif_type, motif):
 	if peut_approuver():
 		doc.reload()
 		doc.approuver()
+	else:
+		# Décision humaine : la coordination et la scolarité sont prévenues (puis relancées).
+		from udshed.notifications.attentes import coordination
+		from udshed.utils import perimetre
+
+		filiere = perimetre.filiere_etudiant(doc.student)
+		_notifier_utilisateurs(coordination(filiere) + perimetre.destinataires(("Registration Manager",), filiere),
+							   _("Correction de note à approuver : {0}").format(doc.name),
+							   frappe.utils.escape_html(doc.motif or ""), DOCTYPE, doc.name,
+							   code="correction_demandee")
 	return {"name": doc.name, "statut": frappe.db.get_value(DOCTYPE, doc.name, "statut")}
 
 
@@ -212,7 +222,7 @@ def refuser(doc, motif):
 				"motif_refus": motif})
 	if doc.demandee_par and doc.demandee_par != frappe.session.user:
 		_notifier_utilisateurs([doc.demandee_par], _("Correction de note refusée : {0}").format(doc.name),
-							   _("Motif : {0}").format(motif), DOCTYPE, doc.name)
+							   _("Motif : {0}").format(motif), DOCTYPE, doc.name, code="correction_decision")
 
 
 # ---------------------------------------------------------------------- #
@@ -309,13 +319,10 @@ def _reinscription_deja_faite(note, annee, prog):
 # ---------------------------------------------------------------------- #
 #  Notifications
 # ---------------------------------------------------------------------- #
-def _notifier_utilisateurs(users, sujet, message, doctype, name):
-	for user in set(users):
-		if not user or user in ("Administrator", "Guest") or not frappe.db.get_value("User", user, "enabled"):
-			continue
-		frappe.get_doc({"doctype": "Notification Log", "for_user": user, "type": "Alert", "subject": sujet,
-						"email_content": message, "document_type": doctype, "document_name": name}
-					   ).insert(ignore_permissions=True)
+def _notifier_utilisateurs(users, sujet, message, doctype, name, code="correction_impact"):
+	from udshed.notifications import emettre
+
+	emettre(code, sorted({u for u in users if u}), sujet, message, reference=(doctype, name))
 
 
 def _alerter_scolarite(sujet, message, doctype, name):
@@ -330,23 +337,14 @@ def notifier_etudiant(doc, note):
 	if not student:
 		return
 	matiere = frappe.db.get_value("Teaching Unit", note.teaching_unit, "intitule_cours") or note.teaching_unit
-	from udshed.utils.compte_etudiant import notifier_etudiant
+	from udshed.utils.etablissement import etablissement
 
-	notifier_etudiant(student.utilisateur, _("Note corrigée : {0}").format(matiere),
-					  _("{0} : {1} → {2}/20").format(matiere, doc.note_finale_avant, note.note_finale))
-	if not student.email:
-		return
-	try:
-		from udshed.utils.etablissement import etablissement
+	from udshed.notifications import emettre
 
-		frappe.sendmail(
-			recipients=[student.email],
-			subject=_("Correction de votre note de {0} - {1}").format(matiere, etablissement().nom),
-			template="correction_note",
+	emettre("correction_appliquee", [{"user": student.utilisateur, "email": student.email}],
+			_("Correction de votre note de {0} - {1}").format(matiere, etablissement().nom),
+			_("{0} : {1} → {2}/20").format(matiere, doc.note_finale_avant, note.note_finale),
+			template="correction_note", lien="/app/mon-espace-etudiant", reference=(DOCTYPE, doc.name),
 			args={"nom": " ".join(x for x in [student.nom, student.prenom] if x), "matiere": matiere,
 				  "annee": doc.academic_year, "avant": doc.note_finale_avant, "apres": note.note_finale,
-				  "motif_type": doc.motif_type, "lien": frappe.utils.get_url("/app/mon-espace-etudiant")},
-			delayed=True,
-		)
-	except Exception:
-		frappe.log_error(title=f"Email de correction de note {doc.name}")
+				  "motif_type": doc.motif_type, "lien": frappe.utils.get_url("/app/mon-espace-etudiant")})

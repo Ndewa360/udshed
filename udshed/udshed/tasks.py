@@ -7,7 +7,10 @@ def daily():
 	update_session_statuses()
 	update_reinscription_session_statuses()
 	relancer_admissions()
-	rappeler_saisie_notes()
+	# Relances, escalades, rappels, invitations et résumés (udshed/notifications/taches.py).
+	from udshed.notifications.taches import quotidien
+
+	quotidien()
 
 
 def rappeler_saisie_notes():

@@ -1,6 +1,6 @@
 {
  "app": "udshed",
- "creation": "2026-11-27 14:00:00.000000",
+ "creation": "2026-11-28 12:00:00.000000",
  "docstatus": 0,
  "doctype": "Sidebar",
  "header_icon": "house",
@@ -38,9 +38,26 @@
    "open_in_new_tab": 0,
    "link_to": "accueil-udshed",
    "idx": 2
+  },
+  {
+   "type": "Link",
+   "label": "Calendrier académique",
+   "link_type": "DocType",
+   "icon": "calendar-check",
+   "child": 1,
+   "indent": 0,
+   "collapsible": 1,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "hidden": 0,
+   "added": 0,
+   "is_default_module": 0,
+   "open_in_new_tab": 0,
+   "link_to": "Jalon Academique",
+   "idx": 3
   }
  ],
- "modified": "2026-11-27 14:00:00.000000",
+ "modified": "2026-11-28 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Udshed",
  "name": "Accueil",

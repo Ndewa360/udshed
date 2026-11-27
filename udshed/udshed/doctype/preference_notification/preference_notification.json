@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "creation": "2026-11-28 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Udshed",
+ "name": "Preference Notification",
+ "owner": "Administrator",
+ "modified": "2026-11-28 11:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "utilisateur",
+  "regle",
+  "application",
+  "email",
+  "sms"
+ ],
+ "fields": [
+  {
+   "fieldname": "utilisateur",
+   "fieldtype": "Link",
+   "label": "Utilisateur",
+   "options": "User",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "regle",
+   "fieldtype": "Link",
+   "label": "Notification",
+   "options": "Regle Notification",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "application",
+   "fieldtype": "Check",
+   "label": "Dans l'application",
+   "default": "1"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Check",
+   "label": "E-mail",
+   "default": "1"
+  },
+  {
+   "fieldname": "sms",
+   "fieldtype": "Check",
+   "label": "SMS",
+   "default": "1"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  }
+ ],
+ "links": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "hash",
+ "naming_rule": "Random"
+}

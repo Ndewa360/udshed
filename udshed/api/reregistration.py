@@ -1287,6 +1287,9 @@ def submit_reinscription(matricule, reinscription_session, semestre, niveau=None
 
 	if not matricule or not frappe.db.exists("Student", matricule):
 		frappe.throw("Étudiant introuvable.")
+	from udshed.utils import frais
+
+	frais.exiger_aucun_blocage(matricule, frappe._("La réinscription"))
 
 	# Vérification d'accès : l'étudiant connecté ou un membre du personnel
 	student = frappe.get_doc("Student", matricule)

@@ -1,0 +1,27 @@
+{% extends "templates/emails/cadre_etablissement.html" %}
+
+{% block sous_titre %}<div style="font-size:12px; opacity:0.8; margin-top:6px; letter-spacing:0.3px; text-transform:uppercase;">Résumé quotidien</div>{% endblock %}
+
+{% block contenu %}
+<p style="margin: 0 0 14px;">Bonjour,</p>
+
+<p style="margin: 0 0 14px;">Voici ce qui demande votre attention dans udshed :</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 18px; border-collapse: collapse;">
+  {% for item in items %}
+  <tr>
+    <td style="padding: 9px 0; border-bottom: 1px solid #eaecf0; font-size: 14px;">
+      {% if item.lien %}<a href="{{ item.lien }}" style="color:#1f3c88; text-decoration:none;">{{ item.sujet }}</a>{% else %}{{ item.sujet }}{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 6px 0 20px;">
+  <tr><td style="background:#1f3c88; border-radius:8px;">
+    <a href="{{ lien }}" style="display:inline-block; padding:11px 20px; color:#ffffff; text-decoration:none; font-weight:600; font-size:14px;">Voir ma file « À faire »</a>
+  </td></tr>
+</table>
+
+<p style="margin: 0; font-size: 12px; color: #667085;">Vous recevez ce résumé une fois par jour au lieu d'un e-mail par événement. Vous pouvez choisir vos notifications facultatives depuis l'accueil.</p>
+{% endblock %}

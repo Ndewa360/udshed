@@ -62,9 +62,17 @@ def assurer_compte(student):
 	return user_name
 
 
-def notifier_etudiant(user, sujet, message=None):
-	"""Alerte dans le desk de l'étudiant, ouvrant son espace (et non un formulaire du personnel)."""
+def notifier_etudiant(user, sujet, message=None, code=None, reference=None, **options):
+	"""Alerte de l'étudiant, ouvrant son espace (et non un formulaire du personnel).
+
+	Avec `code`, passe par le moteur de notifications (canaux de la règle : application,
+	e-mail, SMS) ; sans, simple alerte dans l'application."""
 	if not user or user in ("Administrator", "Guest") or not frappe.db.get_value("User", user, "enabled"):
+		return
+	if code:
+		from udshed.notifications import emettre
+
+		emettre(code, [user], sujet, message, lien="/app/mon-espace-etudiant", reference=reference, **options)
 		return
 	frappe.get_doc({"doctype": "Notification Log", "for_user": user, "type": "Alert", "subject": sujet,
 					"email_content": message, "link": "/app/mon-espace-etudiant"}).insert(ignore_permissions=True)

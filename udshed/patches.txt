@@ -21,3 +21,4 @@ udshed.patches.campagne_admission
 udshed.patches.compte_etudiant_matricule
 udshed.patches.actes_academiques
 udshed.patches.documents_enseignants
+udshed.patches.automatisations

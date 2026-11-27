@@ -1,0 +1,21 @@
+{% extends "templates/emails/cadre_etablissement.html" %}
+
+{% block sous_titre %}<div style="font-size:12px; opacity:0.8; margin-top:6px; letter-spacing:0.3px; text-transform:uppercase;">Notification</div>{% endblock %}
+
+{% block contenu %}
+<p style="margin: 0 0 14px;">Bonjour{% if destinataire %} <strong>{{ destinataire }}</strong>{% endif %},</p>
+
+<p style="margin: 0 0 14px; font-size: 16px; font-weight: 600; color: #1d2939;">{{ sujet }}</p>
+
+{% if message %}
+<div style="margin: 0 0 18px;">{{ message }}</div>
+{% endif %}
+
+{% if lien %}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 6px 0 20px;">
+  <tr><td style="background:#1f3c88; border-radius:8px;">
+    <a href="{{ lien }}" style="display:inline-block; padding:11px 20px; color:#ffffff; text-decoration:none; font-weight:600; font-size:14px;">Ouvrir dans udshed</a>
+  </td></tr>
+</table>
+{% endif %}
+{% endblock %}

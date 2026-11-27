@@ -215,10 +215,15 @@ def _envoyer(cand, expiree):
 	sujet = (_("Votre place n'a pas été confirmée") if expiree
 			 else _("Rappel : confirmez votre inscription avant le {0}").format(format_date(cand.finaliser_avant)))
 	try:
-		frappe.sendmail(
-			recipients=[cand.email],
+		from udshed.notifications import emettre
+
+		emettre(
+			"admission_finalisation",
+			[{"email": cand.email, "phone": cand.phone}],
+			sujet,
 			sender=_get_sender(),
-			subject=sujet,
+			reference=("Session Inscription Candidate", cand.name),
+			lien="/mon-dossier",
 			template="admission_finalisation",
 			args={
 				"first_name": cand.first_name,

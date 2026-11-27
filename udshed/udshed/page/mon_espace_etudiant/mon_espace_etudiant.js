@@ -15,6 +15,7 @@ frappe.pages["mon-espace-etudiant"].on_page_load = function (wrapper) {
 				<button class="mee-onglet" data-onglet="resultats" role="tab">${__("Mes résultats")}</button>
 				<button class="mee-onglet" data-onglet="documents" role="tab">${__("Mes documents")}</button>
 				<button class="mee-onglet" data-onglet="requetes" role="tab">${__("Mes requêtes")}</button>
+				<button class="mee-onglet" data-onglet="frais" role="tab">${__("Mes frais")}</button>
 				<button class="mee-onglet" data-onglet="reinscription" role="tab">${__("Ma réinscription")}</button>
 			</div>
 			<div class="mee-zone"></div>
@@ -68,6 +69,7 @@ frappe.pages["mon-espace-etudiant"].on_page_load = function (wrapper) {
 		if (onglet === "resultats") return resultats();
 		if (onglet === "documents") return documents();
 		if (onglet === "requetes") return requetes();
+		if (onglet === "frais") return frais();
 		$zone.html(`<div class="mee-vide">${__("La réinscription se fait chaque année pendant la session ouverte.")}<br><br>
 			<a class="btn btn-primary btn-sm" href="/app/reinscription_etudiant">${__("Ouvrir ma réinscription")}</a></div>`);
 	}
@@ -215,6 +217,35 @@ frappe.pages["mon-espace-etudiant"].on_page_load = function (wrapper) {
 			$zone.html(`<div class="table-responsive"><table class="table table-bordered table-sm">
 				<thead><tr><th>${__("Année")}</th><th>${__("Semestre")}</th><th>${__("UE")}</th><th class="text-right">${__("Note /20")}</th>
 				<th>${__("Grade")}</th><th>${__("Statut")}</th></tr></thead><tbody>${corps}</tbody></table></div>`);
+		});
+	}
+
+	// Situation financière : échéances, paiements et reçus (udshed/utils/frais.py).
+	function frais() {
+		$zone.html(`<div class="text-muted">${__("Chargement...")}</div>`);
+		frappe.call({ method: "udshed.utils.frais.mes_frais" }).then((r) => {
+			const s = r.message || {};
+			const montant = (v) => esc(format_currency(v || 0));
+			if (!(s.echeances || []).length) {
+				$zone.html(`<div class="mee-vide">${__("Aucun frais de scolarité enregistré pour vous.")}</div>`);
+				return;
+			}
+			const couleur = { "Payée": "green", "En retard": "red", "À payer": "orange", "Exonérée": "blue" };
+			const bloque = (s.blocages || []).length
+				? `<div class="alert alert-danger">${__("Des frais en retard suspendent vos demandes de documents et votre réinscription. Régularisez auprès du service financier.")}</div>` : "";
+			const ech = s.echeances.map((e) => `<tr><td>${esc(e.libelle)}<div class="text-muted small">${esc(e.academic_year)}</div></td>
+				<td>${esc(frappe.datetime.str_to_user(e.date_echeance))}</td><td class="text-right">${montant(e.montant)}</td>
+				<td class="text-right">${montant(e.montant_paye)}</td><td class="text-right">${montant(e.reste)}</td>
+				<td><span class="indicator-pill ${couleur[e.statut] || "gray"}">${esc(__(e.statut))}</span></td></tr>`).join("");
+			const pai = (s.paiements || []).map((p) => `<tr><td>${esc(frappe.datetime.str_to_user(p.date_paiement))}</td>
+				<td class="text-right">${montant(p.montant)}</td><td>${esc(p.mode)}</td>
+				<td><a href="/api/method/udshed.utils.frais.recu?paiement=${encodeURIComponent(p.name)}" target="_blank">${__("Reçu")}</a></td></tr>`).join("");
+			$zone.html(`${bloque}<p><strong>${__("Reste à payer")} : ${montant(s.total_du)}</strong></p>
+				<div class="table-responsive"><table class="table table-bordered table-sm"><thead><tr><th>${__("Échéance")}</th><th>${__("Date")}</th>
+				<th class="text-right">${__("Montant")}</th><th class="text-right">${__("Payé")}</th><th class="text-right">${__("Reste")}</th><th>${__("Statut")}</th></tr></thead>
+				<tbody>${ech}</tbody></table></div>
+				${pai ? `<h6 class="mt-3">${__("Paiements")}</h6><div class="table-responsive"><table class="table table-bordered table-sm"><thead><tr>
+				<th>${__("Date")}</th><th class="text-right">${__("Montant")}</th><th>${__("Mode")}</th><th></th></tr></thead><tbody>${pai}</tbody></table></div>` : ""}`);
 		});
 	}
 };
